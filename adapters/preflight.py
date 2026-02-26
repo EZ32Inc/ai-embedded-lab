@@ -145,6 +145,45 @@ def _la_self_test(probe_cfg):
         return False
 
 
+def _fetch_port_config(probe_cfg):
+    ip = probe_cfg.get("ip")
+    scheme = probe_cfg.get("web_scheme", "https")
+    port = int(probe_cfg.get("web_port", 443))
+    user = probe_cfg.get("web_user", "admin")
+    password = probe_cfg.get("web_pass", "admin")
+    verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
+
+    if not ip:
+        print("Preflight: Port config skipped (missing IP)")
+        return False
+
+    base_url = f"{scheme}://{ip}:{port}"
+    auth = HTTPBasicAuth(user, password)
+
+    try:
+        # Fetch config JSON used by the UI
+        r = requests.get(f"{base_url}/get_credentials", auth=auth, timeout=5, verify=verify_ssl)
+        r.raise_for_status()
+        data = r.json() if r.content else {}
+        mapping = {
+            "pacfg": "Port A Configuration",
+            "pbcfg": "Port B Configuration",
+            "pccfg": "Port C Configuration",
+            "pdcfg": "Port D Configuration",
+        }
+        found = False
+        for key, label in mapping.items():
+            if key in data:
+                print(f"Preflight: {label}: {data[key]}")
+                found = True
+        if not found:
+            print("Preflight: Port config values not found in /get_credentials.")
+        return found
+    except Exception as exc:
+        print(f"Preflight: Port config fetch error: {exc}")
+        return False
+
+
 def run(probe_cfg):
     ip = probe_cfg.get("ip")
     port = probe_cfg.get("gdb_port")
@@ -154,6 +193,7 @@ def run(probe_cfg):
     ok_tcp = _check_tcp(ip, port)
     ok_mon = _monitor_targets(ip, port, gdb_cmd)
     ok_la = _la_self_test(probe_cfg)
+    _fetch_port_config(probe_cfg)
 
     if ok_ping and ok_tcp and ok_mon and ok_la:
         print("Preflight: OK")
