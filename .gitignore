@@ -1,0 +1,5 @@
+__pycache__/
+artifacts/
+*.pyc
+*.pyo
+*.pyd

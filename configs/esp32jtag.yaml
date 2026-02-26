@@ -7,6 +7,8 @@ connection:
   ip: 192.168.4.1
   gdb_port: 4242
 
+gdb_cmd: "arm-none-eabi-gdb"
+
 ports:
 
   P0:

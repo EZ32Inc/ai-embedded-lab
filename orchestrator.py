@@ -51,6 +51,24 @@ def _parse_wiring(s):
     return wiring
 
 
+def _normalize_probe_cfg(raw):
+    probe = raw.get("probe", {}) if isinstance(raw, dict) else {}
+    connection = raw.get("connection", {}) if isinstance(raw, dict) else {}
+    cfg = dict(probe)
+
+    if "ip" not in cfg and "ip" in connection:
+        cfg["ip"] = connection["ip"]
+    if "gdb_port" not in cfg and "gdb_port" in connection:
+        cfg["gdb_port"] = connection["gdb_port"]
+
+    if "gdb_cmd" not in cfg:
+        cfg["gdb_cmd"] = raw.get("gdb_cmd") if isinstance(raw, dict) else None
+    if not cfg.get("gdb_cmd"):
+        cfg["gdb_cmd"] = "gdb-multiarch"
+
+    return cfg
+
+
 def _merge_wiring(defaults, overrides):
     merged = dict(defaults or {})
     merged.update(overrides or {})
@@ -67,7 +85,8 @@ def _require_wiring(merged, required):
 
 
 def run(args):
-    probe_cfg = _simple_yaml_load(args.probe).get("probe", {})
+    probe_raw = _simple_yaml_load(args.probe)
+    probe_cfg = _normalize_probe_cfg(probe_raw)
     board_cfg = _simple_yaml_load(args.board).get("board", {})
 
     wiring_overrides = _parse_wiring(args.wiring or "")

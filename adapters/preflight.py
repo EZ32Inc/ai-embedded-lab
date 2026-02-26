@@ -1,6 +1,10 @@
 import socket
 import subprocess
 import shutil
+import time
+
+import requests
+from requests.auth import HTTPBasicAuth
 
 
 def _ping(ip):
@@ -61,8 +65,83 @@ def _monitor_targets(ip, port, gdb_cmd):
         if res.stderr and not ok:
             print(res.stderr.strip())
         return ok
+    except subprocess.TimeoutExpired:
+        print("Preflight: monitor targets -> FAIL (timeout)")
+        print("Hint: Check connection or release GDB connection in another session if one is active.")
+        return False
     except Exception as exc:
         print(f"Preflight: monitor targets error: {exc}")
+        return False
+
+
+def _parse_samples(buffer: bytes):
+    data = list(buffer)
+    words = []
+    for n in range(0, len(data) - 4, 2):
+        low = data[n + 2]
+        high = data[n + 1]
+        words.append((high << 8) | low)
+    return words
+
+
+def _edge_counts_all_bits(words, bits=16):
+    counts = [0] * bits
+    if not words:
+        return counts
+    prev = [(words[0] >> i) & 0x1 for i in range(bits)]
+    for w in words[1:]:
+        for i in range(bits):
+            b = (w >> i) & 0x1
+            if b != prev[i]:
+                counts[i] += 1
+                prev[i] = b
+    return counts
+
+
+def _la_self_test(probe_cfg):
+    ip = probe_cfg.get("ip")
+    scheme = probe_cfg.get("web_scheme", "https")
+    port = int(probe_cfg.get("web_port", 443))
+    user = probe_cfg.get("web_user", "admin")
+    password = probe_cfg.get("web_pass", "admin")
+    verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
+
+    if not ip:
+        print("Preflight: LA self-test skipped (missing IP)")
+        return False
+
+    base_url = f"{scheme}://{ip}:{port}"
+    auth = HTTPBasicAuth(user, password)
+
+    try:
+        cfg = {
+            "sampleRate": 1_000_000,
+            "triggerPosition": 50,
+            "triggerEnabled": False,
+            "triggerModeOR": True,
+            "captureInternalTestSignal": True,
+            "channels": ["disabled"] * 16,
+        }
+        r = requests.post(
+            f"{base_url}/la_configure",
+            json=cfg,
+            headers={"Content-Type": "application/json"},
+            auth=auth,
+            timeout=5,
+            verify=verify_ssl,
+        )
+        r.raise_for_status()
+
+        r = requests.get(f"{base_url}/instant_capture", auth=auth, timeout=10, verify=verify_ssl)
+        r.raise_for_status()
+        words = _parse_samples(r.content)
+        counts = _edge_counts_all_bits(words)
+        ok = max(counts) > 0
+        print("Preflight: LA self-test (internal signal) -> " + ("OK" if ok else "FAIL"))
+        print("Preflight: LA edge counts: " + ", ".join([f"b{i}={c}" for i, c in enumerate(counts)]))
+        return ok
+    except Exception as exc:
+        print(f"Preflight: LA self-test error: {exc}")
         return False
 
 
@@ -74,8 +153,9 @@ def run(probe_cfg):
     ok_ping = _ping(ip)
     ok_tcp = _check_tcp(ip, port)
     ok_mon = _monitor_targets(ip, port, gdb_cmd)
+    ok_la = _la_self_test(probe_cfg)
 
-    if ok_ping and ok_tcp and ok_mon:
+    if ok_ping and ok_tcp and ok_mon and ok_la:
         print("Preflight: OK")
         return True
     print("Preflight: FAIL")
