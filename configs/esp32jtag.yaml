@@ -1,0 +1,5 @@
+probe:
+  name: ESP32-JTAG
+  ip: 192.168.4.1
+  gdb_port: 3333
+  gdb_cmd: "gdb-multiarch"

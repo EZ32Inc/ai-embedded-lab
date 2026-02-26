@@ -1,0 +1,9 @@
+board:
+  name: RP2040 Pico
+  target: rp2040
+  firmware:
+    description: Blink GPIO25 ~1Hz
+  default_wiring:
+    swd: "P3"
+    reset: "P2.0"
+    verify: "P0.1"
