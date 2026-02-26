@@ -1,5 +1,61 @@
 probe:
-  name: ESP32-JTAG
+  name: ESP32JTAG
+  transport: wifi
+  wifi_mode: AP
+
+connection:
   ip: 192.168.4.1
-  gdb_port: 3333
-  gdb_cmd: "gdb-multiarch"
+  gdb_port: 4242
+
+ports:
+
+  P0:
+    lines:
+      0:
+        capabilities: [gpio_in, gpio_out]
+      1:
+        capabilities: [gpio_in]
+        recommended_use: verify_input
+
+  P1:
+    lines:
+      0:
+        capabilities: [adc_in]
+        note: analog sampling
+      1:
+        capabilities: [gpio_in, gpio_out]
+
+  P2:
+    lines:
+      0:
+        capabilities: [reset_out]
+        drive: open_drain
+        recommended_use: target_reset
+      1:
+        capabilities: [gpio_out]
+
+  P3:
+    capabilities: [swd]
+    signals:
+      swdio: true
+      swclk: true
+
+features:
+
+  sampling:
+    digital:
+      max_rate_hz: 10000000
+      buffer_kb: 1024
+
+  logic_analyzer:
+    supported: true
+    max_rate_hz: 264000000
+    buffer_kb: 1024
+
+  adc:
+    supported: true
+
+defaults:
+  swd_port: P3
+  reset_line: P2.0
+  verify_gpio: P0.1
