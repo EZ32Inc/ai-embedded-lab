@@ -3,5 +3,5 @@
   "expected_hz": 1.0,
   "duration_s": 3.0,
   "min_edges": 2,
-  "max_edges": 6
+  "max_edges": 70000
 }

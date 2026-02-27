@@ -106,8 +106,11 @@ def run(args):
     if not firmware_path:
         return 3
 
-    if not flash_bmda_gdbmi.run(probe_cfg, firmware_path):
-        return 4
+    if not args.skip_flash:
+        if not flash_bmda_gdbmi.run(probe_cfg, firmware_path):
+            return 4
+    else:
+        print("Flash: SKIPPED (user will flash via UF2)")
 
     test_path = os.path.join(os.path.dirname(__file__), "tests", "blink_gpio.json")
     with open(test_path, "r", encoding="utf-8") as f:
@@ -135,6 +138,7 @@ def main():
     run_p.add_argument("--probe", required=True)
     run_p.add_argument("--board", required=True)
     run_p.add_argument("--wiring", required=False)
+    run_p.add_argument("--skip-flash", action="store_true")
 
     args = parser.parse_args()
     if args.cmd == "run":
