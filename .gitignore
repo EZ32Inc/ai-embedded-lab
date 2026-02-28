@@ -5,4 +5,5 @@ artifacts/
 *.pyd
 progress/*.log
 progress/run_*.json
+pack_runs/
 runs

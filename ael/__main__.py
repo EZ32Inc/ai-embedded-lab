@@ -383,8 +383,10 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
         "<ul>",
     ]
     for r in result["results"]:
+        run_dir = r["run_dir"]
         report.append(
-            f\"<li>{r['test']} — {'OK' if r['ok'] else 'FAIL'} — <code>{r['run_dir']}</code></li>\"
+            f\"<li>{r['test']} — {'OK' if r['ok'] else 'FAIL'} — \"
+            f\"<a href=\\\"file://{run_dir}\\\">{run_dir}</a></li>\"
         )
     report.extend(["</ul>", "</body></html>"])
     with open(os.path.join(pack_root, "pack_report.html"), "w", encoding="utf-8") as f:
