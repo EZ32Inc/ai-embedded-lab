@@ -353,6 +353,9 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         return 3
 
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
+    if wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA"):
+        flash_cfg = dict(flash_cfg)
+        flash_cfg["reset_available"] = False
     if skip_flash:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")

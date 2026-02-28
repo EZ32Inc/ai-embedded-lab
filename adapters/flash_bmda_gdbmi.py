@@ -4,7 +4,7 @@ import subprocess
 import time
 
 
-def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s):
+def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue):
     args = [
         gdb_cmd,
         "-q",
@@ -29,7 +29,10 @@ def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, t
     )
     for cmd in post_cmds:
         args.extend(["-ex", cmd])
-    args.extend(["-ex", "monitor reset run", "-ex", "detach"])
+    if do_continue:
+        args.extend(["-ex", "monitor reset run", "-ex", "continue", "-ex", "detach"])
+    else:
+        args.extend(["-ex", "detach"])
     return subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
 
 
@@ -51,6 +54,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     speed_khz = flash_cfg.get("speed_khz", None)
     reset_strategy = flash_cfg.get("reset_strategy", "")
     timeout_s = int(flash_cfg.get("timeout_s", 120))
+    do_continue = bool(flash_cfg.get("reset_available", True))
 
     attempts = []
     strategies = [
@@ -96,6 +100,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 strat.get("pre", []),
                 strat.get("post", []),
                 timeout_s,
+                do_continue,
             )
             out = (res.stdout or "") + (res.stderr or "")
             out_l = out.lower()
@@ -134,6 +139,8 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         print("Flash: FAIL")
     else:
         print("Flash: OK")
+        if not do_continue:
+            print("Flash: reset line not available. Please press reset on target.")
 
     if flash_json_path:
         payload = {
