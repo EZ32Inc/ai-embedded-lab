@@ -168,6 +168,10 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
 
     print(f"Verify: LA host={base_url} bit={bit} duration~{duration_s:.2f}s sample_rate={sample_rate}")
 
+    channels = ["disabled"] * 16
+    if 0 <= bit < len(channels):
+        channels[bit] = "enabled"
+
     try:
         _configure_la(
             base_url,
@@ -178,7 +182,7 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
             trigger_position=50,
             trigger_mode_or=True,
             capture_internal_test_signal=False,
-            channels=["disabled"] * 16,
+            channels=channels,
         )
     except Exception as exc:
         print(f"Verify: configure failed ({exc})")
@@ -205,6 +209,7 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
     low = bits.count(0)
     high = bits.count(1)
     window_s = len(words) / float(sample_rate)
+    edge_counts = _edge_counts_all_bits(words)
 
     if capture_out is not None:
         capture_out["blob"] = blob
@@ -214,6 +219,7 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
         capture_out["edges"] = edges
         capture_out["high"] = high
         capture_out["low"] = low
+        capture_out["edge_counts"] = edge_counts
 
     print(f"Verify: samples={len(words)} window={window_s:.4f}s edges={edges} high={high} low={low}")
 
