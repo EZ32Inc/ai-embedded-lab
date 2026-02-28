@@ -390,6 +390,6 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
         )
     report.extend(["</ul>", "</body></html>"])
     with open(os.path.join(pack_root, "pack_report.html"), "w", encoding="utf-8") as f:
-        f.write(\"\\n\".join(report))
+        f.write("\n".join(report))
 
     return 0 if result["ok"] else 1
