@@ -27,26 +27,31 @@ int main(void) {
     GPIOC_CRH &= ~(0xFu << 20);
     GPIOC_CRH |= (0x2u << 20);
 
-    uint32_t t = 0;
-    uint32_t div = 0;
-    const uint32_t mask = (0xFu << 4); // PA4..PA7
-
+    uint32_t div0 = 0;
+    uint32_t div1 = 0;
+    uint32_t div2 = 0;
+    uint32_t div3 = 0;
     while (1) {
-        // Advance a prescaled counter ~5x faster than before
-        if (++div >= 25) {  // 128 -> 25 (~5.1x faster)
-            div = 0;
-            t++;
+        // Distinct toggle rates for PA4..PA7
+        if (++div0 >= 25) { // fastest
+            div0 = 0;
+            GPIOA_ODR ^= (1u << 4);
+        }
+        if (++div1 >= 50) {
+            div1 = 0;
+            GPIOA_ODR ^= (1u << 5);
+        }
+        if (++div2 >= 75) {
+            div2 = 0;
+            GPIOA_ODR ^= (1u << 6);
+        }
+        if (++div3 >= 100) {
+            div3 = 0;
+            GPIOA_ODR ^= (1u << 7);
         }
 
-        // Different waveforms on PA4..PA7 from counter bits
-        GPIOA_ODR = (GPIOA_ODR & ~mask)
-            | (((t >> 0) & 1u) << 4)
-            | (((t >> 1) & 1u) << 5)
-            | (((t >> 2) & 1u) << 6)
-            | (((t >> 3) & 1u) << 7);
-
         // Blink PC13 (active low on bluepill) at a slower rate
-        if ((t & 0x0CCCC) == 0) {
+        if ((div3 & 0x0CCC) == 0) {
             GPIOC_ODR ^= (1u << 13);
         }
     }
