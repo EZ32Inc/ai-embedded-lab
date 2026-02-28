@@ -7,12 +7,19 @@ board:
     speed_khz: 1000
     reset_strategy: connect_under_reset
     target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "enable breakpoint"
+      - "monitor a"
+      - "attach {target_id}"
+      - "load"
+      - "detach"
   observe_map:
-    sig: P0.0
-    pa4: P0.0
-    pa5: P0.1
-    pa6: P0.2
-    pa7: P0.3
+    sig: P0.4
+    pa4: P0.4
+    pa5: P0.5
+    pa6: P0.6
+    pa7: P0.7
   safe_pins:
     - PA4
     - PA5
@@ -22,4 +29,4 @@ board:
   default_wiring:
     swd: "P3"
     reset: "NC"
-    verify: "P0.0"
+    verify: "P0.4"

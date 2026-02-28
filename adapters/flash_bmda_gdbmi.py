@@ -4,7 +4,7 @@ import subprocess
 import time
 
 
-def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue):
+def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue, launch_cmds):
     args = [
         gdb_cmd,
         "-q",
@@ -15,21 +15,29 @@ def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, t
     ]
     for cmd in pre_cmds:
         args.extend(["-ex", cmd])
-    args.extend(
-        [
-            "-ex",
-            "monitor a",
-            "-ex",
-            f"file {firmware_path}",
-            "-ex",
-            f"attach {target_id}",
-            "-ex",
-            "load",
-        ]
-    )
+    if launch_cmds:
+        for cmd in launch_cmds:
+            cmd = cmd.replace("{firmware}", firmware_path).replace("{target_id}", str(target_id))
+            args.extend(["-ex", cmd])
+    else:
+        args.extend(
+            [
+                "-ex",
+                "monitor a",
+                "-ex",
+                f"file {firmware_path}",
+                "-ex",
+                f"attach {target_id}",
+                "-ex",
+                "load",
+            ]
+        )
     for cmd in post_cmds:
         args.extend(["-ex", cmd])
-    if do_continue:
+    if launch_cmds:
+        # Custom launch commands are expected to handle run/detach.
+        pass
+    elif do_continue:
         args.extend(["-ex", "monitor reset run", "-ex", "continue", "-ex", "detach"])
     else:
         args.extend(["-ex", "detach"])
@@ -76,6 +84,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     timeout_s = int(flash_cfg.get("timeout_s", 120))
     do_continue = True
     reset_available = bool(flash_cfg.get("reset_available", True))
+    launch_cmds = flash_cfg.get("gdb_launch_cmds", None)
 
     attempts = []
     strategies = [
@@ -122,6 +131,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 strat.get("post", []),
                 timeout_s,
                 do_continue,
+                launch_cmds,
             )
             out = (res.stdout or "") + (res.stderr or "")
             out_l = out.lower()
@@ -143,7 +153,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 ok = True
                 strategy_used = strat.get("name")
                 # If the probe reports a remote failure, try a delayed continue.
-                if "remote failure reply" in out_l or "could not read registers" in out_l:
+                if (not launch_cmds) and ("remote failure reply" in out_l or "could not read registers" in out_l):
                     if reset_available:
                         print("Flash: warning - remote failure reply, retrying continue")
                         time.sleep(0.5)
