@@ -46,7 +46,7 @@ int main(void) {
             | (((t >> 3) & 1u) << 7);
 
         // Blink PC13 (active low on bluepill) at a slower rate
-        if ((t & 0x3FFFF) == 0) {
+        if ((t & 0x1FFFF) == 0) {
             GPIOC_ODR ^= (1u << 13);
         }
     }
