@@ -5,6 +5,9 @@ import json
 import shutil
 import subprocess
 from datetime import datetime
+import base64
+import ssl
+import urllib.request
 
 from orchestrator import run_cli, _simple_yaml_load, _normalize_probe_cfg
 from ael import run_manager
@@ -84,9 +87,6 @@ def _monitor_version(probe_cfg):
 
 def _la_capture_ok(probe_cfg):
     try:
-        import requests
-        from requests.auth import HTTPBasicAuth
-
         ip = probe_cfg.get("ip")
         scheme = probe_cfg.get("web_scheme", "https")
         port = int(probe_cfg.get("web_port", 443))
@@ -95,7 +95,6 @@ def _la_capture_ok(probe_cfg):
         verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
 
         base_url = f"{scheme}://{ip}:{port}"
-        auth = HTTPBasicAuth(user, password)
         cfg = {
             "sampleRate": 1_000_000,
             "triggerPosition": 50,
@@ -104,19 +103,30 @@ def _la_capture_ok(probe_cfg):
             "captureInternalTestSignal": True,
             "channels": ["disabled"] * 16,
         }
-        r = requests.post(
+        auth = base64.b64encode(f"{user}:{password}".encode("utf-8")).decode("ascii")
+        headers = {"Content-Type": "application/json", "Authorization": f"Basic {auth}"}
+        ctx = ssl.create_default_context()
+        if not verify_ssl:
+            ctx = ssl._create_unverified_context()  # nosec - local device API
+
+        req = urllib.request.Request(
             f"{base_url}/la_configure",
-            json=cfg,
-            headers={"Content-Type": "application/json"},
-            auth=auth,
-            timeout=5,
-            verify=verify_ssl,
+            data=json.dumps(cfg).encode("utf-8"),
+            headers=headers,
+            method="POST",
         )
-        r.raise_for_status()
-        r = requests.get(f"{base_url}/instant_capture", auth=auth, timeout=5, verify=verify_ssl)
-        r.raise_for_status()
-        ok = len(r.content or b"") > 10
-        return ok, f"len={len(r.content or b'')}"
+        with urllib.request.urlopen(req, timeout=5, context=ctx) as resp:
+            resp.read()
+
+        req = urllib.request.Request(
+            f"{base_url}/instant_capture",
+            headers={"Authorization": f"Basic {auth}"},
+            method="GET",
+        )
+        with urllib.request.urlopen(req, timeout=5, context=ctx) as resp:
+            blob = resp.read()
+        ok = len(blob or b"") > 10
+        return ok, f"len={len(blob or b'')}"
     except Exception as exc:
         return False, str(exc)
 
