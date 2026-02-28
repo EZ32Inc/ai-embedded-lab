@@ -52,7 +52,7 @@ def _check_tcp(ip, port):
 def _monitor_targets(ip, port, gdb_cmd):
     if not gdb_cmd:
         print("Preflight: gdb_cmd not set, skipping monitor targets")
-        return False
+        return False, []
     try:
         res = subprocess.run(
             [
@@ -75,14 +75,31 @@ def _monitor_targets(ip, port, gdb_cmd):
             print(res.stdout.strip())
         if res.stderr and not ok:
             print(res.stderr.strip())
-        return ok
+        targets = []
+        in_table = False
+        for raw in (res.stdout or "").splitlines():
+            line = raw.strip()
+            if not line:
+                continue
+            if line.lower().startswith("available targets"):
+                in_table = True
+                continue
+            if in_table and line[0].isdigit():
+                parts = line.split()
+                if len(parts) >= 3:
+                    targets.append(" ".join(parts[2:]))
+            elif "rp2040" in line.lower():
+                targets.append(line)
+        if targets:
+            print("Preflight: targets: " + ", ".join(targets))
+        return ok, targets
     except subprocess.TimeoutExpired:
         print("Preflight: monitor targets -> FAIL (timeout)")
         print("Hint: Check connection or release GDB connection in another session if one is active.")
-        return False
+        return False, []
     except Exception as exc:
         print(f"Preflight: monitor targets error: {exc}")
-        return False
+        return False, []
 
 
 def _parse_samples(buffer: bytes):
@@ -169,7 +186,7 @@ def _fetch_port_config(probe_cfg):
 
     if not ip:
         print("Preflight: Port config skipped (missing IP)")
-        return False
+        return {}
 
     base_url = f"{scheme}://{ip}:{port}"
     auth = HTTPBasicAuth(user, password)
@@ -187,16 +204,18 @@ def _fetch_port_config(probe_cfg):
             "pdcfg": "Port D Configuration",
         }
         found = False
+        out = {}
         for key, label in mapping.items():
             if key in data:
                 print(f"Preflight: {label}: {data[key]}")
+                out[key] = data[key]
                 found = True
         if not found:
             print("Preflight: Port config values not found in /get_credentials.")
-        return found
+        return out
     except Exception as exc:
         print(f"Preflight: Port config fetch error: {exc}")
-        return False
+        return {}
 
 
 def run(probe_cfg):
@@ -206,12 +225,21 @@ def run(probe_cfg):
 
     ok_ping = _ping(ip)
     ok_tcp = _check_tcp(ip, port)
-    ok_mon = _monitor_targets(ip, port, gdb_cmd)
+    ok_mon, targets = _monitor_targets(ip, port, gdb_cmd)
     ok_la = _la_self_test(probe_cfg)
-    _fetch_port_config(probe_cfg)
+    port_cfg = _fetch_port_config(probe_cfg)
+
+    info = {
+        "ping_ok": ok_ping,
+        "tcp_ok": ok_tcp,
+        "monitor_ok": ok_mon,
+        "targets": targets,
+        "la_ok": ok_la,
+        "port_config": port_cfg,
+    }
 
     if ok_ping and ok_tcp and ok_mon and ok_la:
         print("Preflight: OK")
-        return True
+        return True, info
     print("Preflight: FAIL")
-    return False
+    return False, info
