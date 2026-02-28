@@ -34,19 +34,19 @@ int main(void) {
     uint32_t led_div = 0;
     while (1) {
         // Distinct toggle rates for PA4..PA7
-        if (++div0 >= 25) { // fastest
+        if (++div0 >= 200) { // fastest
             div0 = 0;
             GPIOA_ODR ^= (1u << 4);
         }
-        if (++div1 >= 50) {
+        if (++div1 >= 400) {
             div1 = 0;
             GPIOA_ODR ^= (1u << 5);
         }
-        if (++div2 >= 75) {
+        if (++div2 >= 600) {
             div2 = 0;
             GPIOA_ODR ^= (1u << 6);
         }
-        if (++div3 >= 100) {
+        if (++div3 >= 800) {
             div3 = 0;
             GPIOA_ODR ^= (1u << 7);
         }
