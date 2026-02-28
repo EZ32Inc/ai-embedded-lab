@@ -148,6 +148,13 @@ def _write_json(path, data):
         pass
 
 
+def _default_firmware_path(target):
+    root = os.path.dirname(__file__)
+    if target.startswith("stm32"):
+        return os.path.join(root, "artifacts", "build_stm32", "stm32f103_app.elf")
+    return os.path.join(root, "artifacts", "build", "pico_blink.elf")
+
+
 def _copy_artifacts(firmware_path, artifacts_dir):
     if not firmware_path:
         return []
@@ -223,7 +230,17 @@ def _resolve_board_path(repo_root, board_arg):
     return str(board_path), board_id
 
 
-def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal", skip_flash=False):
+def run_pipeline(
+    probe_path,
+    board_arg,
+    test_path,
+    wiring,
+    output_mode="normal",
+    skip_flash=False,
+    no_build=False,
+    verify_only=False,
+    return_paths=False,
+):
     repo_root = os.path.dirname(__file__)
 
     if not test_path:
@@ -327,37 +344,53 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         _write_json(run_paths.result, result)
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
-        return 2
+        return (2, run_paths) if return_paths else 2
 
     print("SWD and network connection verified. Starting task.")
     if not pre_info.get("targets"):
         print("Preflight: warning - no targets reported by probe.")
 
     firmware_path = None
-    with _tee_output(run_paths.build_log, output_mode):
-        t0 = time.monotonic()
+    if verify_only:
+        timings["build_s"] = 0.0
+    elif no_build:
         target = board_cfg.get("target", "")
-        if target.startswith("stm32"):
-            firmware_path = build_stm32.run(board_cfg)
-        else:
-            firmware_path = build_cmake.run(board_cfg)
-        timings["build_s"] = round(time.monotonic() - t0, 3)
+        firmware_path = _default_firmware_path(target)
+        if not os.path.exists(firmware_path):
+            result["failed_step"] = "build"
+            result["error_summary"] = "no build artifacts found"
+            _write_json(run_paths.result, result)
+            meta["ended_at"] = datetime.now().isoformat()
+            _write_json(run_paths.meta, meta)
+            return (3, run_paths) if return_paths else 3
+        timings["build_s"] = 0.0
+    else:
+        with _tee_output(run_paths.build_log, output_mode):
+            t0 = time.monotonic()
+            target = board_cfg.get("target", "")
+            if target.startswith("stm32"):
+                firmware_path = build_stm32.run(board_cfg)
+            else:
+                firmware_path = build_cmake.run(board_cfg)
+            timings["build_s"] = round(time.monotonic() - t0, 3)
 
-    if not firmware_path:
+    if (not verify_only) and (not firmware_path):
         result["failed_step"] = "build"
         result["error_summary"] = "build failed"
         _triage("build", pre_info)
         _write_json(run_paths.result, result)
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
-        return 3
+        return (3, run_paths) if return_paths else 3
 
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
     reset_unwired = wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA")
     if reset_unwired:
         flash_cfg = dict(flash_cfg)
         flash_cfg["reset_available"] = False
-    if skip_flash:
+    if verify_only:
+        timings["flash_s"] = 0.0
+    elif skip_flash:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")
         _write_json(
@@ -383,7 +416,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
             _write_json(run_paths.result, result)
             meta["ended_at"] = datetime.now().isoformat()
             _write_json(run_paths.meta, meta)
-            return 4
+            return (4, run_paths) if return_paths else 4
 
     capture = {}
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
@@ -414,7 +447,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         _write_json(run_paths.result, result)
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
-        return 5
+        return (5, run_paths) if return_paths else 5
 
     measure = {}
     verify_ok = False
@@ -474,7 +507,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         _write_json(run_paths.result, result)
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
-        return 6
+        return (6, run_paths) if return_paths else 6
 
     timings["total_s"] = round(time.monotonic() - run_started_mono, 3)
 
@@ -511,7 +544,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
 
     print(f"Run metadata saved: {run_paths.meta}")
     print(f"Run log saved: {run_paths.build_log}")
-    return 0
+    return (0, run_paths) if return_paths else 0
 
 
 def run(args):

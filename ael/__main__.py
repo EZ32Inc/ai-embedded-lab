@@ -9,7 +9,7 @@ import base64
 import ssl
 import urllib.request
 
-from orchestrator import run_cli, _simple_yaml_load, _normalize_probe_cfg
+from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import run_manager
 
 
@@ -30,6 +30,14 @@ def main():
     doc_p.add_argument("--board", default=os.path.join("configs", "boards", "rp2040_pico.yaml"))
     doc_p.add_argument("--test", default=os.path.join("tests", "blink_gpio.json"))
 
+    pack_p = sub.add_parser("pack")
+    pack_p.add_argument("--pack", required=True)
+    pack_p.add_argument("--board", required=False)
+    pack_p.add_argument("--stop-on-fail", action="store_true")
+    pack_p.add_argument("--no-flash", action="store_true")
+    pack_p.add_argument("--no-build", action="store_true")
+    pack_p.add_argument("--verify-only", action="store_true")
+
     args = parser.parse_args()
     if args.cmd == "run":
         if args.verbose:
@@ -48,6 +56,16 @@ def main():
         sys.exit(code)
     if args.cmd == "doctor":
         code = run_doctor(args.probe, args.board, args.test)
+        sys.exit(code)
+    if args.cmd == "pack":
+        code = run_pack(
+            pack_path=args.pack,
+            board_override=args.board,
+            stop_on_fail=args.stop_on_fail,
+            no_flash=args.no_flash,
+            no_build=args.no_build,
+            verify_only=args.verify_only,
+        )
         sys.exit(code)
 
 
@@ -258,3 +276,118 @@ def run_doctor(probe_path, board_path, test_path):
 
 if __name__ == "__main__":
     main()
+
+
+def _git_describe():
+    try:
+        res = subprocess.run(
+            ["git", "describe", "--always", "--dirty", "--tags"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if res.returncode == 0:
+            return (res.stdout or "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _load_json(path):
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return {}
+
+
+def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False, no_build=False, verify_only=False):
+    repo_root = os.path.dirname(os.path.dirname(__file__))
+    pack_full = pack_path if os.path.isabs(pack_path) else os.path.join(repo_root, pack_path)
+    pack = _load_json(pack_full)
+
+    pack_name = pack.get("name", "pack")
+    pack_board = board_override or pack.get("board")
+    tests = pack.get("tests", [])
+    if not pack_board or not tests:
+        print("Pack: missing board or tests")
+        return 2
+
+    # Validate tests for mixed boards
+    for t in tests:
+        t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
+        t_json = _load_json(t_full)
+        t_board = t_json.get("board") if isinstance(t_json, dict) else None
+        if t_board and t_board != pack_board:
+            print(f"Pack: test {t} targets board {t_board}, expected {pack_board}")
+            return 3
+
+    bench_path = os.path.join(repo_root, "configs", "bench.yaml")
+    bench = _simple_yaml_load(bench_path)
+
+    run_id = f\"{datetime.now():%Y-%m-%d_%H-%M-%S}_{pack_name}_{pack_board}\"
+    pack_root = os.path.join(repo_root, "pack_runs", run_id)
+    os.makedirs(pack_root, exist_ok=True)
+
+    meta = {
+        "timestamp": datetime.now().isoformat(),
+        "git_describe": _git_describe(),
+        "bench": bench,
+        "pack": pack_name,
+        "board": pack_board,
+    }
+    plan = {"tests": tests}
+    result = {"ok": True, "results": []}
+
+    def _write(path, data):
+        with open(os.path.join(pack_root, path), "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+
+    _write("pack_meta.json", meta)
+    _write("pack_plan.json", plan)
+    _write("pack_result.json", result)
+
+    for t in tests:
+        t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
+        code, run_paths = run_pipeline(
+            probe_path=os.path.join(repo_root, "configs", "esp32jtag.yaml"),
+            board_arg=pack_board,
+            test_path=t_full,
+            wiring=None,
+            output_mode="normal",
+            skip_flash=no_flash or verify_only,
+            no_build=no_build or verify_only,
+            verify_only=verify_only,
+            return_paths=True,
+        )
+        run_result = _load_json(run_paths.result)
+        entry = {
+            "test": t,
+            "run_dir": str(run_paths.root),
+            "ok": bool(run_result.get("ok")),
+            "failed_step": run_result.get("failed_step", ""),
+            "code": code,
+        }
+        result["results"].append(entry)
+        result["ok"] = result["ok"] and entry["ok"]
+        _write("pack_result.json", result)
+        if stop_on_fail and not entry["ok"]:
+            break
+
+    # HTML report
+    report = [
+        "<!doctype html>",
+        "<html><head><meta charset='utf-8'><title>Pack Report</title></head><body>",
+        f"<h1>Pack {pack_name}</h1>",
+        f"<p>Board: {pack_board}</p>",
+        "<ul>",
+    ]
+    for r in result["results"]:
+        report.append(
+            f\"<li>{r['test']} — {'OK' if r['ok'] else 'FAIL'} — <code>{r['run_dir']}</code></li>\"
+        )
+    report.extend(["</ul>", "</body></html>"])
+    with open(os.path.join(pack_root, "pack_report.html"), "w", encoding="utf-8") as f:
+        f.write(\"\\n\".join(report))
+
+    return 0 if result["ok"] else 1
