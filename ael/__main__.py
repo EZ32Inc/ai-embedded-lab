@@ -325,7 +325,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
     bench_path = os.path.join(repo_root, "configs", "bench.yaml")
     bench = _simple_yaml_load(bench_path)
 
-    run_id = f\"{datetime.now():%Y-%m-%d_%H-%M-%S}_{pack_name}_{pack_board}\"
+    run_id = f"{datetime.now():%Y-%m-%d_%H-%M-%S}_{pack_name}_{pack_board}"
     pack_root = os.path.join(repo_root, "pack_runs", run_id)
     os.makedirs(pack_root, exist_ok=True)
 
