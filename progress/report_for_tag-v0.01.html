@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ai-embedded-lab Progress Report — v0.01</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f6f4ef;
+      --ink: #1f1f1f;
+      --muted: #5a5a5a;
+      --accent: #0f4c81;
+      --card: #ffffff;
+      --line: #e0dad1;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font: 16px/1.6 "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, serif;
+    }
+    .wrap {
+      max-width: 900px;
+      margin: 40px auto 64px;
+      padding: 0 20px;
+    }
+    header {
+      margin-bottom: 24px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 16px;
+    }
+    h1 {
+      font-size: 28px;
+      margin: 0 0 6px;
+    }
+    .subtitle {
+      color: var(--muted);
+    }
+    h2 {
+      font-size: 20px;
+      margin: 28px 0 10px;
+      color: var(--accent);
+    }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      box-shadow: 0 1px 0 rgba(0,0,0,0.03);
+    }
+    ul {
+      margin: 8px 0 0 18px;
+      padding: 0;
+    }
+    code, pre {
+      font: 14px/1.5 "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+    pre {
+      background: #f3f0ea;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      overflow: auto;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #e9f1fb;
+      color: var(--accent);
+      font-size: 12px;
+      font-family: "SF Mono", ui-monospace, Menlo, Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>ai-embedded-lab Progress Report</h1>
+      <div class="subtitle">Tag: <span class="pill">v0.01</span></div>
+    </header>
+
+    <section class="card">
+      <h2>Goal</h2>
+      <p>
+        Make the full pipeline work end-to-end: code generation → compile → load/flash via GDB → run → verify,
+        with clean output (no SSL or GDB warnings).
+      </p>
+    </section>
+
+    <section>
+      <h2>What Was Fixed/Added</h2>
+      <div class="card">
+        <ul>
+          <li><strong>Flash step enabled and corrected</strong>: switched BMDA GDB adapter from <code>flash</code> to <code>load</code>,
+              reordered <code>file</code> before <code>attach</code>, and increased flash timeout to 120s.</li>
+          <li><strong>SSL warning suppression added</strong>: new toggle so warnings are suppressed only when SSL verification is disabled.</li>
+          <li><strong>ESP32JTAG config extended</strong>: added web settings and warning suppression option.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Files Changed</h2>
+      <div class="card">
+        <ul>
+          <li><code>adapters/flash_bmda_gdbmi.py</code></li>
+          <li><code>adapters/observe_gpio_pin.py</code></li>
+          <li><code>adapters/preflight.py</code></li>
+          <li><code>configs/esp32jtag.yaml</code></li>
+          <li><code>tools/la_verify.py</code></li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Final Command</h2>
+      <div class="card">
+        <pre><code>python orchestrator.py run \
+  --probe configs/esp32jtag.yaml \
+  --board configs/boards/rp2040_pico.yaml \
+  --wiring "swd=P3 reset=P2.0 verify=P0.1"</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>Observed Results</h2>
+      <div class="card">
+        <ul>
+          <li>Preflight OK (ping, TCP, monitor targets, LA self-test)</li>
+          <li>Build OK</li>
+          <li>Flash OK (GDB <code>load</code>)</li>
+          <li>Verify OK (LA edges detected)</li>
+          <li>Final: <strong>PASS: Blink verified</strong></li>
+          <li>No SSL warnings</li>
+          <li>No “No executable has been specified” warning</li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <h2>Full Run Log (2026-02-28)</h2>
+      <div class="card">
+        <pre><code>AI: starting pipeline
+Using probe: ESP32JTAG @ 192.168.4.1:4242
+Using board: RP2040 Pico target=rp2040
+Wiring: swd=P3 reset=P2.0 verify=P0.1
+Preflight: ping 192.168.4.1 -> OK
+Preflight: TCP 192.168.4.1:4242 -> OK
+Preflight: monitor targets -> OK
+Preflight: LA self-test (internal signal) -> OK
+Preflight: LA edge counts: b0=32766, b1=16383, b2=8191, b3=4096, b4=2048, b5=1024, b6=512, b7=256, b8=128, b9=64, b10=32, b11=16, b12=8, b13=4, b14=2, b15=1
+Preflight: Port A Configuration: 0
+Preflight: Port B Configuration: 0
+Preflight: Port C Configuration: 1
+Preflight: Port D Configuration: 0
+Preflight: OK
+SWD and network connection verified. Starting task.
+Build: target RP2040 Pico
+-- Configuring done
+-- Generating done
+-- Build files have been written to: /nvme1t/work/codex/ai-embedded-lab/artifacts/build
+PICO_SDK_PATH is /nvme1t/github/pico-sdk
+Target board (PICO_BOARD) is 'pico'.
+Using board configuration from /nvme1t/github/pico-sdk/src/boards/include/boards/pico.h
+Pico Platform (PICO_PLATFORM) is 'rp2040'.
+Build type is Release
+TinyUSB available at /nvme1t/github/pico-sdk/lib/tinyusb/hw/bsp/rp2040; enabling build support for USB.
+BTstack available at /nvme1t/github/pico-sdk/lib/btstack
+cyw43-driver available at /nvme1t/github/pico-sdk/lib/cyw43-driver
+mbedtls available at /nvme1t/github/pico-sdk/lib/mbedtls
+lwIP available at /nvme1t/github/pico-sdk/lib/lwip
+Using picotool from /nvme1t/work/codex/ai-embedded-lab/artifacts/build/_deps/picotool/picotool
+/usr/bin/cmake -S/nvme1t/work/codex/ai-embedded-lab/firmware -B/nvme1t/work/codex/ai-embedded-lab/artifacts/build --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/cmake -E cmake_progress_start /nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles /nvme1t/work/codex/ai-embedded-lab/artifacts/build//CMakeFiles/progress.marks
+/usr/bin/gmake  -f CMakeFiles/Makefile2 all
+gmake[1]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+/usr/bin/gmake  -f pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/build.make pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/depend
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+cd /nvme1t/work/codex/ai-embedded-lab/artifacts/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /nvme1t/work/codex/ai-embedded-lab/firmware /nvme1t/github/pico-sdk/src/rp2040/boot_stage2 /nvme1t/work/codex/ai-embedded-lab/artifacts/build /nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2 /nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/DependInfo.cmake --color=
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/DependInfo.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/depend.internal".
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/depend.internal".
+Scanning dependencies of target bs2_default
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+/usr/bin/gmake  -f pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/build.make pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/build
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+gmake[2]: Nothing to be done for 'pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default.dir/build'.
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+[  3%] Built target bs2_default
+/usr/bin/gmake  -f pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/build.make pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/depend
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+cd /nvme1t/work/codex/ai-embedded-lab/artifacts/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /nvme1t/work/codex/ai-embedded-lab/firmware /nvme1t/github/pico-sdk/src/rp2040/boot_stage2 /nvme1t/work/codex/ai-embedded-lab/artifacts/build /nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2 /nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/DependInfo.cmake --color=
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/DependInfo.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/depend.internal".
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/depend.internal".
+Scanning dependencies of target bs2_default_library
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+/usr/bin/gmake  -f pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/build.make pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/build
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+gmake[2]: Nothing to be done for 'pico-sdk/src/rp2040/boot_stage2/CMakeFiles/bs2_default_library.dir/build'.
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+[  7%] Built target bs2_default_library
+/usr/bin/gmake  -f CMakeFiles/pico_blink.dir/build.make CMakeFiles/pico_blink.dir/depend
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+cd /nvme1t/work/codex/ai-embedded-lab/artifacts/build && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /nvme1t/work/codex/ai-embedded-lab/firmware /nvme1t/work/codex/ai-embedded-lab/firmware /nvme1t/work/codex/ai-embedded-lab/artifacts/build /nvme1t/work/codex/ai-embedded-lab/artifacts/build /nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/DependInfo.cmake --color=
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/DependInfo.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/depend.internal".
+Dependee "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/CMakeDirectoryInformation.cmake" is newer than depender "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/depend.internal".
+Scanning dependencies of target pico_blink
+Dependencies file "CMakeFiles/pico_blink.dir/main.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/common/hardware_claim/claim.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/common/pico_sync/critical_section.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/common/pico_sync/lock_core.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/common/pico_sync/mutex.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/hardware_uart/uart.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/hardware_vreg/vreg.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/hardware_watchdog/watchdog.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/hardware_xosc/xosc.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_atomic/atomic.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_bootrom/bootrom.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_bootrom/bootrom_lock.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_clib_interface/newlib_interface.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_double/double_init_rom_rp2040.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_double/double_math.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_flash/flash.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_float/float_init_rom_rp2040.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_float/float_math.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_malloc/malloc.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_platform_common/common.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_platform_panic/panic.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_printf/printf.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_runtime/runtime.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init_clocks.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_runtime_init/runtime_init_stack_guard.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_standard_binary_info/standard_binary_info.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_stdio/stdio.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_stdlib/stdlib.c.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Dependencies file "CMakeFiles/pico_blink.dir/nvme1t/github/pico-sdk/src/rp2_common/pico_cxx_options/new_delete.cpp.o.d" is newer than depends file "/nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles/pico_blink.dir/compiler_depend.internal".
+Consolidate compiler generated dependencies of target pico_blink
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+/usr/bin/gmake  -f CMakeFiles/pico_blink.dir/build.make CMakeFiles/pico_blink.dir/build
+gmake[2]: Entering directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+gmake[2]: Nothing to be done for 'CMakeFiles/pico_blink.dir/build'.
+gmake[2]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+[100%] Built target pico_blink
+gmake[1]: Leaving directory '/nvme1t/work/codex/ai-embedded-lab/artifacts/build'
+/usr/bin/cmake -E cmake_progress_start /nvme1t/work/codex/ai-embedded-lab/artifacts/build/CMakeFiles 0
+Build: OK -> /nvme1t/work/codex/ai-embedded-lab/artifacts/build/pico_blink.elf
+Flash: BMDA via GDB
+Flash: OK
+timer_time_us_64 (timer=0x40054000) at /nvme1t/github/pico-sdk/src/rp2_common/hardware_timer/timer.c:60
+60	    uint32_t hi = timer->timerawh;
+Loading section .boot2, size 0x100 lma 0x10000000
+Loading section .text, size 0x1660 lma 0x10000100
+Loading section .rodata, size 0xdc lma 0x10001760
+Loading section .binary_info, size 0x1c lma 0x1000183c
+Loading section .data, size 0x128 lma 0x10001858
+Start address 0x100001e8, load size 6528
+Transfer rate: 8 KB/sec, 652 bytes/write.
+[Inferior 1 (Remote target) detached]
+Target voltage: 3.3V
+JTAG scan found no devices, trying SWD!
+Available Targets:
+No. Att Driver
+ 1      RP2040 M0+
+ 2      RP2040 M0+
+ 3      RP2040 Rescue (Attach to reset) 
+You are now detached from the previous target.
+Verify: LA host=https://192.168.4.1:443 bit=1 duration~3.00s sample_rate=260000
+Verify: samples=65532 window=0.2520s edges=10588 high=32554 low=32978
+Verify: OK
+PASS: Blink verified</code></pre>
+      </div>
+    </section>
+
+    <section>
+      <h2>Commit</h2>
+      <div class="card">
+        <p><code>50dfbf7</code> — “can flash correctly without warning. Now the whole process of generation code--&gt;compiing--&gt;loading/flash--&gt;run--&gt;verify works, for the first time!”</p>
+      </div>
+    </section>
+  </div>
+</body>
+</html>
