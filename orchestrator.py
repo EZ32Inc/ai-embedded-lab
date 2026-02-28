@@ -2,11 +2,15 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime
 import hashlib
 import time
+from datetime import datetime
+from pathlib import Path
+from contextlib import contextmanager
 
 from adapters import preflight, build_cmake, flash_bmda_gdbmi, observe_gpio_pin
+from ael import run_manager
+from tools import la_verify
 
 
 def _simple_yaml_load(path):
@@ -26,7 +30,7 @@ def _simple_yaml_load(path):
                     continue
                 indent = len(line) - len(line.lstrip(" "))
                 key, _, value = line.strip().partition(":")
-                value = value.strip().strip("\"")
+                value = value.strip().strip('"')
                 while indent < indent_stack[-1]:
                     stack.pop()
                     indent_stack.pop()
@@ -38,6 +42,18 @@ def _simple_yaml_load(path):
                 else:
                     stack[-1][key] = value
         return data
+
+
+def _deep_merge(base, override):
+    if not isinstance(base, dict) or not isinstance(override, dict):
+        return override
+    out = dict(base)
+    for k, v in override.items():
+        if k in out and isinstance(out[k], dict) and isinstance(v, dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
 
 
 def _parse_wiring(s):
@@ -86,73 +102,6 @@ def _require_wiring(merged, required):
     return merged
 
 
-class _Tee:
-    def __init__(self, file_obj, console, mode):
-        self._file = file_obj
-        self._console = console
-        self._mode = mode
-        self._buf = ""
-
-    def write(self, s):
-        if not s:
-            return 0
-        self._file.write(s)
-        self._file.flush()
-        self._buf += s
-        while "\n" in self._buf:
-            line, self._buf = self._buf.split("\n", 1)
-            self._write_console_line(line + "\n")
-        return len(s)
-
-    def flush(self):
-        if self._buf:
-            self._write_console_line(self._buf)
-            self._buf = ""
-        self._file.flush()
-        if hasattr(self._console, "flush"):
-            self._console.flush()
-
-    def _write_console_line(self, line):
-        if self._mode == "verbose":
-            self._console.write(line)
-            return
-        if self._mode == "quiet":
-            prefixes = (
-                "AI:",
-                "Using ",
-                "Wiring:",
-                "Preflight:",
-                "SWD ",
-                "Build:",
-                "Flash:",
-                "Verify:",
-                "PASS:",
-                "FAIL:",
-                "Summary:",
-                "Run metadata saved:",
-                "Run log saved:",
-                "Hint:",
-            )
-            if line.startswith(prefixes):
-                self._console.write(line)
-            return
-        # normal mode: drop very noisy build lines, keep status
-        noisy = (
-            "gmake",
-            "/usr/bin/cmake",
-            "Scanning dependencies",
-            "Dependee ",
-            "Dependencies file",
-            "Consolidate compiler generated dependencies",
-            "Built target",
-            "Entering directory",
-            "Leaving directory",
-        )
-        if line.startswith(noisy):
-            return
-        self._console.write(line)
-
-
 def _file_sha256(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -161,7 +110,8 @@ def _file_sha256(path):
     return h.hexdigest()
 
 
-def _git_commit():
+def _git_info():
+    info = {"commit": "", "dirty": False, "status": ""}
     try:
         import subprocess
 
@@ -172,10 +122,69 @@ def _git_commit():
             timeout=2,
         )
         if res.returncode == 0:
-            return (res.stdout or "").strip()
+            info["commit"] = (res.stdout or "").strip()
+
+        res = subprocess.run(
+            ["git", "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+        if res.returncode == 0:
+            status = (res.stdout or "").strip()
+            info["status"] = status
+            info["dirty"] = bool(status)
     except Exception:
         pass
-    return ""
+    return info
+
+
+def _write_json(path, data):
+    try:
+        run_manager.ensure_parent(Path(path))
+        with open(path, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, sort_keys=True)
+    except Exception:
+        pass
+
+
+def _copy_artifacts(firmware_path, artifacts_dir):
+    if not firmware_path:
+        return []
+    copied = []
+    base = Path(firmware_path)
+    candidates = [base]
+    candidates.append(base.with_suffix(".uf2"))
+    candidates.append(base.with_suffix(".bin"))
+    for p in candidates:
+        if p.exists():
+            dest = Path(artifacts_dir) / p.name
+            try:
+                dest.write_bytes(p.read_bytes())
+                copied.append(str(dest))
+            except Exception:
+                pass
+    return copied
+
+
+@contextmanager
+def _tee_output(log_path, output_mode):
+    tee, f = run_manager.open_tee(Path(log_path), output_mode, console=sys.stdout)
+    orig_out = sys.stdout
+    orig_err = sys.stderr
+    sys.stdout = tee
+    sys.stderr = tee
+    try:
+        yield
+    finally:
+        try:
+            sys.stdout.flush()
+            sys.stderr.flush()
+        except Exception:
+            pass
+        sys.stdout = orig_out
+        sys.stderr = orig_err
+        f.close()
 
 
 def _triage(stage, pre_info):
@@ -203,108 +212,217 @@ def _triage(stage, pre_info):
         return
 
 
-def run(args):
+def _resolve_board_path(repo_root, board_arg):
+    if not board_arg:
+        return None, None
+    p = Path(board_arg)
+    if p.exists() and p.is_file():
+        return str(p), p.stem
+    board_id = board_arg
+    board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
+    return str(board_path), board_id
+
+
+def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal", skip_flash=False):
+    repo_root = os.path.dirname(__file__)
+
+    if not test_path:
+        test_path = os.path.join(repo_root, "tests", "blink_gpio.json")
+
+    test_raw = {}
+    try:
+        with open(test_path, "r", encoding="utf-8") as f:
+            test_raw = json.load(f)
+    except Exception:
+        test_raw = {}
+
+    board_path, board_id = _resolve_board_path(repo_root, board_arg)
+    if not board_id:
+        board_id = test_raw.get("board", "unknown") if isinstance(test_raw, dict) else "unknown"
+        if board_id and board_id != "unknown":
+            board_path, _ = _resolve_board_path(repo_root, board_id)
+
+    run_paths = run_manager.create_run(board_id or "unknown", test_path, repo_root)
+    # Ensure all expected files exist even if we fail early.
+    for p in [
+        run_paths.build_log,
+        run_paths.flash_log,
+        run_paths.observe_log,
+        run_paths.verify_log,
+        run_paths.preflight_log,
+    ]:
+        Path(p).write_text("")
+    _write_json(run_paths.measure, {"ok": False, "metrics": {}, "reasons": ["not_run"]})
+    _write_json(run_paths.result, {"ok": False, "failed_step": "", "error_summary": ""})
+
+    probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
+    board_raw = _simple_yaml_load(board_path) if board_path else {}
+
+    effective = _deep_merge(_deep_merge(probe_raw, board_raw), test_raw)
+    _write_json(run_paths.config_effective, effective)
+
     run_started = datetime.now()
     run_started_mono = time.monotonic()
-    run_id = run_started.strftime("%Y%m%d_%H%M%S")
-    progress_dir = os.path.join(os.path.dirname(__file__), "progress")
-    os.makedirs(progress_dir, exist_ok=True)
-    meta_path = os.path.join(progress_dir, f"run_{run_id}.json")
-    log_path = os.path.join(progress_dir, f"run_{run_id}.log")
+    git_info = _git_info()
 
-    with open(log_path, "w", encoding="utf-8") as logf:
-        orig_out = sys.stdout
-        orig_err = sys.stderr
-        sys.stdout = _Tee(logf, orig_out, args.output_mode)
-        sys.stderr = _Tee(logf, orig_err, args.output_mode)
-        code = 0
-        try:
-            code = _run_pipeline(args, run_started, run_started_mono, run_id, meta_path, log_path)
-        finally:
-            sys.stdout.flush()
-            sys.stderr.flush()
-            sys.stdout = orig_out
-            sys.stderr = orig_err
-    return code
+    meta = {
+        "run_id": run_paths.run_id,
+        "started_at": run_started.isoformat(),
+        "probe_path": probe_path,
+        "board_path": board_path,
+        "test_path": test_path,
+        "git_commit": git_info.get("commit"),
+        "git_dirty": git_info.get("dirty"),
+        "git_status": git_info.get("status"),
+    }
 
-
-def _run_pipeline(args, run_started, run_started_mono, run_id, meta_path, log_path):
-    status = {"stage": "init", "ok": False}
-
-    probe_raw = _simple_yaml_load(args.probe)
     probe_cfg = _normalize_probe_cfg(probe_raw)
-    board_cfg = _simple_yaml_load(args.board).get("board", {})
+    board_cfg = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
 
-    wiring_overrides = _parse_wiring(args.wiring or "")
-    wiring = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
-    wiring = _require_wiring(wiring, ["swd", "reset", "verify"])
+    wiring_overrides = _parse_wiring(wiring or "")
+    wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
+    wiring_cfg = _require_wiring(wiring_cfg, ["swd", "reset", "verify"])
+
+    timings = {}
+    result = {
+        "ok": False,
+        "failed_step": "",
+        "error_summary": "",
+        "logs": {
+            "preflight": str(run_paths.preflight_log),
+            "build": str(run_paths.build_log),
+            "flash": str(run_paths.flash_log),
+            "observe": str(run_paths.observe_log),
+            "verify": str(run_paths.verify_log),
+        },
+    }
 
     print("AI: starting pipeline")
     print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
-    print(f"Wiring: swd={wiring.get('swd')} reset={wiring.get('reset')} verify={wiring.get('verify')}")
+    print(f"Wiring: swd={wiring_cfg.get('swd')} reset={wiring_cfg.get('reset')} verify={wiring_cfg.get('verify')}")
 
-    timings = {}
+    pre_info = {}
+    with _tee_output(run_paths.preflight_log, output_mode):
+        t0 = time.monotonic()
+        ok_pre, pre_info = preflight.run(probe_cfg)
+        timings["preflight_s"] = round(time.monotonic() - t0, 3)
+    pre_info = pre_info or {}
+    pre_info["timing_s"] = timings.get("preflight_s", 0)
+    _write_json(run_paths.preflight, pre_info)
 
-    t0 = time.monotonic()
-    ok_pre, pre_info = preflight.run(probe_cfg)
-    timings["preflight_s"] = round(time.monotonic() - t0, 3)
     if not ok_pre:
-        status = {"stage": "preflight", "ok": False}
-        _write_meta(meta_path, run_started, status, probe_cfg, board_cfg, wiring, timings, pre_info, "")
+        result["failed_step"] = "preflight"
+        result["error_summary"] = "preflight failed"
         _triage("preflight", pre_info)
-        print(f"Run log saved: {log_path}")
+        _write_json(run_paths.result, result)
+        meta["ended_at"] = datetime.now().isoformat()
+        _write_json(run_paths.meta, meta)
         return 2
+
     print("SWD and network connection verified. Starting task.")
     if not pre_info.get("targets"):
         print("Preflight: warning - no targets reported by probe.")
 
-    t0 = time.monotonic()
-    firmware_path = build_cmake.run(board_cfg)
-    timings["build_s"] = round(time.monotonic() - t0, 3)
+    firmware_path = None
+    with _tee_output(run_paths.build_log, output_mode):
+        t0 = time.monotonic()
+        firmware_path = build_cmake.run(board_cfg)
+        timings["build_s"] = round(time.monotonic() - t0, 3)
+
     if not firmware_path:
-        status = {"stage": "build", "ok": False}
-        _write_meta(meta_path, run_started, status, probe_cfg, board_cfg, wiring, timings, pre_info, "")
+        result["failed_step"] = "build"
+        result["error_summary"] = "build failed"
         _triage("build", pre_info)
-        print(f"Run log saved: {log_path}")
+        _write_json(run_paths.result, result)
+        meta["ended_at"] = datetime.now().isoformat()
+        _write_json(run_paths.meta, meta)
         return 3
 
-    if not args.skip_flash:
-        t0 = time.monotonic()
-        flash_ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path)
-        timings["flash_s"] = round(time.monotonic() - t0, 3)
-        if not flash_ok:
-            status = {"stage": "flash", "ok": False}
-            _write_meta(meta_path, run_started, status, probe_cfg, board_cfg, wiring, timings, pre_info, firmware_path)
-            _triage("flash", pre_info)
-            print(f"Run log saved: {log_path}")
-            return 4
+    if skip_flash:
+        with _tee_output(run_paths.flash_log, output_mode):
+            print("Flash: SKIPPED (user requested skip)")
+        timings["flash_s"] = 0.0
     else:
-        print("Flash: SKIPPED (user will flash via UF2)")
+        with _tee_output(run_paths.flash_log, output_mode):
+            t0 = time.monotonic()
+            flash_ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path)
+            timings["flash_s"] = round(time.monotonic() - t0, 3)
 
-    test_path = os.path.join(os.path.dirname(__file__), "tests", "blink_gpio.json")
-    with open(test_path, "r", encoding="utf-8") as f:
-        test = json.load(f)
+        if not flash_ok:
+            result["failed_step"] = "flash"
+            result["error_summary"] = "flash failed"
+            _triage("flash", pre_info)
+            _write_json(run_paths.result, result)
+            meta["ended_at"] = datetime.now().isoformat()
+            _write_json(run_paths.meta, meta)
+            return 4
 
-    t0 = time.monotonic()
-    ok = observe_gpio_pin.run(
-        probe_cfg,
-        pin=wiring.get("verify"),
-        duration_s=float(test.get("duration_s", 3.0)),
-        expected_hz=float(test.get("expected_hz", 1.0)),
-        min_edges=int(test.get("min_edges", 2)),
-        max_edges=int(test.get("max_edges", 6)),
-    )
-    timings["verify_s"] = round(time.monotonic() - t0, 3)
-    if not ok:
-        status = {"stage": "verify", "ok": False}
-        _write_meta(meta_path, run_started, status, probe_cfg, board_cfg, wiring, timings, pre_info, firmware_path)
-        _triage("verify", pre_info)
-        print(f"Run log saved: {log_path}")
+    capture = {}
+    with _tee_output(run_paths.observe_log, output_mode):
+        t0 = time.monotonic()
+        ok_obs = observe_gpio_pin.run(
+            probe_cfg,
+            pin=wiring_cfg.get("verify"),
+            duration_s=float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0,
+            expected_hz=float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
+            min_edges=int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
+            max_edges=int(test_raw.get("max_edges", 6)) if isinstance(test_raw, dict) else 6,
+            capture_out=capture,
+            verify_edges=False,
+        )
+        timings["observe_s"] = round(time.monotonic() - t0, 3)
+
+    if not ok_obs:
+        result["failed_step"] = "observe"
+        result["error_summary"] = "observe failed"
+        _write_json(run_paths.result, result)
+        meta["ended_at"] = datetime.now().isoformat()
+        _write_json(run_paths.meta, meta)
         return 5
 
-    total_s = round(time.monotonic() - run_started_mono, 3)
-    timings["total_s"] = total_s
+    measure = {}
+    verify_ok = False
+    with _tee_output(run_paths.verify_log, output_mode):
+        t0 = time.monotonic()
+        if capture.get("blob"):
+            measure = la_verify.analyze_capture_bytes(
+                capture.get("blob"),
+                int(capture.get("sample_rate_hz", 0)),
+                int(capture.get("bit", 0)),
+                min_edges=int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
+            )
+            verify_ok = bool(measure.get("ok"))
+            metrics = measure.get("metrics", {})
+            print(
+                "Verify: freq={:.3f}Hz duty={:.3f} jitter_est={:.6f}s".format(
+                    metrics.get("freq_hz", 0.0),
+                    metrics.get("duty", 0.0),
+                    metrics.get("jitter_est", 0.0),
+                )
+            )
+            if not verify_ok:
+                print("Verify: FAIL " + ", ".join(measure.get("reasons", [])))
+        else:
+            measure = {"ok": False, "metrics": {}, "reasons": ["no_capture"]}
+            verify_ok = False
+            print("Verify: FAIL no capture")
+        timings["verify_s"] = round(time.monotonic() - t0, 3)
+
+    _write_json(run_paths.measure, measure)
+
+    if not verify_ok:
+        result["failed_step"] = "verify"
+        result["error_summary"] = "verify failed"
+        _triage("verify", pre_info)
+        _write_json(run_paths.result, result)
+        meta["ended_at"] = datetime.now().isoformat()
+        _write_json(run_paths.meta, meta)
+        return 6
+
+    timings["total_s"] = round(time.monotonic() - run_started_mono, 3)
+
+    artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
 
     print("PASS: Blink verified")
     print(
@@ -312,46 +430,53 @@ def _run_pipeline(args, run_started, run_started_mono, run_id, meta_path, log_pa
         f"preflight={timings.get('preflight_s', 0)}s "
         f"build={timings.get('build_s', 0)}s "
         f"flash={timings.get('flash_s', 0)}s "
+        f"observe={timings.get('observe_s', 0)}s "
         f"verify={timings.get('verify_s', 0)}s "
         f"total={timings.get('total_s', 0)}s"
     )
 
-    status = {"stage": "complete", "ok": True}
-    _write_meta(meta_path, run_started, status, probe_cfg, board_cfg, wiring, timings, pre_info, firmware_path)
-    print(f"Run metadata saved: {meta_path}")
-    print(f"Run log saved: {log_path}")
+    result["ok"] = True
+    result["failed_step"] = ""
+    result["error_summary"] = ""
+    result["artifacts"] = artifacts_copied
+    _write_json(run_paths.result, result)
+
+    meta.update(
+        {
+            "ended_at": datetime.now().isoformat(),
+            "timings": timings,
+            "firmware": {
+                "path": firmware_path,
+                "sha256": _file_sha256(firmware_path) if firmware_path else "",
+            },
+        }
+    )
+    _write_json(run_paths.meta, meta)
+
+    print(f"Run metadata saved: {run_paths.meta}")
+    print(f"Run log saved: {run_paths.build_log}")
     return 0
 
 
-def _write_meta(path, started, status, probe_cfg, board_cfg, wiring, timings, pre_info, firmware_path):
-    meta = {
-        "run_id": started.strftime("%Y%m%d_%H%M%S"),
-        "started_at": started.isoformat(),
-        "status": status,
-        "probe": {
-            "name": probe_cfg.get("name"),
-            "ip": probe_cfg.get("ip"),
-            "gdb_port": probe_cfg.get("gdb_port"),
-            "gdb_cmd": probe_cfg.get("gdb_cmd"),
-        },
-        "board": {
-            "name": board_cfg.get("name"),
-            "target": board_cfg.get("target"),
-        },
-        "wiring": wiring,
-        "preflight": pre_info,
-        "timings": timings,
-        "firmware": {
-            "path": firmware_path,
-            "sha256": _file_sha256(firmware_path) if firmware_path else "",
-        },
-        "git_commit": _git_commit(),
-    }
-    try:
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(meta, f, indent=2, sort_keys=True)
-    except Exception:
-        pass
+def run(args):
+    return run_pipeline(
+        probe_path=args.probe,
+        board_arg=args.board,
+        test_path=args.test,
+        wiring=args.wiring,
+        output_mode=args.output_mode,
+        skip_flash=args.skip_flash,
+    )
+
+
+def run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal"):
+    return run_pipeline(
+        probe_path=probe_path,
+        board_arg=board_id,
+        test_path=test_path,
+        wiring=wiring,
+        output_mode=output_mode,
+    )
 
 
 def main():
@@ -360,6 +485,7 @@ def main():
     run_p = sub.add_parser("run")
     run_p.add_argument("--probe", required=True)
     run_p.add_argument("--board", required=True)
+    run_p.add_argument("--test", required=False, default=os.path.join("tests", "blink_gpio.json"))
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--skip-flash", action="store_true")
     out_group = run_p.add_mutually_exclusive_group()

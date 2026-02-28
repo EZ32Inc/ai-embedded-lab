@@ -3,6 +3,7 @@ import argparse
 import sys
 import time
 from typing import List
+import statistics
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -85,6 +86,63 @@ def edge_counts_all_bits(words: List[int], bits: int = 16) -> List[int]:
     return counts
 
 
+def analyze_samples(words: List[int], sample_rate_hz: int, bit: int, min_edges: int = 2) -> dict:
+    bits = extract_bit(words, bit)
+    edges = count_edges(bits)
+    high = bits.count(1)
+    low = bits.count(0)
+    total = len(bits)
+    window_s = total / float(sample_rate_hz) if sample_rate_hz else 0.0
+
+    freq_hz = 0.0
+    jitter_est = 0.0
+    reasons = []
+
+    if window_s > 0 and edges >= 2:
+        freq_hz = (edges / 2.0) / window_s
+
+    rising = []
+    prev = bits[0] if bits else 0
+    for i, b in enumerate(bits[1:], start=1):
+        if prev == 0 and b == 1:
+            rising.append(i)
+        prev = b
+    if len(rising) >= 3 and sample_rate_hz:
+        periods = [rising[i + 1] - rising[i] for i in range(len(rising) - 1)]
+        if len(periods) >= 2:
+            jitter_est = statistics.pstdev(periods) / float(sample_rate_hz)
+
+    duty = (high / float(total)) if total else 0.0
+    ok = True
+    if edges == 0:
+        ok = False
+        reasons.append("no_edges")
+    elif edges < min_edges:
+        ok = False
+        reasons.append("too_few_edges")
+
+    return {
+        "ok": ok,
+        "metrics": {
+            "freq_hz": freq_hz,
+            "duty": duty,
+            "jitter_est": jitter_est,
+            "edges": edges,
+            "high": high,
+            "low": low,
+            "window_s": window_s,
+            "sample_rate_hz": sample_rate_hz,
+            "bit": bit,
+        },
+        "reasons": reasons,
+    }
+
+
+def analyze_capture_bytes(blob: bytes, sample_rate_hz: int, bit: int, min_edges: int = 2) -> dict:
+    words = parse_samples(blob)
+    return analyze_samples(words, sample_rate_hz, bit, min_edges=min_edges)
+
+
 def configure_la(base_url, auth, verify_ssl, sample_rate, trigger_enabled, trigger_position,
                  trigger_mode_or, capture_internal_test_signal, channels):
     payload = {
@@ -149,6 +207,29 @@ def run(args) -> int:
         print("Warning: SSL verification disabled.")
         _maybe_disable_ssl_warnings(args.verify_ssl, args.suppress_ssl_warnings)
 
+    if args.capture:
+        if not args.sample_rate:
+            print("ERROR: --sample-rate required when using --capture")
+            return 2
+        try:
+            with open(args.capture, "rb") as f:
+                blob = f.read()
+        except Exception as exc:
+            print(f"ERROR: cannot read capture file ({exc})")
+            return 2
+        if len(blob) < 10:
+            print("ERROR: Capture returned too few bytes")
+            return 4
+        result = analyze_capture_bytes(blob, args.sample_rate, args.bit, min_edges=args.min_edges)
+        metrics = result.get("metrics", {})
+        print(f"sampleRate={metrics.get('sample_rate_hz')}Hz window={metrics.get('window_s'):.6f}s")
+        print(f"bit={args.bit} edges={metrics.get('edges')} high={metrics.get('high')} low={metrics.get('low')}")
+        if not result.get("ok"):
+            print("FAIL: " + ", ".join(result.get("reasons", [])))
+            return 7
+        print("PASS: Toggling detected")
+        return 0
+
     channels = ["disabled"] * 16
 
     try:
@@ -204,20 +285,18 @@ def run(args) -> int:
         print("ERROR: --bit must be 0..15")
         return 2
 
-    bits = extract_bit(words, args.bit)
-    edges = count_edges(bits)
-    high = bits.count(1)
-    low = bits.count(0)
+    result = analyze_samples(words, sample_rate, args.bit, min_edges=args.min_edges)
+    metrics = result.get("metrics", {})
 
     print(f"sampleRate={sample_rate}Hz samples={len(words)} window={window_s:.6f}s")
-    print(f"bit={args.bit} edges={edges} high={high} low={low}")
+    print(f"bit={args.bit} edges={metrics.get('edges')} high={metrics.get('high')} low={metrics.get('low')}")
 
-    if edges == 0:
-        print("FAIL: Bit never changes (stuck high/low).")
-        return 6
-    if edges < args.min_edges:
-        print("FAIL: Only 1 edge or too few edges.")
-        print("Hint: lower sample rate or speed up blink.")
+    if not result.get("ok"):
+        if "no_edges" in result.get("reasons", []):
+            print("FAIL: Bit never changes (stuck high/low).")
+        else:
+            print("FAIL: Only 1 edge or too few edges.")
+            print("Hint: lower sample rate or speed up blink.")
         return 7
 
     print("PASS: Toggling detected")
@@ -240,6 +319,7 @@ def main():
     ap.add_argument("--bit", type=int, default=1)
     ap.add_argument("--line", default="", help="PA0..PD3 or P0.1; overrides --bit")
     ap.add_argument("--min-edges", type=int, default=4)
+    ap.add_argument("--capture", default="", help="Path to raw capture data file")
     ap.add_argument("--scan", action="store_true")
     ap.add_argument("--internal-test", action="store_true")
     ap.add_argument("--dry-run", action="store_true")

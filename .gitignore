@@ -5,3 +5,4 @@ artifacts/
 *.pyd
 progress/*.log
 progress/run_*.json
+runs

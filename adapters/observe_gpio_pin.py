@@ -144,7 +144,7 @@ def _bit_from_pin(pin: str) -> int:
     return -1
 
 
-def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges):
+def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out=None, verify_edges=True):
     ip = probe_cfg.get("ip")
     scheme = probe_cfg.get("web_scheme", "https")
     port = int(probe_cfg.get("web_port", 443))
@@ -204,8 +204,20 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges):
     high = bits.count(1)
     window_s = len(words) / float(sample_rate)
 
+    if capture_out is not None:
+        capture_out["blob"] = blob
+        capture_out["sample_rate_hz"] = sample_rate
+        capture_out["bit"] = bit
+        capture_out["window_s"] = window_s
+        capture_out["edges"] = edges
+        capture_out["high"] = high
+        capture_out["low"] = low
+
     print(f"Verify: samples={len(words)} window={window_s:.4f}s edges={edges} high={high} low={low}")
 
+    if not verify_edges:
+        print("Verify: capture OK (edge checks skipped)")
+        return True
     if edges == 0:
         print("Verify: Bit never changes (stuck high/low).")
         counts = _edge_counts_all_bits(words)
