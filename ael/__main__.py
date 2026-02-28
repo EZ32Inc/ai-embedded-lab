@@ -274,10 +274,6 @@ def run_doctor(probe_path, board_path, test_path):
     return 0 if result["ok"] else 1
 
 
-if __name__ == "__main__":
-    main()
-
-
 def _git_describe():
     try:
         res = subprocess.run(
@@ -393,3 +389,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
         f.write("\n".join(report))
 
     return 0 if result["ok"] else 1
+
+
+if __name__ == "__main__":
+    main()
