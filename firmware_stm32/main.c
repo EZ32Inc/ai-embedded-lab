@@ -31,6 +31,7 @@ int main(void) {
     uint32_t div1 = 0;
     uint32_t div2 = 0;
     uint32_t div3 = 0;
+    uint32_t led_div = 0;
     while (1) {
         // Distinct toggle rates for PA4..PA7
         if (++div0 >= 25) { // fastest
@@ -51,7 +52,8 @@ int main(void) {
         }
 
         // Blink PC13 (active low on bluepill) at a slower rate
-        if ((div3 & 0x0CCC) == 0) {
+        if (++led_div >= 16380) { // ~5x slower than previous
+            led_div = 0;
             GPIOC_ODR ^= (1u << 13);
         }
     }
