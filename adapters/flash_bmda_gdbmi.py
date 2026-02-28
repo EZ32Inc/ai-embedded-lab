@@ -36,6 +36,26 @@ def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, t
     return subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
 
 
+def _run_continue(gdb_cmd, ip, port, target_id, timeout_s):
+    args = [
+        gdb_cmd,
+        "-q",
+        "--nx",
+        "--batch",
+        "-ex",
+        f"target extended-remote {ip}:{port}",
+        "-ex",
+        "monitor a",
+        "-ex",
+        f"attach {target_id}",
+        "-ex",
+        "continue",
+        "-ex",
+        "detach",
+    ]
+    return subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
+
+
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not firmware_path or not os.path.exists(firmware_path):
         print("Flash: firmware not found")
@@ -121,6 +141,18 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
             if attempt_ok:
                 ok = True
                 strategy_used = strat.get("name")
+                # If the probe reports a remote failure, try a delayed continue.
+                if "remote failure reply" in out_l or "could not read registers" in out_l:
+                    print("Flash: warning - remote failure reply, retrying continue")
+                    time.sleep(0.5)
+                    try:
+                        res2 = _run_continue(gdb_cmd, ip, port, target_id, timeout_s)
+                        if res2.stdout:
+                            print(res2.stdout.strip())
+                        if res2.stderr:
+                            print(res2.stderr.strip())
+                    except Exception as exc:
+                        print(f"Flash: continue retry error ({exc})")
                 break
             last_error = "flash attempt failed"
         except Exception as exc:
