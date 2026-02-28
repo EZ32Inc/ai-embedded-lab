@@ -9,7 +9,6 @@ board:
     target_id: 1
     gdb_launch_cmds:
       - "file {firmware}"
-      - "enable breakpoint"
       - "monitor a"
       - "attach {target_id}"
       - "load"
