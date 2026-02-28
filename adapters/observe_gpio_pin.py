@@ -21,6 +21,18 @@ SUPPORTED_RATES = [
 ]
 
 
+def _maybe_disable_ssl_warnings(verify_ssl: bool, suppress: bool) -> None:
+    if verify_ssl or not suppress:
+        return
+    try:
+        import urllib3
+        from urllib3.exceptions import InsecureRequestWarning
+
+        urllib3.disable_warnings(InsecureRequestWarning)
+    except Exception:
+        pass
+
+
 def _choose_sample_rate(target_window_s: float, samples_hint: int = 65536) -> int:
     if target_window_s <= 0:
         return 1_000_000
@@ -139,6 +151,7 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges):
     user = probe_cfg.get("web_user", "admin")
     password = probe_cfg.get("web_pass", "admin")
     verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
+    suppress_ssl_warnings = bool(probe_cfg.get("web_suppress_ssl_warnings", False))
     sample_rate = int(probe_cfg.get("la_sample_rate", 0)) or _choose_sample_rate(duration_s)
 
     bit = _bit_from_pin(pin)
@@ -148,6 +161,8 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges):
 
     base_url = f"{scheme}://{ip}:{port}"
     auth = HTTPBasicAuth(user, password)
+
+    _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
     print(f"Verify: LA host={base_url} bit={bit} duration~{duration_s:.2f}s sample_rate={sample_rate}")
 

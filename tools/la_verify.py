@@ -25,6 +25,18 @@ SUPPORTED_RATES = [
 ]
 
 
+def _maybe_disable_ssl_warnings(verify_ssl: bool, suppress: bool) -> None:
+    if verify_ssl or not suppress:
+        return
+    try:
+        import urllib3
+        from urllib3.exceptions import InsecureRequestWarning
+
+        urllib3.disable_warnings(InsecureRequestWarning)
+    except Exception:
+        pass
+
+
 def choose_sample_rate(target_window_s: float, samples_hint: int = 65536) -> int:
     if target_window_s <= 0:
         return 1_000_000
@@ -135,6 +147,7 @@ def run(args) -> int:
 
     if not args.verify_ssl:
         print("Warning: SSL verification disabled.")
+        _maybe_disable_ssl_warnings(args.verify_ssl, args.suppress_ssl_warnings)
 
     channels = ["disabled"] * 16
 
@@ -219,6 +232,7 @@ def main():
     ap.add_argument("--scheme", default="https", choices=["http", "https"])
     ap.add_argument("--port", type=int, default=443)
     ap.add_argument("--verify-ssl", action="store_true", help="Enable SSL certificate verification")
+    ap.add_argument("--suppress-ssl-warnings", action="store_true", help="Hide urllib3 SSL warnings")
     ap.add_argument("--mode", default="instant", choices=["instant", "trigger"]) 
     ap.add_argument("--sample-rate", type=int, default=0)
     ap.add_argument("--window-s", type=float, default=0.2, help="Desired window seconds")

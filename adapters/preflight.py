@@ -7,6 +7,17 @@ import requests
 from requests.auth import HTTPBasicAuth
 
 
+def _maybe_disable_ssl_warnings(verify_ssl: bool, suppress: bool) -> None:
+    if verify_ssl or not suppress:
+        return
+    try:
+        import urllib3
+        from urllib3.exceptions import InsecureRequestWarning
+
+        urllib3.disable_warnings(InsecureRequestWarning)
+    except Exception:
+        pass
+
 def _ping(ip):
     if not ip:
         print("Preflight: missing probe IP")
@@ -105,6 +116,7 @@ def _la_self_test(probe_cfg):
     user = probe_cfg.get("web_user", "admin")
     password = probe_cfg.get("web_pass", "admin")
     verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
+    suppress_ssl_warnings = bool(probe_cfg.get("web_suppress_ssl_warnings", False))
 
     if not ip:
         print("Preflight: LA self-test skipped (missing IP)")
@@ -112,6 +124,7 @@ def _la_self_test(probe_cfg):
 
     base_url = f"{scheme}://{ip}:{port}"
     auth = HTTPBasicAuth(user, password)
+    _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
     try:
         cfg = {
@@ -152,6 +165,7 @@ def _fetch_port_config(probe_cfg):
     user = probe_cfg.get("web_user", "admin")
     password = probe_cfg.get("web_pass", "admin")
     verify_ssl = bool(probe_cfg.get("web_verify_ssl", False))
+    suppress_ssl_warnings = bool(probe_cfg.get("web_suppress_ssl_warnings", False))
 
     if not ip:
         print("Preflight: Port config skipped (missing IP)")
@@ -159,6 +173,7 @@ def _fetch_port_config(probe_cfg):
 
     base_url = f"{scheme}://{ip}:{port}"
     auth = HTTPBasicAuth(user, password)
+    _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
     try:
         # Fetch config JSON used by the UI

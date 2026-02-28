@@ -32,7 +32,7 @@ def run(probe_cfg, firmware_path):
                 "-ex",
                 "attach 1",
                 "-ex",
-                "flash",
+                "load",
                 "-ex",
                 "monitor reset run",
                 "-ex",
@@ -40,7 +40,7 @@ def run(probe_cfg, firmware_path):
             ],
             capture_output=True,
             text=True,
-            timeout=20,
+            timeout=120,
         )
 
         out = (res.stdout or "") + (res.stderr or "")
