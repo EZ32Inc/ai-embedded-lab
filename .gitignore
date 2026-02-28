@@ -3,3 +3,5 @@ artifacts/
 *.pyc
 *.pyo
 *.pyd
+progress/*.log
+progress/run_*.json
