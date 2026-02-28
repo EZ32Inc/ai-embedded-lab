@@ -54,7 +54,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     speed_khz = flash_cfg.get("speed_khz", None)
     reset_strategy = flash_cfg.get("reset_strategy", "")
     timeout_s = int(flash_cfg.get("timeout_s", 120))
-    do_continue = bool(flash_cfg.get("reset_available", True))
+    do_continue = True
 
     attempts = []
     strategies = [
@@ -139,8 +139,6 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         print("Flash: FAIL")
     else:
         print("Flash: OK")
-        if not do_continue:
-            print("Flash: reset line not available. Please press reset on target.")
 
     if flash_json_path:
         payload = {
