@@ -75,6 +75,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     reset_strategy = flash_cfg.get("reset_strategy", "")
     timeout_s = int(flash_cfg.get("timeout_s", 120))
     do_continue = True
+    reset_available = bool(flash_cfg.get("reset_available", True))
 
     attempts = []
     strategies = [
@@ -143,16 +144,19 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 strategy_used = strat.get("name")
                 # If the probe reports a remote failure, try a delayed continue.
                 if "remote failure reply" in out_l or "could not read registers" in out_l:
-                    print("Flash: warning - remote failure reply, retrying continue")
-                    time.sleep(0.5)
-                    try:
-                        res2 = _run_continue(gdb_cmd, ip, port, target_id, timeout_s)
-                        if res2.stdout:
-                            print(res2.stdout.strip())
-                        if res2.stderr:
-                            print(res2.stderr.strip())
-                    except Exception as exc:
-                        print(f"Flash: continue retry error ({exc})")
+                    if reset_available:
+                        print("Flash: warning - remote failure reply, retrying continue")
+                        time.sleep(0.5)
+                        try:
+                            res2 = _run_continue(gdb_cmd, ip, port, target_id, timeout_s)
+                            if res2.stdout:
+                                print(res2.stdout.strip())
+                            if res2.stderr:
+                                print(res2.stderr.strip())
+                        except Exception as exc:
+                            print(f"Flash: continue retry error ({exc})")
+                    else:
+                        print("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
                 break
             last_error = "flash attempt failed"
         except Exception as exc:

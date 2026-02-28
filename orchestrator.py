@@ -354,6 +354,9 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
 
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
     reset_unwired = wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA")
+    if reset_unwired:
+        flash_cfg = dict(flash_cfg)
+        flash_cfg["reset_available"] = False
     if skip_flash:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")
@@ -467,7 +470,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         result["error_summary"] = "verify failed"
         _triage("verify", pre_info)
         if reset_unwired:
-            print("Hint: reset line not wired. Press reset on target and rerun verify.")
+            print("Hint: reset line not wired. Power-cycle target and rerun verify.")
         _write_json(run_paths.result, result)
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
