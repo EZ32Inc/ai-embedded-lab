@@ -329,7 +329,9 @@ def main():
         p = args.line.strip().upper()
         if len(p) == 3 and p[0] == "P" and p[1] in ("A", "B", "C", "D") and p[2].isdigit():
             idx = int(p[2])
-            if 0 <= idx <= 3:
+            if p[1] == "A" and 0 <= idx <= 7:
+                args.bit = idx
+            elif 0 <= idx <= 3:
                 base = {"A": 0, "B": 4, "C": 8, "D": 12}[p[1]]
                 args.bit = base + idx
         elif "." in p and p.split(".")[-1].isdigit():

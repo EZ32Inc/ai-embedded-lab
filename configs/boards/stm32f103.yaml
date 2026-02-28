@@ -8,11 +8,11 @@ board:
     reset_strategy: connect_under_reset
     target_id: 1
   observe_map:
-    sig: PA0
-    pa4: PA0
-    pa5: PA1
-    pa6: PA2
-    pa7: PA3
+    sig: P0.0
+    pa4: P0.0
+    pa5: P0.1
+    pa6: P0.2
+    pa7: P0.3
   safe_pins:
     - PA4
     - PA5
@@ -22,4 +22,4 @@ board:
   default_wiring:
     swd: "P3"
     reset: "NC"
-    verify: "PA0"
+    verify: "P0.0"
