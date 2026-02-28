@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from adapters import preflight, build_cmake, flash_bmda_gdbmi, observe_gpio_pin
+from adapters import preflight, build_cmake, build_stm32, flash_bmda_gdbmi, observe_gpio_pin
 from ael import run_manager
 from tools import la_verify
 
@@ -336,7 +336,11 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
     firmware_path = None
     with _tee_output(run_paths.build_log, output_mode):
         t0 = time.monotonic()
-        firmware_path = build_cmake.run(board_cfg)
+        target = board_cfg.get("target", "")
+        if target.startswith("stm32"):
+            firmware_path = build_stm32.run(board_cfg)
+        else:
+            firmware_path = build_cmake.run(board_cfg)
         timings["build_s"] = round(time.monotonic() - t0, 3)
 
     if not firmware_path:
