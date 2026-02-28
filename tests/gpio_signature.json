@@ -1,7 +1,7 @@
 {
   "name": "gpio_signature",
   "pin": "sig",
-  "min_freq_hz": 500.0,
+  "min_freq_hz": 200.0,
   "max_freq_hz": 100000.0,
   "duty_min": 0.4,
   "duty_max": 0.6,
