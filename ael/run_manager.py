@@ -16,11 +16,13 @@ class RunPaths:
     preflight_log: Path
     build_log: Path
     flash_log: Path
+    flash_json: Path
     observe_log: Path
     verify_log: Path
     measure: Path
     result: Path
     artifacts_dir: Path
+    doctor_log: Path
 
 
 class Tee:
@@ -106,11 +108,13 @@ def create_run(board_id: str, test_path: str, repo_root: str) -> RunPaths:
         preflight_log=root / "preflight.log",
         build_log=root / "build.log",
         flash_log=root / "flash.log",
+        flash_json=root / "flash.json",
         observe_log=root / "observe.log",
         verify_log=root / "verify.log",
         measure=root / "measure.json",
         result=root / "result.json",
         artifacts_dir=artifacts_dir,
+        doctor_log=root / "doctor.log",
     )
 
 

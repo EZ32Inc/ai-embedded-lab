@@ -1,8 +1,39 @@
+import json
 import os
 import subprocess
+import time
 
 
-def run(probe_cfg, firmware_path):
+def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s):
+    args = [
+        gdb_cmd,
+        "-q",
+        "--nx",
+        "--batch",
+        "-ex",
+        f"target extended-remote {ip}:{port}",
+    ]
+    for cmd in pre_cmds:
+        args.extend(["-ex", cmd])
+    args.extend(
+        [
+            "-ex",
+            "monitor a",
+            "-ex",
+            f"file {firmware_path}",
+            "-ex",
+            f"attach {target_id}",
+            "-ex",
+            "load",
+        ]
+    )
+    for cmd in post_cmds:
+        args.extend(["-ex", cmd])
+    args.extend(["-ex", "monitor reset run", "-ex", "detach"])
+    return subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
+
+
+def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not firmware_path or not os.path.exists(firmware_path):
         print("Flash: firmware not found")
         return False
@@ -15,44 +46,109 @@ def run(probe_cfg, firmware_path):
         print("Flash: gdb_cmd not set")
         return False
 
-    print("Flash: BMDA via GDB")
-    try:
-        res = subprocess.run(
-            [
+    flash_cfg = flash_cfg or {}
+    target_id = flash_cfg.get("target_id", 1)
+    speed_khz = flash_cfg.get("speed_khz", None)
+    reset_strategy = flash_cfg.get("reset_strategy", "")
+    timeout_s = int(flash_cfg.get("timeout_s", 120))
+
+    attempts = []
+    strategies = [
+        {
+            "name": "normal",
+            "pre": [],
+            "post": [],
+        },
+        {
+            "name": "connect_under_reset",
+            "pre": ["monitor connect_srst enable", "monitor reset halt"],
+            "post": ["monitor connect_srst disable"],
+        },
+        {
+            "name": "reduced_speed",
+            "pre": ([f"monitor swd_freq {int(speed_khz)}"] if speed_khz else []),
+            "post": [],
+        },
+        {
+            "name": "reconnect",
+            "pre": ["monitor reconnect"],
+            "post": [],
+        },
+    ]
+
+    if reset_strategy and reset_strategy != "connect_under_reset":
+        # If a custom reset strategy is set, only include it as attempt 2.
+        strategies[1]["name"] = reset_strategy
+
+    print("Flash: BMDA via GDB (resilience ladder)")
+    ok = False
+    strategy_used = ""
+    last_error = ""
+
+    for idx, strat in enumerate(strategies, start=1):
+        try:
+            res = _run_gdb(
                 gdb_cmd,
-                "-q",
-                "--nx",
-                "--batch",
-                "-ex",
-                f"target extended-remote {ip}:{port}",
-                "-ex",
-                "monitor a",
-                "-ex",
-                f"file {firmware_path}",
-                "-ex",
-                "attach 1",
-                "-ex",
-                "load",
-                "-ex",
-                "monitor reset run",
-                "-ex",
-                "detach",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=120,
-        )
+                ip,
+                port,
+                firmware_path,
+                target_id,
+                strat.get("pre", []),
+                strat.get("post", []),
+                timeout_s,
+            )
+            out = (res.stdout or "") + (res.stderr or "")
+            out_l = out.lower()
+            attempt_ok = res.returncode == 0 and "failed" not in out_l
+            attempts.append(
+                {
+                    "attempt": idx,
+                    "strategy": strat.get("name"),
+                    "ok": attempt_ok,
+                    "returncode": res.returncode,
+                }
+            )
+            print(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
+            if res.stdout:
+                print(res.stdout.strip())
+            if res.stderr:
+                print(res.stderr.strip())
+            if attempt_ok:
+                ok = True
+                strategy_used = strat.get("name")
+                break
+            last_error = "flash attempt failed"
+        except Exception as exc:
+            attempts.append(
+                {
+                    "attempt": idx,
+                    "strategy": strat.get("name"),
+                    "ok": False,
+                    "error": str(exc),
+                }
+            )
+            last_error = str(exc)
+        time.sleep(0.2)
 
-        out = (res.stdout or "") + (res.stderr or "")
-        out_l = out.lower()
-        ok = res.returncode == 0 and "failed" not in out_l
+    if not ok:
+        print("Flash: FAIL")
+    else:
+        print("Flash: OK")
 
-        print("Flash: " + ("OK" if ok else "FAIL"))
-        if res.stdout:
-            print(res.stdout.strip())
-        if res.stderr:
-            print(res.stderr.strip())
-        return ok
-    except Exception as exc:
-        print(f"Flash: error ({exc})")
-        return False
+    if flash_json_path:
+        payload = {
+            "ok": ok,
+            "attempts": attempts,
+            "strategy_used": strategy_used,
+            "speed_khz": speed_khz,
+            "target_id": target_id,
+            "reset_strategy": reset_strategy,
+            "error_summary": last_error,
+        }
+        try:
+            with open(flash_json_path, "w", encoding="utf-8") as f:
+                json.dump(payload, f, indent=2, sort_keys=True)
+        except Exception:
+            pass
+
+    return ok

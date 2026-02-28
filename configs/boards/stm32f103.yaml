@@ -1,0 +1,23 @@
+board:
+  name: STM32F103
+  target: stm32f103
+  firmware:
+    description: GPIO signature test
+  flash:
+    speed_khz: 1000
+    reset_strategy: connect_under_reset
+    target_id: 1
+  observe_map:
+    sig: PA0
+    square: PA1
+    burst: PA2
+  safe_pins:
+    - PA0
+    - PA1
+    - PA2
+    - PB0
+    - PB1
+  default_wiring:
+    swd: "P3"
+    reset: "P2.0"
+    verify: "PA0"

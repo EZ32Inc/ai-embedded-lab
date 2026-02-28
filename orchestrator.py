@@ -254,6 +254,7 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         Path(p).write_text("")
     _write_json(run_paths.measure, {"ok": False, "metrics": {}, "reasons": ["not_run"]})
     _write_json(run_paths.result, {"ok": False, "failed_step": "", "error_summary": ""})
+    _write_json(run_paths.flash_json, {"ok": False, "attempts": [], "strategy_used": "", "speed_khz": None})
 
     probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
     board_raw = _simple_yaml_load(board_path) if board_path else {}
@@ -294,6 +295,14 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
             "flash": str(run_paths.flash_log),
             "observe": str(run_paths.observe_log),
             "verify": str(run_paths.verify_log),
+        },
+        "artifacts": [],
+        "json": {
+            "flash": str(run_paths.flash_json),
+            "measure": str(run_paths.measure),
+            "preflight": str(run_paths.preflight),
+            "meta": str(run_paths.meta),
+            "config_effective": str(run_paths.config_effective),
         },
     }
 
@@ -339,14 +348,24 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
         _write_json(run_paths.meta, meta)
         return 3
 
+    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
     if skip_flash:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")
+        _write_json(
+            run_paths.flash_json,
+            {"ok": False, "attempts": [], "strategy_used": "skipped", "speed_khz": flash_cfg.get("speed_khz")},
+        )
         timings["flash_s"] = 0.0
     else:
         with _tee_output(run_paths.flash_log, output_mode):
             t0 = time.monotonic()
-            flash_ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path)
+            flash_ok = flash_bmda_gdbmi.run(
+                probe_cfg,
+                firmware_path,
+                flash_cfg=flash_cfg,
+                flash_json_path=str(run_paths.flash_json),
+            )
             timings["flash_s"] = round(time.monotonic() - t0, 3)
 
         if not flash_ok:
@@ -359,11 +378,19 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
             return 4
 
     capture = {}
+    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
+    test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
+    pin_value = test_pin
+    if test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
+        pin_value = observe_map.get(test_pin)
+    if not pin_value:
+        pin_value = wiring_cfg.get("verify")
+
     with _tee_output(run_paths.observe_log, output_mode):
         t0 = time.monotonic()
         ok_obs = observe_gpio_pin.run(
             probe_cfg,
-            pin=wiring_cfg.get("verify"),
+            pin=pin_value,
             duration_s=float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0,
             expected_hz=float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
             min_edges=int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
@@ -401,6 +428,25 @@ def run_pipeline(probe_path, board_arg, test_path, wiring, output_mode="normal",
                     metrics.get("jitter_est", 0.0),
                 )
             )
+            if isinstance(test_raw, dict):
+                min_f = test_raw.get("min_freq_hz")
+                max_f = test_raw.get("max_freq_hz")
+                duty_min = test_raw.get("duty_min")
+                duty_max = test_raw.get("duty_max")
+                if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
+                    measure.setdefault("reasons", []).append("freq_below_min")
+                    verify_ok = False
+                if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
+                    measure.setdefault("reasons", []).append("freq_above_max")
+                    verify_ok = False
+                if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
+                    measure.setdefault("reasons", []).append("duty_below_min")
+                    verify_ok = False
+                if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
+                    measure.setdefault("reasons", []).append("duty_above_max")
+                    verify_ok = False
+
+            measure["ok"] = bool(verify_ok)
             if not verify_ok:
                 print("Verify: FAIL " + ", ".join(measure.get("reasons", [])))
         else:
