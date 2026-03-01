@@ -58,9 +58,6 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "run":
-        if not args.test and not args.pack:
-            print("Provide --test or --pack (or use --dut with defaults).")
-            sys.exit(2)
         if args.verbose:
             output_mode = "verbose"
         elif args.quiet:
@@ -119,6 +116,9 @@ def main():
                     verify_only=False,
                 )
                 sys.exit(code)
+        if not test_path and not pack_path:
+            print("Provide --test or --pack (or use --dut with defaults).")
+            sys.exit(2)
         code = run_cli(
             probe_path=args.probe,
             board_id=board_id,
