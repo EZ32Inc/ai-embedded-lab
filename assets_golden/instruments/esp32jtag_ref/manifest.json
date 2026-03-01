@@ -1,0 +1,100 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "id": "esp32jtag_ref_01",
+  "kind": "instrument",
+  "vendor": "YourCompany",
+  "model": "ESP32JTAG",
+  "serial": "EJTG-001234",
+  "firmware": { "version": "2.0.0-rc2", "git": "5cbadd24d" },
+
+  "identity": {
+    "preferred_name": "benchA-esp32jtag",
+    "usb": { "vid": "0x303A", "pid": "0x1001", "serial": "EJTG-001234" },
+    "network": { "mac": "AA:BB:CC:DD:EE:FF" }
+  },
+
+  "transports": [
+    {
+      "type": "serial",
+      "endpoint_hint": "/dev/ttyACM*",
+      "baud_default": 115200,
+      "protocol": "ael-rpc-serial-v0.1"
+    },
+    {
+      "type": "tcp",
+      "endpoint_hint": "192.168.1.50:9000",
+      "protocol": "ael-rpc-tcp-v0.1",
+      "mdns": { "service": "_ael._tcp", "name_hint": "esp32jtag" }
+    }
+  ],
+
+  "capabilities": [
+    {
+      "name": "debug.swd",
+      "version": "v0.1",
+      "exclusive": true,
+      "params": {
+        "target_voltage_v": { "min": 1.2, "max": 3.6, "default": 3.3 },
+        "max_swd_khz": { "max": 4000, "default": 1000 }
+      }
+    },
+    {
+      "name": "observe.logic",
+      "version": "v0.1",
+      "exclusive": true,
+      "channels": 8,
+      "params": {
+        "sample_rate_hz": { "min": 1000, "max": 20000000, "default": 5000000 },
+        "threshold_v": { "min": 0.5, "max": 3.3, "default": 1.6 },
+        "capture_ms": { "min": 1, "max": 2000, "default": 50 }
+      },
+      "limits": {
+        "input_voltage_v": { "min": -0.3, "max": 3.6 },
+        "max_toggle_hz_recommended": 5000000
+      },
+      "outputs": [
+        { "type": "edges", "format": "json", "path_hint": "measure.json" },
+        { "type": "samples", "format": "bin+json", "path_hint": "capture.bin" }
+      ]
+    },
+    {
+      "name": "observe.uart",
+      "version": "v0.1",
+      "exclusive": false,
+      "params": {
+        "baud": { "min": 1200, "max": 2000000, "default": 115200 },
+        "duration_s": { "min": 1, "max": 120, "default": 6 }
+      }
+    },
+    {
+      "name": "power.switch",
+      "version": "v0.1",
+      "exclusive": true,
+      "params": {
+        "supports_power_cycle": true,
+        "min_off_ms": 50,
+        "max_current_a": 0.8
+      }
+    }
+  ],
+
+  "safety": {
+    "hotplug_allowed": false,
+    "notes": [
+      "Common ground required between instrument and DUT.",
+      "Do not exceed 3.6V on logic inputs."
+    ]
+  },
+
+  "docs": {
+    "human": [
+      { "title": "ESP32JTAG Quick Start", "url": "https://example.com/esp32jtag/quickstart" }
+    ],
+    "ai": [
+      { "title": "AEL usage notes for ESP32JTAG", "path": "assets_golden/instruments/esp32jtag_ref/docs_ai.md" }
+    ],
+    "examples": [
+      { "title": "Capture 4 GPIO freqs", "path": "assets_golden/instruments/esp32jtag_ref/examples/capture_gpio_freq.json" }
+    ]
+  }
+}

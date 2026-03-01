@@ -1,0 +1,43 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "id": "rp2040_gpio_meter_01",
+  "kind": "instrument",
+  "vendor": "Community",
+  "model": "RP2040 GPIO Meter",
+  "serial": "R2-METER-0001",
+  "firmware": { "version": "0.1.0" },
+
+  "identity": {
+    "usb": { "vid": "0x2E8A", "pid": "0x000A", "serial": "R2-METER-0001" }
+  },
+
+  "transports": [
+    { "type": "serial", "endpoint_hint": "/dev/ttyACM*", "baud_default": 115200, "protocol": "line-json-v0.1" }
+  ],
+
+  "capabilities": [
+    {
+      "name": "measure.freq",
+      "version": "v0.1",
+      "exclusive": true,
+      "channels": 4,
+      "params": {
+        "duration_ms": { "min": 10, "max": 2000, "default": 200 }
+      },
+      "outputs": [
+        { "type": "measurement", "format": "jsonline", "path_hint": "instrument_measure.json" }
+      ]
+    }
+  ],
+
+  "safety": {
+    "hotplug_allowed": true,
+    "notes": [ "3.3V logic only." ]
+  },
+
+  "docs": {
+    "ai": [
+      { "title": "Command protocol", "path": "assets_golden/instruments/rp2040_gpio_meter/docs_ai.md" }
+    ]
+  }
+}
