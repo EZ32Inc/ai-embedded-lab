@@ -7,3 +7,6 @@ progress/*.log
 progress/run_*.json
 pack_runs/
 runs
+firmware_esp32s3/build/
+firmware_esp32s3/sdkconfig
+firmware_esp32s3/sdkconfig.old

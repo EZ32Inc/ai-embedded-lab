@@ -411,6 +411,11 @@ def run_pipeline(
                 if board_cfg.get("build", {}):
                     flash_cfg = dict(flash_cfg)
                     flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
+                target = board_cfg.get("target")
+                if target:
+                    flash_cfg = dict(flash_cfg)
+                    flash_cfg["target"] = target
+                    flash_cfg["build_dir"] = os.path.join(repo_root, "artifacts", f"build_{target}")
                 flash_ok = flash_idf.run(
                     probe_cfg,
                     firmware_path,

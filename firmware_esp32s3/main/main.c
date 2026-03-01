@@ -1,7 +1,10 @@
 #include <stdio.h>
+#include <stdint.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
+#include "esp_timer.h"
+#include "esp_task_wdt.h"
 
 #ifndef AEL_GPIO_BASE
 #define AEL_GPIO_BASE 4
@@ -11,8 +14,12 @@
 #define AEL_LED_GPIO 48
 #endif
 
-#ifndef AEL_TOGGLE_DIV
-#define AEL_TOGGLE_DIV 50
+#ifndef AEL_BASE_FREQ_HZ
+#define AEL_BASE_FREQ_HZ 50000
+#endif
+
+#ifndef AEL_LED_BLINK_HZ
+#define AEL_LED_BLINK_HZ 1
 #endif
 
 static void gpio_init_out(gpio_num_t pin) {
@@ -27,6 +34,7 @@ static void gpio_init_out(gpio_num_t pin) {
 }
 
 void app_main(void) {
+    esp_task_wdt_deinit();
     const gpio_num_t pins[4] = {
         (gpio_num_t)(AEL_GPIO_BASE + 0),
         (gpio_num_t)(AEL_GPIO_BASE + 1),
@@ -36,35 +44,60 @@ void app_main(void) {
 
     for (int i = 0; i < 4; i++) {
         gpio_init_out(pins[i]);
+        gpio_set_level(pins[i], 0);
     }
     gpio_init_out((gpio_num_t)AEL_LED_GPIO);
+    gpio_set_level((gpio_num_t)AEL_LED_GPIO, 0);
 
     printf("AEL_READY ESP32S3\n");
 
-    uint32_t div0 = 0, div1 = 0, div2 = 0, div3 = 0;
-    uint32_t led_div = 0;
+    const int64_t base_period_us = 1000000LL / (2 * (int64_t)AEL_BASE_FREQ_HZ);
+    const int64_t led_period_us = 1000000LL / (2 * (int64_t)AEL_LED_BLINK_HZ);
+    int64_t now = esp_timer_get_time();
+    int64_t next0 = now + base_period_us;
+    int64_t next1 = now + base_period_us * 2;
+    int64_t next2 = now + base_period_us * 3;
+    int64_t next3 = now + base_period_us * 4;
+    int64_t next_led = now + led_period_us;
+    int64_t last_yield = now;
+    uint8_t state0 = 0;
+    uint8_t state1 = 0;
+    uint8_t state2 = 0;
+    uint8_t state3 = 0;
+    uint8_t led_state = 0;
 
     while (1) {
-        if (++div0 >= AEL_TOGGLE_DIV) {
-            div0 = 0;
-            gpio_set_level(pins[0], !gpio_get_level(pins[0]));
+        now = esp_timer_get_time();
+        if (now >= next0) {
+            next0 += base_period_us;
+            state0 ^= 1;
+            gpio_set_level(pins[0], state0);
         }
-        if (++div1 >= AEL_TOGGLE_DIV * 2) {
-            div1 = 0;
-            gpio_set_level(pins[1], !gpio_get_level(pins[1]));
+        if (now >= next1) {
+            next1 += base_period_us * 2;
+            state1 ^= 1;
+            gpio_set_level(pins[1], state1);
         }
-        if (++div2 >= AEL_TOGGLE_DIV * 3) {
-            div2 = 0;
-            gpio_set_level(pins[2], !gpio_get_level(pins[2]));
+        if (now >= next2) {
+            next2 += base_period_us * 3;
+            state2 ^= 1;
+            gpio_set_level(pins[2], state2);
         }
-        if (++div3 >= AEL_TOGGLE_DIV * 4) {
-            div3 = 0;
-            gpio_set_level(pins[3], !gpio_get_level(pins[3]));
+        if (now >= next3) {
+            next3 += base_period_us * 4;
+            state3 ^= 1;
+            gpio_set_level(pins[3], state3);
         }
 
-        if (++led_div >= AEL_TOGGLE_DIV * 400) {
-            led_div = 0;
-            gpio_set_level((gpio_num_t)AEL_LED_GPIO, !gpio_get_level((gpio_num_t)AEL_LED_GPIO));
+        if (now >= next_led) {
+            next_led += led_period_us;
+            led_state ^= 1;
+            gpio_set_level((gpio_num_t)AEL_LED_GPIO, led_state);
+        }
+
+        if (now - last_yield >= 5000) {
+            last_yield = now;
+            taskYIELD();
         }
     }
 }

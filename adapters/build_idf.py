@@ -11,6 +11,7 @@ def run(board_cfg):
     name = board_cfg.get("name", "unknown")
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
     project_dir = build_cfg.get("project_dir")
+    target = build_cfg.get("target") or board_cfg.get("target")
     print(f"Build: target {name}")
 
     if not _idf_ok():
@@ -27,11 +28,26 @@ def run(board_cfg):
     os.makedirs(build_dir, exist_ok=True)
 
     try:
+        env = os.environ.copy()
+        if target:
+            env["IDF_TARGET"] = str(target)
+            res = subprocess.run(
+                ["idf.py", "-C", proj, "-B", build_dir, "set-target", str(target)],
+                check=True,
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+            if res.stdout:
+                print(res.stdout.strip())
+            if res.stderr:
+                print(res.stderr.strip())
         res = subprocess.run(
             ["idf.py", "-C", proj, "-B", build_dir, "build"],
             check=True,
             capture_output=True,
             text=True,
+            env=env,
         )
         if res.stdout:
             print(res.stdout.strip())
