@@ -8,5 +8,15 @@
   "duty_min": 0.4,
   "duty_max": 0.6,
   "min_edges": 2,
-  "max_edges": 20000
+  "max_edges": 20000,
+  "observe_uart": {
+    "enabled": true,
+    "port": null,
+    "baud": 115200,
+    "duration_s": 6,
+    "profile": "espidf",
+    "expect_patterns": [
+      "AEL_READY ESP32S3"
+    ]
+  }
 }
