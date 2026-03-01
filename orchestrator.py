@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from adapters import preflight, build_cmake, build_stm32, flash_bmda_gdbmi, observe_gpio_pin
+from adapters import preflight, build_cmake, build_stm32, build_idf, flash_bmda_gdbmi, flash_idf, observe_gpio_pin
 from ael import run_manager
 from tools import la_verify
 
@@ -368,7 +368,11 @@ def run_pipeline(
         with _tee_output(run_paths.build_log, output_mode):
             t0 = time.monotonic()
             target = board_cfg.get("target", "")
-            if target.startswith("stm32"):
+            build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
+            build_type = build_cfg.get("type", "")
+            if build_type == "idf":
+                firmware_path = build_idf.run(board_cfg)
+            elif target.startswith("stm32"):
                 firmware_path = build_stm32.run(board_cfg)
             else:
                 firmware_path = build_cmake.run(board_cfg)
@@ -401,12 +405,25 @@ def run_pipeline(
     else:
         with _tee_output(run_paths.flash_log, output_mode):
             t0 = time.monotonic()
-            flash_ok = flash_bmda_gdbmi.run(
-                probe_cfg,
-                firmware_path,
-                flash_cfg=flash_cfg,
-                flash_json_path=str(run_paths.flash_json),
-            )
+            method = flash_cfg.get("method", "")
+            if method == "idf_esptool":
+                # pass project_dir for IDF flash
+                if board_cfg.get("build", {}):
+                    flash_cfg = dict(flash_cfg)
+                    flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
+                flash_ok = flash_idf.run(
+                    probe_cfg,
+                    firmware_path,
+                    flash_cfg=flash_cfg,
+                    flash_json_path=str(run_paths.flash_json),
+                )
+            else:
+                flash_ok = flash_bmda_gdbmi.run(
+                    probe_cfg,
+                    firmware_path,
+                    flash_cfg=flash_cfg,
+                    flash_json_path=str(run_paths.flash_json),
+                )
             timings["flash_s"] = round(time.monotonic() - t0, 3)
 
         if not flash_ok:
@@ -426,6 +443,11 @@ def run_pipeline(
         pin_value = observe_map.get(test_pin)
     if not pin_value:
         pin_value = wiring_cfg.get("verify")
+
+    if isinstance(test_raw, dict) and test_raw.get("sample_rate_hz"):
+        probe_cfg["la_sample_rate"] = int(test_raw.get("sample_rate_hz"))
+    if isinstance(test_raw, dict) and test_raw.get("duration_ms") and not test_raw.get("duration_s"):
+        test_raw["duration_s"] = float(test_raw.get("duration_ms")) / 1000.0
 
     with _tee_output(run_paths.observe_log, output_mode):
         t0 = time.monotonic()

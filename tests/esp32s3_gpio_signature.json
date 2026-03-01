@@ -1,0 +1,12 @@
+{
+  "name": "esp32s3_gpio_signature",
+  "pin": "sig",
+  "sample_rate_hz": 260000,
+  "duration_ms": 1000,
+  "min_freq_hz": 200.0,
+  "max_freq_hz": 200000.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000
+}
