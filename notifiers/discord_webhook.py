@@ -91,8 +91,12 @@ def notify(event: dict, cfg: dict) -> None:
             [
                 "curl",
                 "-sS",
+                "-w",
+                "%{http_code}",
                 "-H",
                 "Content-Type: application/json",
+                "-H",
+                "User-Agent: AEL/1.0",
                 "--data",
                 data,
                 webhook_url,
@@ -103,6 +107,8 @@ def notify(event: dict, cfg: dict) -> None:
         )
         if res.returncode != 0:
             raise RuntimeError(res.stderr.strip() or "curl failed")
+        if res.stdout and res.stdout.strip() not in ("200", "204"):
+            raise RuntimeError(f"discord http {res.stdout.strip()}")
     except Exception as exc:  # pragma: no cover - network dependent
         ts = datetime.now().isoformat()
         print(f"Notify: Discord webhook failed at {ts}: {exc}")
