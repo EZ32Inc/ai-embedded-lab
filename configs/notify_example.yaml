@@ -1,0 +1,10 @@
+notify:
+  discord:
+    enabled: true
+    webhook_url: "https://discord.com/api/webhooks/..."
+    notify_on:
+      - run_failed
+      - need_input
+    include_success: false
+    mention: ""
+    max_log_lines: 20

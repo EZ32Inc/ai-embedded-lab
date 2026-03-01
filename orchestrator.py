@@ -9,6 +9,7 @@ from pathlib import Path
 from contextlib import contextmanager
 
 from adapters import preflight, build_cmake, build_stm32, build_idf, flash_bmda_gdbmi, flash_idf, observe_gpio_pin, observe_uart_log
+from notifiers import discord_webhook
 from ael import run_manager
 from tools import la_verify
 
@@ -223,6 +224,15 @@ def _triage(stage, pre_info):
         return
 
 
+def _emit_event(event, notify_cfg):
+    if not isinstance(notify_cfg, dict):
+        return
+    try:
+        discord_webhook.notify(event, notify_cfg)
+    except Exception as exc:
+        print(f"Notify: error {exc}")
+
+
 def _resolve_board_path(repo_root, board_arg):
     if not board_arg:
         return None, None
@@ -285,6 +295,7 @@ def run_pipeline(
 
     effective = _deep_merge(_deep_merge(probe_raw, board_raw), test_raw)
     _write_json(run_paths.config_effective, effective)
+    notify_cfg = effective.get("notify", {}) if isinstance(effective, dict) else {}
 
     run_started = datetime.now()
     run_started_mono = time.monotonic()
@@ -338,6 +349,27 @@ def run_pipeline(
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
     print(f"Wiring: swd={wiring_cfg.get('swd')} reset={wiring_cfg.get('reset')} verify={wiring_cfg.get('verify')}")
 
+    _emit_event(
+        {
+            "type": "run_started",
+            "severity": "info",
+            "run_id": run_paths.run_id,
+            "dut": board_id or board_cfg.get("name", "unknown"),
+            "bench": None,
+            "summary": "run started",
+            "artifacts_path": str(run_paths.root),
+            "timestamp": run_started.isoformat(),
+            "log_paths": {
+                "build": str(run_paths.build_log),
+                "flash": str(run_paths.flash_log),
+                "observe": str(run_paths.observe_log),
+                "verify": str(run_paths.verify_log),
+                "uart": str(run_paths.observe_uart_log),
+            },
+        },
+        notify_cfg,
+    )
+
     pre_info = {}
     with _tee_output(run_paths.preflight_log, output_mode):
         t0 = time.monotonic()
@@ -352,6 +384,22 @@ def run_pipeline(
         result["error_summary"] = "preflight failed"
         _triage("preflight", pre_info)
         _write_json(run_paths.result, result)
+        _emit_event(
+            {
+                "type": "run_failed",
+                "severity": "error",
+                "run_id": run_paths.run_id,
+                "dut": board_id or board_cfg.get("name", "unknown"),
+                "bench": None,
+                "step": "preflight",
+                "summary": "preflight failed",
+                "details": "probe or LA not reachable",
+                "artifacts_path": str(run_paths.root),
+                "timestamp": datetime.now().isoformat(),
+                "log_paths": {"preflight": str(run_paths.preflight_log)},
+            },
+            notify_cfg,
+        )
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
         return (2, run_paths) if return_paths else 2
@@ -393,6 +441,22 @@ def run_pipeline(
         result["error_summary"] = "build failed"
         _triage("build", pre_info)
         _write_json(run_paths.result, result)
+        _emit_event(
+            {
+                "type": "run_failed",
+                "severity": "error",
+                "run_id": run_paths.run_id,
+                "dut": board_id or board_cfg.get("name", "unknown"),
+                "bench": None,
+                "step": "build",
+                "summary": "build failed",
+                "details": result.get("error_summary"),
+                "artifacts_path": str(run_paths.root),
+                "timestamp": datetime.now().isoformat(),
+                "log_paths": {"build": str(run_paths.build_log)},
+            },
+            notify_cfg,
+        )
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
         return (3, run_paths) if return_paths else 3
@@ -446,6 +510,22 @@ def run_pipeline(
             result["error_summary"] = "flash failed"
             _triage("flash", pre_info)
             _write_json(run_paths.result, result)
+            _emit_event(
+                {
+                    "type": "run_failed",
+                    "severity": "error",
+                    "run_id": run_paths.run_id,
+                    "dut": board_id or board_cfg.get("name", "unknown"),
+                    "bench": None,
+                    "step": "flash",
+                    "summary": "flash failed",
+                    "details": result.get("error_summary"),
+                    "artifacts_path": str(run_paths.root),
+                    "timestamp": datetime.now().isoformat(),
+                    "log_paths": {"flash": str(run_paths.flash_log)},
+                },
+                notify_cfg,
+            )
             meta["ended_at"] = datetime.now().isoformat()
             _write_json(run_paths.meta, meta)
             return (4, run_paths) if return_paths else 4
@@ -473,6 +553,22 @@ def run_pipeline(
             result["error_summary"] = uart_result.get("error_summary") or "uart observe failed"
             _triage("observe_uart", pre_info)
             _write_json(run_paths.result, result)
+            _emit_event(
+                {
+                    "type": "run_failed",
+                    "severity": "error",
+                    "run_id": run_paths.run_id,
+                    "dut": board_id or board_cfg.get("name", "unknown"),
+                    "bench": None,
+                    "step": "observe_uart",
+                    "summary": result.get("error_summary"),
+                    "details": "",
+                    "artifacts_path": str(run_paths.root),
+                    "timestamp": datetime.now().isoformat(),
+                    "log_paths": {"uart": str(run_paths.observe_uart_log)},
+                },
+                notify_cfg,
+            )
             meta["ended_at"] = datetime.now().isoformat()
             _write_json(run_paths.meta, meta)
             return (5, run_paths) if return_paths else 5
@@ -507,6 +603,22 @@ def run_pipeline(
         result["failed_step"] = "observe"
         result["error_summary"] = "observe failed"
         _write_json(run_paths.result, result)
+        _emit_event(
+            {
+                "type": "run_failed",
+                "severity": "error",
+                "run_id": run_paths.run_id,
+                "dut": board_id or board_cfg.get("name", "unknown"),
+                "bench": None,
+                "step": "observe",
+                "summary": result.get("error_summary"),
+                "details": "",
+                "artifacts_path": str(run_paths.root),
+                "timestamp": datetime.now().isoformat(),
+                "log_paths": {"observe": str(run_paths.observe_log)},
+            },
+            notify_cfg,
+        )
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
         return (5, run_paths) if return_paths else 5
@@ -567,6 +679,22 @@ def run_pipeline(
         if reset_unwired:
             print("Hint: reset line not wired. Power-cycle target and rerun verify.")
         _write_json(run_paths.result, result)
+        _emit_event(
+            {
+                "type": "run_failed",
+                "severity": "error",
+                "run_id": run_paths.run_id,
+                "dut": board_id or board_cfg.get("name", "unknown"),
+                "bench": None,
+                "step": "verify",
+                "summary": result.get("error_summary"),
+                "details": ",".join(measure.get("reasons", [])) if isinstance(measure, dict) else "",
+                "artifacts_path": str(run_paths.root),
+                "timestamp": datetime.now().isoformat(),
+                "log_paths": {"verify": str(run_paths.verify_log)},
+            },
+            notify_cfg,
+        )
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
         return (6, run_paths) if return_paths else 6
@@ -606,6 +734,28 @@ def run_pipeline(
 
     print(f"Run metadata saved: {run_paths.meta}")
     print(f"Run log saved: {run_paths.build_log}")
+    _emit_event(
+        {
+            "type": "run_succeeded",
+            "severity": "info",
+            "run_id": run_paths.run_id,
+            "dut": board_id or board_cfg.get("name", "unknown"),
+            "bench": None,
+            "step": "verify",
+            "summary": "run succeeded",
+            "details": "",
+            "artifacts_path": str(run_paths.root),
+            "timestamp": datetime.now().isoformat(),
+            "log_paths": {
+                "build": str(run_paths.build_log),
+                "flash": str(run_paths.flash_log),
+                "observe": str(run_paths.observe_log),
+                "verify": str(run_paths.verify_log),
+                "uart": str(run_paths.observe_uart_log),
+            },
+        },
+        notify_cfg,
+    )
     return (0, run_paths) if return_paths else 0
 
 
