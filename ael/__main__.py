@@ -21,6 +21,7 @@ def main():
     run_p = sub.add_parser("run")
     run_p.add_argument("--test", required=True)
     run_p.add_argument("--board", required=False, help="Board id (e.g. rp2040_pico)")
+    run_p.add_argument("--dut", required=False, help="DUT id from assets_golden/assets_user")
     run_p.add_argument("--probe", default=os.path.join("configs", "esp32jtag.yaml"))
     run_p.add_argument("--wiring", required=False)
     out_group = run_p.add_mutually_exclusive_group()
@@ -35,6 +36,7 @@ def main():
     pack_p = sub.add_parser("pack")
     pack_p.add_argument("--pack", required=True)
     pack_p.add_argument("--board", required=False)
+    pack_p.add_argument("--dut", required=False)
     pack_p.add_argument("--stop-on-fail", action="store_true")
     pack_p.add_argument("--no-flash", action="store_true")
     pack_p.add_argument("--no-build", action="store_true")
@@ -58,10 +60,26 @@ def main():
             output_mode = "quiet"
         else:
             output_mode = "normal"
+        board_id = args.board
+        test_path = args.test
+        if args.dut:
+            dut = assets.load_dut(args.dut)
+            if not dut:
+                print(f"DUT not found: {args.dut}")
+                sys.exit(2)
+            dut_path = Path(dut["path"])
+            if not board_id:
+                candidate = Path("configs") / "boards" / f"{args.dut}.yaml"
+                if candidate.exists():
+                    board_id = args.dut
+            if not os.path.isabs(test_path):
+                dut_test = dut_path / "tests" / test_path
+                if dut_test.exists():
+                    test_path = str(dut_test)
         code = run_cli(
             probe_path=args.probe,
-            board_id=args.board,
-            test_path=args.test,
+            board_id=board_id,
+            test_path=test_path,
             wiring=args.wiring,
             output_mode=output_mode,
         )
@@ -70,9 +88,19 @@ def main():
         code = run_doctor(args.probe, args.board, args.test)
         sys.exit(code)
     if args.cmd == "pack":
+        board_override = args.board
+        if args.dut:
+            dut = assets.load_dut(args.dut)
+            if not dut:
+                print(f"DUT not found: {args.dut}")
+                sys.exit(2)
+            if not board_override:
+                candidate = Path("configs") / "boards" / f"{args.dut}.yaml"
+                if candidate.exists():
+                    board_override = args.dut
         code = run_pack(
             pack_path=args.pack,
-            board_override=args.board,
+            board_override=board_override,
             stop_on_fail=args.stop_on_fail,
             no_flash=args.no_flash,
             no_build=args.no_build,
