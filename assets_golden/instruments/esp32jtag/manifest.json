@@ -1,0 +1,20 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "id": "esp32jtag",
+  "kind": "instrument",
+  "transports": [
+    { "type": "tcp", "endpoint_hint": "192.168.4.1:4242" },
+    { "type": "http", "endpoint_hint": "https://192.168.4.1:443" }
+  ],
+  "capabilities": [
+    { "name": "debug.swd" },
+    { "name": "observe.logic", "channels": 8 },
+    { "name": "observe.uart" }
+  ],
+  "identity": {
+    "network": { "ip": "192.168.4.1" }
+  },
+  "docs": {
+    "ai": [{ "path": "docs_ai.md" }]
+  }
+}

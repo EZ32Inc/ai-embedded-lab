@@ -46,6 +46,14 @@ def main():
     pack_p.add_argument("--no-build", action="store_true")
     pack_p.add_argument("--verify-only", action="store_true")
 
+    instr_p = sub.add_parser("instruments")
+    instr_sub = instr_p.add_subparsers(dest="instr_cmd", required=True)
+    instr_list = instr_sub.add_parser("list")
+    instr_show = instr_sub.add_parser("show")
+    instr_show.add_argument("id")
+    instr_find = instr_sub.add_parser("find")
+    instr_find.add_argument("--cap", required=True)
+
     dut_p = sub.add_parser("dut")
     dut_sub = dut_p.add_subparsers(dest="dut_cmd", required=True)
     dut_create = dut_sub.add_parser("create")
@@ -143,6 +151,24 @@ def main():
     if args.cmd == "doctor":
         code = run_doctor(args.probe, args.board, args.test)
         sys.exit(code)
+    if args.cmd == "instruments":
+        from ael.instruments.registry import InstrumentRegistry
+
+        registry = InstrumentRegistry()
+        if args.instr_cmd == "list":
+            print(json.dumps(registry.list(), indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "show":
+            inst = registry.get(args.id)
+            if not inst:
+                print(f"Instrument not found: {args.id}")
+                sys.exit(2)
+            print(json.dumps(inst, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "find":
+            matches = registry.find_by_capability(args.cap)
+            print(json.dumps(matches, indent=2, sort_keys=True))
+            sys.exit(0)
     if args.cmd == "pack":
         board_override = args.board
         if args.dut:
