@@ -1,0 +1,15 @@
+{
+  "name": "instrument_esp32s3_dev_c_meter_selftest",
+  "board": "esp32s3_dev_c_meter",
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": { "host": "192.168.4.1", "port": 9000 }
+  },
+  "selftest": {
+    "loopback": { "out_gpio": 15, "in_gpio": 11 },
+    "stim": { "mode": "toggle", "freq_hz": 1000, "duration_us": 200000 },
+    "measure": { "duration_ms": 200 },
+    "expect": { "state": "toggle" }
+  },
+  "notes": "Loopback wire: GPIO15 -> GPIO11. No ESP32JTAG required."
+}

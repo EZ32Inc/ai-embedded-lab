@@ -1,0 +1,66 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "id": "esp32s3_dev_c_meter",
+  "kind": "instrument",
+  "transports": [
+    {
+      "type": "tcp",
+      "endpoint_hint": "192.168.4.1:9000",
+      "protocol": "ael-meter-linejson-v0.1",
+      "mdns": { "service": "_ael._tcp", "name_hint": "ESP32_GPIO_METER" }
+    },
+    {
+      "type": "serial",
+      "endpoint_hint": "/dev/ttyUSB*",
+      "baud_default": 115200,
+      "protocol": "log-only"
+    }
+  ],
+  "identity": {
+    "network": { "mac": "00:00:00:00:00:00" }
+  },
+  "channels": {
+    "digital_inputs": [11, 12, 13, 14],
+    "analog_inputs": [4],
+    "digital_outputs": [15, 16, 17, 18]
+  },
+  "capabilities": [
+    {
+      "name": "measure.digital",
+      "version": "v0.1",
+      "channels": 4,
+      "params": { "duration_ms": 500 },
+      "outputs": "jsonline measurement",
+      "limits": { "input_voltage_v": { "min": -0.3, "max": 3.3 } }
+    },
+    {
+      "name": "measure.voltage",
+      "version": "v0.1",
+      "channels": 1,
+      "params": { "avg_samples": 16, "sample_rate_hz": 100 },
+      "outputs": { "units": "V" },
+      "limits": { "input_voltage_v": { "min": 0, "max": 3.3 } }
+    },
+    {
+      "name": "stim.digital",
+      "version": "v0.1",
+      "channels": 4,
+      "params": {
+        "mode": "hiz/low/high/toggle/pulse",
+        "duration_us": null,
+        "freq_hz": null,
+        "pattern": "lhl/hlh"
+      },
+      "outputs": "ack jsonline"
+    }
+  ],
+  "safety": {
+    "notes": "Common ground required; 3.3V logic only; outputs default Hi-Z."
+  },
+  "wifi": {
+    "ap_ssid_prefix": "ESP32_GPIO_METER_",
+    "ap_password": "esp32gpiom",
+    "tcp_port": 9000,
+    "ap_ip": "192.168.4.1"
+  }
+}
