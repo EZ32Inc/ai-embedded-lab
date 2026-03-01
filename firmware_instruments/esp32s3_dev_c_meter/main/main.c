@@ -3,11 +3,11 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "driver/adc.h"
-#include "driver/adc_oneshot.h"
 #include "driver/gpio.h"
 #include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_cali_scheme.h"
+#include "esp_adc/adc_oneshot.h"
+#include "esp_rom_sys.h"
 #include "esp_event.h"
 #include "esp_log.h"
 #include "esp_mac.h"
@@ -15,6 +15,7 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "esp_wifi.h"
+#include "nvs_flash.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lwip/sockets.h"
@@ -70,7 +71,7 @@ static void adc_init(void) {
     adc_oneshot_unit_init_cfg_t init_cfg = {
         .unit_id = ADC_UNIT_1,
     };
-    ESP_ERROR_CHECK(adc_oneshot_unit_init(&init_cfg, &s_adc_handle));
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&init_cfg, &s_adc_handle));
 
     adc_oneshot_chan_cfg_t chan_cfg = {
         .atten = ADC_ATTEN_DB_11,
@@ -78,12 +79,12 @@ static void adc_init(void) {
     };
     ESP_ERROR_CHECK(adc_oneshot_config_channel(s_adc_handle, ADC_CHANNEL_3, &chan_cfg));
 
-    adc_cali_line_fitting_config_t cali_cfg = {
+    adc_cali_curve_fitting_config_t cali_cfg = {
         .unit_id = ADC_UNIT_1,
         .atten = ADC_ATTEN_DB_11,
         .bitwidth = ADC_BITWIDTH_DEFAULT,
     };
-    if (adc_cali_create_scheme_line_fitting(&cali_cfg, &s_adc_cali) != ESP_OK) {
+    if (adc_cali_create_scheme_curve_fitting(&cali_cfg, &s_adc_cali) != ESP_OK) {
         s_adc_cali = NULL;
     }
 }
@@ -265,7 +266,7 @@ static void handle_stim_digital(int sock, const char *line) {
         while (esp_timer_get_time() < end) {
             level = !level;
             gpio_set_level(gpio, level);
-            ets_delay_us(period_us / 2);
+            esp_rom_delay_us(period_us / 2);
         }
     } else if (strcmp(mode, "pulse") == 0) {
         gpio_set_direction(gpio, GPIO_MODE_OUTPUT);
@@ -276,7 +277,7 @@ static void handle_stim_digital(int sock, const char *line) {
         for (int i = 0; i < 3; i++) {
             char c = pattern[i];
             gpio_set_level(gpio, (c == 'h' || c == 'H') ? 1 : 0);
-            ets_delay_us(segment);
+            esp_rom_delay_us(segment);
         }
     } else {
         send_json(sock, "{\"ok\":false,\"error\":\"mode_not_supported\"}");
@@ -301,6 +302,82 @@ static void handle_stim_digital(int sock, const char *line) {
     send_json(sock, buf);
 }
 
+static bool is_in_gpio(int gpio) {
+    for (int i = 0; i < 4; i++) {
+        if (k_in_pins[i] == gpio) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void handle_selftest(int sock, const char *line) {
+    int out_gpio = parse_int(find_kv(line, "OUT"), 15);
+    int in_gpio = parse_int(find_kv(line, "IN"), 11);
+    int duration_ms = parse_int(find_kv(line, "DUR_MS"), 200);
+    int freq_hz = parse_int(find_kv(line, "FREQ_HZ"), 1000);
+
+    if (!is_out_gpio(out_gpio) || !is_in_gpio(in_gpio)) {
+        send_json(sock, "{\"ok\":false,\"error\":\"gpio_not_supported\"}");
+        return;
+    }
+
+    gpio_set_direction(in_gpio, GPIO_MODE_INPUT);
+    gpio_set_pull_mode(in_gpio, GPIO_FLOATING);
+    gpio_set_direction(out_gpio, GPIO_MODE_OUTPUT);
+
+    int period_us = freq_hz > 0 ? (1000000 / freq_hz) : 1000;
+    if (period_us < 2) {
+        period_us = 2;
+    }
+
+    int samples = 0;
+    int ones = 0;
+    int zeros = 0;
+    int transitions = 0;
+    int last = gpio_get_level(in_gpio);
+    int level = 0;
+    gpio_set_level(out_gpio, level);
+
+    int64_t end = esp_timer_get_time() + ((int64_t)duration_ms * 1000);
+    while (esp_timer_get_time() < end) {
+        level = !level;
+        gpio_set_level(out_gpio, level);
+        esp_rom_delay_us(period_us / 2);
+
+        int v = gpio_get_level(in_gpio);
+        samples++;
+        if (v) {
+            ones++;
+        } else {
+            zeros++;
+        }
+        if (v != last) {
+            transitions++;
+        }
+        last = v;
+    }
+
+    set_hiz(out_gpio);
+
+    bool pass = transitions > 0 && ones > 0 && zeros > 0;
+    char buf[256];
+    snprintf(
+        buf,
+        sizeof(buf),
+        "{\"ok\":true,\"type\":\"selftest\",\"out_gpio\":%d,\"in_gpio\":%d,\"duration_ms\":%d,"
+        "\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d,\"pass\":%s}",
+        out_gpio,
+        in_gpio,
+        duration_ms,
+        samples,
+        ones,
+        zeros,
+        transitions,
+        pass ? "true" : "false");
+    send_json(sock, buf);
+}
+
 static void handle_line(int sock, const char *line) {
     if (!line || line[0] == '\0') {
         send_json(sock, "{\"ok\":false,\"error\":\"empty\"}");
@@ -320,6 +397,10 @@ static void handle_line(int sock, const char *line) {
     }
     if (strstr(line, "STIM") == line && strstr(line, "DIGITAL")) {
         handle_stim_digital(sock, line);
+        return;
+    }
+    if (strstr(line, "SELFTEST") == line) {
+        handle_selftest(sock, line);
         return;
     }
     send_json(sock, "{\"ok\":false,\"error\":\"unknown_command\"}");
@@ -386,6 +467,13 @@ static void tcp_server_task(void *arg) {
 }
 
 void app_main(void) {
+    esp_err_t nvs_ret = nvs_flash_init();
+    if (nvs_ret == ESP_ERR_NVS_NO_FREE_PAGES || nvs_ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        nvs_ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(nvs_ret);
+
     gpio_init_defaults();
     adc_init();
     wifi_init_softap();

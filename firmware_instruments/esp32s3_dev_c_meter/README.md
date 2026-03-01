@@ -22,6 +22,7 @@ MEAS VOLT GPIO=4 AVG=16
 STIM DIGITAL GPIO=15 MODE=high
 STIM DIGITAL GPIO=15 MODE=toggle DUR_US=100000 FREQ_HZ=1000
 STIM DIGITAL GPIO=15 MODE=pulse DUR_US=50 PATTERN=lhl
+SELFTEST OUT=15 IN=11 DUR_MS=200 FREQ_HZ=1000
 ```
 
 ## Selftest Wiring
@@ -36,6 +37,16 @@ Then:
 2) `MEAS DIGITAL PINS=11,12,13,14 DUR_MS=200`
 
 Expected: GPIO11 reports `toggle`.
+
+## Built-in Selftest
+
+Use `SELFTEST` with loopback wiring to verify output-drive and input-detect path.
+
+Example:
+
+`SELFTEST OUT=15 IN=11 DUR_MS=200 FREQ_HZ=1000`
+
+Response includes `pass: true/false` plus transition/sample counters.
 
 ## Safety
 
