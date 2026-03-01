@@ -1,6 +1,6 @@
 import json
 import os
-import urllib.request
+import subprocess
 from datetime import datetime
 
 
@@ -85,16 +85,24 @@ def notify(event: dict, cfg: dict) -> None:
 
     payload = {"content": _format_message(event, discord, log_tails)}
 
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        webhook_url,
-        data=data,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     try:
-        with urllib.request.urlopen(req, timeout=5) as resp:
-            resp.read()
+        data = json.dumps(payload)
+        res = subprocess.run(
+            [
+                "curl",
+                "-sS",
+                "-H",
+                "Content-Type: application/json",
+                "--data",
+                data,
+                webhook_url,
+            ],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        if res.returncode != 0:
+            raise RuntimeError(res.stderr.strip() or "curl failed")
     except Exception as exc:  # pragma: no cover - network dependent
         ts = datetime.now().isoformat()
         print(f"Notify: Discord webhook failed at {ts}: {exc}")
