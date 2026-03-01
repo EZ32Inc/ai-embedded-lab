@@ -217,6 +217,73 @@ This keeps the system deterministic and reliable while still enabling full autom
 Natural-language workflows are a future direction.
 
 ---
+## Terminology
+
+An AEL lab consists of four core roles:
+
+### Orchestrator
+The system running AEL software.
+
+Typically a PC or server.
+
+Responsible for:
+- orchestration
+- decision making
+- build & flash control
+- verification logic
+
+---
+
+### DUT (Device Under Test)
+
+The target system being developed or verified.
+
+Examples:
+- STM32 board
+- RP2040 Pico
+- ESP32-S3 target
+
+Runs firmware and produces behavior.
+
+---
+
+### Instrument
+
+A device that interacts with the DUT.
+
+Instruments provide capabilities such as:
+
+- debug access (SWD / JTAG)
+- signal capture
+- signal generation
+- UART monitoring
+- measurement
+
+Examples:
+- ESP32JTAG
+- RP2040 USB GPIO meter
+- Future ezLink
+- External lab equipment
+
+---
+
+### Connections
+
+Defines how DUTs are wired to Instruments.
+
+Examples:
+
+- SWD → Instrument Port P3
+- DUT GPIO P4 → Capture IN0
+
+Connections make automation reproducible.
+
+---
+
+Together:
+
+Orchestrator → Instruments → Connections → DUTs
+---
 
 ## License
 
