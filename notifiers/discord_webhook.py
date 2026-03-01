@@ -50,6 +50,9 @@ def _format_message(event, cfg, log_tails):
     content = "\n".join(lines)
     if mention:
         content = f"{mention}\n{content}"
+    # Discord content limit is 2000 chars. Keep a safe margin.
+    if len(content) > 1900:
+        content = content[:1890] + "\n...[truncated]"
     return content
 
 
