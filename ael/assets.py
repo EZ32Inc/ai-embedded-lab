@@ -107,6 +107,11 @@ def load_dut(dut_id, roots=None):
     return None
 
 
+def load_dut_prefer_user(dut_id):
+    roots = ["assets_user/duts", "assets_golden/duts"]
+    return load_dut(dut_id, roots=roots)
+
+
 def find_golden_reference(query):
     mcu = (query or {}).get("mcu")
     family = (query or {}).get("family")

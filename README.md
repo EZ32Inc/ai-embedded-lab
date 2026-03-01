@@ -55,6 +55,12 @@ All as part of a single automated pipeline.
 
 ---
 
+## For AI Agents
+
+See `docs/AI_USAGE_RULES.md` for CLI design rules and deterministic execution guidance.
+
+---
+
 ## Supported Targets (v0.1)
 
 - RP2040  

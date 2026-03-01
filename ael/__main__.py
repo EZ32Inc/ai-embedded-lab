@@ -17,13 +17,16 @@ from ael import run_manager
 
 def main():
     parser = argparse.ArgumentParser(prog="ael")
+    # Follow docs/AI_USAGE_RULES.md: CLI is a deterministic control interface for AI agents.
     sub = parser.add_subparsers(dest="cmd", required=True)
     run_p = sub.add_parser("run")
-    run_p.add_argument("--test", required=True)
+    run_p.add_argument("--test", required=False)
+    run_p.add_argument("--pack", required=False)
     run_p.add_argument("--board", required=False, help="Board id (e.g. rp2040_pico)")
     run_p.add_argument("--dut", required=False, help="DUT id from assets_golden/assets_user")
     run_p.add_argument("--probe", default=os.path.join("configs", "esp32jtag.yaml"))
     run_p.add_argument("--wiring", required=False)
+    run_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
     out_group = run_p.add_mutually_exclusive_group()
     out_group.add_argument("--quiet", action="store_true", help="Concise console output")
     out_group.add_argument("--verbose", action="store_true", help="Verbose console output")
@@ -34,9 +37,10 @@ def main():
     doc_p.add_argument("--test", default=os.path.join("tests", "blink_gpio.json"))
 
     pack_p = sub.add_parser("pack")
-    pack_p.add_argument("--pack", required=True)
+    pack_p.add_argument("--pack", required=False)
     pack_p.add_argument("--board", required=False)
     pack_p.add_argument("--dut", required=False)
+    pack_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
     pack_p.add_argument("--stop-on-fail", action="store_true")
     pack_p.add_argument("--no-flash", action="store_true")
     pack_p.add_argument("--no-build", action="store_true")
@@ -54,6 +58,9 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "run":
+        if not args.test and not args.pack:
+            print("Provide --test or --pack (or use --dut with defaults).")
+            sys.exit(2)
         if args.verbose:
             output_mode = "verbose"
         elif args.quiet:
@@ -62,20 +69,56 @@ def main():
             output_mode = "normal"
         board_id = args.board
         test_path = args.test
+        pack_path = args.pack
         if args.dut:
-            dut = assets.load_dut(args.dut)
+            dut = assets.load_dut_prefer_user(args.dut)
             if not dut:
                 print(f"DUT not found: {args.dut}")
                 sys.exit(2)
             dut_path = Path(dut["path"])
+            manifest = dut.get("manifest") if isinstance(dut, dict) else {}
             if not board_id:
                 candidate = Path("configs") / "boards" / f"{args.dut}.yaml"
                 if candidate.exists():
                     board_id = args.dut
-            if not os.path.isabs(test_path):
+            if test_path and not os.path.isabs(test_path):
                 dut_test = dut_path / "tests" / test_path
                 if dut_test.exists():
                     test_path = str(dut_test)
+            if pack_path and not os.path.isabs(pack_path):
+                dut_pack = dut_path / "packs" / pack_path
+                if dut_pack.exists():
+                    pack_path = str(dut_pack)
+            if not test_path and not pack_path:
+                default_packs = []
+                if isinstance(manifest, dict):
+                    default_packs = manifest.get("default_packs", []) or []
+                if default_packs:
+                    pack_path = default_packs[0]
+                else:
+                    dut_packs_dir = dut_path / "packs"
+                    if dut_packs_dir.exists():
+                        packs = sorted([p for p in dut_packs_dir.glob("*.json")])
+                        if packs:
+                            pack_path = str(packs[0])
+                    dut_tests_dir = dut_path / "tests"
+                    if not pack_path and dut_tests_dir.exists():
+                        tests = sorted([t for t in dut_tests_dir.glob("*.json")])
+                        if tests:
+                            test_path = str(tests[0])
+            if not test_path and not pack_path:
+                print("DUT has no tests or packs. Provide --test or --pack.")
+                sys.exit(2)
+            if pack_path:
+                code = run_pack(
+                    pack_path=pack_path,
+                    board_override=board_id,
+                    stop_on_fail=False,
+                    no_flash=False,
+                    no_build=False,
+                    verify_only=False,
+                )
+                sys.exit(code)
         code = run_cli(
             probe_path=args.probe,
             board_id=board_id,
@@ -90,7 +133,7 @@ def main():
     if args.cmd == "pack":
         board_override = args.board
         if args.dut:
-            dut = assets.load_dut(args.dut)
+            dut = assets.load_dut_prefer_user(args.dut)
             if not dut:
                 print(f"DUT not found: {args.dut}")
                 sys.exit(2)
@@ -98,6 +141,24 @@ def main():
                 candidate = Path("configs") / "boards" / f"{args.dut}.yaml"
                 if candidate.exists():
                     board_override = args.dut
+            if args.pack and not os.path.isabs(args.pack):
+                dut_pack = Path(dut["path"]) / "packs" / args.pack
+                if dut_pack.exists():
+                    args.pack = str(dut_pack)
+            if not args.pack:
+                manifest = dut.get("manifest") if isinstance(dut, dict) else {}
+                default_packs = manifest.get("default_packs", []) if isinstance(manifest, dict) else []
+                if default_packs:
+                    args.pack = default_packs[0]
+                else:
+                    dut_packs_dir = Path(dut["path"]) / "packs"
+                    if dut_packs_dir.exists():
+                        packs = sorted([p for p in dut_packs_dir.glob("*.json")])
+                        if packs:
+                            args.pack = str(packs[0])
+            if not args.pack:
+                print("DUT has no packs. Provide --pack.")
+                sys.exit(2)
         code = run_pack(
             pack_path=args.pack,
             board_override=board_override,
