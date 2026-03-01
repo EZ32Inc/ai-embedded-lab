@@ -8,8 +8,10 @@ from datetime import datetime
 import base64
 import ssl
 import urllib.request
+from pathlib import Path
 
 from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
+from ael import assets
 from ael import run_manager
 
 
@@ -37,6 +39,16 @@ def main():
     pack_p.add_argument("--no-flash", action="store_true")
     pack_p.add_argument("--no-build", action="store_true")
     pack_p.add_argument("--verify-only", action="store_true")
+
+    dut_p = sub.add_parser("dut")
+    dut_sub = dut_p.add_subparsers(dest="dut_cmd", required=True)
+    dut_create = dut_sub.add_parser("create")
+    dut_create.add_argument("--from-golden", required=True)
+    dut_create.add_argument("--to", required=True)
+    dut_promote = dut_sub.add_parser("promote")
+    dut_promote.add_argument("--id", required=True)
+    dut_promote.add_argument("--as", dest="as_id", required=False)
+    dut_promote.add_argument("--delete-source", action="store_true")
 
     args = parser.parse_args()
     if args.cmd == "run":
@@ -67,6 +79,13 @@ def main():
             verify_only=args.verify_only,
         )
         sys.exit(code)
+    if args.cmd == "dut":
+        if args.dut_cmd == "create":
+            code = dut_create_cmd(args.from_golden, args.to)
+            sys.exit(code)
+        if args.dut_cmd == "promote":
+            code = dut_promote_cmd(args.id, args.as_id, args.delete_source)
+            sys.exit(code)
 
 
 def _check_tools(tools):
@@ -272,6 +291,70 @@ def run_doctor(probe_path, board_path, test_path):
         json.dump(meta, f, indent=2, sort_keys=True)
 
     return 0 if result["ok"] else 1
+
+
+def _update_manifest_id(manifest, new_id, verified_status=None):
+    if not isinstance(manifest, dict):
+        manifest = {}
+    manifest["id"] = new_id
+    if verified_status is not None:
+        verified = manifest.get("verified") if isinstance(manifest.get("verified"), dict) else {}
+        verified["status"] = bool(verified_status)
+        manifest["verified"] = verified
+    return manifest
+
+
+def dut_create_cmd(from_golden_id, to_user_id):
+    src = Path("assets_golden") / "duts" / from_golden_id
+    dst = Path("assets_user") / "duts" / to_user_id
+    if not src.exists():
+        print(f"DUT create: golden id not found: {from_golden_id}")
+        return 1
+    if dst.exists():
+        print(f"DUT create: destination already exists: {dst}")
+        return 2
+    assets.copy_dut_skeleton(src, dst)
+    manifest_path = dst / "manifest.yaml"
+    manifest = assets._load_yaml(manifest_path) if manifest_path.exists() else {}
+    manifest = _update_manifest_id(manifest, to_user_id, verified_status=False)
+    assets.save_manifest(manifest_path, manifest)
+    notes_path = dst / "notes.md"
+    if not notes_path.exists():
+        notes_path.write_text(f"Created from golden {from_golden_id}\n", encoding="utf-8")
+    print(f"DUT create: {dst}")
+    return 0
+
+
+def dut_promote_cmd(user_id, as_id=None, delete_source=False):
+    src = Path("assets_user") / "duts" / user_id
+    if not src.exists():
+        print(f"DUT promote: user id not found: {user_id}")
+        return 1
+    manifest_path = src / "manifest.yaml"
+    if not manifest_path.exists():
+        print("DUT promote: manifest.yaml missing")
+        return 2
+    manifest = assets._load_yaml(manifest_path)
+    missing = assets._validate_manifest(manifest)
+    if missing:
+        print("DUT promote: manifest missing fields: " + ", ".join(missing))
+        return 3
+    golden_id = as_id or user_id
+    dst = Path("assets_golden") / "duts" / golden_id
+    if dst.exists():
+        print(f"DUT promote: destination already exists: {dst}")
+        return 4
+    assets.copy_dut_skeleton(src, dst)
+    dst_manifest_path = dst / "manifest.yaml"
+    verified_status = manifest.get("verified", {}).get("status", False) if isinstance(manifest, dict) else False
+    manifest = _update_manifest_id(manifest, golden_id, verified_status=verified_status)
+    assets.save_manifest(dst_manifest_path, manifest)
+    promo_note = dst / "PROMOTION.md"
+    promo_note.write_text(f"Promoted from user DUT {user_id}.\n", encoding="utf-8")
+    if delete_source:
+        shutil.rmtree(src)
+    print(f"DUT promote: {dst}")
+    return 0
 
 
 def _git_describe():

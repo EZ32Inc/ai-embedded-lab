@@ -1,0 +1,20 @@
+id: esp32s3_devkit
+mcu: esp32s3
+family: esp32
+description: ESP32-S3 DevKit GPIO waveform + UART banner
+build:
+  type: idf
+  project_dir: firmware
+flash:
+  method: idf_esptool
+default_packs:
+  - packs/ezlink_dev.json
+tags:
+  - esp32
+  - esp32s3
+  - devkit
+verified:
+  status: true
+  verified_on:
+    bench_id: default
+  date: 2026-02-28

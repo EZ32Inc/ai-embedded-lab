@@ -1,0 +1,19 @@
+id: rp2040_pico
+mcu: rp2040
+family: rp2040
+description: Raspberry Pi Pico (RP2040) blink + LA verify
+build:
+  type: pico
+  project_dir: firmware
+flash:
+  method: gdb_swd
+default_packs:
+  - packs/smoke.json
+tags:
+  - pico
+  - rp2040
+verified:
+  status: true
+  verified_on:
+    bench_id: default
+  date: 2026-02-28
