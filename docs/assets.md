@@ -35,3 +35,15 @@ Golden assets should be:
 - documented (wiring, pins, known limitations)
 - verified on a known bench
 
+## Using `--dut` in CLI
+`--dut <id>` resolves DUTs deterministically:
+1) `assets_user/duts/<id>/manifest.yaml` (preferred)
+2) `assets_golden/duts/<id>/manifest.yaml`
+
+Test/pack selection precedence:
+1) explicit `--test` / `--pack`
+2) `manifest.default_packs`
+3) DUT-local `packs/` or `tests/`
+4) error if none
+
+If `configs/boards/<id>.yaml` exists, it is used as the board profile for build/flash defaults.
