@@ -18,8 +18,11 @@ class RunPaths:
     flash_log: Path
     flash_json: Path
     observe_log: Path
+    observe_uart_log: Path
+    observe_uart_step_log: Path
     verify_log: Path
     measure: Path
+    uart_observe: Path
     result: Path
     artifacts_dir: Path
     doctor_log: Path
@@ -110,8 +113,11 @@ def create_run(board_id: str, test_path: str, repo_root: str) -> RunPaths:
         flash_log=root / "flash.log",
         flash_json=root / "flash.json",
         observe_log=root / "observe.log",
+        observe_uart_log=root / "observe_uart.log",
+        observe_uart_step_log=root / "observe_uart_step.log",
         verify_log=root / "verify.log",
         measure=root / "measure.json",
+        uart_observe=root / "uart_observe.json",
         result=root / "result.json",
         artifacts_dir=artifacts_dir,
         doctor_log=root / "doctor.log",

@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from adapters import preflight, build_cmake, build_stm32, build_idf, flash_bmda_gdbmi, flash_idf, observe_gpio_pin
+from adapters import preflight, build_cmake, build_stm32, build_idf, flash_bmda_gdbmi, flash_idf, observe_gpio_pin, observe_uart_log
 from ael import run_manager
 from tools import la_verify
 
@@ -217,6 +217,10 @@ def _triage(stage, pre_info):
         print("Hint: verify GPIO mapping and wiring for verify pin.")
         print("Hint: if edges are too few, lower LA sample rate or increase blink frequency.")
         return
+    if stage == "observe_uart":
+        print("Hint: check UART port selection and that no other process holds the port.")
+        print("Hint: ensure target is running and baud rate matches firmware.")
+        return
 
 
 def _resolve_board_path(repo_root, board_arg):
@@ -265,13 +269,16 @@ def run_pipeline(
         run_paths.build_log,
         run_paths.flash_log,
         run_paths.observe_log,
+        run_paths.observe_uart_step_log,
         run_paths.verify_log,
         run_paths.preflight_log,
     ]:
         Path(p).write_text("")
+    Path(run_paths.observe_uart_log).write_bytes(b"")
     _write_json(run_paths.measure, {"ok": False, "metrics": {}, "reasons": ["not_run"]})
     _write_json(run_paths.result, {"ok": False, "failed_step": "", "error_summary": ""})
     _write_json(run_paths.flash_json, {"ok": False, "attempts": [], "strategy_used": "", "speed_khz": None})
+    _write_json(run_paths.uart_observe, {"ok": False, "bytes": 0, "lines": 0})
 
     probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
     board_raw = _simple_yaml_load(board_path) if board_path else {}
@@ -311,12 +318,15 @@ def run_pipeline(
             "build": str(run_paths.build_log),
             "flash": str(run_paths.flash_log),
             "observe": str(run_paths.observe_log),
+            "observe_uart": str(run_paths.observe_uart_step_log),
+            "observe_uart_raw": str(run_paths.observe_uart_log),
             "verify": str(run_paths.verify_log),
         },
         "artifacts": [],
         "json": {
             "flash": str(run_paths.flash_json),
             "measure": str(run_paths.measure),
+            "uart_observe": str(run_paths.uart_observe),
             "preflight": str(run_paths.preflight),
             "meta": str(run_paths.meta),
             "config_effective": str(run_paths.config_effective),
@@ -441,6 +451,31 @@ def run_pipeline(
             return (4, run_paths) if return_paths else 4
 
     capture = {}
+    observe_uart_cfg = {}
+    if isinstance(effective, dict):
+        observe_uart_cfg = effective.get("observe_uart", {}) or {}
+    if isinstance(observe_uart_cfg, dict) and observe_uart_cfg.get("enabled"):
+        if not observe_uart_cfg.get("port"):
+            try:
+                with open(run_paths.flash_json, "r", encoding="utf-8") as f:
+                    flash_info = json.load(f)
+                if flash_info.get("port"):
+                    observe_uart_cfg = dict(observe_uart_cfg)
+                    observe_uart_cfg["port"] = flash_info.get("port")
+            except Exception:
+                pass
+        with _tee_output(run_paths.observe_uart_step_log, output_mode):
+            uart_result = observe_uart_log.run(observe_uart_cfg, raw_log_path=str(run_paths.observe_uart_log))
+        _write_json(run_paths.uart_observe, uart_result)
+        result["uart"] = uart_result
+        if not uart_result.get("ok", True):
+            result["failed_step"] = "observe_uart"
+            result["error_summary"] = uart_result.get("error_summary") or "uart observe failed"
+            _triage("observe_uart", pre_info)
+            _write_json(run_paths.result, result)
+            meta["ended_at"] = datetime.now().isoformat()
+            _write_json(run_paths.meta, meta)
+            return (5, run_paths) if return_paths else 5
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
     test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
     pin_value = test_pin
