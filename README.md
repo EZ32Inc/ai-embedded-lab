@@ -232,8 +232,6 @@ Responsible for:
 - build & flash control
 - verification logic
 
----
-
 ### DUT (Device Under Test)
 
 The target system being developed or verified.
@@ -244,8 +242,6 @@ Examples:
 - ESP32-S3 target
 
 Runs firmware and produces behavior.
-
----
 
 ### Instrument
 
@@ -265,8 +261,6 @@ Examples:
 - Future ezLink
 - External lab equipment
 
----
-
 ### Connections
 
 Defines how DUTs are wired to Instruments.
@@ -278,11 +272,10 @@ Examples:
 
 Connections make automation reproducible.
 
----
-
-Together:
+### Together:
 
 Orchestrator → Instruments → Connections → DUTs
+
 ---
 
 ## License
