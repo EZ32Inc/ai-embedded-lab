@@ -57,6 +57,9 @@ def main():
     dut_promote.add_argument("--delete-source", action="store_true")
 
     args = parser.parse_args()
+    repo_root = os.path.dirname(os.path.dirname(__file__))
+    probe_default = os.path.join("configs", "esp32jtag.yaml")
+    notify_probe = os.path.join("configs", "esp32jtag_notify.yaml")
     if args.cmd == "run":
         if args.verbose:
             output_mode = "verbose"
@@ -67,6 +70,8 @@ def main():
         board_id = args.board
         test_path = args.test
         pack_path = args.pack
+        probe_path = args.probe
+        probe_provided = "--probe" in sys.argv
         if args.dut:
             dut = assets.load_dut_prefer_user(args.dut)
             if not dut:
@@ -116,11 +121,19 @@ def main():
                     verify_only=False,
                 )
                 sys.exit(code)
+        if not probe_provided and not probe_path:
+            probe_path = probe_default
+        if not probe_provided:
+            notify_full = os.path.join(repo_root, notify_probe)
+            if (board_id == "esp32s3_devkit" or args.dut == "esp32s3_devkit") and os.path.exists(
+                notify_full
+            ):
+                probe_path = notify_probe
         if not test_path and not pack_path:
             print("Provide --test or --pack (or use --dut with defaults).")
             sys.exit(2)
         code = run_cli(
-            probe_path=args.probe,
+            probe_path=probe_path,
             board_id=board_id,
             test_path=test_path,
             wiring=args.wiring,
@@ -471,6 +484,8 @@ def _load_json(path):
 
 def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False, no_build=False, verify_only=False):
     repo_root = os.path.dirname(os.path.dirname(__file__))
+    notify_probe = os.path.join("configs", "esp32jtag_notify.yaml")
+    default_probe = os.path.join(repo_root, "configs", "esp32jtag.yaml")
     pack_full = pack_path if os.path.isabs(pack_path) else os.path.join(repo_root, pack_path)
     pack = _load_json(pack_full)
 
@@ -518,7 +533,11 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
     for t in tests:
         t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
         code, run_paths = run_pipeline(
-            probe_path=os.path.join(repo_root, "configs", "esp32jtag.yaml"),
+            probe_path=(
+                os.path.join(repo_root, notify_probe)
+                if pack_board == "esp32s3_devkit" and os.path.exists(os.path.join(repo_root, notify_probe))
+                else default_probe
+            ),
             board_arg=pack_board,
             test_path=t_full,
             wiring=None,

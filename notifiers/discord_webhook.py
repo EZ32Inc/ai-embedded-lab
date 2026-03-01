@@ -112,6 +112,19 @@ def notify(event: dict, cfg: dict) -> None:
         status = res.stdout.strip() if res.stdout else ""
         if status and status not in ("200", "204"):
             print(f"Notify: Discord webhook status {status}")
+        _append_marker(event, status or "204")
     except Exception as exc:  # pragma: no cover - network dependent
         ts = datetime.now().isoformat()
         print(f"Notify: Discord webhook failed at {ts}: {exc}")
+
+
+def _append_marker(event: dict, status: str) -> None:
+    log_paths = event.get("log_paths", {}) if isinstance(event.get("log_paths"), dict) else {}
+    build_log = log_paths.get("build")
+    if not build_log:
+        return
+    try:
+        with open(build_log, "a", encoding="utf-8") as f:
+            f.write(f"Notify: Discord sent {event.get('type', '')} http={status}\n")
+    except Exception:
+        return
