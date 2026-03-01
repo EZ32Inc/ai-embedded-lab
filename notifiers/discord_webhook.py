@@ -45,6 +45,10 @@ def _format_lines(event, log_tails):
 
 
 def _format_message(event, cfg, log_tails):
+    if cfg.get("force_short"):
+        mention = cfg.get("mention", "") or ""
+        short = "AEL Test01"
+        return f"{mention} {short}".strip()
     mention = cfg.get("mention", "") or ""
     lines = _format_lines(event, log_tails)
     content = "\n".join(lines)
@@ -109,6 +113,9 @@ def notify(event: dict, cfg: dict) -> None:
             raise RuntimeError(res.stderr.strip() or "curl failed")
         if res.stdout and res.stdout.strip() not in ("200", "204"):
             raise RuntimeError(f"discord http {res.stdout.strip()}")
+        status = res.stdout.strip() if res.stdout else ""
+        if status:
+            print(f"Notify: Discord webhook status {status}")
     except Exception as exc:  # pragma: no cover - network dependent
         ts = datetime.now().isoformat()
         print(f"Notify: Discord webhook failed at {ts}: {exc}")
