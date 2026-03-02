@@ -14,3 +14,5 @@ firmware_esp32s3/sdkconfig.old
 sdkconfig
 sdkconfig.old
 firmware_instruments/esp32s3_dev_c_meter/build
+assets_golden/duts/esp32s3_devkit/gpio_signature/firmware/build/
+assets_golden/duts/esp32s3_devkit/gpio_signature/firmware/sdkconfig.old

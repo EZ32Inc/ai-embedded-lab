@@ -1,0 +1,19 @@
+id: esp32s3_devkit_gpio_signature
+kind: dut_test_asset
+parent_dut: esp32s3_devkit
+description: ESP32-S3 GPIO signature DUT firmware for external instrument verification
+build:
+  type: idf
+  project_dir: assets_golden/duts/esp32s3_devkit/gpio_signature/firmware
+flash:
+  method: idf_esptool
+uart:
+  expect_token: AEL_DUT_READY
+pins:
+  x1: 4
+  x2: 5
+  x3: 6
+  x4: 7
+instrument:
+  id: esp32s3_dev_c_meter
+  measure_pins: [11, 12, 13, 14]

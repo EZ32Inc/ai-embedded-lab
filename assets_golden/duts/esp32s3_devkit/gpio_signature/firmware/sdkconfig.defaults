@@ -1,0 +1,4 @@
+# Route console output to native USB Serial/JTAG so AEL monitor on /dev/ttyACM* sees DUT logs.
+CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+# CONFIG_ESP_CONSOLE_UART_DEFAULT is not set
+CONFIG_ESPTOOLPY_MONITOR_BAUD=115200
