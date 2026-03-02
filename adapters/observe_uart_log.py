@@ -135,7 +135,50 @@ def run(cfg, raw_log_path: str):
     matched_forbid = {}
 
     data = bytearray()
-    ser = serial.Serial(port, baudrate=baud, timeout=0.1)
+    startup_wait_s = float(cfg.get("startup_wait_s", 6.0))
+    open_deadline = time.time() + max(0.0, startup_wait_s)
+    ser = None
+    last_exc = None
+    while time.time() <= open_deadline:
+        try:
+            ser = serial.Serial(
+                port,
+                baudrate=baud,
+                timeout=0.1,
+                rtscts=False,
+                dsrdtr=False,
+            )
+            # Force a deterministic reset edge on USB-UART control lines so capture
+            # starts from boot/app logs similarly to `idf.py monitor`.
+            try:
+                ser.rts = False
+                ser.dtr = True
+                time.sleep(0.05)
+                ser.dtr = False
+            except Exception:
+                pass
+            break
+        except Exception as exc:
+            last_exc = exc
+            time.sleep(0.2)
+    if ser is None:
+        return {
+            "ok": False,
+            "bytes": 0,
+            "lines": 0,
+            "port": port,
+            "baud": baud,
+            "crash_detected": False,
+            "reboot_loop_suspected": False,
+            "errors": [],
+            "warnings": [],
+            "matched": {},
+            "raw_log_path": raw_log_path,
+            "error_summary": f"failed to open UART port: {last_exc}",
+        }
+    start_delay_s = float(cfg.get("start_delay_s", 0.4))
+    if start_delay_s > 0:
+        time.sleep(start_delay_s)
     try:
         start = time.time()
         while time.time() - start < duration_s:
