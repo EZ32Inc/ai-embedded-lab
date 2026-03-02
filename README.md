@@ -78,7 +78,7 @@ See `docs/AI_USAGE_RULES.md` for CLI design rules and deterministic execution gu
 Imagine:
 
 - You have an STM32 board  
-- Its SWD is connected to a debug node  
+- Its SWD is connected to an Instrument that support Cortex MCU flash
 - Its GPIOs P4–P7 are connected to capture inputs  
 
 You tell AEL:
@@ -101,7 +101,7 @@ No manual intervention required.
 
 ---
 
-## Reference Lab Node: [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
+## Reference Instrument: [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
 
 AEL works with programmable **Instrument** that provide:
 
@@ -120,9 +120,7 @@ It enables AEL to:
 
 AEL itself is not tied to any specific hardware.
 
-[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) is simply the first concrete implementation of this lab node concept.
-
-Future nodes (including ezLink) will expand this capability.
+[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) is simply the first concrete implementation of this AEL Instrument concept.
 
 ---
 
@@ -132,12 +130,12 @@ You don’t need [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) to expe
 
 A minimal setup uses:
 
-- One ESP32-S3 dev board (target)
-- One RP2040 or STM32 dev board (instrument)
+- One ESP32-S3 dev board (Instrument)
+- One RP2040 or STM32 or ESP32 dev board (DUT)
 
 Total cost: under $20–$30.
 
-The second board acts as a simple USB-based signal instrument.
+The first board is a WiFi-based signal instrument that captures signals from the DUT or generates stimulus signals, and communicates with the Orchestrator over WiFi.
 
 This allows AEL to:
 
@@ -190,13 +188,13 @@ automatically.
 
 ## How it works (Simplified)
 
-Human → AEL → Lab Node → Target MCU
+Human → Orchestrator → Instrument → DUT(Target MCU)
 
 Where:
 
-- AEL orchestrates the workflow  
-- Lab Node provides debug & capture  
-- Target runs real firmware  
+- Orchestrator orchestrates the workflow  
+- Instrument provides debug & capture  
+- DUT runs real firmware  
 
 ---
 
