@@ -2,6 +2,8 @@
 
 This golden test verifies an ESP32-S3 DUT with an external Wi-Fi instrument (`esp32s3_dev_c_meter`) after build/flash/UART checks.
 
+Use CON1 (native USB, typically `/dev/ttyACM*`) for both flashing/reset and UART log observation.
+
 ## Wiring
 
 DUT to instrument:
@@ -9,6 +11,7 @@ DUT to instrument:
 - DUT GPIO5 (X2) -> Instrument GPIO12 (DIN1), expected toggle (~2kHz)
 - DUT GPIO6 (X3) -> Instrument GPIO13 (DIN2), expected high
 - DUT GPIO7 (X4) -> Instrument GPIO14 (DIN3), expected low
+- DUT 3V3 -> Instrument ADC GPIO4 (AD), expected within 3.0V..3.45V
 - DUT GND -> Instrument GND
 
 Avoid DUT strapping pins (for example GPIO0) and USB pins.
@@ -32,6 +35,8 @@ python3 -m ael run \
 Notes:
 - This test disables classic ESP32JTAG preflight with `"preflight": {"enabled": false}`.
 - Instrument selftest is disabled by default (`"instrument.run_selftest": false`) because loopback wires are not assumed.
+- UART observe uses the same serial port selected for flashing (CON1).
 - Artifacts include:
   - `instrument_digital.json`
+  - `instrument_voltage.json` (when analog checks are configured)
   - `verify_result.json`

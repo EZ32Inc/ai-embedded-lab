@@ -344,6 +344,7 @@ def _run_meter_digital_verify(test_raw, board_cfg, run_paths):
     }
     instrument_path = str(Path(run_paths.artifacts_dir) / "instrument_digital.json")
     verify_path = str(Path(run_paths.artifacts_dir) / "verify_result.json")
+    analog_path = str(Path(run_paths.artifacts_dir) / "instrument_voltage.json")
 
     meas = esp32s3_dev_c_meter_tcp.measure_digital(
         cfg,
@@ -398,6 +399,93 @@ def _run_meter_digital_verify(test_raw, board_cfg, run_paths):
                     }
                 )
 
+    analog_checks = []
+    analog_links = test_raw.get("connections", {}).get("dut_to_instrument_analog", [])
+    analog_measurements = []
+
+    def _extract_voltage_v(payload):
+        if not isinstance(payload, dict):
+            return None
+        direct_v_keys = ("voltage_v", "v", "value_v", "voltage", "value")
+        for key in direct_v_keys:
+            val = payload.get(key)
+            if isinstance(val, (int, float)):
+                f = float(val)
+                if f > 10.0:
+                    return f / 1000.0
+                return f
+        mv = payload.get("mv")
+        if isinstance(mv, (int, float)):
+            return float(mv) / 1000.0
+        result = payload.get("result")
+        if isinstance(result, dict):
+            return _extract_voltage_v(result)
+        return None
+
+    for item in analog_links if isinstance(analog_links, list) else []:
+        if not isinstance(item, dict):
+            continue
+        adc_gpio = item.get("inst_adc_gpio")
+        if adc_gpio is None:
+            continue
+        adc_gpio = int(adc_gpio)
+        avg = int(item.get("avg", 16))
+        min_v = item.get("expect_v_min")
+        max_v = item.get("expect_v_max")
+        if min_v is not None:
+            min_v = float(min_v)
+        if max_v is not None:
+            max_v = float(max_v)
+        if min_v is None and max_v is None and item.get("expect_v") is not None:
+            center = float(item.get("expect_v"))
+            tol = float(item.get("tolerance_v", 0.2))
+            min_v = center - tol
+            max_v = center + tol
+
+        meas_v = esp32s3_dev_c_meter_tcp.measure_voltage(cfg, gpio=adc_gpio, avg=avg, out_path=None)
+        analog_measurements.append(
+            {
+                "inst_adc_gpio": adc_gpio,
+                "avg": avg,
+                "response": meas_v,
+            }
+        )
+        measured_v = _extract_voltage_v(meas_v)
+        check = {
+            "inst_adc_gpio": adc_gpio,
+            "dut_signal": item.get("dut_signal"),
+            "expect_v_min": min_v,
+            "expect_v_max": max_v,
+            "measured_v": measured_v,
+            "avg": avg,
+        }
+        analog_checks.append(check)
+
+        if measured_v is None:
+            mismatches.append({"inst_adc_gpio": adc_gpio, "reason": "voltage_missing"})
+            continue
+        if min_v is not None and measured_v < min_v:
+            mismatches.append(
+                {
+                    "inst_adc_gpio": adc_gpio,
+                    "reason": "voltage_below_min",
+                    "expect_v_min": min_v,
+                    "measured_v": measured_v,
+                }
+            )
+        if max_v is not None and measured_v > max_v:
+            mismatches.append(
+                {
+                    "inst_adc_gpio": adc_gpio,
+                    "reason": "voltage_above_max",
+                    "expect_v_max": max_v,
+                    "measured_v": measured_v,
+                }
+            )
+
+    if analog_measurements:
+        _write_json(analog_path, {"ok": True, "measurements": analog_measurements})
+
     ok = len(mismatches) == 0
     verify_payload = {
         "ok": ok,
@@ -407,11 +495,15 @@ def _run_meter_digital_verify(test_raw, board_cfg, run_paths):
         "host": cfg.get("host"),
         "port": cfg.get("port"),
         "checks": checks,
+        "analog_checks": analog_checks,
         "mismatches": mismatches,
     }
     _write_json(verify_path, verify_payload)
     err = "" if ok else "instrument digital verification failed"
-    return ok, [instrument_path, verify_path], err
+    artifacts = [instrument_path, verify_path]
+    if analog_measurements:
+        artifacts.append(analog_path)
+    return ok, artifacts, err
 
 
 def _resolve_board_path(repo_root, board_arg):
