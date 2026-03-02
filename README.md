@@ -1,9 +1,13 @@
 # AEL — AI Embedded Lab
 
+AEL orchestrates Instruments interacting with DUTs (real hardware running firmware) to automatically build, run and verify their behavior.
+
+---
+
 **Tell AEL what you connected. Tell it what you want.  
 It builds, flashes, runs, measures and reports — on real hardware.**
 
-AEL turns embedded development into a **web-coding-like experience**:
+AEL turns embedded development into a **vibe coding experience**:
 
 Instead of manually:
 
