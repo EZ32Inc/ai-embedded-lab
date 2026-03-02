@@ -50,6 +50,7 @@ void app_main(void) {
     gpio_set_level((gpio_num_t)AEL_LED_GPIO, 0);
 
     printf("AEL_READY ESP32S3\n");
+    printf("Hello World!\n");
 
     const int64_t base_period_us = 1000000LL / (2 * (int64_t)AEL_BASE_FREQ_HZ);
     const int64_t led_period_us = 1000000LL / (2 * (int64_t)AEL_LED_BLINK_HZ);
