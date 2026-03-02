@@ -202,14 +202,14 @@ Where:
 
 ## Some use case examples
 
-Here is image how we use [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) as Instrument and RP2040 PICO board.
+Here is example how we use [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) as Instrument and RP2040 PICO board.
 ![image](docs/images/20260302_esp32jtag_rp2040.jpg)
 
-Another image is using two ESP32S3 boards, one as Instrument to check IO levels and toggling and target voltage, another ESP32S3 dev board is used as DUT or the target system.
+Another example is using two ESP32S3 boards, one as Instrument to check GPIO levels and toggling and target voltage of the DUT, another ESP32S3 dev board is used as DUT or the target system being developed/verified.
 ![image](docs/images/20260302_two_esp32s3.jpg)
 
-This image shows how we use AEL and Codex in Ubuntu OS:
-![image](docs/images/Screenshot_AEL_Codex_0302.jpg)
+This is a screenshot showing how we use AEL and Codex in Ubuntu OS:
+![image](docs/images/Screenshot_AEL_Codex_0302.png)
 
 ---
 
