@@ -71,6 +71,8 @@ See `docs/AI_USAGE_RULES.md` for CLI design rules and deterministic execution gu
 - STM32F103  
 - ESP32-S3  
 
+And much more to come.
+
 ---
 
 ## Example
@@ -309,6 +311,6 @@ See the [MIT LICENSE](https://choosealicense.com/licenses/mit/) file for details
 
 ## Status
 
-Early stage but actively used in daily hardware development.
+Early stage but actively used in daily development.
 
 Feedback and contribution is welcome.
