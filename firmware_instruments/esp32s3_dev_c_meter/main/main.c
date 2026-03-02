@@ -33,6 +33,17 @@ static const int k_out_pins[4] = {15, 16, 17, 18};
 static adc_oneshot_unit_handle_t s_adc_handle = NULL;
 static adc_cali_handle_t s_adc_cali = NULL;
 
+typedef struct {
+    int gpio;
+    int samples;
+    int ones;
+    int zeros;
+    int transitions;
+    const char *state;
+} digital_stats_t;
+
+static const int k_selftest_toggle_min_transitions = 10;
+
 static void make_ssid(char *out, size_t out_len, uint8_t *mac) {
     unsigned int last = ((unsigned int)mac[4] << 8) | mac[5];
     snprintf(out, out_len, "ESP32_GPIO_METER_%04X", last & 0xFFFFu);
@@ -144,70 +155,104 @@ static void handle_ping(int sock) {
     send_json(sock, buf);
 }
 
+static const char *classify_digital_state(int ones, int zeros) {
+    if (ones == 0) {
+        return "low";
+    }
+    if (zeros == 0) {
+        return "high";
+    }
+    return "toggle";
+}
+
+static void measure_digital_gpio(int gpio, int duration_ms, digital_stats_t *out) {
+    if (!out) {
+        return;
+    }
+    out->gpio = gpio;
+    out->samples = 0;
+    out->ones = 0;
+    out->zeros = 0;
+    out->transitions = 0;
+    out->state = "toggle";
+
+    int last = -1;
+    int64_t end = esp_timer_get_time() + ((int64_t)duration_ms * 1000);
+    while (esp_timer_get_time() < end) {
+        int v = gpio_get_level(gpio);
+        out->samples++;
+        if (v) {
+            out->ones++;
+        } else {
+            out->zeros++;
+        }
+        if (last >= 0 && v != last) {
+            out->transitions++;
+        }
+        last = v;
+    }
+    out->state = classify_digital_state(out->ones, out->zeros);
+}
+
 static void handle_meas_digital(int sock, const char *line) {
     int duration_ms = parse_int(find_kv(line, "DUR_MS"), 500);
-    int samples[4] = {0};
-    int ones[4] = {0};
-    int zeros[4] = {0};
-    int transitions[4] = {0};
-    int last[4] = {-1, -1, -1, -1};
-    int64_t start = esp_timer_get_time();
-    int64_t end = start + ((int64_t)duration_ms * 1000);
-    while (esp_timer_get_time() < end) {
-        for (int i = 0; i < 4; i++) {
-            int v = gpio_get_level(k_in_pins[i]);
-            samples[i]++;
-            if (v) {
-                ones[i]++;
-            } else {
-                zeros[i]++;
-            }
-            if (last[i] >= 0 && v != last[i]) {
-                transitions[i]++;
-            }
-            last[i] = v;
-        }
+    digital_stats_t stats[4];
+    for (int i = 0; i < 4; i++) {
+        measure_digital_gpio(k_in_pins[i], duration_ms, &stats[i]);
     }
+
     char buf[512];
     int n = snprintf(buf, sizeof(buf), "{\"ok\":true,\"type\":\"digital\",\"duration_ms\":%d,\"pins\":[", duration_ms);
     for (int i = 0; i < 4; i++) {
-        const char *state = "toggle";
-        if (ones[i] == 0) {
-            state = "low";
-        } else if (zeros[i] == 0) {
-            state = "high";
-        }
         n += snprintf(
             buf + n,
             sizeof(buf) - n,
             "{\"gpio\":%d,\"state\":\"%s\",\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d}%s",
-            k_in_pins[i],
-            state,
-            samples[i],
-            ones[i],
-            zeros[i],
-            transitions[i],
+            stats[i].gpio,
+            stats[i].state,
+            stats[i].samples,
+            stats[i].ones,
+            stats[i].zeros,
+            stats[i].transitions,
             (i == 3) ? "" : ",");
     }
     snprintf(buf + n, sizeof(buf) - n, "]}");
     send_json(sock, buf);
 }
 
-static void handle_meas_voltage(int sock, const char *line) {
-    int avg = parse_int(find_kv(line, "AVG"), 16);
+static float measure_voltage_gpio4(int avg, int *raw_avg_out, bool *cali_used_out) {
     int total = 0;
+    int reads = 0;
     for (int i = 0; i < avg; i++) {
         int raw = 0;
         if (adc_oneshot_read(s_adc_handle, ADC_CHANNEL_3, &raw) == ESP_OK) {
             total += raw;
+            reads++;
         }
     }
-    int raw_avg = avg > 0 ? total / avg : 0;
+    int raw_avg = reads > 0 ? total / reads : 0;
     int mv = raw_avg;
+    bool cali_used = false;
     if (s_adc_cali) {
-        adc_cali_raw_to_voltage(s_adc_cali, raw_avg, &mv);
+        if (adc_cali_raw_to_voltage(s_adc_cali, raw_avg, &mv) == ESP_OK) {
+            cali_used = true;
+        }
     }
-    float volts = ((float)mv) / 1000.0f;
+    if (!cali_used) {
+        mv = (raw_avg * 3300) / 4095;
+    }
+    if (raw_avg_out) {
+        *raw_avg_out = raw_avg;
+    }
+    if (cali_used_out) {
+        *cali_used_out = cali_used;
+    }
+    return ((float)mv) / 1000.0f;
+}
+
+static void handle_meas_voltage(int sock, const char *line) {
+    int avg = parse_int(find_kv(line, "AVG"), 16);
+    float volts = measure_voltage_gpio4(avg, NULL, NULL);
     char buf[192];
     snprintf(
         buf,
@@ -314,27 +359,72 @@ static bool is_in_gpio(int gpio) {
 static void handle_selftest(int sock, const char *line) {
     int out_gpio = parse_int(find_kv(line, "OUT"), 15);
     int in_gpio = parse_int(find_kv(line, "IN"), 11);
+    int adc_out_gpio = parse_int(find_kv(line, "ADC_OUT"), 16);
+    int adc_in_gpio = parse_int(find_kv(line, "ADC_IN"), 4);
     int duration_ms = parse_int(find_kv(line, "DUR_MS"), 200);
     int freq_hz = parse_int(find_kv(line, "FREQ_HZ"), 1000);
+    int settle_ms = parse_int(find_kv(line, "SETTLE_MS"), 20);
+    int avg = parse_int(find_kv(line, "AVG"), 16);
+    int keep = parse_int(find_kv(line, "KEEP"), 0);
 
-    if (!is_out_gpio(out_gpio) || !is_in_gpio(in_gpio)) {
-        send_json(sock, "{\"ok\":false,\"error\":\"gpio_not_supported\"}");
+    if (!is_out_gpio(out_gpio) || !is_in_gpio(in_gpio) || !is_out_gpio(adc_out_gpio) || adc_in_gpio != 4) {
+        send_json(
+            sock,
+            "{\"ok\":true,\"type\":\"selftest\",\"pass\":false,\"error\":\"gpio_not_supported\"}");
         return;
     }
+
+    if (duration_ms < 20) {
+        duration_ms = 20;
+    }
+    if (settle_ms < 1) {
+        settle_ms = 1;
+    }
+    if (avg < 1) {
+        avg = 1;
+    }
+
+    ESP_LOGI(
+        TAG,
+        "SELFTEST start out=%d in=%d adc_out=%d adc_in=%d dur_ms=%d freq_hz=%d avg=%d settle_ms=%d",
+        out_gpio,
+        in_gpio,
+        adc_out_gpio,
+        adc_in_gpio,
+        duration_ms,
+        freq_hz,
+        avg,
+        settle_ms);
+
+    set_hiz(out_gpio);
+    set_hiz(adc_out_gpio);
+
+    digital_stats_t low_stats = {0};
+    digital_stats_t high_stats = {0};
+    digital_stats_t toggle_stats = {0};
 
     gpio_set_direction(in_gpio, GPIO_MODE_INPUT);
     gpio_set_pull_mode(in_gpio, GPIO_FLOATING);
     gpio_set_direction(out_gpio, GPIO_MODE_OUTPUT);
 
+    gpio_set_level(out_gpio, 0);
+    esp_rom_delay_us((uint32_t)settle_ms * 1000);
+    measure_digital_gpio(in_gpio, settle_ms * 2, &low_stats);
+
+    gpio_set_level(out_gpio, 1);
+    esp_rom_delay_us((uint32_t)settle_ms * 1000);
+    measure_digital_gpio(in_gpio, settle_ms * 2, &high_stats);
+
     int period_us = freq_hz > 0 ? (1000000 / freq_hz) : 1000;
     if (period_us < 2) {
         period_us = 2;
     }
-
-    int samples = 0;
-    int ones = 0;
-    int zeros = 0;
-    int transitions = 0;
+    toggle_stats.gpio = in_gpio;
+    toggle_stats.samples = 0;
+    toggle_stats.ones = 0;
+    toggle_stats.zeros = 0;
+    toggle_stats.transitions = 0;
+    toggle_stats.state = "toggle";
     int last = gpio_get_level(in_gpio);
     int level = 0;
     gpio_set_level(out_gpio, level);
@@ -346,35 +436,120 @@ static void handle_selftest(int sock, const char *line) {
         esp_rom_delay_us(period_us / 2);
 
         int v = gpio_get_level(in_gpio);
-        samples++;
+        toggle_stats.samples++;
         if (v) {
-            ones++;
+            toggle_stats.ones++;
         } else {
-            zeros++;
+            toggle_stats.zeros++;
         }
         if (v != last) {
-            transitions++;
+            toggle_stats.transitions++;
         }
         last = v;
     }
+    toggle_stats.state = classify_digital_state(toggle_stats.ones, toggle_stats.zeros);
 
-    set_hiz(out_gpio);
+    bool digital_pass = (strcmp(low_stats.state, "low") == 0) && (strcmp(high_stats.state, "high") == 0) &&
+                        (strcmp(toggle_stats.state, "toggle") == 0) &&
+                        (toggle_stats.transitions > k_selftest_toggle_min_transitions);
 
-    bool pass = transitions > 0 && ones > 0 && zeros > 0;
-    char buf[256];
-    snprintf(
+    gpio_set_direction(adc_out_gpio, GPIO_MODE_OUTPUT);
+    gpio_set_level(adc_out_gpio, 0);
+    esp_rom_delay_us((uint32_t)settle_ms * 1000);
+    bool cali_used_low = false;
+    bool cali_used_high = false;
+    float v_low = measure_voltage_gpio4(avg, NULL, &cali_used_low);
+
+    gpio_set_level(adc_out_gpio, 1);
+    esp_rom_delay_us((uint32_t)settle_ms * 1000);
+    float v_high = measure_voltage_gpio4(avg, NULL, &cali_used_high);
+
+    bool cali_used = cali_used_low || cali_used_high;
+    float v_low_max = cali_used ? 0.30f : 0.50f;
+    float v_high_min = cali_used ? 2.60f : 2.20f;
+    bool adc_pass = (v_low < v_low_max) && (v_high > v_high_min);
+
+    if (!keep) {
+        set_hiz(out_gpio);
+        set_hiz(adc_out_gpio);
+    }
+
+    bool pass = digital_pass && adc_pass;
+    const char *error = "";
+    if (!digital_pass) {
+        if (strcmp(low_stats.state, "low") != 0) {
+            error = "digital_low_failed";
+        } else if (strcmp(high_stats.state, "high") != 0) {
+            error = "digital_high_failed";
+        } else if (strcmp(toggle_stats.state, "toggle") != 0) {
+            error = "digital_toggle_state_failed";
+        } else {
+            error = "digital_toggle_transitions_low";
+        }
+    } else if (!adc_pass) {
+        if (v_low >= v_low_max) {
+            error = "adc_low_voltage_too_high";
+        } else if (v_high <= v_high_min) {
+            error = "adc_high_voltage_too_low";
+        } else {
+            error = "adc_window_failed";
+        }
+    }
+
+    ESP_LOGI(
+        TAG,
+        "SELFTEST result pass=%d digital_pass=%d adc_pass=%d v_low=%.3f v_high=%.3f",
+        pass ? 1 : 0,
+        digital_pass ? 1 : 0,
+        adc_pass ? 1 : 0,
+        v_low,
+        v_high);
+
+    char buf[1400];
+    int n = snprintf(
         buf,
         sizeof(buf),
-        "{\"ok\":true,\"type\":\"selftest\",\"out_gpio\":%d,\"in_gpio\":%d,\"duration_ms\":%d,"
-        "\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d,\"pass\":%s}",
+        "{\"ok\":true,\"type\":\"selftest\",\"pass\":%s",
+        pass ? "true" : "false");
+    if (!pass) {
+        n += snprintf(buf + n, sizeof(buf) - n, ",\"error\":\"%s\"", error);
+    }
+    n += snprintf(
+        buf + n,
+        sizeof(buf) - n,
+        ",\"digital\":{\"pass\":%s,\"out_gpio\":%d,\"in_gpio\":%d,\"dur_ms\":%d,\"freq_hz\":%d,"
+        "\"low\":{\"state\":\"%s\",\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d},"
+        "\"high\":{\"state\":\"%s\",\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d},"
+        "\"toggle\":{\"state\":\"%s\",\"samples\":%d,\"ones\":%d,\"zeros\":%d,\"transitions\":%d}},"
+        "\"adc\":{\"pass\":%s,\"out_gpio\":%d,\"adc_gpio\":%d,\"avg\":%d,\"settle_ms\":%d,"
+        "\"v_low\":%.3f,\"v_high\":%.3f}}",
+        digital_pass ? "true" : "false",
         out_gpio,
         in_gpio,
         duration_ms,
-        samples,
-        ones,
-        zeros,
-        transitions,
-        pass ? "true" : "false");
+        freq_hz,
+        low_stats.state,
+        low_stats.samples,
+        low_stats.ones,
+        low_stats.zeros,
+        low_stats.transitions,
+        high_stats.state,
+        high_stats.samples,
+        high_stats.ones,
+        high_stats.zeros,
+        high_stats.transitions,
+        toggle_stats.state,
+        toggle_stats.samples,
+        toggle_stats.ones,
+        toggle_stats.zeros,
+        toggle_stats.transitions,
+        adc_pass ? "true" : "false",
+        adc_out_gpio,
+        adc_in_gpio,
+        avg,
+        settle_ms,
+        v_low,
+        v_high);
     send_json(sock, buf);
 }
 

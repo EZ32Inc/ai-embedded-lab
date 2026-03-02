@@ -8,10 +8,22 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from adapters import preflight, build_cmake, build_stm32, build_idf, flash_bmda_gdbmi, flash_idf, observe_gpio_pin, observe_uart_log
+from adapters import (
+    preflight,
+    build_cmake,
+    build_stm32,
+    build_idf,
+    flash_bmda_gdbmi,
+    flash_idf,
+    observe_gpio_pin,
+    observe_uart_log,
+    esp32s3_dev_c_meter_tcp,
+)
 from notifiers import discord_webhook
 from ael import run_manager
 from tools import la_verify
+
+_INSTRUMENT_SELFTEST_CACHE = {}
 
 
 def _simple_yaml_load(path):
@@ -233,6 +245,51 @@ def _emit_event(event, notify_cfg):
         print(f"Notify: error {exc}")
 
 
+def _parse_endpoint_hint(endpoint_hint):
+    if not endpoint_hint or ":" not in str(endpoint_hint):
+        return {}
+    host, port = str(endpoint_hint).rsplit(":", 1)
+    try:
+        return {"host": host.strip(), "port": int(port.strip())}
+    except Exception:
+        return {}
+
+
+def _resolve_instrument_context(test_raw, board_cfg):
+    explicit = {}
+    if isinstance(test_raw, dict):
+        explicit = test_raw.get("instrument", {}) if isinstance(test_raw.get("instrument"), dict) else {}
+    if not explicit and isinstance(board_cfg, dict):
+        explicit = board_cfg.get("instrument", {}) if isinstance(board_cfg.get("instrument"), dict) else {}
+    instrument_id = explicit.get("id")
+    if not instrument_id:
+        return None, {}, {}
+
+    manifest = {}
+    try:
+        from ael.instruments.registry import InstrumentRegistry
+
+        manifest = InstrumentRegistry().get(instrument_id) or {}
+    except Exception:
+        manifest = {}
+
+    tcp_cfg = explicit.get("tcp", {}) if isinstance(explicit.get("tcp"), dict) else {}
+    if "host" not in tcp_cfg or "port" not in tcp_cfg:
+        endpoint = {}
+        transports = manifest.get("transports", []) if isinstance(manifest, dict) else []
+        for t in transports:
+            if isinstance(t, dict) and t.get("type") == "tcp":
+                endpoint = _parse_endpoint_hint(t.get("endpoint_hint"))
+                if endpoint:
+                    break
+        wifi_cfg = manifest.get("wifi", {}) if isinstance(manifest.get("wifi"), dict) else {}
+        host = tcp_cfg.get("host") or endpoint.get("host") or wifi_cfg.get("ap_ip")
+        port = tcp_cfg.get("port") or endpoint.get("port") or wifi_cfg.get("tcp_port")
+        tcp_cfg = {"host": host, "port": port}
+
+    return instrument_id, tcp_cfg, manifest
+
+
 def _resolve_board_path(repo_root, board_arg):
     if not board_arg:
         return None, None
@@ -242,6 +299,89 @@ def _resolve_board_path(repo_root, board_arg):
     board_id = board_arg
     board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
     return str(board_path), board_id
+
+
+def _run_instrument_selftest(test_raw, board_cfg, run_paths):
+    instrument_id, tcp_cfg, manifest = _resolve_instrument_context(test_raw, board_cfg)
+    if not instrument_id:
+        return True, None, None
+
+    selftest_manifest = manifest.get("selftest", {}) if isinstance(manifest, dict) else {}
+    if instrument_id != "esp32s3_dev_c_meter" and not selftest_manifest:
+        return True, None, None
+
+    cache_key = (run_paths.run_id, instrument_id)
+    if cache_key in _INSTRUMENT_SELFTEST_CACHE:
+        cached = _INSTRUMENT_SELFTEST_CACHE[cache_key]
+        return bool(cached.get("pass")), cached.get("artifact"), cached.get("error")
+
+    artifact_path = str(Path(run_paths.artifacts_dir) / "instrument_selftest.json")
+    cfg = {
+        "host": tcp_cfg.get("host"),
+        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
+        "artifacts_dir": str(run_paths.artifacts_dir),
+    }
+
+    dig = selftest_manifest.get("digital", {}) if isinstance(selftest_manifest.get("digital"), dict) else {}
+    adc = selftest_manifest.get("adc", {}) if isinstance(selftest_manifest.get("adc"), dict) else {}
+    test_self = test_raw.get("selftest", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("selftest"), dict) else {}
+    test_dig = test_self.get("digital", {}) if isinstance(test_self.get("digital"), dict) else {}
+    test_adc = test_self.get("adc", {}) if isinstance(test_self.get("adc"), dict) else {}
+
+    out_gpio = int(test_dig.get("out_gpio", dig.get("out_gpio", 15)))
+    in_gpio = int(test_dig.get("in_gpio", dig.get("in_gpio", 11)))
+    dur_ms = int(test_dig.get("dur_ms", dig.get("dur_ms", 200)))
+    freq_hz = int(test_dig.get("freq_hz", dig.get("freq_hz", 1000)))
+    adc_out = int(test_adc.get("out_gpio", adc.get("out_gpio", 16)))
+    adc_in = int(test_adc.get("adc_gpio", adc.get("adc_gpio", 4)))
+    avg = int(test_adc.get("avg", adc.get("avg", 16)))
+    settle_ms = int(test_adc.get("settle_ms", adc.get("settle_ms", 20)))
+
+    try:
+        payload = esp32s3_dev_c_meter_tcp.selftest(
+            cfg,
+            out_gpio=out_gpio,
+            in_gpio=in_gpio,
+            adc_out=adc_out,
+            adc_in=adc_in,
+            dur_ms=dur_ms,
+            freq_hz=freq_hz,
+            avg=avg,
+            settle_ms=settle_ms,
+            out_path=artifact_path,
+        )
+        cache_value = {"pass": bool(payload.get("pass")), "artifact": artifact_path, "error": payload.get("error", "")}
+        _INSTRUMENT_SELFTEST_CACHE[cache_key] = cache_value
+        return bool(payload.get("pass")), artifact_path, payload.get("error", "")
+    except Exception as exc:
+        err_payload = {
+            "ok": False,
+            "type": "selftest",
+            "pass": False,
+            "error": str(exc),
+            "instrument_id": instrument_id,
+            "host": cfg.get("host"),
+            "port": cfg.get("port"),
+        }
+        _write_json(artifact_path, err_payload)
+        cache_value = {"pass": False, "artifact": artifact_path, "error": str(exc)}
+        _INSTRUMENT_SELFTEST_CACHE[cache_key] = cache_value
+        return False, artifact_path, str(exc)
+
+
+def _instrument_selftest_requested(test_raw, board_cfg):
+    if isinstance(test_raw, dict):
+        if bool(test_raw.get("instrument_selftest")):
+            return True
+        selftest_cfg = test_raw.get("selftest", {})
+        if isinstance(selftest_cfg, dict) and bool(selftest_cfg.get("enabled")):
+            return True
+        instrument_cfg = test_raw.get("instrument", {})
+        if isinstance(instrument_cfg, dict) and bool(instrument_cfg.get("selftest")):
+            return True
+    if isinstance(board_cfg, dict) and bool(board_cfg.get("instrument_selftest")):
+        return True
+    return False
 
 
 def run_pipeline(
@@ -341,6 +481,7 @@ def run_pipeline(
             "preflight": str(run_paths.preflight),
             "meta": str(run_paths.meta),
             "config_effective": str(run_paths.config_effective),
+            "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
         },
     }
 
@@ -403,6 +544,34 @@ def run_pipeline(
         meta["ended_at"] = datetime.now().isoformat()
         _write_json(run_paths.meta, meta)
         return (2, run_paths) if return_paths else 2
+
+    if _instrument_selftest_requested(test_raw, board_cfg):
+        selftest_ok, selftest_artifact, selftest_error = _run_instrument_selftest(test_raw, board_cfg, run_paths)
+        if selftest_artifact:
+            result["artifacts"].append(selftest_artifact)
+        if not selftest_ok:
+            result["failed_step"] = "instrument_selftest"
+            result["error_summary"] = selftest_error or "instrument selftest failed"
+            _write_json(run_paths.result, result)
+            _emit_event(
+                {
+                    "type": "run_failed",
+                    "severity": "error",
+                    "run_id": run_paths.run_id,
+                    "dut": board_id or board_cfg.get("name", "unknown"),
+                    "bench": None,
+                    "step": "instrument_selftest",
+                    "summary": "instrument selftest failed",
+                    "details": result.get("error_summary"),
+                    "artifacts_path": str(run_paths.root),
+                    "timestamp": datetime.now().isoformat(),
+                    "log_paths": {"preflight": str(run_paths.preflight_log)},
+                },
+                notify_cfg,
+            )
+            meta["ended_at"] = datetime.now().isoformat()
+            _write_json(run_paths.meta, meta)
+            return (7, run_paths) if return_paths else 7
 
     print("SWD and network connection verified. Starting task.")
     if not pre_info.get("targets"):
@@ -717,7 +886,10 @@ def run_pipeline(
     result["ok"] = True
     result["failed_step"] = ""
     result["error_summary"] = ""
-    result["artifacts"] = artifacts_copied
+    existing_artifacts = result.get("artifacts", [])
+    if not isinstance(existing_artifacts, list):
+        existing_artifacts = []
+    result["artifacts"] = existing_artifacts + artifacts_copied
     _write_json(run_paths.result, result)
 
     meta.update(

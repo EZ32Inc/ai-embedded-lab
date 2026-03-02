@@ -62,5 +62,19 @@
     "ap_password": "esp32gpiom",
     "tcp_port": 9000,
     "ap_ip": "192.168.4.1"
+  },
+  "selftest": {
+    "digital": {
+      "out_gpio": 15,
+      "in_gpio": 11,
+      "freq_hz": 1000,
+      "dur_ms": 200
+    },
+    "adc": {
+      "out_gpio": 16,
+      "adc_gpio": 4,
+      "avg": 16,
+      "settle_ms": 20
+    }
   }
 }

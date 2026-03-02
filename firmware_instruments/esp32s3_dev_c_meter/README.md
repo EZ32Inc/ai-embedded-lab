@@ -22,31 +22,31 @@ MEAS VOLT GPIO=4 AVG=16
 STIM DIGITAL GPIO=15 MODE=high
 STIM DIGITAL GPIO=15 MODE=toggle DUR_US=100000 FREQ_HZ=1000
 STIM DIGITAL GPIO=15 MODE=pulse DUR_US=50 PATTERN=lhl
-SELFTEST OUT=15 IN=11 DUR_MS=200 FREQ_HZ=1000
+SELFTEST OUT=15 IN=11 ADC_OUT=16 ADC_IN=4 DUR_MS=200 FREQ_HZ=1000 AVG=16 SETTLE_MS=20
 ```
 
 ## Selftest Wiring
 
 Loopback:
 
-- GPIO15 (output) -> GPIO11 (input)
+- GPIO15 (output) -> GPIO11 (input)  (digital loopback)
+- GPIO16 (output) -> GPIO4 (ADC input)  (ADC loopback)
 
-Then:
+Command:
 
-1) `STIM DIGITAL GPIO=15 MODE=toggle DUR_US=200000 FREQ_HZ=1000`
-2) `MEAS DIGITAL PINS=11,12,13,14 DUR_MS=200`
+`SELFTEST OUT=15 IN=11 ADC_OUT=16 ADC_IN=4 DUR_MS=200 FREQ_HZ=1000 AVG=16 SETTLE_MS=20`
 
-Expected: GPIO11 reports `toggle`.
+Expected:
 
-## Built-in Selftest
+- `pass=true` with `digital.pass=true` and `adc.pass=true`
+- Digital includes low/high/toggle state and transitions
+- ADC includes `v_low` and `v_high` checks
 
-Use `SELFTEST` with loopback wiring to verify output-drive and input-detect path.
+Behavior summary:
 
-Example:
-
-`SELFTEST OUT=15 IN=11 DUR_MS=200 FREQ_HZ=1000`
-
-Response includes `pass: true/false` plus transition/sample counters.
+- Digital pass requires low/high/toggle state match and toggle transitions > 10.
+- ADC pass requires approximately `v_low < 0.30V` and `v_high > 2.60V` (looser thresholds if ADC calibration is unavailable).
+- Outputs return to Hi-Z after selftest unless `KEEP=1`.
 
 ## Safety
 
