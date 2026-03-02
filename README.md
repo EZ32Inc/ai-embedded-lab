@@ -293,7 +293,7 @@ Orchestrator → Instruments → Connections → DUTs
 
 ## License
 
-AEL is released under the MIT License.
+AEL is released under the [MIT License](https://choosealicense.com/licenses/mit/).
 
 The goal is to make it easy for developers, startups and hardware teams to experiment with AI-driven embedded workflows without legal friction.
 
@@ -303,7 +303,7 @@ You are free to:
 - integrate it into commercial products  
 - extend it for internal tooling  
 
-See the [LICENSE](LICENSE) file for details.
+See the [MIT LICENSE](https://choosealicense.com/licenses/mit/) file for details.
 
 ---
 
