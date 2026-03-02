@@ -101,15 +101,15 @@ No manual intervention required.
 
 ---
 
-## Reference Lab Node: ESP32JTAG
+## Reference Lab Node: [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
 
-AEL works with programmable **lab nodes** that provide:
+AEL works with programmable **Instrument** that provide:
 
 - debug access  
 - signal capture  
 - runtime monitoring  
 
-Today, **ESP32JTAG** serves as the first fully-supported reference lab node.
+Today, **ESP32JTAG** serves as the first fully-supported Instrument.
 
 It enables AEL to:
 
@@ -120,7 +120,7 @@ It enables AEL to:
 
 AEL itself is not tied to any specific hardware.
 
-ESP32JTAG is simply the first concrete implementation of this lab node concept.
+[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) is simply the first concrete implementation of this lab node concept.
 
 Future nodes (including ezLink) will expand this capability.
 
@@ -128,7 +128,7 @@ Future nodes (including ezLink) will expand this capability.
 
 ## Try AEL with Two Dev Boards (No Dedicated Hardware Required)
 
-You don’t need ESP32JTAG to experience AEL.
+You don’t need [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) to experience AEL.
 
 A minimal setup uses:
 
@@ -171,7 +171,7 @@ AEL will:
 - compile  
 - flash  
 - run  
-- measure  
+- measure
 - validate  
 
 automatically.
@@ -200,11 +200,16 @@ Where:
 
 ---
 
-## Real Usage
+## Some use case examples
 
-AEL is actively used to develop **ezLink**, an ESP32-S3-based hardware tool.
+Here is image how we use [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) as Instrument and RP2040 PICO board.
+![image](docs/images/20260302_esp32jtag_rp2040.jpg)
 
-This ensures features are driven by real development needs.
+Another image is using two ESP32S3 boards, one as Instrument to check IO levels and toggling and target voltage, another ESP32S3 dev board is used as DUT or the target system.
+![image](docs/images/20260302_two_esp32s3.jpg)
+
+This image shows how we use AEL and Codex in Ubuntu OS:
+![image](docs/images/Screenshot_AEL_Codex_0302.jpg)
 
 ---
 
@@ -229,7 +234,7 @@ Natural-language workflows are a future direction.
 ---
 ## Terminology
 
-An AEL lab consists of four core roles:
+An AEL lab consists of four core roles: Orchestrator, DUT, Instrument, Connections.
 
 ### Orchestrator
 The system running AEL software.
@@ -266,7 +271,7 @@ Instruments provide capabilities such as:
 - measurement
 
 Examples:
-- ESP32JTAG
+- [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
 - RP2040 USB GPIO meter
 - Future ezLink
 - External lab equipment
@@ -308,4 +313,4 @@ See the [LICENSE](LICENSE) file for details.
 
 Early stage but actively used in daily hardware development.
 
-Feedback is welcome.
+Feedback and contribution is welcome.
