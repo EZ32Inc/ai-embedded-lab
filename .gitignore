@@ -11,3 +11,6 @@ assets_user/cache/
 firmware_esp32s3/build/
 firmware_esp32s3/sdkconfig
 firmware_esp32s3/sdkconfig.old
+sdkconfig
+sdkconfig.old
+firmware_instruments/esp32s3_dev_c_meter/build
