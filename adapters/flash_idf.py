@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import glob
+import time
 
 
 def _find_tty_by_serial(serial):
@@ -41,6 +42,10 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     port = flash_cfg.get("port")
     baud = flash_cfg.get("baud", 460800)
     serial = flash_cfg.get("serial")
+    target = str(flash_cfg.get("target") or "esp32s3")
+    # Keep optional workaround disabled by default. Standard `idf.py flash`
+    # already performs a hard reset and should hand off to app mode.
+    post_flash_run = bool(flash_cfg.get("post_flash_run", False))
 
     root = os.path.dirname(os.path.dirname(__file__))
     if project_dir:
@@ -82,6 +87,46 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         if exc.stderr:
             print(exc.stderr.strip())
         ok = False
+
+    if ok and post_flash_run:
+        # On some ESP32-S3 native USB setups, flash hard-reset leaves ROM downloader active.
+        # Kick the chip into app mode without external line toggles.
+        run_cmd = [
+            "python3",
+            "-m",
+            "esptool",
+            "--chip",
+            target,
+            "-p",
+            str(port),
+            "--before",
+            "no_reset",
+            "--after",
+            "watchdog_reset",
+            "run",
+        ]
+        run_ok = False
+        last_exc = None
+        for attempt in range(1, 9):
+            try:
+                run_res = subprocess.run(run_cmd, check=True, capture_output=True, text=True, timeout=20)
+                print(f"Flash: post-flash run via watchdog reset (attempt {attempt})")
+                if run_res.stdout:
+                    print(run_res.stdout.strip())
+                if run_res.stderr:
+                    print(run_res.stderr.strip())
+                run_ok = True
+                break
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+                last_exc = exc
+                time.sleep(0.4)
+        if not run_ok:
+            print("Flash: WARN post-flash run failed")
+            if isinstance(last_exc, subprocess.CalledProcessError):
+                if last_exc.stdout:
+                    print(last_exc.stdout.strip())
+                if last_exc.stderr:
+                    print(last_exc.stderr.strip())
 
     if flash_json_path:
         payload = {
