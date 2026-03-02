@@ -290,6 +290,130 @@ def _resolve_instrument_context(test_raw, board_cfg):
     return instrument_id, tcp_cfg, manifest
 
 
+def _is_meter_digital_verify_test(test_raw):
+    if not isinstance(test_raw, dict):
+        return False
+    inst = test_raw.get("instrument", {})
+    if not isinstance(inst, dict) or inst.get("id") != "esp32s3_dev_c_meter":
+        return False
+    conns = test_raw.get("connections", {})
+    if not isinstance(conns, dict):
+        return False
+    links = conns.get("dut_to_instrument", [])
+    return isinstance(links, list) and len(links) > 0
+
+
+def _run_meter_digital_verify(test_raw, board_cfg, run_paths):
+    instrument_id, tcp_cfg, _manifest = _resolve_instrument_context(test_raw, board_cfg)
+    if instrument_id != "esp32s3_dev_c_meter":
+        return False, [], "meter instrument not configured"
+
+    links = test_raw.get("connections", {}).get("dut_to_instrument", [])
+    pins = []
+    expected_by_gpio = {}
+    for item in links:
+        if not isinstance(item, dict):
+            continue
+        if item.get("inst_gpio") is None:
+            continue
+        inst_gpio = int(item.get("inst_gpio"))
+        expect = str(item.get("expect", "")).strip().lower()
+        pins.append(inst_gpio)
+        expected_by_gpio[inst_gpio] = {
+            "expect": expect,
+            "dut_gpio": item.get("dut_gpio"),
+            "freq_hz": item.get("freq_hz"),
+        }
+    if not pins:
+        return False, [], "no instrument pins configured"
+
+    duration_ms = 500
+    meas_cfg = test_raw.get("measurement", {})
+    if isinstance(meas_cfg, dict) and meas_cfg.get("duration_ms") is not None:
+        duration_ms = int(meas_cfg.get("duration_ms"))
+    else:
+        instrument_cfg = test_raw.get("instrument", {})
+        if isinstance(instrument_cfg, dict):
+            meter_cfg = instrument_cfg.get("measure", {})
+            if isinstance(meter_cfg, dict) and meter_cfg.get("duration_ms") is not None:
+                duration_ms = int(meter_cfg.get("duration_ms"))
+
+    cfg = {
+        "host": tcp_cfg.get("host"),
+        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
+    }
+    instrument_path = str(Path(run_paths.artifacts_dir) / "instrument_digital.json")
+    verify_path = str(Path(run_paths.artifacts_dir) / "verify_result.json")
+
+    meas = esp32s3_dev_c_meter_tcp.measure_digital(
+        cfg,
+        pins=pins,
+        duration_ms=duration_ms,
+        out_path=instrument_path,
+    )
+    pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
+    actual_by_gpio = {}
+    for row in pin_rows:
+        if isinstance(row, dict) and row.get("gpio") is not None:
+            actual_by_gpio[int(row.get("gpio"))] = row
+
+    mismatches = []
+    checks = []
+    for gpio, exp in expected_by_gpio.items():
+        row = actual_by_gpio.get(gpio)
+        if not row:
+            mismatches.append({"inst_gpio": gpio, "reason": "missing_measurement"})
+            continue
+        actual_state = str(row.get("state", "")).strip().lower()
+        expect_state = exp.get("expect", "")
+        check = {
+            "inst_gpio": gpio,
+            "dut_gpio": exp.get("dut_gpio"),
+            "expect": expect_state,
+            "actual": actual_state,
+            "samples": row.get("samples"),
+            "ones": row.get("ones"),
+            "zeros": row.get("zeros"),
+            "transitions": row.get("transitions"),
+        }
+        checks.append(check)
+        if actual_state != expect_state:
+            mismatches.append(
+                {
+                    "inst_gpio": gpio,
+                    "reason": "state_mismatch",
+                    "expect": expect_state,
+                    "actual": actual_state,
+                }
+            )
+            continue
+        if expect_state == "toggle":
+            transitions = int(row.get("transitions", 0))
+            if transitions <= 0:
+                mismatches.append(
+                    {
+                        "inst_gpio": gpio,
+                        "reason": "toggle_no_transitions",
+                        "transitions": transitions,
+                    }
+                )
+
+    ok = len(mismatches) == 0
+    verify_payload = {
+        "ok": ok,
+        "type": "instrument_digital_verify",
+        "duration_ms": duration_ms,
+        "instrument_id": "esp32s3_dev_c_meter",
+        "host": cfg.get("host"),
+        "port": cfg.get("port"),
+        "checks": checks,
+        "mismatches": mismatches,
+    }
+    _write_json(verify_path, verify_payload)
+    err = "" if ok else "instrument digital verification failed"
+    return ok, [instrument_path, verify_path], err
+
+
 def _resolve_board_path(repo_root, board_arg):
     if not board_arg:
         return None, None
@@ -379,6 +503,8 @@ def _instrument_selftest_requested(test_raw, board_cfg):
         instrument_cfg = test_raw.get("instrument", {})
         if isinstance(instrument_cfg, dict) and bool(instrument_cfg.get("selftest")):
             return True
+        if isinstance(instrument_cfg, dict) and bool(instrument_cfg.get("run_selftest")):
+            return True
     if isinstance(board_cfg, dict) and bool(board_cfg.get("instrument_selftest")):
         return True
     return False
@@ -454,6 +580,21 @@ def run_pipeline(
 
     probe_cfg = _normalize_probe_cfg(probe_raw)
     board_cfg = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
+    if not isinstance(board_cfg, dict):
+        board_cfg = {}
+    else:
+        board_cfg = dict(board_cfg)
+
+    # Allow test files to override DUT firmware project for deterministic instrumented runs.
+    test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
+    firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None
+    project_override = test_build.get("project_dir") or firmware_override
+    if project_override:
+        build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}
+        build_cfg = dict(build_cfg)
+        build_cfg["type"] = "idf"
+        build_cfg["project_dir"] = str(project_override)
+        board_cfg["build"] = build_cfg
 
     wiring_overrides = _parse_wiring(wiring or "")
     wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
@@ -482,6 +623,8 @@ def run_pipeline(
             "meta": str(run_paths.meta),
             "config_effective": str(run_paths.config_effective),
             "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
+            "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
+            "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
         },
     }
 
@@ -512,10 +655,19 @@ def run_pipeline(
     )
 
     pre_info = {}
-    with _tee_output(run_paths.preflight_log, output_mode):
-        t0 = time.monotonic()
-        ok_pre, pre_info = preflight.run(probe_cfg)
-        timings["preflight_s"] = round(time.monotonic() - t0, 3)
+    preflight_cfg = test_raw.get("preflight", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("preflight"), dict) else {}
+    preflight_enabled = True if preflight_cfg.get("enabled") is None else bool(preflight_cfg.get("enabled"))
+    if preflight_enabled:
+        with _tee_output(run_paths.preflight_log, output_mode):
+            t0 = time.monotonic()
+            ok_pre, pre_info = preflight.run(probe_cfg)
+            timings["preflight_s"] = round(time.monotonic() - t0, 3)
+    else:
+        with _tee_output(run_paths.preflight_log, output_mode):
+            print("Preflight: SKIPPED (test config)")
+        ok_pre = True
+        pre_info = {"skipped": True}
+        timings["preflight_s"] = 0.0
     pre_info = pre_info or {}
     pre_info["timing_s"] = timings.get("preflight_s", 0)
     _write_json(run_paths.preflight, pre_info)
@@ -741,6 +893,86 @@ def run_pipeline(
             meta["ended_at"] = datetime.now().isoformat()
             _write_json(run_paths.meta, meta)
             return (5, run_paths) if return_paths else 5
+
+    if _is_meter_digital_verify_test(test_raw):
+        with _tee_output(run_paths.observe_log, output_mode):
+            t0 = time.monotonic()
+            meter_ok, meter_artifacts, meter_err = _run_meter_digital_verify(test_raw, board_cfg, run_paths)
+            timings["observe_s"] = round(time.monotonic() - t0, 3)
+        if meter_artifacts:
+            result["artifacts"].extend(meter_artifacts)
+        if not meter_ok:
+            result["failed_step"] = "verify"
+            result["error_summary"] = meter_err or "instrument verify failed"
+            _write_json(run_paths.result, result)
+            _emit_event(
+                {
+                    "type": "run_failed",
+                    "severity": "error",
+                    "run_id": run_paths.run_id,
+                    "dut": board_id or board_cfg.get("name", "unknown"),
+                    "bench": None,
+                    "step": "verify",
+                    "summary": result.get("error_summary"),
+                    "details": "",
+                    "artifacts_path": str(run_paths.root),
+                    "timestamp": datetime.now().isoformat(),
+                    "log_paths": {"observe": str(run_paths.observe_log), "verify": str(run_paths.verify_log)},
+                },
+                notify_cfg,
+            )
+            meta["ended_at"] = datetime.now().isoformat()
+            _write_json(run_paths.meta, meta)
+            return (6, run_paths) if return_paths else 6
+
+        timings["verify_s"] = 0.0
+        timings["total_s"] = round(time.monotonic() - run_started_mono, 3)
+        artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
+        existing_artifacts = result.get("artifacts", [])
+        if not isinstance(existing_artifacts, list):
+            existing_artifacts = []
+        result["ok"] = True
+        result["failed_step"] = ""
+        result["error_summary"] = ""
+        result["artifacts"] = existing_artifacts + artifacts_copied
+        _write_json(run_paths.result, result)
+        _write_json(run_paths.measure, {"ok": True, "type": "instrument_digital_verify"})
+        meta.update(
+            {
+                "ended_at": datetime.now().isoformat(),
+                "timings": timings,
+                "firmware": {
+                    "path": firmware_path,
+                    "sha256": _file_sha256(firmware_path) if firmware_path else "",
+                },
+            }
+        )
+        _write_json(run_paths.meta, meta)
+        print("PASS: Instrument digital signature verified")
+        _emit_event(
+            {
+                "type": "run_succeeded",
+                "severity": "info",
+                "run_id": run_paths.run_id,
+                "dut": board_id or board_cfg.get("name", "unknown"),
+                "bench": None,
+                "step": "verify",
+                "summary": "run succeeded",
+                "details": "",
+                "artifacts_path": str(run_paths.root),
+                "timestamp": datetime.now().isoformat(),
+                "log_paths": {
+                    "build": str(run_paths.build_log),
+                    "flash": str(run_paths.flash_log),
+                    "observe": str(run_paths.observe_log),
+                    "verify": str(run_paths.verify_log),
+                    "uart": str(run_paths.observe_uart_log),
+                },
+            },
+            notify_cfg,
+        )
+        return (0, run_paths) if return_paths else 0
+
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
     test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
     pin_value = test_pin
