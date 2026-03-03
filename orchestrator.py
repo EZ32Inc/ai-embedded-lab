@@ -957,6 +957,9 @@ def run_pipeline(
                     observe_uart_cfg["port"] = flash_info.get("port")
             except Exception:
                 pass
+        observe_uart_cfg = dict(observe_uart_cfg)
+        observe_uart_cfg.setdefault("auto_reset_on_download", True)
+        observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
         with _tee_output(run_paths.observe_uart_step_log, output_mode):
             uart_result = observe_uart_log.run(observe_uart_cfg, raw_log_path=str(run_paths.observe_uart_log))
         _write_json(run_paths.uart_observe, uart_result)
@@ -964,6 +967,13 @@ def run_pipeline(
         if not uart_result.get("ok", True):
             result["failed_step"] = "observe_uart"
             result["error_summary"] = uart_result.get("error_summary") or "uart observe failed"
+            err_l = str(result["error_summary"]).lower()
+            if "permission check failed" in err_l or "permission denied" in err_l:
+                print("UART: permission check failed.")
+                print("Action required: fix /dev/tty* permission/group manually, then rerun.")
+            if "download mode" in err_l:
+                print("UART: target entered bootloader download mode.")
+                print("Action: reset DUT and rerun. Auto RTS reset was already attempted.")
             _triage("observe_uart", pre_info)
             _write_json(run_paths.result, result)
             _emit_event(
