@@ -94,8 +94,6 @@ def _normalize_probe_cfg(raw):
 
     if "gdb_cmd" not in cfg:
         cfg["gdb_cmd"] = raw.get("gdb_cmd") if isinstance(raw, dict) else None
-    if not cfg.get("gdb_cmd"):
-        cfg["gdb_cmd"] = "gdb-multiarch"
 
     return cfg
 
@@ -161,9 +159,24 @@ def _write_json(path, data):
         pass
 
 
-def _default_firmware_path(target):
+def _resolve_builder_kind(board_cfg):
+    build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
+    if isinstance(build_cfg, dict):
+        kind = str(build_cfg.get("type", "")).strip().lower()
+        if kind:
+            return kind
+    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
+    if isinstance(flash_cfg, dict):
+        if flash_cfg.get("method") == "idf_esptool":
+            return "idf"
+        if flash_cfg.get("gdb_launch_cmds"):
+            return "arm_debug"
+    return "cmake"
+
+
+def _default_firmware_path(board_cfg):
     root = os.path.dirname(__file__)
-    if target.startswith("stm32"):
+    if _resolve_builder_kind(board_cfg) == "arm_debug":
         return os.path.join(root, "artifacts", "build_stm32", "stm32f103_app.elf")
     return os.path.join(root, "artifacts", "build", "pico_blink.elf")
 
@@ -213,17 +226,17 @@ def _triage(stage, pre_info):
         if not pre_info.get("ping_ok"):
             print("Hint: probe not reachable. Check power and Wi-Fi/AP connection.")
         if not pre_info.get("tcp_ok"):
-            print("Hint: GDB port closed. Check ESP32JTAG GDB server and IP/port.")
+            print("Hint: debug port closed. Check debug server endpoint and IP/port.")
         if not pre_info.get("monitor_ok"):
-            print("Hint: GDB server connected but monitor failed. Try power-cycle target and probe.")
+            print("Hint: debug server connected but monitor failed. Try power-cycle target and probe.")
         if not pre_info.get("la_ok"):
             print("Hint: LA web API failed. Check web credentials and HTTPS settings.")
         return
     if stage == "build":
-        print("Hint: check pico-sdk path, CMake toolchain, and build dependencies.")
+        print("Hint: check SDK path, build toolchain, and build dependencies.")
         return
     if stage == "flash":
-        print("Hint: verify SWD wiring, target power, and only one GDB session connected.")
+        print("Hint: verify SWD wiring, target power, and only one debug session connected.")
         print("Hint: try a reset or power-cycle, then rerun.")
         return
     if stage == "verify":
@@ -825,8 +838,7 @@ def run_pipeline(
     if verify_only:
         timings["build_s"] = 0.0
     elif no_build:
-        target = board_cfg.get("target", "")
-        firmware_path = _default_firmware_path(target)
+        firmware_path = _default_firmware_path(board_cfg)
         if not os.path.exists(firmware_path):
             result["failed_step"] = "build"
             result["error_summary"] = "no build artifacts found"
@@ -838,12 +850,10 @@ def run_pipeline(
     else:
         with _tee_output(run_paths.build_log, output_mode):
             t0 = time.monotonic()
-            target = board_cfg.get("target", "")
-            build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
-            build_type = build_cfg.get("type", "")
-            if build_type == "idf":
+            build_kind = _resolve_builder_kind(board_cfg)
+            if build_kind == "idf":
                 firmware_path = build_idf.run(board_cfg)
-            elif target.startswith("stm32"):
+            elif build_kind == "arm_debug":
                 firmware_path = build_stm32.run(board_cfg)
             else:
                 firmware_path = build_cmake.run(board_cfg)

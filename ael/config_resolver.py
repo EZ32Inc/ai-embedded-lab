@@ -17,7 +17,6 @@ _DEFAULTS: Dict[str, str] = {
 }
 
 _NOTIFY_BOARDS = {"esp32s3_devkit"}
-_DOCTOR_REQUIRED_TOOLS = ("arm-none-eabi-gdb", "arm-none-eabi-gcc", "cmake")
 
 
 def _arg(args: Any, name: str, default: Any = None) -> Any:
@@ -122,5 +121,7 @@ def resolve_board_config(repo_root: str, args: Any, pack_meta: Optional[dict] = 
 
 
 def resolve_doctor_required_tools(_args: Any = None) -> Iterable[str]:
-    """Tool list for doctor checks (kept policy-driven, not in CLI code)."""
-    return _DOCTOR_REQUIRED_TOOLS
+    """Tool list for doctor checks sourced outside CLI policy defaults."""
+    from ael.doctor_checks import get_required_tools
+
+    return get_required_tools()

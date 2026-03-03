@@ -4,9 +4,23 @@ from __future__ import annotations
 
 import base64
 import json
+from pathlib import Path
 import ssl
 import subprocess
 import urllib.request
+
+
+def get_required_tools():
+    repo_root = Path(__file__).resolve().parents[1]
+    cfg_path = repo_root / "configs" / "doctor_tools.json"
+    try:
+        payload = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        return ()
+    tools = payload.get("required_tools", []) if isinstance(payload, dict) else []
+    if not isinstance(tools, list):
+        return ()
+    return tuple(str(x) for x in tools if isinstance(x, str) and x.strip())
 
 
 def monitor_version(probe_cfg):
