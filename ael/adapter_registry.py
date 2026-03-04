@@ -13,6 +13,7 @@ from adapters import (
     esp32s3_dev_c_meter_tcp,
     flash_bmda_gdbmi,
     flash_idf,
+    instrument_aip_http,
     observe_gpio_pin,
     observe_uart_log,
     preflight,
@@ -432,8 +433,27 @@ class _NoopRecoveryAdapter:
         return {"ok": False, "error_summary": "recovery action not implemented"}
 
 
+class _InstrumentAipHttpAdapter:
+    def __init__(self, capability: str | None = None):
+        self._capability = capability
+
+    def execute(self, step, plan, ctx):
+        step_obj = dict(step) if isinstance(step, dict) else {}
+        inputs = dict(step_obj.get("inputs", {})) if isinstance(step_obj.get("inputs"), dict) else {}
+        if self._capability and not inputs.get("capability"):
+            inputs["capability"] = self._capability
+        step_obj["inputs"] = inputs
+        return instrument_aip_http.execute(step_obj, plan, ctx)
+
+
 class AdapterRegistry:
     def __init__(self):
+        self._capability_map = {
+            "measure.voltage": _InstrumentAipHttpAdapter("measure.voltage"),
+            "measure.digital": _InstrumentAipHttpAdapter("measure.digital"),
+            "selftest": _InstrumentAipHttpAdapter("selftest"),
+            "control.reset_target": _InstrumentAipHttpAdapter("control.reset_target"),
+        }
         self._adapters = {
             "preflight.probe": _PreflightAdapter(),
             "build.idf": _BuildAdapter("idf"),
@@ -445,6 +465,11 @@ class AdapterRegistry:
             "check.instrument_signature": _InstrumentSignatureAdapter(),
             "check.signal_verify": _SignalVerifyAdapter(),
             "check.instrument_selftest": _InstrumentSelftestAdapter(),
+            "instrument.aip_http": _InstrumentAipHttpAdapter(),
+            "instrument.aip_http.measure.voltage": self._capability_map["measure.voltage"],
+            "instrument.aip_http.measure.digital": self._capability_map["measure.digital"],
+            "instrument.aip_http.selftest": self._capability_map["selftest"],
+            "instrument.aip_http.control.reset_target": self._capability_map["control.reset_target"],
         }
         self._recovery = {
             "reset.serial": _NoopRecoveryAdapter(),
@@ -459,3 +484,8 @@ class AdapterRegistry:
         if action_type not in self._recovery:
             raise KeyError(f"recovery adapter not found: {action_type}")
         return self._recovery[action_type]
+
+    def get_for_capability(self, capability: str):
+        if capability not in self._capability_map:
+            raise KeyError(f"instrument capability not mapped: {capability}")
+        return self._capability_map[capability]
