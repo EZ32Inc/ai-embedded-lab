@@ -1,0 +1,1199 @@
+{
+  "name": "AEL Instrument Protocol",
+  "short_name": "AIP",
+  "version": "0.1",
+  "protocol_major": 0,
+  "status": "draft",
+  "date": "2026-03-04",
+  "primary_consumer": "AI",
+  "design_goals": [
+    "AI-first: machine-readable, schema-like, predictable",
+    "Transport-agnostic: same RPC over WiFi/Bluetooth/Ethernet/USB/PCIe/Serial via adapters",
+    "Safe by default: constraints + prepare/apply for risky operations",
+    "Observable: events/logs + evidence capture",
+    "Extensible via namespaces and feature negotiation"
+  ],
+  "roles": {
+    "orchestrator": "AEL core scheduler/agent calling instruments",
+    "instrument": "Hardware device or adapter service implementing AIP",
+    "adapter": "Wraps legacy instruments/APIs into an AIP instrument",
+    "dut": "Device Under Test",
+    "board_profile": "Describes DUT wiring, voltage domains, allowed operations; enforced by orchestrator and optionally by instrument"
+  },
+  "transports": {
+    "common_message_format": "json_rpc_envelope",
+    "interfaces": [
+      {
+        "name": "wifi",
+        "typical": "HTTP(S) RPC; WS/SSE events; mDNS discovery",
+        "notes": [
+          "primary wireless transport"
+        ]
+      },
+      {
+        "name": "bluetooth",
+        "typical": "BLE GATT or SPP tunneled JSON RPC",
+        "notes": [
+          "portable/low-power instruments"
+        ]
+      },
+      {
+        "name": "ethernet",
+        "typical": "HTTP(S) RPC; WS/SSE events; mDNS discovery",
+        "notes": [
+          "lab infrastructure"
+        ]
+      },
+      {
+        "name": "usb",
+        "typical": "CDC/ACM + framed JSON; or USB vendor protocol via adapter",
+        "notes": [
+          "direct host connection"
+        ]
+      },
+      {
+        "name": "pcie",
+        "typical": "MMIO control + DMA streaming; adapter exposes AIP semantics",
+        "notes": [
+          "high-speed capture"
+        ]
+      },
+      {
+        "name": "serial",
+        "typical": "UART framed JSON for minimal devices",
+        "notes": [
+          "debug adapters / bootstrap mode"
+        ]
+      }
+    ],
+    "recommended_defaults_v0": {
+      "rpc": {
+        "type": "http",
+        "endpoint": "POST /rpc",
+        "content_type": "application/json"
+      },
+      "events": [
+        {
+          "type": "sse",
+          "endpoint": "GET /events?claim_token=...",
+          "optional": true
+        },
+        {
+          "type": "websocket",
+          "endpoint": "GET /ws",
+          "optional": true
+        }
+      ]
+    }
+  },
+  "discovery": {
+    "mdns": {
+      "service": "_ael._tcp.local",
+      "txt_keys": [
+        "proto",
+        "id",
+        "model",
+        "fw",
+        "caps"
+      ],
+      "example": {
+        "proto": "aip/0.1",
+        "id": "<uuid>",
+        "model": "esp32s3-gpioinst",
+        "fw": "0.3.7",
+        "caps": "gpio,adc,la,jtag,power"
+      }
+    },
+    "non_mdns": [
+      "USB/Serial/PCIe instruments are discovered by host OS enumeration; adapters expose them as AIP endpoints.",
+      "Static configuration (IP list) is allowed for air-gapped labs."
+    ]
+  },
+  "envelope": {
+    "request": {
+      "fields": [
+        {
+          "name": "v",
+          "type": "int",
+          "required": true,
+          "meaning": "protocol major (0 for AIP/0)"
+        },
+        {
+          "name": "op",
+          "type": "string",
+          "required": true,
+          "meaning": "operation name namespace.action"
+        },
+        {
+          "name": "req_id",
+          "type": "string",
+          "required": true,
+          "meaning": "request correlation id (UUID recommended)"
+        },
+        {
+          "name": "timestamp_ms",
+          "type": "int",
+          "required": false,
+          "meaning": "caller timestamp (ms)"
+        },
+        {
+          "name": "claim_token",
+          "type": "string",
+          "required": false,
+          "meaning": "authorization token from sys.claim"
+        },
+        {
+          "name": "args",
+          "type": "object",
+          "required": true,
+          "meaning": "operation arguments"
+        }
+      ]
+    },
+    "response": {
+      "fields": [
+        {
+          "name": "v",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "op",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "req_id",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "ok",
+          "type": "bool",
+          "required": true
+        },
+        {
+          "name": "result",
+          "type": "object",
+          "required": false,
+          "meaning": "present when ok=true"
+        },
+        {
+          "name": "err",
+          "type": "object",
+          "required": false,
+          "meaning": "present when ok=false"
+        }
+      ]
+    }
+  },
+  "claiming": {
+    "purpose": "Exclusive control to prevent conflicts among orchestrators/users",
+    "token_usage": "If instrument requires claiming, all state-changing ops must include claim_token",
+    "ttl_ms_default": 30000,
+    "ops": {
+      "sys.claim": {
+        "returns": "claim_token + expires_in_ms"
+      },
+      "sys.renew": {
+        "optional": true,
+        "returns": "expires_in_ms"
+      },
+      "sys.release": {
+        "returns": "released"
+      }
+    }
+  },
+  "binding": {
+    "purpose": "Bind logical labels (dut_reset) to physical resources (gpio pin 4) so AI plans refer to labels",
+    "bind_revision": true
+  },
+  "safety_model": {
+    "two_phase": {
+      "prepare": "Validate plan against caps + constraints; return plan_id + warnings",
+      "apply": "Execute prepared plan; must reject unknown/expired plan_id"
+    },
+    "constraints_examples": [
+      "max_voltage_mv",
+      "forbid_hotplug",
+      "require_bound_labels",
+      "pin_conflict_policy",
+      "max_current_ma",
+      "require_power_good"
+    ],
+    "notes": [
+      "Orchestrator should enforce Board Profile constraints; instruments may add extra local safety checks.",
+      "Risky ops include power switching, high-frequency driving, flash programming, voltage/current changes."
+    ]
+  },
+  "events": {
+    "purpose": "Async observability for AI diagnosis: warnings/errors/state/capture progress",
+    "message": {
+      "fields": [
+        {
+          "name": "v",
+          "type": "int",
+          "required": true
+        },
+        {
+          "name": "op",
+          "type": "string",
+          "required": true,
+          "fixed": "event"
+        },
+        {
+          "name": "topic",
+          "type": "string",
+          "required": true,
+          "enum": [
+            "log",
+            "warning",
+            "error",
+            "capture",
+            "state",
+            "metric"
+          ]
+        },
+        {
+          "name": "timestamp_us",
+          "type": "int",
+          "required": false,
+          "meaning": "instrument monotonic timestamp"
+        },
+        {
+          "name": "data",
+          "type": "object",
+          "required": true
+        }
+      ]
+    }
+  },
+  "data_capture": {
+    "chunking": {
+      "fields": [
+        "capture_id",
+        "chunk_index",
+        "chunk_total",
+        "encoding",
+        "data_b64"
+      ],
+      "preferred_encodings": [
+        "packed_bits",
+        "rle",
+        "raw_bytes"
+      ],
+      "note": "v0 may use base64; higher performance transports can switch to binary frames without changing semantics"
+    },
+    "timebase": {
+      "clock": "monotonic_us",
+      "boot_id": "changes each reboot to avoid cross-boot confusion"
+    }
+  },
+  "error_model": {
+    "structure": {
+      "fields": [
+        {
+          "name": "code",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "required": true
+        },
+        {
+          "name": "detail",
+          "type": "object",
+          "required": false
+        },
+        {
+          "name": "retryable",
+          "type": "bool",
+          "required": true
+        },
+        {
+          "name": "hint",
+          "type": "string",
+          "required": false
+        }
+      ]
+    },
+    "codes": [
+      "ERR_BAD_REQUEST",
+      "ERR_UNSUPPORTED_OP",
+      "ERR_CLAIMED",
+      "ERR_UNAUTHORIZED",
+      "ERR_TIMEOUT",
+      "ERR_BUSY",
+      "ERR_UNBOUND_LABEL",
+      "ERR_OUT_OF_RANGE",
+      "ERR_SAFETY_VOLTAGE_DOMAIN",
+      "ERR_SAFETY_PIN_CONFLICT",
+      "ERR_SAFETY_OVERCURRENT",
+      "ERR_SAFETY_THERMAL",
+      "ERR_TRANSPORT",
+      "ERR_INTERNAL"
+    ]
+  },
+  "capability_model": {
+    "principles": [
+      "Capabilities must be self-describing and machine-actionable.",
+      "Include limits (max freq, max rate, voltage levels), resources (pins/channels), and supported encodings.",
+      "Orchestrator uses caps to plan safe operations and select instruments."
+    ],
+    "sys.get_caps_result_schema": {
+      "caps": {
+        "gpio": {
+          "pins": "int[]",
+          "modes": "string[]",
+          "pull": "string[]",
+          "max_toggle_hz": "int",
+          "levels_mv": "int[]"
+        },
+        "adc": {
+          "channels": "int[]",
+          "max_sps": "int",
+          "resolution_bits": "int",
+          "range_mv": "[int,int]"
+        },
+        "dac": {
+          "channels": "int[]",
+          "max_sps": "int",
+          "resolution_bits": "int",
+          "range_mv": "[int,int]"
+        },
+        "power": {
+          "rails": "string[]",
+          "switchable": "bool",
+          "measure_current": "bool",
+          "measure_voltage": "bool",
+          "max_current_ma": "int?"
+        },
+        "la": {
+          "channels": "int",
+          "max_sample_hz": "int",
+          "buffer_bytes": "int",
+          "encodings": "string[]"
+        },
+        "scope": {
+          "channels": "int",
+          "max_sample_hz": "int",
+          "vertical_ranges_mv": "int[]",
+          "trigger_types": "string[]"
+        },
+        "jtag": {
+          "transports": "string[]",
+          "max_freq_hz": "int",
+          "targets": "string[]?"
+        },
+        "flash": {
+          "max_image_bytes": "int",
+          "chunk_bytes": "int",
+          "supported_formats": "string[]"
+        },
+        "uart": {
+          "ports": "string[]",
+          "max_baud": "int",
+          "flow_control": "string[]"
+        },
+        "i2c": {
+          "buses": "string[]",
+          "max_hz": "int",
+          "addr_width_bits": "[7,10]"
+        },
+        "spi": {
+          "buses": "string[]",
+          "max_hz": "int",
+          "modes": "int[]"
+        },
+        "pwm": {
+          "channels": "int",
+          "max_hz": "int",
+          "resolution_bits": "int"
+        },
+        "can": {
+          "buses": "string[]",
+          "max_bitrate": "int"
+        },
+        "eth": {
+          "ports": "int",
+          "link_speeds_mbps": "int[]"
+        },
+        "wifi": {
+          "modes": "string[]",
+          "max_throughput_mbps": "int?"
+        },
+        "bt": {
+          "modes": "string[]"
+        },
+        "rf": {
+          "bands_hz": "[int,int][]",
+          "capabilities": "string[]"
+        },
+        "sensor": {
+          "types": "string[]",
+          "sample_modes": "string[]"
+        },
+        "storage": {
+          "types": "string[]",
+          "max_bytes": "int?"
+        },
+        "camera": {
+          "formats": "string[]",
+          "max_fps": "int?",
+          "resolutions": "string[]?"
+        }
+      }
+    }
+  },
+  "namespaces": {
+    "sys": "identity, claiming, binding, planning, health",
+    "gpio": "digital IO",
+    "adc": "analog input sampling",
+    "dac": "analog output",
+    "pwm": "pulse generation",
+    "power": "rail switching/measurement/limits",
+    "la": "logic analyzer / digital capture",
+    "scope": "oscilloscope-like analog capture",
+    "jtag": "JTAG/SWD debug access",
+    "flash": "programming (via jtag/uart/usb etc.)",
+    "uart": "serial console and stimulus",
+    "spi": "SPI transfers / bus emulation",
+    "i2c": "I2C transfers / bus emulation",
+    "can": "CAN bus",
+    "eth": "Ethernet link control/packet capture (optional)",
+    "wifi": "WiFi diagnostics (optional)",
+    "bt": "Bluetooth diagnostics (optional)",
+    "rf": "RF scan/capture (optional)",
+    "sensor": "sensor read/stream (optional)",
+    "storage": "mass storage, file push/pull for upgrades (optional)",
+    "camera": "vision capture (optional)"
+  },
+  "operations": [
+    {
+      "op": "sys.hello",
+      "category": "sys",
+      "auth": "none",
+      "args": {
+        "client": "string",
+        "proto": "string?"
+      },
+      "result": {
+        "instrument": "object",
+        "time": "object"
+      }
+    },
+    {
+      "op": "sys.get_caps",
+      "category": "sys",
+      "auth": "none",
+      "args": {},
+      "result": {
+        "caps": "object"
+      }
+    },
+    {
+      "op": "sys.claim",
+      "category": "sys",
+      "auth": "none",
+      "args": {
+        "owner": "string",
+        "ttl_ms": "int?",
+        "purpose": "string?"
+      },
+      "result": {
+        "claim_token": "string",
+        "expires_in_ms": "int"
+      }
+    },
+    {
+      "op": "sys.renew",
+      "category": "sys",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "ttl_ms": "int?"
+      },
+      "result": {
+        "expires_in_ms": "int"
+      }
+    },
+    {
+      "op": "sys.release",
+      "category": "sys",
+      "auth": "claim",
+      "args": {},
+      "result": {
+        "released": "bool"
+      }
+    },
+    {
+      "op": "sys.bind",
+      "category": "sys",
+      "auth": "claim",
+      "args": {
+        "map": "object"
+      },
+      "result": {
+        "bind_rev": "int"
+      }
+    },
+    {
+      "op": "sys.prepare",
+      "category": "sys",
+      "auth": "claim",
+      "args": {
+        "plan": "object",
+        "constraints": "object?"
+      },
+      "result": {
+        "plan_id": "string",
+        "warnings": "object[]?"
+      }
+    },
+    {
+      "op": "sys.apply",
+      "category": "sys",
+      "auth": "claim",
+      "args": {
+        "plan_id": "string"
+      },
+      "result": {
+        "applied": "bool",
+        "summary": "object?"
+      }
+    },
+    {
+      "op": "sys.health",
+      "category": "sys",
+      "auth": "claim",
+      "optional": true,
+      "args": {},
+      "result": {
+        "metrics": "object"
+      }
+    },
+    {
+      "op": "sys.time",
+      "category": "sys",
+      "auth": "none",
+      "optional": true,
+      "args": {},
+      "result": {
+        "clock": "string",
+        "now_us": "int",
+        "boot_id": "string"
+      }
+    },
+    {
+      "op": "sys.reset",
+      "category": "sys",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "mode": "string?",
+        "reason": "string?"
+      },
+      "result": {
+        "rebooting": "bool"
+      }
+    },
+    {
+      "op": "gpio.config",
+      "category": "gpio",
+      "auth": "claim",
+      "args": {
+        "set": "object"
+      },
+      "result": {
+        "configured": "int"
+      }
+    },
+    {
+      "op": "gpio.read",
+      "category": "gpio",
+      "auth": "claim",
+      "args": {
+        "signals": "string[]"
+      },
+      "result": {
+        "values": "object",
+        "timestamp_us": "int?"
+      }
+    },
+    {
+      "op": "gpio.write",
+      "category": "gpio",
+      "auth": "claim",
+      "args": {
+        "set": "object"
+      },
+      "result": {
+        "written": "int"
+      }
+    },
+    {
+      "op": "gpio.toggle",
+      "category": "gpio",
+      "auth": "claim",
+      "args": {
+        "signal": "string",
+        "freq_hz": "int",
+        "duration_ms": "int"
+      },
+      "result": {
+        "done": "bool"
+      }
+    },
+    {
+      "op": "gpio.pulse",
+      "category": "gpio",
+      "auth": "claim",
+      "args": {
+        "signal": "string",
+        "active_level": "0|1?",
+        "width_us": "int",
+        "count": "int?",
+        "period_us": "int?"
+      },
+      "result": {
+        "done": "bool"
+      }
+    },
+    {
+      "op": "adc.read",
+      "category": "adc",
+      "auth": "claim",
+      "args": {
+        "channels": "string[]",
+        "samples": "int?",
+        "sample_hz": "int?",
+        "settle_us": "int?"
+      },
+      "result": {
+        "readings": "object",
+        "timestamp_us": "int?"
+      }
+    },
+    {
+      "op": "adc.stream_start",
+      "category": "adc",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "channels": "string[]",
+        "sample_hz": "int",
+        "duration_ms": "int?",
+        "encoding": "string?"
+      },
+      "result": {
+        "stream_id": "string"
+      }
+    },
+    {
+      "op": "adc.stream_read",
+      "category": "adc",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "stream_id": "string"
+      },
+      "result": {
+        "chunk": "object"
+      }
+    },
+    {
+      "op": "dac.write",
+      "category": "dac",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "set": "object"
+      },
+      "result": {
+        "written": "int"
+      }
+    },
+    {
+      "op": "power.set",
+      "category": "power",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "rails": "object"
+      },
+      "result": {
+        "changed": "int"
+      }
+    },
+    {
+      "op": "power.measure",
+      "category": "power",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "rails": "string[]",
+        "what": "string[]"
+      },
+      "result": {
+        "measurements": "object",
+        "timestamp_us": "int?"
+      }
+    },
+    {
+      "op": "power.limit",
+      "category": "power",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "rails": "object"
+      },
+      "result": {
+        "applied": "bool"
+      }
+    },
+    {
+      "op": "la.start",
+      "category": "la",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "signals": "string[]",
+        "sample_hz": "int",
+        "duration_ms": "int?",
+        "trigger": "object?",
+        "encoding": "string?"
+      },
+      "result": {
+        "capture_id": "string"
+      }
+    },
+    {
+      "op": "la.read",
+      "category": "la",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "capture_id": "string",
+        "chunk_index": "int?"
+      },
+      "result": {
+        "capture_chunk": "object"
+      }
+    },
+    {
+      "op": "la.stop",
+      "category": "la",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "capture_id": "string"
+      },
+      "result": {
+        "stopped": "bool"
+      }
+    },
+    {
+      "op": "scope.start",
+      "category": "scope",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "channels": "string[]",
+        "sample_hz": "int",
+        "duration_ms": "int",
+        "trigger": "object?",
+        "encoding": "string?"
+      },
+      "result": {
+        "capture_id": "string"
+      }
+    },
+    {
+      "op": "scope.read",
+      "category": "scope",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "capture_id": "string",
+        "chunk_index": "int?"
+      },
+      "result": {
+        "capture_chunk": "object"
+      }
+    },
+    {
+      "op": "jtag.scan",
+      "category": "jtag",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "transport": "string?",
+        "freq_hz": "int?",
+        "chain_hint": "object?"
+      },
+      "result": {
+        "targets": "object[]"
+      }
+    },
+    {
+      "op": "jtag.set_freq",
+      "category": "jtag",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "freq_hz": "int"
+      },
+      "result": {
+        "freq_hz": "int"
+      }
+    },
+    {
+      "op": "jtag.reset",
+      "category": "jtag",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "kind": "string?",
+        "assert_ms": "int?"
+      },
+      "result": {
+        "done": "bool"
+      }
+    },
+    {
+      "op": "jtag.read_reg",
+      "category": "jtag",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "reg": "string",
+        "width_bits": "int?"
+      },
+      "result": {
+        "value": "string"
+      }
+    },
+    {
+      "op": "jtag.write_reg",
+      "category": "jtag",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "reg": "string",
+        "value": "string",
+        "width_bits": "int?"
+      },
+      "result": {
+        "done": "bool"
+      }
+    },
+    {
+      "op": "flash.begin",
+      "category": "flash",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "target": "string?",
+        "format": "string",
+        "image_bytes": "int",
+        "chunk_bytes": "int?",
+        "address": "string?",
+        "verify": "bool?"
+      },
+      "result": {
+        "session_id": "string",
+        "chunk_bytes": "int"
+      }
+    },
+    {
+      "op": "flash.chunk",
+      "category": "flash",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "session_id": "string",
+        "index": "int",
+        "data_b64": "string"
+      },
+      "result": {
+        "accepted": "bool",
+        "next_index": "int"
+      }
+    },
+    {
+      "op": "flash.finish",
+      "category": "flash",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "session_id": "string",
+        "do_reset": "bool?"
+      },
+      "result": {
+        "verified": "bool?",
+        "done": "bool"
+      }
+    },
+    {
+      "op": "uart.open",
+      "category": "uart",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "port": "string",
+        "baud": "int",
+        "config": "object?"
+      },
+      "result": {
+        "handle": "string"
+      }
+    },
+    {
+      "op": "uart.read",
+      "category": "uart",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "handle": "string",
+        "max_bytes": "int",
+        "timeout_ms": "int?"
+      },
+      "result": {
+        "data_b64": "string",
+        "n": "int"
+      }
+    },
+    {
+      "op": "uart.write",
+      "category": "uart",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "handle": "string",
+        "data_b64": "string"
+      },
+      "result": {
+        "n": "int"
+      }
+    },
+    {
+      "op": "uart.close",
+      "category": "uart",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "handle": "string"
+      },
+      "result": {
+        "closed": "bool"
+      }
+    },
+    {
+      "op": "i2c.write",
+      "category": "i2c",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "bus": "string",
+        "addr": "int",
+        "data_b64": "string"
+      },
+      "result": {
+        "written": "int"
+      }
+    },
+    {
+      "op": "i2c.read",
+      "category": "i2c",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "bus": "string",
+        "addr": "int",
+        "n": "int"
+      },
+      "result": {
+        "data_b64": "string",
+        "read": "int"
+      }
+    },
+    {
+      "op": "spi.transfer",
+      "category": "spi",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "bus": "string",
+        "cs": "string?",
+        "mode": "int?",
+        "hz": "int?",
+        "tx_b64": "string"
+      },
+      "result": {
+        "rx_b64": "string",
+        "n": "int"
+      }
+    },
+    {
+      "op": "pwm.set",
+      "category": "pwm",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "channels": "object"
+      },
+      "result": {
+        "applied": "bool"
+      }
+    },
+    {
+      "op": "can.send",
+      "category": "can",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "bus": "string",
+        "id": "int",
+        "data_b64": "string",
+        "is_extended": "bool?"
+      },
+      "result": {
+        "sent": "bool"
+      }
+    },
+    {
+      "op": "can.recv",
+      "category": "can",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "bus": "string",
+        "max_frames": "int?",
+        "timeout_ms": "int?"
+      },
+      "result": {
+        "frames": "object[]"
+      }
+    },
+    {
+      "op": "wifi.diagnose",
+      "category": "wifi",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "tests": "string[]"
+      },
+      "result": {
+        "results": "object"
+      }
+    },
+    {
+      "op": "bt.diagnose",
+      "category": "bt",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "tests": "string[]"
+      },
+      "result": {
+        "results": "object"
+      }
+    },
+    {
+      "op": "rf.scan",
+      "category": "rf",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "band_hz": "[int,int]",
+        "duration_ms": "int",
+        "mode": "string?"
+      },
+      "result": {
+        "observations": "object",
+        "evidence": "object?"
+      }
+    },
+    {
+      "op": "sensor.read",
+      "category": "sensor",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "type": "string",
+        "what": "string[]"
+      },
+      "result": {
+        "values": "object"
+      }
+    },
+    {
+      "op": "sensor.stream_start",
+      "category": "sensor",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "type": "string",
+        "sample_hz": "int",
+        "duration_ms": "int?",
+        "encoding": "string?"
+      },
+      "result": {
+        "stream_id": "string"
+      }
+    },
+    {
+      "op": "storage.push",
+      "category": "storage",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "path": "string",
+        "data_b64": "string",
+        "mode": "string?"
+      },
+      "result": {
+        "bytes": "int"
+      }
+    },
+    {
+      "op": "storage.pull",
+      "category": "storage",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "path": "string",
+        "max_bytes": "int?"
+      },
+      "result": {
+        "data_b64": "string",
+        "bytes": "int"
+      }
+    },
+    {
+      "op": "camera.capture",
+      "category": "camera",
+      "auth": "claim",
+      "optional": true,
+      "args": {
+        "format": "string",
+        "resolution": "string?",
+        "fps": "int?",
+        "duration_ms": "int?"
+      },
+      "result": {
+        "frames": "object?",
+        "data_b64": "string?",
+        "stream_id": "string?"
+      }
+    }
+  ],
+  "ai_usage_notes": [
+    "Agents should call sys.get_caps and build plans that respect reported limits.",
+    "Prefer sys.bind so plans use semantic labels, improving portability across instruments/boards.",
+    "Use sys.prepare before risky operations; apply only after validation.",
+    "When failures happen, collect: err.code+detail, recent events, and capture evidence for debugging."
+  ]
+}
