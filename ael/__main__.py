@@ -9,6 +9,7 @@ from pathlib import Path
 
 from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import assets
+from ael.bridge_server import run_server as run_bridge_server
 from ael.cli import submit_task
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
 from ael import run_manager
@@ -75,6 +76,11 @@ def main():
     submit_p.add_argument("--description", default="")
     submit_p.add_argument("--priority", default="normal")
     submit_p.add_argument("--created-by", default="ael-submit")
+
+    bridge_p = sub.add_parser("bridge")
+    bridge_p.add_argument("--host", default=os.environ.get("AEL_BRIDGE_HOST", "127.0.0.1"))
+    bridge_p.add_argument("--port", type=int, default=int(os.environ.get("AEL_BRIDGE_PORT", "8844")))
+    bridge_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -228,6 +234,8 @@ def main():
         )
         print(json.dumps(payload, indent=2, sort_keys=True))
         sys.exit(0 if status == 200 and bool(payload.get("accepted")) else 1)
+    if args.cmd == "bridge":
+        sys.exit(run_bridge_server(host=str(args.host), port=int(args.port), queue_root=str(args.queue)))
 
 
 def _check_tools(tools):
