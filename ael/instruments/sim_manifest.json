@@ -1,0 +1,91 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "kind": "instrument",
+  "id": "instrument_sim",
+  "name": "AEL Reference Simulator",
+  "version": "0.1.0",
+  "transports": [
+    {
+      "type": "inproc",
+      "adapter": "instrument.sim_http"
+    }
+  ],
+  "capabilities": [
+    {
+      "name": "measure.digital",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "type": "array",
+            "items": {
+              "type": "integer"
+            }
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "pins": {
+            "type": "array"
+          }
+        }
+      },
+      "units": {
+        "freq_hz": "Hz",
+        "duty": "ratio"
+      }
+    },
+    {
+      "name": "measure.voltage",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "channel": {
+            "type": "string"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "voltage_v": {
+            "type": "number"
+          }
+        }
+      },
+      "units": {
+        "voltage_v": "V"
+      },
+      "ranges": {
+        "voltage_v": [
+          0.0,
+          3.3
+        ]
+      },
+      "tolerances": {
+        "voltage_v": 0.01
+      }
+    },
+    {
+      "name": "uart_log",
+      "inputs_schema": {
+        "type": "object",
+        "properties": {
+          "ready_count": {
+            "type": "integer"
+          }
+        }
+      },
+      "outputs_schema": {
+        "type": "object",
+        "properties": {
+          "lines": {
+            "type": "array"
+          }
+        }
+      }
+    }
+  ]
+}
