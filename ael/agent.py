@@ -122,14 +122,50 @@ def _load_plan(task: Dict, task_dir: Path) -> Tuple[Optional[Dict], str]:
         return dict(task.get("plan")), ""
 
     plan_path = task.get("plan_path")
+    plan_file = task.get("plan_file")
+    if not plan_path and isinstance(plan_file, str) and plan_file.strip():
+        plan_path = plan_file
     if not plan_path:
         return None, "plan or plan_path is required"
 
     p = Path(str(plan_path))
     if not p.is_absolute():
-        p = (task_dir / p).resolve()
+        p_local = (task_dir / p).resolve()
+        p_repo = (_repo_root() / p).resolve()
+        if p_local.exists():
+            p = p_local
+        else:
+            p = p_repo
     if not p.exists():
         return None, f"plan_path not found: {p}"
+    # API tasks may point to non-JSON plan docs. We still execute through runner
+    # with a no-op plan so queue ingestion and state transitions remain stable.
+    if str(p.suffix).lower() != ".json":
+        note = str(task.get("description", "")).strip() or f"plan_file={p}"
+        plan = {
+            "version": "runplan/0.1",
+            "plan_id": str(task.get("task_id", "api-task")),
+            "created_at": _now_iso(),
+            "inputs": {
+                "task_id": str(task.get("task_id", "")),
+                "plan_file": str(p),
+            },
+            "selected": {"test_config": str(p)},
+            "context": {},
+            "steps": [
+                {
+                    "name": "check_api_task",
+                    "type": "check.noop",
+                    "inputs": {
+                        "note": note,
+                    },
+                }
+            ],
+            "recovery_policy": {"enabled": False},
+            "meta": {},
+        }
+        return plan, ""
+
     try:
         payload = json.loads(p.read_text(encoding="utf-8"))
     except Exception as exc:
@@ -242,7 +278,9 @@ def _process_task_file(
     if not isinstance(task, dict):
         return finalize(False, None, "invalid task JSON", {})
 
-    if task.get("task_version") != "agenttask/0.1":
+    task_version = str(task.get("task_version", "")).strip()
+    is_api_task = isinstance(task.get("plan_file"), str) and bool(str(task.get("plan_file")).strip())
+    if task_version not in ("", "agenttask/0.1", "taskapi/0.3") and not is_api_task:
         return finalize(False, None, "unsupported task_version", {})
 
     if mode.branch_worker:

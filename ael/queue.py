@@ -40,10 +40,20 @@ def _task_priority(path: Path) -> Tuple[int, str]:
         return default
     if not isinstance(data, dict):
         return default
-    try:
-        p = int(data.get("priority", 100))
-    except Exception:
-        p = 100
+    raw_priority = data.get("priority", 100)
+    if isinstance(raw_priority, str):
+        mapped = {
+            "high": 10,
+            "urgent": 5,
+            "normal": 100,
+            "low": 200,
+        }
+        p = mapped.get(raw_priority.strip().lower(), 100)
+    else:
+        try:
+            p = int(raw_priority)
+        except Exception:
+            p = 100
     return (p, path.name)
 
 
