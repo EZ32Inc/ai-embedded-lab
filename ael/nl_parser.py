@@ -14,7 +14,8 @@ def parse_user_prompt(prompt: str) -> Dict:
         return {"title": "empty prompt", "kind": "codex", "payload": {"prompt": prompt}}
 
     plan_terms = ("develop", "implement", "create", "verify", "golden test")
-    if any(term in text for term in plan_terms):
+    has_plan_term = any(term in text for term in plan_terms) or bool(re.search(r"\btest\b", text))
+    if has_plan_term:
         return {
             "title": prompt[:80] if prompt else "plan task",
             "kind": "plan",

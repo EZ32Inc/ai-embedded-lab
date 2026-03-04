@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import os
 from typing import Dict, List
 
 
@@ -45,15 +46,28 @@ def generate_plan(prompt: str) -> List[Dict]:
     board = _detect_board(text)
     test = _detect_test(text)
 
-    return [
-        {
-            "kind": "codex",
-            "title": f"generate {test} task assets",
-            "payload": {
-                "prompt": f"Prepare changes for {test} testing on {board or 'target board'}. Original goal: {prompt}",
-                "repo_root": ".",
-            },
-        },
+    tasks: List[Dict] = []
+    if os.environ.get("AEL_CODEX_ENABLED", "0").strip() == "1":
+        tasks.append(
+            {
+                "kind": "codex",
+                "title": f"generate {test} task assets",
+                "payload": {
+                    "prompt": f"Prepare changes for {test} testing on {board or 'target board'}. Original goal: {prompt}",
+                    "repo_root": ".",
+                },
+            }
+        )
+    else:
+        tasks.append(
+            {
+                "kind": "noop",
+                "title": "prepare task context",
+                "payload": {"note": f"codex disabled; using local plan flow for: {prompt}"},
+            }
+        )
+    tasks.extend(
+        [
         {
             "kind": "runplan",
             "title": f"run {test} test",
@@ -68,4 +82,6 @@ def generate_plan(prompt: str) -> List[Dict]:
             "title": "verify results",
             "payload": {"note": f"verify plan outcome for: {prompt}"},
         },
-    ]
+        ]
+    )
+    return tasks
