@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import time
 from datetime import datetime
@@ -42,6 +43,58 @@ def _now_iso() -> str:
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
+
+
+def _git(cmd: List[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:
+    workdir = str(cwd or _repo_root())
+    return subprocess.run(
+        ["git", *cmd],
+        cwd=workdir,
+        capture_output=True,
+        text=True,
+    )
+
+
+def _git_current_head() -> Tuple[Optional[str], str]:
+    res = _git(["rev-parse", "HEAD"])
+    if int(res.returncode) != 0:
+        return None, (res.stderr or res.stdout or "git rev-parse failed").strip()
+    return (res.stdout or "").strip(), ""
+
+
+def _git_current_branch() -> Tuple[Optional[str], str]:
+    res = _git(["rev-parse", "--abbrev-ref", "HEAD"])
+    if int(res.returncode) != 0:
+        return None, (res.stderr or res.stdout or "git branch resolve failed").strip()
+    return (res.stdout or "").strip(), ""
+
+
+def _git_is_dirty() -> Tuple[Optional[bool], str]:
+    res = _git(["status", "--porcelain"])
+    if int(res.returncode) != 0:
+        return None, (res.stderr or res.stdout or "git status failed").strip()
+    return bool((res.stdout or "").strip()), ""
+
+
+def _slugify(value: str) -> str:
+    raw = (value or "").strip().lower()
+    chars = []
+    prev_dash = False
+    for ch in raw:
+        if ch.isalnum():
+            chars.append(ch)
+            prev_dash = False
+            continue
+        if not prev_dash:
+            chars.append("-")
+            prev_dash = True
+    out = "".join(chars).strip("-")
+    return out or "task"
+
+
+def _task_branch_name(task_id: str, task_index: int) -> str:
+    date_prefix = datetime.now().strftime("%Y-%m-%d")
+    return f"agent/{date_prefix}/task-{int(task_index):04d}-{_slugify(task_id)}"
 
 
 def _safe_run_dir(path_value: str) -> bool:
@@ -134,13 +187,14 @@ def _process_task_file(
     queue_root: Path,
     report_root: Path,
     mode: _AgentMode,
+    task_index: int,
     verbose: bool = False,
 ) -> bool:
     running_task = claim_task(task_inbox_path, queue_root)
     started = time.monotonic()
     started_at = _now_iso()
 
-    running_state = {
+    running_state: Dict[str, object] = {
         "task_id": "",
         "started_at": started_at,
         "finished_at": "",
@@ -157,6 +211,8 @@ def _process_task_file(
     if isinstance(task, dict) and task.get("task_id"):
         task_id = str(task.get("task_id"))
     running_state["task_id"] = task_id
+
+    original_branch = ""
 
     def finalize(ok: bool, run_dir: Optional[Path], error_summary: str, artifacts: Dict[str, str]) -> bool:
         finished_at = _now_iso()
@@ -178,6 +234,8 @@ def _process_task_file(
         append_task_result(report_root, running_state)
         if verbose:
             print(f"Agent: task {task_id} -> {'DONE' if ok else 'FAILED'}")
+        if mode.branch_worker and original_branch:
+            _git(["checkout", original_branch])
         return ok
 
     if not isinstance(task, dict):
@@ -185,6 +243,23 @@ def _process_task_file(
 
     if task.get("task_version") != "agenttask/0.1":
         return finalize(False, None, "unsupported task_version", {})
+
+    if mode.branch_worker:
+        branch_name = _task_branch_name(task_id, task_index)
+        base_commit, commit_err = _git_current_head()
+        if not base_commit:
+            return finalize(False, None, f"git base commit read failed: {commit_err}", {})
+        current_branch, branch_err = _git_current_branch()
+        if not current_branch:
+            return finalize(False, None, f"git current branch read failed: {branch_err}", {})
+        original_branch = current_branch
+        checkout = _git(["checkout", "-b", branch_name])
+        if int(checkout.returncode) != 0:
+            summary = (checkout.stderr or checkout.stdout or "git checkout -b failed").strip()
+            return finalize(False, None, f"branch creation failed: {summary}", {})
+        running_state["base_commit"] = base_commit
+        running_state["branch_name"] = branch_name
+        write_state(running_task, running_state)
 
     plan, plan_err = _load_plan(task, running_task.parent)
     if not plan:
@@ -256,6 +331,9 @@ def _process_task_file(
         running_state["publish_requested"] = bool(mode.push)
         running_state["remote"] = mode.remote
         running_state["gates_path"] = mode.gates_path or ""
+        head_after, _ = _git_current_head()
+        if head_after:
+            running_state["final_commit"] = head_after
 
     return finalize(runner_ok, run_dir, error_summary, artifacts)
 
@@ -277,7 +355,14 @@ def run_sweep(
         if not tasks:
             break
         task_path = tasks[0]
-        _process_task_file(task_path, queue_root, report_root, mode=mode, verbose=verbose)
+        _process_task_file(
+            task_path,
+            queue_root,
+            report_root,
+            mode=mode,
+            task_index=processed + 1,
+            verbose=verbose,
+        )
         processed += 1
         if max_tasks is not None and processed >= max_tasks:
             break
@@ -305,6 +390,18 @@ def main() -> int:
         remote=str(args.remote),
         gates_path=args.gates,
     )
+
+    if mode.branch_worker:
+        if os.environ.get("AEL_AGENT_ALLOW_DIRTY", "").strip() == "1":
+            pass
+        else:
+            dirty, dirty_err = _git_is_dirty()
+            if dirty is None:
+                print(f"Agent: git check failed: {dirty_err}")
+                return 2
+            if dirty:
+                print("Agent: refusing to start in branch-worker mode because working tree is dirty.")
+                return 2
 
     if args.once:
         run_sweep(args.queue, mode=mode, max_tasks=args.max_tasks, verbose=args.verbose)

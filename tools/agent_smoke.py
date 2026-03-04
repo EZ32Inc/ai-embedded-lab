@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 import sys
@@ -23,8 +24,17 @@ def main() -> int:
         shutil.rmtree(queue_root)
     if run_dir.exists():
         shutil.rmtree(run_dir)
-
     (queue_root / "inbox").mkdir(parents=True, exist_ok=True)
+
+    original_branch_res = subprocess.run(
+        ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+    )
+    if original_branch_res.returncode != 0:
+        return _fail("failed to resolve current git branch")
+    original_branch = (original_branch_res.stdout or "").strip()
 
     task_id = "agent-smoke"
     task_name = f"2099-01-01_00-00-00_{task_id}.json"
@@ -84,10 +94,13 @@ def main() -> int:
         "-m",
         "ael.agent",
         "--once",
+        "--branch-worker",
+        "--no-push",
         "--queue",
         str(queue_root),
     ]
-    p = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True)
+    env = dict(**os.environ, AEL_AGENT_ALLOW_DIRTY="1")
+    p = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True, env=env)
     if p.returncode != 0:
         return _fail(f"agent exit code {p.returncode}\nstdout={p.stdout}\nstderr={p.stderr}")
 
@@ -97,6 +110,28 @@ def main() -> int:
         return _fail("task was not moved to queue/done")
     if not done_state.exists():
         return _fail("done state json was not created")
+    try:
+        state_payload = json.loads(done_state.read_text(encoding="utf-8"))
+    except Exception as exc:
+        return _fail(f"failed to parse done state: {exc}")
+    branch_name = str(state_payload.get("branch_name", "")).strip()
+    base_commit = str(state_payload.get("base_commit", "")).strip()
+    if not branch_name:
+        return _fail("branch_name missing in task state")
+    if not base_commit:
+        return _fail("base_commit missing in task state")
+
+    branch_check = subprocess.run(
+        ["git", "show-ref", "--verify", f"refs/heads/{branch_name}"],
+        cwd=str(repo_root),
+        capture_output=True,
+        text=True,
+    )
+    if branch_check.returncode != 0:
+        return _fail("created task branch not found in repository")
+
+    subprocess.run(["git", "checkout", original_branch], cwd=str(repo_root), capture_output=True, text=True)
+    subprocess.run(["git", "branch", "-D", branch_name], cwd=str(repo_root), capture_output=True, text=True)
 
     if not (run_dir / "artifacts" / "run_plan.json").exists():
         return _fail("run_plan artifact missing")
