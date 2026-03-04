@@ -37,6 +37,19 @@ def write_nightly_report(date_str: str, summary: dict, path: Path) -> Path:
             )
     if not fail_any:
         lines.append("- None")
+    lines.extend(
+        [
+            "",
+            "## Merge Readiness",
+            "| Branch | Task | Status | Execution Mode | Tests | Merge Ready |",
+            "|------|------|------|------|------|------|",
+        ]
+    )
+    for p in plans:
+        lines.append(
+            f"| {p.get('branch','')} | {p.get('title','')} | {p.get('status','')} | "
+            f"{p.get('execution_mode','')} | {p.get('tests','')} | {p.get('merge_ready','')} |"
+        )
     lines.extend(["", "## Changes"])
     changes = False
     for p in plans:

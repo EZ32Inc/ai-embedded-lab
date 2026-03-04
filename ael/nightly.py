@@ -20,6 +20,7 @@ from ael.git_ops import (
     safe_branch_name,
 )
 from ael.nightly_report import write_nightly_report
+from ael.review_pack import generate_review_pack
 
 
 @dataclass
@@ -114,6 +115,9 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
         return summary
 
     plans = _collect_backlog(cfg)
+    smoke_ok = True
+    if not cfg.dry_run:
+        smoke_ok = _smoke_gates_pass()
     stash_info = {"stashed": False, "stash_ref": None}
     if not cfg.dry_run:
         stash_info = require_clean_or_stash(cfg.stash_dirty)
@@ -133,6 +137,11 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
                 "report_path": "",
                 "error_summary": "",
                 "diffstat": "",
+                "execution_mode": "offline",
+                "downgrade_reason": "",
+                "tests": "PASS" if smoke_ok else "FAIL",
+                "merge_ready": "NO",
+                "review_pack": "",
             }
             if cfg.dry_run:
                 entry["status"] = "OK"
@@ -162,11 +171,30 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
             entry["run_dir"] = str(state.get("run_dir", ""))
             entry["error_summary"] = str(state.get("error_summary", ""))
             entry["report_path"] = str((state.get("key_artifacts", {}) or {}).get("plan_report", ""))
+            entry["execution_mode"] = str(state.get("execution_mode", "")).strip() or "offline"
+            entry["downgrade_reason"] = str(state.get("downgrade_reason", "")).strip()
 
             commit = commit_all(f"chore(nightly): {title}")
             entry["commit"] = commit or ""
             if commit:
                 entry["diffstat"] = diffstat_head()
+            has_code_changes = bool(commit)
+            no_downgrade = not bool(entry["downgrade_reason"]) and entry["execution_mode"] != "noop"
+            merge_ready = bool(ok and no_downgrade and smoke_ok and has_code_changes)
+            entry["merge_ready"] = "YES" if merge_ready else "NO"
+
+            review_task = {
+                "title": title,
+                "task_id": task_id,
+                "execution_mode": entry["execution_mode"],
+                "prompt": str((plan_task.get("payload", {}) if isinstance(plan_task.get("payload"), dict) else {}).get("prompt", title)),
+                "merge_ready": entry["merge_ready"].lower(),
+                "summary": str(entry.get("error_summary", "")).strip() or "Nightly autonomous execution summary.",
+            }
+            review_artifacts = dict(state.get("key_artifacts", {}) if isinstance(state.get("key_artifacts"), dict) else {})
+            review_artifacts["run_dir"] = entry["run_dir"]
+            rp = generate_review_pack(branch=branch, task=review_task, artifacts=review_artifacts)
+            entry["review_pack"] = str(rp)
             if not ok:
                 summary["ok"] = False
             summary["plans"].append(entry)
@@ -181,3 +209,16 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
     write_nightly_report(cfg.date_str, summary, report_path)
     summary["report_path"] = str(report_path)
     return summary
+
+
+def _smoke_gates_pass() -> bool:
+    commands = [
+        ["python3", "tools/agent_smoke.py"],
+        ["python3", "tools/bridge_smoke.py"],
+        ["python3", "tools/plan_smoke.py"],
+    ]
+    for cmd in commands:
+        proc = subprocess.run(cmd, cwd=str(repo_root()), capture_output=True, text=True)
+        if int(proc.returncode) != 0:
+            return False
+    return True
