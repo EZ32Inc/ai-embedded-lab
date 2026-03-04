@@ -1,0 +1,7 @@
+{
+  "required_tools": [
+    "arm-none-eabi-gdb",
+    "arm-none-eabi-gcc",
+    "cmake"
+  ]
+}

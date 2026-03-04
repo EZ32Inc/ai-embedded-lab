@@ -1,0 +1,32 @@
+{
+  "core_files": [
+    "orchestrator.py",
+    "ael/__main__.py",
+    "ael/run_manager.py",
+    "ael/config_resolver.py",
+    "ael/doctor_checks.py"
+  ],
+  "docs_required": [
+    "docs/ael_core_v0_1_boundary_contract.md",
+    "docs/contributor_rules.md",
+    "docs/failure_taxonomy_v0_1.md"
+  ],
+  "core_forbidden_patterns": [
+    "\\besp32\\b",
+    "\\besp32s3\\b",
+    "\\bstm32\\b",
+    "\\brp2040\\b",
+    "\\bpico\\b",
+    "\\bch32v\\b",
+    "\\bopenocd\\b",
+    "\\besptool\\b",
+    "\\bgdb\\b",
+    "\\bstlink\\b",
+    "\\bwchlink\\b",
+    "\\bbmda\\b"
+  ],
+  "adapter_heuristic_patterns": [
+    "\\bin\\s+board_(id|name)\\b",
+    "\\bboard_(id|name)\\b.*\\bin\\b"
+  ]
+}

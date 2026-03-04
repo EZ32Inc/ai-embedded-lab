@@ -1,0 +1,45 @@
+                     ┌─────────────────────────┐
+                     │        AEL CLI          │
+                     │  ael run / doctor / pack│
+                     └────────────┬────────────┘
+                                  │
+                                  ▼
+                       ┌──────────────────┐
+                       │      Runner      │
+                       │ pipeline control │
+                       └───────┬──────────┘
+                               │
+                ┌──────────────┼──────────────┐
+                ▼              ▼              ▼
+
+          ┌──────────┐   ┌──────────┐   ┌──────────┐
+          │   Plan   │   │ Preflight│   │ Execution│
+          │ resolver │   │ readiness│   │ engine   │
+          └────┬─────┘   └────┬─────┘   └────┬─────┘
+               │              │              │
+               │              │              │
+               ▼              ▼              ▼
+
+         ┌───────────┐   ┌────────────┐   ┌───────────┐
+         │  configs  │   │   tools    │   │ adapters  │
+         │  boards   │   │ toolchain  │   │ build/run │
+         │  probes   │   │ permissions│   │ check     │
+         └───────────┘   └────────────┘   └───────────┘
+
+                                               │
+                                               ▼
+
+                                     ┌────────────────┐
+                                     │  Instruments   │
+                                     │  LogicAnalyzer │
+                                     │  PowerControl  │
+                                     │  UART Monitor  │
+                                     └────────────────┘
+
+                                               │
+                                               ▼
+
+                                      ┌────────────┐
+                                      │    DUT     │
+                                      │ target HW  │
+                                      └────────────┘
