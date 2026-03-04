@@ -132,7 +132,7 @@ python3 -m py_compile ael/evidence.py
 
 # Task 5 — Instrument Contract Validator
 
-Status: [ ] TODO
+Status: [x] DONE (b7ba7a4)
 
 Create tool:
 
