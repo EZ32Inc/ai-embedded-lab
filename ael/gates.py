@@ -175,6 +175,26 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
     for idx, cmd in enumerate(commands, start=1):
         log_path = logs_dir / f"gate_{idx:02d}.log"
         log_path.parent.mkdir(parents=True, exist_ok=True)
+        is_hardware_gate = "python3 -m ael pack --pack packs/esp32meter1.json" in cmd
+        if is_hardware_gate and os.environ.get("AEL_SKIP_HARDWARE_GATES", "").strip() == "1":
+            skip_text = "Hardware gate skipped by AEL_SKIP_HARDWARE_GATES=1"
+            log_path.write_text(f"$ {cmd}\n[skip]\n{skip_text}\n", encoding="utf-8")
+            gate_results.append(
+                _mk_gate_result(
+                    name=f"gate_{idx:02d}",
+                    command=cmd,
+                    exit_code=0,
+                    status=STATUS_SKIP,
+                    summary="hardware gate skipped by policy",
+                    hints=[
+                        "Set AEL_SKIP_HARDWARE_GATES=0 to run the hardware gate.",
+                        "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
+                    ],
+                    log_path=str(log_path),
+                    output_text=skip_text,
+                )
+            )
+            continue
         proc = subprocess.run(
             cmd,
             shell=True,
@@ -193,7 +213,6 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
         summary = "gate passed" if status == STATUS_PASS else f"gate failed: {cmd}"
         hints: List[str] = []
         extra_evidence: Dict[str, str] = {}
-        is_hardware_gate = "python3 -m ael pack --pack packs/esp32meter1.json" in cmd
         if is_hardware_gate:
             hw = _classify_hardware_gate(cmd, int(proc.returncode), combined)
             status = str(hw.get("status", status))
