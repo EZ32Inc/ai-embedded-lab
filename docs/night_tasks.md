@@ -47,7 +47,7 @@ python3 -m py_compile adapters/instrument_aip_http.py
 
 # Task 2 — Manifest Loader
 
-Status: [ ] TODO
+Status: [x] DONE (21f01a1)
 
 Add support for loading instrument manifests.
 
