@@ -473,6 +473,9 @@ def main() -> int:
     parser.add_argument("--no-push", dest="push", action="store_false", help="Do not push branch on success")
     parser.add_argument("--remote", default="origin", help="Remote name for push in branch-worker mode")
     parser.add_argument("--gates", default=None, help="Optional gate commands config path")
+    parser.add_argument("--api", action="store_true", help="Start task API server mode")
+    parser.add_argument("--api-host", default="127.0.0.1", help="Task API bind host")
+    parser.add_argument("--api-port", type=int, default=8765, help="Task API bind port")
     parser.add_argument(
         "--report-root",
         default=os.environ.get("AEL_REPORT_ROOT") or str(_repo_root() / "reports"),
@@ -487,6 +490,16 @@ def main() -> int:
         remote=str(args.remote),
         gates_path=args.gates,
     )
+
+    if bool(args.api):
+        from ael.task_api import run_server
+
+        return run_server(
+            host=str(args.api_host),
+            port=int(args.api_port),
+            queue_root=str(args.queue),
+            report_root=str(args.report_root),
+        )
 
     if mode.branch_worker:
         if os.environ.get("AEL_AGENT_ALLOW_DIRTY", "").strip() == "1":
