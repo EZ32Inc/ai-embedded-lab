@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import socket
 import subprocess
 import sys
 import time
@@ -36,11 +37,19 @@ def _extract_task_id(text: str) -> str:
     return ""
 
 
+def _pick_free_port() -> int:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.bind(("127.0.0.1", 0))
+        return int(s.getsockname()[1])
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     queue_root = Path("/tmp/ael_bridge_smoke_queue")
     report_root = Path("/tmp/ael_bridge_smoke_reports")
     up_log = Path("/tmp/ael_bridge_smoke_up.log")
+    port = _pick_free_port()
+    api_base = f"http://127.0.0.1:{port}"
 
     for p in (queue_root, report_root):
         if p.exists():
@@ -56,7 +65,7 @@ def main() -> int:
         "--host",
         "127.0.0.1",
         "--port",
-        "8844",
+        str(port),
         "--queue",
         str(queue_root),
         "--report-root",
@@ -72,7 +81,7 @@ def main() -> int:
         healthy = False
         for _ in range(40):
             try:
-                code, health = _http_json("GET", "http://127.0.0.1:8844/health")
+                code, health = _http_json("GET", f"{api_base}/health")
                 if code == 200 and bool(health.get("ok")):
                     healthy = True
                     break
@@ -83,7 +92,7 @@ def main() -> int:
             return _fail("bridge health check failed")
 
         submit = subprocess.run(
-            [sys.executable, "-m", "ael", "submit", "run gpio golden test", "--api", "http://127.0.0.1:8844/v1/tasks"],
+            [sys.executable, "-m", "ael", "submit", "run gpio golden test", "--api", f"{api_base}/v1/tasks"],
             cwd=str(repo_root),
             capture_output=True,
             text=True,
@@ -98,14 +107,14 @@ def main() -> int:
         status_payload = {}
         deadline = time.time() + 12.0
         while time.time() < deadline:
-            code, status_payload = _http_json("GET", f"http://127.0.0.1:8844/v1/tasks/{task_id}")
+            code, status_payload = _http_json("GET", f"{api_base}/v1/tasks/{task_id}")
             if code == 200 and status_payload.get("state") in ("done", "failed"):
                 break
             time.sleep(0.2)
         if status_payload.get("state") != "done":
             return _fail(f"task did not finish as done: {status_payload}")
 
-        code, result = _http_json("GET", f"http://127.0.0.1:8844/v1/tasks/{task_id}/result")
+        code, result = _http_json("GET", f"{api_base}/v1/tasks/{task_id}/result")
         if code != 200:
             return _fail(f"result fetch failed: {result}")
         if not bool(result.get("ok", False)):

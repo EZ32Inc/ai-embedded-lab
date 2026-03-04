@@ -90,7 +90,7 @@ def _write_task_atomic(inbox_dir: Path, payload: Dict[str, Any], filename: str) 
     if target.exists():
         raise FileExistsError(str(target))
     data = _json_bytes(payload)
-    tmp_name = str(inbox_dir / f".tmp_bridge_{os.getpid()}_{int(time.time() * 1000)}.json")
+    tmp_name = str(inbox_dir / f".tmp_bridge_{os.getpid()}_{int(time.time() * 1000)}.tmp")
     try:
         with open(tmp_name, "wb") as tmpf:
             tmpf.write(data)
