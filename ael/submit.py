@@ -75,6 +75,13 @@ def build_bridge_task_from_input(user_input: str, json_mode: bool = False) -> Di
         if not isinstance(runplan, dict):
             runplan = _noop_runplan_from_prompt(text, str(payload.get("board", "")), str(payload.get("test", "")))
         return {"title": title, "kind": "runplan", "payload": {"runplan": runplan}, "priority": 0}
+    if kind == "plan":
+        return {
+            "title": title,
+            "kind": "plan",
+            "payload": {"prompt": str(payload.get("prompt", text))},
+            "priority": 0,
+        }
     if kind == "codex":
         codex_payload = {
             "repo_root": str(payload.get("repo_root", ".")),

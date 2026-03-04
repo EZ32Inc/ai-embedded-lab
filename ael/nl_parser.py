@@ -13,6 +13,14 @@ def parse_user_prompt(prompt: str) -> Dict:
     if not text:
         return {"title": "empty prompt", "kind": "codex", "payload": {"prompt": prompt}}
 
+    plan_terms = ("develop", "implement", "create", "verify", "golden test")
+    if any(term in text for term in plan_terms):
+        return {
+            "title": prompt[:80] if prompt else "plan task",
+            "kind": "plan",
+            "payload": {"prompt": prompt},
+        }
+
     board = ""
     for candidate in ("stm32f103", "stm32", "esp32s3", "esp32", "rp2040", "pico"):
         if candidate in text:

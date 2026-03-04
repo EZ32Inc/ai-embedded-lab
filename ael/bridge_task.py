@@ -7,7 +7,7 @@ from typing import Any, Dict, Tuple
 
 
 BRIDGE_VERSION = "bridge/0.1"
-BRIDGE_KINDS = {"runplan", "codex", "noop"}
+BRIDGE_KINDS = {"runplan", "codex", "noop", "plan"}
 
 
 def now_iso() -> str:
@@ -44,7 +44,7 @@ def validate_submit_request(body: Dict[str, Any]) -> Tuple[bool, str]:
         return False, "title is required"
     kind = body.get("kind")
     if kind not in BRIDGE_KINDS:
-        return False, "kind must be one of: runplan, codex, noop"
+        return False, "kind must be one of: runplan, codex, noop, plan"
     payload = body.get("payload")
     if not isinstance(payload, dict):
         return False, "payload must be a JSON object"
