@@ -13,6 +13,7 @@ from ael.adapter_registry import AdapterRegistry
 from ael.bridge_task import is_bridge_task, noop_plan
 from ael.codex_driver import CodexDriver
 from ael.gates import run_gates
+from ael.planner import generate_plan
 from ael.queue import (
     claim_task,
     ensure_queue_layout,
@@ -239,10 +240,93 @@ def _bridge_run_plan(task: Dict) -> Tuple[Optional[Dict], str]:
         return noop_plan(task), ""
     if kind == "runplan":
         runplan = payload.get("runplan")
-        if not isinstance(runplan, dict):
-            return None, "bridge runplan task missing payload.runplan"
-        return runplan, ""
+        if isinstance(runplan, dict):
+            return runplan, ""
+        test = str(payload.get("test", "general")).strip() or "general"
+        board = str(payload.get("board", "")).strip()
+        note = f"{test} test {board}".strip()
+        return {
+            "version": "runplan/0.1",
+            "plan_id": f"bridge_runplan_{test}",
+            "created_at": _now_iso(),
+            "inputs": {"test": test, "board": board},
+            "selected": {"test_config": "bridge/runplan_noop"},
+            "context": {},
+            "steps": [
+                {
+                    "name": "check_bridge_runplan",
+                    "type": "check.noop",
+                    "inputs": {"note": note or "bridge runplan"},
+                }
+            ],
+            "recovery_policy": {"enabled": False},
+            "meta": {},
+        }, ""
     return None, ""
+
+
+def _execute_bridge_subtask(subtask: Dict, run_dir: Path, tasklog) -> Tuple[bool, str, Dict[str, str]]:
+    artifacts_dir = run_dir / "artifacts"
+    logs_dir = run_dir / "logs"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    _write_json(artifacts_dir / "task.json", subtask)
+
+    kind = str(subtask.get("kind", "")).strip()
+    if kind == "codex":
+        payload = subtask.get("payload", {}) if isinstance(subtask.get("payload"), dict) else {}
+        prompt = str(payload.get("prompt", "")).strip()
+        if not prompt:
+            return False, "bridge codex subtask missing prompt", {"task": str(artifacts_dir / "task.json")}
+        repo_root = str(payload.get("repo_root", "."))
+        timeout_s = int(payload.get("timeout_s", 1800))
+        transcript_path = artifacts_dir / "codex_transcript.log"
+        tasklog(f"subtask codex start: {subtask.get('title', '')}")
+        codex = CodexDriver()
+        codex_out = codex.run(repo_root=repo_root, prompt=prompt, timeout_s=timeout_s, log_path=str(transcript_path))
+        _write_json(artifacts_dir / "codex_result.json", codex_out)
+        _write_json(
+            run_dir / "result.json",
+            {
+                "ok": bool(codex_out.get("ok", False)),
+                "kind": kind,
+                "title": subtask.get("title", ""),
+                "error_summary": str(codex_out.get("error_summary", "")),
+            },
+        )
+        return bool(codex_out.get("ok", False)), str(codex_out.get("error_summary", "")), {
+            "task": str(artifacts_dir / "task.json"),
+            "codex_result": str(artifacts_dir / "codex_result.json"),
+            "codex_transcript": str(transcript_path),
+        }
+
+    plan, plan_err = _bridge_run_plan(subtask)
+    if not plan:
+        return False, plan_err or "subtask plan resolution failed", {"task": str(artifacts_dir / "task.json")}
+
+    tasklog(f"subtask runner start: {subtask.get('title', '')}")
+    try:
+        registry = AdapterRegistry()
+        runner_result = run_plan(plan, run_dir, registry)
+    except Exception as exc:
+        return False, f"subtask runner exception: {exc}", {"task": str(artifacts_dir / "task.json")}
+    ok = bool(runner_result.get("ok", False))
+    err = "" if ok else str(runner_result.get("error_summary", "runner reported failure"))
+    _write_json(
+        run_dir / "result.json",
+        {
+            "ok": ok,
+            "kind": kind,
+            "title": subtask.get("title", ""),
+            "error_summary": err,
+        },
+    )
+    artifacts = {
+        "task": str(artifacts_dir / "task.json"),
+        "run_plan": str(artifacts_dir / "run_plan.json"),
+        "result": str(artifacts_dir / "result.json"),
+    }
+    return ok, err, artifacts
 
 
 def _process_task_file(
@@ -354,7 +438,7 @@ def _process_task_file(
             if isinstance(task.get("run_dir_hint"), str) and task.get("run_dir_hint"):
                 run_dir_hint = str(task.get("run_dir_hint"))
 
-    if bridge_mode and str(task.get("kind", "")).strip() == "codex":
+    if bridge_mode and str(task.get("kind", "")).strip() in ("codex", "plan"):
         pass
     elif not plan:
         return finalize(False, None, plan_err or "plan resolution failed", {})
@@ -392,7 +476,46 @@ def _process_task_file(
             return finalize(False, run_dir, err_pre, artifacts)
 
     runner_result: Dict = {}
-    if bridge_mode and str(task.get("kind", "")).strip() == "codex":
+    kind = str(task.get("kind", "")).strip() if bridge_mode else ""
+    if bridge_mode and kind == "plan":
+        payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
+        prompt = str(payload.get("prompt", "")).strip()
+        if not prompt:
+            artifacts = {"agent_task": str(artifacts_dir / "agent_task.json"), "task_log": str(task_log)}
+            return finalize(False, run_dir, "bridge plan task missing payload.prompt", artifacts)
+
+        tasklog("plan generation started")
+        plan_items = generate_plan(prompt)
+        _write_json(run_dir / "plan.json", {"task_id": task_id, "prompt": prompt, "tasks": plan_items})
+        tasklog(f"plan generation completed: {len(plan_items)} subtasks")
+
+        tasks_root = run_dir / "tasks"
+        tasks_root.mkdir(parents=True, exist_ok=True)
+        sub_results: List[Dict] = []
+        overall_ok = True
+        overall_err = ""
+        for idx, subtask in enumerate(plan_items, start=1):
+            sub_title = str(subtask.get("title", f"task_{idx}"))
+            sub_dir = tasks_root / f"{idx:02d}_{_slugify(sub_title)}"
+            ok_sub, err_sub, sub_artifacts = _execute_bridge_subtask(subtask, sub_dir, tasklog)
+            sub_result = {
+                "index": idx,
+                "title": sub_title,
+                "kind": str(subtask.get("kind", "")),
+                "ok": ok_sub,
+                "error_summary": err_sub,
+                "run_dir": str(sub_dir),
+                "artifacts": sub_artifacts,
+            }
+            _write_json(sub_dir / "result.json", sub_result)
+            sub_results.append(sub_result)
+            if not ok_sub:
+                overall_ok = False
+                overall_err = err_sub or f"subtask {idx} failed"
+                break
+        _write_json(artifacts_dir / "plan_results.json", {"ok": overall_ok, "tasks": sub_results, "error_summary": overall_err})
+        runner_result = {"ok": overall_ok, "error_summary": overall_err}
+    elif bridge_mode and kind == "codex":
         payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
         prompt = str(payload.get("prompt", "")).strip()
         if not prompt:
@@ -455,6 +578,12 @@ def _process_task_file(
         artifacts["codex_result"] = str(codex_result_path)
     if codex_transcript_path.exists():
         artifacts["codex_transcript"] = str(codex_transcript_path)
+    plan_json_path = run_dir / "plan.json"
+    plan_results_path = artifacts_dir / "plan_results.json"
+    if plan_json_path.exists():
+        artifacts["plan"] = str(plan_json_path)
+    if plan_results_path.exists():
+        artifacts["plan_results"] = str(plan_results_path)
     if mode.branch_worker:
         running_state["mode"] = "branch-worker"
         running_state["publish_requested"] = bool(mode.push)
