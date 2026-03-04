@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from ael.adapter_registry import AdapterRegistry
+from ael.gates import run_gates
 from ael.queue import (
     claim_task,
     ensure_queue_layout,
@@ -324,16 +325,38 @@ def _process_task_file(
         "run_plan": str(artifacts_dir / "run_plan.json"),
         "result": str(artifacts_dir / "result.json"),
     }
-    # v0.2 branch-worker skeleton hooks: task-level branch isolation + gates + publish.
-    # Full behavior is implemented incrementally in later tasks.
     if mode.branch_worker:
         running_state["mode"] = "branch-worker"
         running_state["publish_requested"] = bool(mode.push)
         running_state["remote"] = mode.remote
         running_state["gates_path"] = mode.gates_path or ""
+        gates_payload = run_gates(run_dir, gates_path=mode.gates_path)
+        gates_json_path = artifacts_dir / "gates_result.json"
+        _write_json(gates_json_path, gates_payload)
+        artifacts["gates_result"] = str(gates_json_path)
+        artifacts["gates_logs_dir"] = str(run_dir / "logs" / "gates")
+        running_state["gate_results"] = gates_payload.get("results", [])
+        running_state["gate_overall"] = gates_payload.get("overall", "fail")
         head_after, _ = _git_current_head()
         if head_after:
             running_state["final_commit"] = head_after
+
+        gate_overall = str(gates_payload.get("overall", "fail")).lower()
+        if gate_overall == "human_action_required":
+            if not error_summary:
+                error_summary = "HUMAN_ACTION_REQUIRED: hardware gate unavailable"
+            running_state["disposition"] = "HUMAN_ACTION_REQUIRED"
+            return finalize(False, run_dir, error_summary, artifacts)
+        if gate_overall != "pass":
+            if not error_summary:
+                error_summary = "mandatory gates failed"
+            running_state["disposition"] = "FAILED"
+            return finalize(False, run_dir, error_summary, artifacts)
+        if runner_ok:
+            running_state["disposition"] = "DONE"
+            return finalize(True, run_dir, "", artifacts)
+        running_state["disposition"] = "FAILED"
+        return finalize(False, run_dir, error_summary or "runner reported failure", artifacts)
 
     return finalize(runner_ok, run_dir, error_summary, artifacts)
 
