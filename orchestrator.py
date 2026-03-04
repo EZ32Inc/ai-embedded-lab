@@ -8,20 +8,10 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from adapters import (
-    preflight,
-    build_cmake,
-    build_stm32,
-    build_idf,
-    flash_bmda_gdbmi,
-    flash_idf,
-    observe_gpio_pin,
-    observe_uart_log,
-    esp32s3_dev_c_meter_tcp,
-)
 from notifiers import discord_webhook
 from ael import run_manager
-from tools import la_verify
+from ael.adapter_registry import AdapterRegistry
+from ael.runner import run_plan
 
 _INSTRUMENT_SELFTEST_CACHE = {}
 
@@ -627,11 +617,9 @@ def run_pipeline(
     return_paths=False,
 ):
     repo_root = os.path.dirname(__file__)
-
     if not test_path:
         test_path = os.path.join(repo_root, "tests", "blink_gpio.json")
 
-    test_raw = {}
     try:
         with open(test_path, "r", encoding="utf-8") as f:
             test_raw = json.load(f)
@@ -645,7 +633,6 @@ def run_pipeline(
             board_path, _ = _resolve_board_path(repo_root, board_id)
 
     run_paths = run_manager.create_run(board_id or "unknown", test_path, repo_root)
-    # Ensure all expected files exist even if we fail early.
     for p in [
         run_paths.build_log,
         run_paths.flash_log,
@@ -663,7 +650,6 @@ def run_pipeline(
 
     probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
     board_raw = _simple_yaml_load(board_path) if board_path else {}
-
     effective = _deep_merge(_deep_merge(probe_raw, board_raw), test_raw)
     _write_json(run_paths.config_effective, effective)
     notify_cfg = effective.get("notify", {}) if isinstance(effective, dict) else {}
@@ -671,7 +657,6 @@ def run_pipeline(
     run_started = datetime.now()
     run_started_mono = time.monotonic()
     git_info = _git_info()
-
     meta = {
         "run_id": run_paths.run_id,
         "started_at": run_started.isoformat(),
@@ -690,7 +675,6 @@ def run_pipeline(
     else:
         board_cfg = dict(board_cfg)
 
-    # Allow test files to override DUT firmware project for deterministic instrumented runs.
     test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
     firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None
     project_override = test_build.get("project_dir") or firmware_override
@@ -704,34 +688,6 @@ def run_pipeline(
     wiring_overrides = _parse_wiring(wiring or "")
     wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
     wiring_cfg = _require_wiring(wiring_cfg, ["swd", "reset", "verify"])
-
-    timings = {}
-    result = {
-        "ok": False,
-        "failed_step": "",
-        "error_summary": "",
-        "logs": {
-            "preflight": str(run_paths.preflight_log),
-            "build": str(run_paths.build_log),
-            "flash": str(run_paths.flash_log),
-            "observe": str(run_paths.observe_log),
-            "observe_uart": str(run_paths.observe_uart_step_log),
-            "observe_uart_raw": str(run_paths.observe_uart_log),
-            "verify": str(run_paths.verify_log),
-        },
-        "artifacts": [],
-        "json": {
-            "flash": str(run_paths.flash_json),
-            "measure": str(run_paths.measure),
-            "uart_observe": str(run_paths.uart_observe),
-            "preflight": str(run_paths.preflight),
-            "meta": str(run_paths.meta),
-            "config_effective": str(run_paths.config_effective),
-            "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
-            "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
-            "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
-        },
-    }
 
     print("AI: starting pipeline")
     print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
@@ -759,308 +715,354 @@ def run_pipeline(
         notify_cfg,
     )
 
-    pre_info = {}
+    def _failed_step_name(runner_result):
+        if runner_result.get("ok"):
+            return ""
+        steps = runner_result.get("steps", []) if isinstance(runner_result, dict) else []
+        for entry in reversed(steps):
+            if isinstance(entry, dict) and not entry.get("ok", False):
+                return str(entry.get("name", ""))
+        return ""
+
+    def _code_from_failed_step(name):
+        if not name:
+            return 1
+        if name.startswith("preflight"):
+            return 2
+        if name.startswith("instrument_selftest"):
+            return 7
+        if name.startswith("build"):
+            return 3
+        if name.startswith("load"):
+            return 4
+        if name.startswith("check_uart"):
+            return 5
+        if name.startswith("check"):
+            return 6
+        return 1
+
+    def _extract_firmware_from_runner(runner_result):
+        steps = runner_result.get("steps", []) if isinstance(runner_result, dict) else []
+        for entry in reversed(steps):
+            if not isinstance(entry, dict):
+                continue
+            payload = entry.get("result", {})
+            if isinstance(payload, dict) and payload.get("firmware_path"):
+                return str(payload.get("firmware_path"))
+        return None
+
+    plan_steps = []
     preflight_cfg = test_raw.get("preflight", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("preflight"), dict) else {}
     preflight_enabled = True if preflight_cfg.get("enabled") is None else bool(preflight_cfg.get("enabled"))
     if preflight_enabled:
-        with _tee_output(run_paths.preflight_log, output_mode):
-            t0 = time.monotonic()
-            ok_pre, pre_info = preflight.run(probe_cfg)
-            timings["preflight_s"] = round(time.monotonic() - t0, 3)
+        plan_steps.append(
+            {
+                "name": "preflight",
+                "type": "preflight.probe",
+                "inputs": {
+                    "probe_cfg": probe_cfg,
+                    "out_json": str(run_paths.preflight),
+                    "output_mode": output_mode,
+                    "log_path": str(run_paths.preflight_log),
+                },
+            }
+        )
     else:
+        _write_json(run_paths.preflight, {"skipped": True})
         with _tee_output(run_paths.preflight_log, output_mode):
             print("Preflight: SKIPPED (test config)")
-        ok_pre = True
-        pre_info = {"skipped": True}
-        timings["preflight_s"] = 0.0
-    pre_info = pre_info or {}
-    pre_info["timing_s"] = timings.get("preflight_s", 0)
-    _write_json(run_paths.preflight, pre_info)
-
-    if not ok_pre:
-        result["failed_step"] = "preflight"
-        result["error_summary"] = "preflight failed"
-        _triage("preflight", pre_info)
-        _write_json(run_paths.result, result)
-        _emit_event(
-            {
-                "type": "run_failed",
-                "severity": "error",
-                "run_id": run_paths.run_id,
-                "dut": board_id or board_cfg.get("name", "unknown"),
-                "bench": None,
-                "step": "preflight",
-                "summary": "preflight failed",
-                "details": "probe or LA not reachable",
-                "artifacts_path": str(run_paths.root),
-                "timestamp": datetime.now().isoformat(),
-                "log_paths": {"preflight": str(run_paths.preflight_log)},
-            },
-            notify_cfg,
-        )
-        meta["ended_at"] = datetime.now().isoformat()
-        _write_json(run_paths.meta, meta)
-        return (2, run_paths) if return_paths else 2
 
     if _instrument_selftest_requested(test_raw, board_cfg):
-        selftest_ok, selftest_artifact, selftest_error = _run_instrument_selftest(test_raw, board_cfg, run_paths)
-        if selftest_artifact:
-            result["artifacts"].append(selftest_artifact)
-        if not selftest_ok:
-            result["failed_step"] = "instrument_selftest"
-            result["error_summary"] = selftest_error or "instrument selftest failed"
-            _write_json(run_paths.result, result)
-            _emit_event(
-                {
-                    "type": "run_failed",
-                    "severity": "error",
-                    "run_id": run_paths.run_id,
-                    "dut": board_id or board_cfg.get("name", "unknown"),
-                    "bench": None,
-                    "step": "instrument_selftest",
-                    "summary": "instrument selftest failed",
-                    "details": result.get("error_summary"),
-                    "artifacts_path": str(run_paths.root),
-                    "timestamp": datetime.now().isoformat(),
-                    "log_paths": {"preflight": str(run_paths.preflight_log)},
+        instrument_id, tcp_cfg, manifest = _resolve_instrument_context(test_raw, board_cfg)
+        selftest_manifest = manifest.get("selftest", {}) if isinstance(manifest, dict) else {}
+        dig = selftest_manifest.get("digital", {}) if isinstance(selftest_manifest.get("digital"), dict) else {}
+        adc = selftest_manifest.get("adc", {}) if isinstance(selftest_manifest.get("adc"), dict) else {}
+        test_self = test_raw.get("selftest", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("selftest"), dict) else {}
+        test_dig = test_self.get("digital", {}) if isinstance(test_self.get("digital"), dict) else {}
+        test_adc = test_self.get("adc", {}) if isinstance(test_self.get("adc"), dict) else {}
+        plan_steps.append(
+            {
+                "name": "instrument_selftest",
+                "type": "check.instrument_selftest",
+                "inputs": {
+                    "cfg": {
+                        "host": tcp_cfg.get("host"),
+                        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
+                        "artifacts_dir": str(run_paths.artifacts_dir),
+                    },
+                    "params": {
+                        "out_gpio": int(test_dig.get("out_gpio", dig.get("out_gpio", 15))),
+                        "in_gpio": int(test_dig.get("in_gpio", dig.get("in_gpio", 11))),
+                        "dur_ms": int(test_dig.get("dur_ms", dig.get("dur_ms", 200))),
+                        "freq_hz": int(test_dig.get("freq_hz", dig.get("freq_hz", 1000))),
+                        "adc_out": int(test_adc.get("out_gpio", adc.get("out_gpio", 16))),
+                        "adc_in": int(test_adc.get("adc_gpio", adc.get("adc_gpio", 4))),
+                        "avg": int(test_adc.get("avg", adc.get("avg", 16))),
+                        "settle_ms": int(test_adc.get("settle_ms", adc.get("settle_ms", 20))),
+                    },
+                    "out_path": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
                 },
-                notify_cfg,
-            )
-            meta["ended_at"] = datetime.now().isoformat()
-            _write_json(run_paths.meta, meta)
-            return (7, run_paths) if return_paths else 7
+            }
+        )
 
-    print("SWD and network connection verified. Starting task.")
-    if not pre_info.get("targets"):
-        print("Preflight: warning - no targets reported by probe.")
-
-    firmware_path = None
-    if verify_only:
-        timings["build_s"] = 0.0
-    elif no_build:
-        firmware_path = _default_firmware_path(board_cfg)
-        if not os.path.exists(firmware_path):
-            result["failed_step"] = "build"
-            result["error_summary"] = "no build artifacts found"
+    build_kind = _resolve_builder_kind(board_cfg)
+    known_firmware_path = None
+    if not verify_only and not no_build:
+        plan_steps.append(
+            {
+                "name": "build",
+                "type": f"build.{build_kind}",
+                "inputs": {
+                    "board_cfg": board_cfg,
+                    "output_mode": output_mode,
+                    "log_path": str(run_paths.build_log),
+                },
+            }
+        )
+    elif not verify_only and no_build:
+        known_firmware_path = _default_firmware_path(board_cfg)
+        if not os.path.exists(known_firmware_path):
+            result = {
+                "ok": False,
+                "failed_step": "build",
+                "error_summary": "no build artifacts found",
+                "logs": {
+                    "preflight": str(run_paths.preflight_log),
+                    "build": str(run_paths.build_log),
+                    "flash": str(run_paths.flash_log),
+                    "observe": str(run_paths.observe_log),
+                    "observe_uart": str(run_paths.observe_uart_step_log),
+                    "observe_uart_raw": str(run_paths.observe_uart_log),
+                    "verify": str(run_paths.verify_log),
+                },
+                "artifacts": [],
+                "json": {
+                    "flash": str(run_paths.flash_json),
+                    "measure": str(run_paths.measure),
+                    "uart_observe": str(run_paths.uart_observe),
+                    "preflight": str(run_paths.preflight),
+                    "meta": str(run_paths.meta),
+                    "config_effective": str(run_paths.config_effective),
+                    "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
+                    "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
+                    "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
+                },
+            }
             _write_json(run_paths.result, result)
             meta["ended_at"] = datetime.now().isoformat()
             _write_json(run_paths.meta, meta)
             return (3, run_paths) if return_paths else 3
-        timings["build_s"] = 0.0
-    else:
-        with _tee_output(run_paths.build_log, output_mode):
-            t0 = time.monotonic()
-            build_kind = _resolve_builder_kind(board_cfg)
-            if build_kind == "idf":
-                firmware_path = build_idf.run(board_cfg)
-            elif build_kind == "arm_debug":
-                firmware_path = build_stm32.run(board_cfg)
-            else:
-                firmware_path = build_cmake.run(board_cfg)
-            timings["build_s"] = round(time.monotonic() - t0, 3)
-
-    if (not verify_only) and (not firmware_path):
-        result["failed_step"] = "build"
-        result["error_summary"] = "build failed"
-        _triage("build", pre_info)
-        _write_json(run_paths.result, result)
-        _emit_event(
-            {
-                "type": "run_failed",
-                "severity": "error",
-                "run_id": run_paths.run_id,
-                "dut": board_id or board_cfg.get("name", "unknown"),
-                "bench": None,
-                "step": "build",
-                "summary": "build failed",
-                "details": result.get("error_summary"),
-                "artifacts_path": str(run_paths.root),
-                "timestamp": datetime.now().isoformat(),
-                "log_paths": {"build": str(run_paths.build_log)},
-            },
-            notify_cfg,
-        )
-        meta["ended_at"] = datetime.now().isoformat()
-        _write_json(run_paths.meta, meta)
-        return (3, run_paths) if return_paths else 3
 
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
     reset_unwired = wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA")
     if reset_unwired:
         flash_cfg = dict(flash_cfg)
         flash_cfg["reset_available"] = False
-    if verify_only:
-        timings["flash_s"] = 0.0
-    elif skip_flash:
+    if not verify_only and not skip_flash:
+        method = str(flash_cfg.get("method", "gdbmi")).strip()
+        if method == "idf_esptool":
+            if board_cfg.get("build", {}):
+                flash_cfg = dict(flash_cfg)
+                flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
+            target = board_cfg.get("target")
+            if target:
+                flash_cfg = dict(flash_cfg)
+                flash_cfg["target"] = target
+                flash_cfg["build_dir"] = os.path.join(repo_root, "artifacts", f"build_{target}")
+        plan_steps.append(
+            {
+                "name": "load",
+                "type": "load.idf_esptool" if method == "idf_esptool" else "load.gdbmi",
+                "inputs": {
+                    "probe_cfg": probe_cfg,
+                    "firmware_path": known_firmware_path,
+                    "flash_cfg": flash_cfg,
+                    "flash_json_path": str(run_paths.flash_json),
+                    "output_mode": output_mode,
+                    "log_path": str(run_paths.flash_log),
+                },
+            }
+        )
+    elif skip_flash and not verify_only:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")
         _write_json(
             run_paths.flash_json,
             {"ok": False, "attempts": [], "strategy_used": "skipped", "speed_khz": flash_cfg.get("speed_khz")},
         )
-        timings["flash_s"] = 0.0
-    else:
-        with _tee_output(run_paths.flash_log, output_mode):
-            t0 = time.monotonic()
-            method = flash_cfg.get("method", "")
-            if method == "idf_esptool":
-                # pass project_dir for IDF flash
-                if board_cfg.get("build", {}):
-                    flash_cfg = dict(flash_cfg)
-                    flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
-                target = board_cfg.get("target")
-                if target:
-                    flash_cfg = dict(flash_cfg)
-                    flash_cfg["target"] = target
-                    flash_cfg["build_dir"] = os.path.join(repo_root, "artifacts", f"build_{target}")
-                flash_ok = flash_idf.run(
-                    probe_cfg,
-                    firmware_path,
-                    flash_cfg=flash_cfg,
-                    flash_json_path=str(run_paths.flash_json),
-                )
-            else:
-                flash_ok = flash_bmda_gdbmi.run(
-                    probe_cfg,
-                    firmware_path,
-                    flash_cfg=flash_cfg,
-                    flash_json_path=str(run_paths.flash_json),
-                )
-            timings["flash_s"] = round(time.monotonic() - t0, 3)
 
-        if not flash_ok:
-            result["failed_step"] = "flash"
-            result["error_summary"] = "flash failed"
-            _triage("flash", pre_info)
-            _write_json(run_paths.result, result)
-            _emit_event(
-                {
-                    "type": "run_failed",
-                    "severity": "error",
-                    "run_id": run_paths.run_id,
-                    "dut": board_id or board_cfg.get("name", "unknown"),
-                    "bench": None,
-                    "step": "flash",
-                    "summary": "flash failed",
-                    "details": result.get("error_summary"),
-                    "artifacts_path": str(run_paths.root),
-                    "timestamp": datetime.now().isoformat(),
-                    "log_paths": {"flash": str(run_paths.flash_log)},
-                },
-                notify_cfg,
-            )
-            meta["ended_at"] = datetime.now().isoformat()
-            _write_json(run_paths.meta, meta)
-            return (4, run_paths) if return_paths else 4
-
-    capture = {}
     observe_uart_cfg = {}
     if isinstance(effective, dict):
         observe_uart_cfg = effective.get("observe_uart", {}) or {}
     if isinstance(observe_uart_cfg, dict) and observe_uart_cfg.get("enabled"):
-        if not observe_uart_cfg.get("port"):
-            try:
-                with open(run_paths.flash_json, "r", encoding="utf-8") as f:
-                    flash_info = json.load(f)
-                if flash_info.get("port"):
-                    observe_uart_cfg = dict(observe_uart_cfg)
-                    observe_uart_cfg["port"] = flash_info.get("port")
-            except Exception:
-                pass
         observe_uart_cfg = dict(observe_uart_cfg)
         observe_uart_cfg.setdefault("auto_reset_on_download", True)
         observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
-        with _tee_output(run_paths.observe_uart_step_log, output_mode):
-            uart_result = observe_uart_log.run(observe_uart_cfg, raw_log_path=str(run_paths.observe_uart_log))
-        _write_json(run_paths.uart_observe, uart_result)
-        result["uart"] = uart_result
-        if not uart_result.get("ok", True):
-            result["failed_step"] = "observe_uart"
-            result["error_summary"] = uart_result.get("error_summary") or "uart observe failed"
-            err_l = str(result["error_summary"]).lower()
-            if "permission check failed" in err_l or "permission denied" in err_l:
-                print("UART: permission check failed.")
-                print("Action required: fix /dev/tty* permission/group manually, then rerun.")
-            if "download mode" in err_l:
-                print("UART: target entered bootloader download mode.")
-                print("Action: reset DUT and rerun. Auto RTS reset was already attempted.")
-            _triage("observe_uart", pre_info)
-            _write_json(run_paths.result, result)
-            _emit_event(
-                {
-                    "type": "run_failed",
-                    "severity": "error",
-                    "run_id": run_paths.run_id,
-                    "dut": board_id or board_cfg.get("name", "unknown"),
-                    "bench": None,
-                    "step": "observe_uart",
-                    "summary": result.get("error_summary"),
-                    "details": "",
-                    "artifacts_path": str(run_paths.root),
-                    "timestamp": datetime.now().isoformat(),
-                    "log_paths": {"uart": str(run_paths.observe_uart_log)},
-                },
-                notify_cfg,
-            )
-            meta["ended_at"] = datetime.now().isoformat()
-            _write_json(run_paths.meta, meta)
-            return (5, run_paths) if return_paths else 5
-
-    if _is_meter_digital_verify_test(test_raw):
-        with _tee_output(run_paths.observe_log, output_mode):
-            t0 = time.monotonic()
-            meter_ok, meter_artifacts, meter_err = _run_meter_digital_verify(test_raw, board_cfg, run_paths)
-            timings["observe_s"] = round(time.monotonic() - t0, 3)
-        if meter_artifacts:
-            result["artifacts"].extend(meter_artifacts)
-        if not meter_ok:
-            result["failed_step"] = "verify"
-            result["error_summary"] = meter_err or "instrument verify failed"
-            _write_json(run_paths.result, result)
-            _emit_event(
-                {
-                    "type": "run_failed",
-                    "severity": "error",
-                    "run_id": run_paths.run_id,
-                    "dut": board_id or board_cfg.get("name", "unknown"),
-                    "bench": None,
-                    "step": "verify",
-                    "summary": result.get("error_summary"),
-                    "details": "",
-                    "artifacts_path": str(run_paths.root),
-                    "timestamp": datetime.now().isoformat(),
-                    "log_paths": {"observe": str(run_paths.observe_log), "verify": str(run_paths.verify_log)},
-                },
-                notify_cfg,
-            )
-            meta["ended_at"] = datetime.now().isoformat()
-            _write_json(run_paths.meta, meta)
-            return (6, run_paths) if return_paths else 6
-
-        timings["verify_s"] = 0.0
-        timings["total_s"] = round(time.monotonic() - run_started_mono, 3)
-        artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
-        existing_artifacts = result.get("artifacts", [])
-        if not isinstance(existing_artifacts, list):
-            existing_artifacts = []
-        result["ok"] = True
-        result["failed_step"] = ""
-        result["error_summary"] = ""
-        result["artifacts"] = existing_artifacts + artifacts_copied
-        _write_json(run_paths.result, result)
-        _write_json(run_paths.measure, {"ok": True, "type": "instrument_digital_verify"})
-        meta.update(
+        plan_steps.append(
             {
-                "ended_at": datetime.now().isoformat(),
-                "timings": timings,
-                "firmware": {
-                    "path": firmware_path,
-                    "sha256": _file_sha256(firmware_path) if firmware_path else "",
+                "name": "check_uart",
+                "type": "check.uart_log",
+                "inputs": {
+                    "observe_uart_cfg": observe_uart_cfg,
+                    "raw_log_path": str(run_paths.observe_uart_log),
+                    "out_json": str(run_paths.uart_observe),
+                    "flash_json_path": str(run_paths.flash_json),
+                    "output_mode": output_mode,
+                    "log_path": str(run_paths.observe_uart_step_log),
                 },
             }
         )
-        _write_json(run_paths.meta, meta)
-        print("PASS: Instrument digital signature verified")
+
+    if _is_meter_digital_verify_test(test_raw):
+        instrument_id, tcp_cfg, _manifest = _resolve_instrument_context(test_raw, board_cfg)
+        links = test_raw.get("connections", {}).get("dut_to_instrument", [])
+        analog_links = test_raw.get("connections", {}).get("dut_to_instrument_analog", [])
+        duration_ms = 500
+        meas_cfg = test_raw.get("measurement", {})
+        if isinstance(meas_cfg, dict) and meas_cfg.get("duration_ms") is not None:
+            duration_ms = int(meas_cfg.get("duration_ms"))
+        plan_steps.append(
+            {
+                "name": "check_meter",
+                "type": "check.instrument_signature",
+                "inputs": {
+                    "instrument_id": instrument_id,
+                    "cfg": {
+                        "host": tcp_cfg.get("host"),
+                        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
+                    },
+                    "links": links,
+                    "analog_links": analog_links,
+                    "duration_ms": duration_ms,
+                    "digital_out": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
+                    "verify_out": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
+                    "analog_out": str(Path(run_paths.artifacts_dir) / "instrument_voltage.json"),
+                },
+            }
+        )
+    else:
+        observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
+        test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
+        pin_value = test_pin
+        if test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
+            pin_value = observe_map.get(test_pin)
+        if not pin_value:
+            pin_value = wiring_cfg.get("verify")
+        check_probe_cfg = dict(probe_cfg)
+        if isinstance(test_raw, dict) and test_raw.get("sample_rate_hz"):
+            check_probe_cfg["la_sample_rate"] = int(test_raw.get("sample_rate_hz"))
+        duration_s = float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0
+        if isinstance(test_raw, dict) and test_raw.get("duration_ms") and not test_raw.get("duration_s"):
+            duration_s = float(test_raw.get("duration_ms")) / 1000.0
+        plan_steps.append(
+            {
+                "name": "check_signal",
+                "type": "check.signal_verify",
+                "inputs": {
+                    "probe_cfg": check_probe_cfg,
+                    "pin": pin_value,
+                    "duration_s": duration_s,
+                    "expected_hz": float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
+                    "min_edges": int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
+                    "max_edges": int(test_raw.get("max_edges", 6)) if isinstance(test_raw, dict) else 6,
+                    "log_path": str(run_paths.observe_log),
+                    "output_mode": output_mode,
+                    "measure_path": str(run_paths.measure),
+                    "test_limits": {
+                        "min_freq_hz": test_raw.get("min_freq_hz") if isinstance(test_raw, dict) else None,
+                        "max_freq_hz": test_raw.get("max_freq_hz") if isinstance(test_raw, dict) else None,
+                        "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
+                        "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
+                    },
+                },
+            }
+        )
+
+    plan = {
+        "version": "runplan/0.1",
+        "plan_id": run_paths.run_id,
+        "created_at": run_started.isoformat(),
+        "inputs": {
+            "board_id": board_id or "unknown",
+            "probe_id": probe_cfg.get("name"),
+            "instrument_id": (_resolve_instrument_context(test_raw, board_cfg)[0] if isinstance(test_raw, dict) else None),
+            "test_id": Path(test_path).stem,
+        },
+        "selected": {
+            "board_config": str(board_path) if board_path else "",
+            "probe_config": str(probe_path) if probe_path else "",
+            "test_config": str(test_path),
+        },
+        "context": {
+            "workspace_dir": str(repo_root),
+            "run_root": str(Path(repo_root) / "runs"),
+            "artifact_root": str(Path(run_paths.root) / "artifacts"),
+            "log_root": str(Path(run_paths.root)),
+        },
+        "preflight": {"checks": [{"type": "probe.health", "args": {}}], "policy": {"fail_fast": True}},
+        "steps": plan_steps,
+        "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"build": 1, "run": 2, "check": 2}},
+        "report": {"emit": ["*.log", "*.json", "artifacts/*"]},
+    }
+
+    registry = AdapterRegistry()
+    runner_result = run_plan(plan, Path(run_paths.root), registry)
+
+    failed_step = _failed_step_name(runner_result)
+    firmware_path = known_firmware_path or _extract_firmware_from_runner(runner_result)
+    artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
+
+    if _is_meter_digital_verify_test(test_raw):
+        _write_json(run_paths.measure, {"ok": bool(runner_result.get("ok")), "type": "instrument_digital_verify"})
+
+    result = {
+        "ok": bool(runner_result.get("ok", False)),
+        "failed_step": failed_step,
+        "error_summary": runner_result.get("error_summary", ""),
+        "logs": {
+            "preflight": str(run_paths.preflight_log),
+            "build": str(run_paths.build_log),
+            "flash": str(run_paths.flash_log),
+            "observe": str(run_paths.observe_log),
+            "observe_uart": str(run_paths.observe_uart_step_log),
+            "observe_uart_raw": str(run_paths.observe_uart_log),
+            "verify": str(run_paths.verify_log),
+        },
+        "artifacts": artifacts_copied,
+        "json": {
+            "flash": str(run_paths.flash_json),
+            "measure": str(run_paths.measure),
+            "uart_observe": str(run_paths.uart_observe),
+            "preflight": str(run_paths.preflight),
+            "meta": str(run_paths.meta),
+            "config_effective": str(run_paths.config_effective),
+            "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
+            "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
+            "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
+            "run_plan": str(Path(run_paths.artifacts_dir) / "run_plan.json"),
+            "runner_result": str(Path(run_paths.artifacts_dir) / "result.json"),
+        },
+    }
+    _write_json(run_paths.result, result)
+
+    timings = {"total_s": round(time.monotonic() - run_started_mono, 3)}
+    for s in ("preflight", "build", "load", "check_uart", "check_meter", "check_signal", "instrument_selftest"):
+        entries = [x for x in runner_result.get("steps", []) if isinstance(x, dict) and x.get("name") == s]
+        if entries:
+            timings[f"{s}_attempts"] = len(entries)
+    meta.update(
+        {
+            "ended_at": datetime.now().isoformat(),
+            "timings": timings,
+            "firmware": {"path": firmware_path, "sha256": _file_sha256(firmware_path) if firmware_path else ""},
+            "runner_result": str(Path(run_paths.artifacts_dir) / "result.json"),
+            "run_plan": str(Path(run_paths.artifacts_dir) / "run_plan.json"),
+        }
+    )
+    _write_json(run_paths.meta, meta)
+
+    if result["ok"]:
+        print("PASS: Run verified")
         _emit_event(
             {
                 "type": "run_succeeded",
@@ -1085,184 +1087,39 @@ def run_pipeline(
         )
         return (0, run_paths) if return_paths else 0
 
-    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
-    test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
-    pin_value = test_pin
-    if test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
-        pin_value = observe_map.get(test_pin)
-    if not pin_value:
-        pin_value = wiring_cfg.get("verify")
+    err_l = str(result["error_summary"]).lower()
+    if "permission check failed" in err_l or "permission denied" in err_l:
+        print("UART: permission check failed.")
+        print("Action required: fix /dev/tty* permission/group manually, then rerun.")
+    if "download mode" in err_l:
+        print("UART: target entered bootloader download mode.")
+        print("Action: reset DUT and rerun. Auto RTS reset was already attempted.")
 
-    if isinstance(test_raw, dict) and test_raw.get("sample_rate_hz"):
-        probe_cfg["la_sample_rate"] = int(test_raw.get("sample_rate_hz"))
-    if isinstance(test_raw, dict) and test_raw.get("duration_ms") and not test_raw.get("duration_s"):
-        test_raw["duration_s"] = float(test_raw.get("duration_ms")) / 1000.0
+    fail_stage = "verify"
+    if failed_step.startswith("preflight"):
+        fail_stage = "preflight"
+    elif failed_step.startswith("build"):
+        fail_stage = "build"
+    elif failed_step.startswith("load"):
+        fail_stage = "flash"
+    elif failed_step.startswith("check_uart"):
+        fail_stage = "observe_uart"
+    _triage(fail_stage, {})
 
-    with _tee_output(run_paths.observe_log, output_mode):
-        t0 = time.monotonic()
-        ok_obs = observe_gpio_pin.run(
-            probe_cfg,
-            pin=pin_value,
-            duration_s=float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0,
-            expected_hz=float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
-            min_edges=int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
-            max_edges=int(test_raw.get("max_edges", 6)) if isinstance(test_raw, dict) else 6,
-            capture_out=capture,
-            verify_edges=False,
-        )
-        timings["observe_s"] = round(time.monotonic() - t0, 3)
-
-    if not ok_obs:
-        result["failed_step"] = "observe"
-        result["error_summary"] = "observe failed"
-        _write_json(run_paths.result, result)
-        _emit_event(
-            {
-                "type": "run_failed",
-                "severity": "error",
-                "run_id": run_paths.run_id,
-                "dut": board_id or board_cfg.get("name", "unknown"),
-                "bench": None,
-                "step": "observe",
-                "summary": result.get("error_summary"),
-                "details": "",
-                "artifacts_path": str(run_paths.root),
-                "timestamp": datetime.now().isoformat(),
-                "log_paths": {"observe": str(run_paths.observe_log)},
-            },
-            notify_cfg,
-        )
-        meta["ended_at"] = datetime.now().isoformat()
-        _write_json(run_paths.meta, meta)
-        return (5, run_paths) if return_paths else 5
-
-    measure = {}
-    verify_ok = False
-    with _tee_output(run_paths.verify_log, output_mode):
-        t0 = time.monotonic()
-        if capture.get("blob"):
-            measure = la_verify.analyze_capture_bytes(
-                capture.get("blob"),
-                int(capture.get("sample_rate_hz", 0)),
-                int(capture.get("bit", 0)),
-                min_edges=int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
-            )
-            verify_ok = bool(measure.get("ok"))
-            metrics = measure.get("metrics", {})
-            print(
-                "Verify: freq={:.3f}Hz duty={:.3f} jitter_est={:.6f}s".format(
-                    metrics.get("freq_hz", 0.0),
-                    metrics.get("duty", 0.0),
-                    metrics.get("jitter_est", 0.0),
-                )
-            )
-            if isinstance(test_raw, dict):
-                min_f = test_raw.get("min_freq_hz")
-                max_f = test_raw.get("max_freq_hz")
-                duty_min = test_raw.get("duty_min")
-                duty_max = test_raw.get("duty_max")
-                if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
-                    measure.setdefault("reasons", []).append("freq_below_min")
-                    verify_ok = False
-                if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
-                    measure.setdefault("reasons", []).append("freq_above_max")
-                    verify_ok = False
-                if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
-                    measure.setdefault("reasons", []).append("duty_below_min")
-                    verify_ok = False
-                if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
-                    measure.setdefault("reasons", []).append("duty_above_max")
-                    verify_ok = False
-
-            measure["ok"] = bool(verify_ok)
-            if not verify_ok:
-                print("Verify: FAIL " + ", ".join(measure.get("reasons", [])))
-        else:
-            measure = {"ok": False, "metrics": {}, "reasons": ["no_capture"]}
-            verify_ok = False
-            print("Verify: FAIL no capture")
-        timings["verify_s"] = round(time.monotonic() - t0, 3)
-
-    _write_json(run_paths.measure, measure)
-
-    if not verify_ok:
-        result["failed_step"] = "verify"
-        result["error_summary"] = "verify failed"
-        _triage("verify", pre_info)
-        if reset_unwired:
-            print("Hint: reset line not wired. Power-cycle target and rerun verify.")
-        _write_json(run_paths.result, result)
-        _emit_event(
-            {
-                "type": "run_failed",
-                "severity": "error",
-                "run_id": run_paths.run_id,
-                "dut": board_id or board_cfg.get("name", "unknown"),
-                "bench": None,
-                "step": "verify",
-                "summary": result.get("error_summary"),
-                "details": ",".join(measure.get("reasons", [])) if isinstance(measure, dict) else "",
-                "artifacts_path": str(run_paths.root),
-                "timestamp": datetime.now().isoformat(),
-                "log_paths": {"verify": str(run_paths.verify_log)},
-            },
-            notify_cfg,
-        )
-        meta["ended_at"] = datetime.now().isoformat()
-        _write_json(run_paths.meta, meta)
-        return (6, run_paths) if return_paths else 6
-
-    timings["total_s"] = round(time.monotonic() - run_started_mono, 3)
-
-    artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
-
-    print("PASS: Blink verified")
-    print(
-        "Summary: "
-        f"preflight={timings.get('preflight_s', 0)}s "
-        f"build={timings.get('build_s', 0)}s "
-        f"flash={timings.get('flash_s', 0)}s "
-        f"observe={timings.get('observe_s', 0)}s "
-        f"verify={timings.get('verify_s', 0)}s "
-        f"total={timings.get('total_s', 0)}s"
-    )
-
-    result["ok"] = True
-    result["failed_step"] = ""
-    result["error_summary"] = ""
-    existing_artifacts = result.get("artifacts", [])
-    if not isinstance(existing_artifacts, list):
-        existing_artifacts = []
-    result["artifacts"] = existing_artifacts + artifacts_copied
-    _write_json(run_paths.result, result)
-
-    meta.update(
-        {
-            "ended_at": datetime.now().isoformat(),
-            "timings": timings,
-            "firmware": {
-                "path": firmware_path,
-                "sha256": _file_sha256(firmware_path) if firmware_path else "",
-            },
-        }
-    )
-    _write_json(run_paths.meta, meta)
-
-    print(f"Run metadata saved: {run_paths.meta}")
-    print(f"Run log saved: {run_paths.build_log}")
     _emit_event(
         {
-            "type": "run_succeeded",
-            "severity": "info",
+            "type": "run_failed",
+            "severity": "error",
             "run_id": run_paths.run_id,
             "dut": board_id or board_cfg.get("name", "unknown"),
             "bench": None,
-            "step": "verify",
-            "summary": "run succeeded",
+            "step": failed_step or "runner",
+            "summary": result.get("error_summary", "run failed"),
             "details": "",
             "artifacts_path": str(run_paths.root),
             "timestamp": datetime.now().isoformat(),
             "log_paths": {
+                "preflight": str(run_paths.preflight_log),
                 "build": str(run_paths.build_log),
                 "flash": str(run_paths.flash_log),
                 "observe": str(run_paths.observe_log),
@@ -1272,7 +1129,8 @@ def run_pipeline(
         },
         notify_cfg,
     )
-    return (0, run_paths) if return_paths else 0
+    code = _code_from_failed_step(failed_step)
+    return (code, run_paths) if return_paths else code
 
 
 def run(args):
