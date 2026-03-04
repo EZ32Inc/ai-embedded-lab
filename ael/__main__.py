@@ -12,8 +12,8 @@ from pathlib import Path
 from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import assets
 from ael.bridge_server import run_server as run_bridge_server
-from ael.cli import submit_task
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
+from ael.submit import submit_to_bridge
 from ael import run_manager
 from ael.config_resolver import (
     resolve_board_config,
@@ -109,12 +109,9 @@ def main():
     dut_promote.add_argument("--delete-source", action="store_true")
 
     submit_p = sub.add_parser("submit")
-    submit_p.add_argument("plan_file")
-    submit_p.add_argument("--api", default="http://127.0.0.1:8765/v1/tasks")
-    submit_p.add_argument("--task-id", default=None)
-    submit_p.add_argument("--description", default="")
-    submit_p.add_argument("--priority", default="normal")
-    submit_p.add_argument("--created-by", default="ael-submit")
+    submit_p.add_argument("input_text", help="Natural language prompt or JSON payload/path when --json is set")
+    submit_p.add_argument("--api", default="http://127.0.0.1:8844/v1/tasks")
+    submit_p.add_argument("--json", action="store_true", help="Treat input_text as JSON object or JSON file path")
 
     bridge_p = sub.add_parser("bridge")
     bridge_p.add_argument("--host", default=os.environ.get("AEL_BRIDGE_HOST", "127.0.0.1"))
@@ -273,16 +270,19 @@ def main():
             code = dut_promote_cmd(args.id, args.as_id, args.delete_source)
             sys.exit(code)
     if args.cmd == "submit":
-        status, payload = submit_task(
-            plan_file=args.plan_file,
+        status, payload = submit_to_bridge(
+            user_input=args.input_text,
             api_url=args.api,
-            task_id=args.task_id,
-            description=args.description,
-            priority=args.priority,
-            created_by=args.created_by,
+            json_mode=bool(args.json),
         )
         print(json.dumps(payload, indent=2, sort_keys=True))
-        sys.exit(0 if status == 200 and bool(payload.get("accepted")) else 1)
+        if status == 200 and bool(payload.get("ok", False)):
+            task_id = str(payload.get("task_id", "")).strip()
+            print("Task submitted")
+            if task_id:
+                print(f"task_id: {task_id}")
+            sys.exit(0)
+        sys.exit(1)
     if args.cmd == "bridge":
         sys.exit(run_bridge_server(host=str(args.host), port=int(args.port), queue_root=str(args.queue)))
     if args.cmd == "up":
