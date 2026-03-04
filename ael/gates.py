@@ -10,6 +10,7 @@ from typing import Dict, List, Optional
 
 DEFAULT_GATE_COMMANDS = [
     "python3 tools/ael_guard.py --fast",
+    "python3 tools/check_instrument_protocol.py",
     "python3 tools/runner_smoke.py",
     "python3 tools/agent_smoke.py",
     "python3 -m ael pack --pack packs/esp32meter1.json",
