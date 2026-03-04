@@ -4,6 +4,8 @@ import sys
 import json
 import shutil
 import subprocess
+import threading
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -18,6 +20,43 @@ from ael.config_resolver import (
     resolve_doctor_required_tools,
     resolve_probe_config,
 )
+
+
+def _run_agent_loop(queue: str, report_root: str, poll: float) -> None:
+    from ael.agent import _AgentMode, run_sweep
+
+    mode = _AgentMode(branch_worker=False, push=False, remote="origin", gates_path=None)
+    while True:
+        run_sweep(queue_path=queue, mode=mode, report_root=report_root, max_tasks=None, verbose=False)
+        time.sleep(max(0.1, float(poll)))
+
+
+def run_up(host: str, port: int, queue: str, report_root: str, poll: float) -> int:
+    print("AEL system starting...")
+
+    bridge_thread = threading.Thread(
+        target=run_bridge_server,
+        kwargs={"host": str(host), "port": int(port), "queue_root": str(queue)},
+        daemon=True,
+    )
+    agent_thread = threading.Thread(
+        target=_run_agent_loop,
+        kwargs={"queue": str(queue), "report_root": str(report_root), "poll": float(poll)},
+        daemon=True,
+    )
+    bridge_thread.start()
+    agent_thread.start()
+
+    print(f"Bridge running at http://{host}:{int(port)}")
+    print("Agent queue runner active")
+    print("System ready.")
+
+    try:
+        while True:
+            time.sleep(1.0)
+    except KeyboardInterrupt:
+        print("AEL system stopping...")
+        return 0
 
 
 def main():
@@ -81,6 +120,16 @@ def main():
     bridge_p.add_argument("--host", default=os.environ.get("AEL_BRIDGE_HOST", "127.0.0.1"))
     bridge_p.add_argument("--port", type=int, default=int(os.environ.get("AEL_BRIDGE_PORT", "8844")))
     bridge_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
+
+    up_p = sub.add_parser("up")
+    up_p.add_argument("--host", default=os.environ.get("AEL_BRIDGE_HOST", "127.0.0.1"))
+    up_p.add_argument("--port", type=int, default=int(os.environ.get("AEL_BRIDGE_PORT", "8844")))
+    up_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
+    up_p.add_argument(
+        "--report-root",
+        default=os.environ.get("AEL_REPORT_ROOT") or str(Path(__file__).resolve().parents[1] / "reports"),
+    )
+    up_p.add_argument("--poll", type=float, default=0.5, help="Agent queue poll interval in seconds")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -236,6 +285,16 @@ def main():
         sys.exit(0 if status == 200 and bool(payload.get("accepted")) else 1)
     if args.cmd == "bridge":
         sys.exit(run_bridge_server(host=str(args.host), port=int(args.port), queue_root=str(args.queue)))
+    if args.cmd == "up":
+        sys.exit(
+            run_up(
+                host=str(args.host),
+                port=int(args.port),
+                queue=str(args.queue),
+                report_root=str(args.report_root),
+                poll=float(args.poll),
+            )
+        )
 
 
 def _check_tools(tools):
