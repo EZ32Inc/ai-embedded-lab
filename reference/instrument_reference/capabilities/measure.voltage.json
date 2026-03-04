@@ -1,0 +1,26 @@
+{
+  "capability_id": "measure.voltage",
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "channel": {"type": "string"},
+      "avg": {"type": "integer", "minimum": 1}
+    }
+  },
+  "outputs_schema": {
+    "type": "object",
+    "required": ["voltage_v"],
+    "properties": {
+      "voltage_v": {"type": "number"}
+    }
+  },
+  "units": {
+    "voltage_v": "V"
+  },
+  "ranges": {
+    "voltage_v": [0.0, 3.3]
+  },
+  "tolerances": {
+    "voltage_v": 0.01
+  }
+}

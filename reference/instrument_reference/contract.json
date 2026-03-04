@@ -1,0 +1,21 @@
+{
+  "instrument_id": "ref.instrument.001",
+  "name": "Reference Instrument",
+  "protocol_version": "ael-instrument/0.1",
+  "firmware_version": "0.1.0",
+  "transports": [
+    {
+      "type": "http",
+      "base_url": "http://192.168.4.1"
+    }
+  ],
+  "capabilities": [
+    "measure.digital",
+    "measure.voltage",
+    "uart_log"
+  ],
+  "security": {
+    "mode": "local-network",
+    "token_required": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "capability_id": "uart_log",
+  "inputs_schema": {
+    "type": "object",
+    "properties": {
+      "timeout_ms": {"type": "integer", "minimum": 1},
+      "must_contain": {
+        "type": "array",
+        "items": {"type": "string"}
+      }
+    }
+  },
+  "outputs_schema": {
+    "type": "object",
+    "required": ["lines"],
+    "properties": {
+      "lines": {
+        "type": "array",
+        "items": {"type": "string"}
+      }
+    }
+  }
+}

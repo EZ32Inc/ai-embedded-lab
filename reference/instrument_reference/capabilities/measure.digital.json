@@ -1,0 +1,36 @@
+{
+  "capability_id": "measure.digital",
+  "inputs_schema": {
+    "type": "object",
+    "required": ["pins"],
+    "properties": {
+      "pins": {
+        "type": "array",
+        "items": {"type": "integer"}
+      },
+      "duration_ms": {"type": "integer", "minimum": 1}
+    }
+  },
+  "outputs_schema": {
+    "type": "object",
+    "required": ["pins"],
+    "properties": {
+      "pins": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "gpio": {"type": "integer"},
+            "state": {"type": "string"},
+            "freq_hz": {"type": "number"},
+            "duty": {"type": "number"}
+          }
+        }
+      }
+    }
+  },
+  "units": {
+    "freq_hz": "Hz",
+    "duty": "ratio"
+  }
+}
