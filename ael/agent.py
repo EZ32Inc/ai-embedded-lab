@@ -213,6 +213,14 @@ def _write_json(path: Path, payload: Dict) -> None:
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
 
 
+def _read_json(path: Path) -> Dict:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    return payload if isinstance(payload, dict) else {}
+
+
 def _task_validate(task: Dict) -> Tuple[List[str], List[str]]:
     validate = task.get("validate", {}) if isinstance(task.get("validate"), dict) else {}
     pre = validate.get("pre", []) if isinstance(validate.get("pre"), list) else []
@@ -273,8 +281,10 @@ def _execute_bridge_subtask(subtask: Dict, run_dir: Path, tasklog) -> Tuple[bool
     _write_json(artifacts_dir / "task.json", subtask)
 
     kind = str(subtask.get("kind", "")).strip()
+    payload = subtask.get("payload", {}) if isinstance(subtask.get("payload"), dict) else {}
+    exec_mode = str(payload.get("execution_mode", "")).strip()
+    downgrade_reason = str(payload.get("downgrade_reason", "")).strip()
     if kind == "codex":
-        payload = subtask.get("payload", {}) if isinstance(subtask.get("payload"), dict) else {}
         prompt = str(payload.get("prompt", "")).strip()
         if not prompt:
             return False, "bridge codex subtask missing prompt", {"task": str(artifacts_dir / "task.json")}
@@ -292,6 +302,8 @@ def _execute_bridge_subtask(subtask: Dict, run_dir: Path, tasklog) -> Tuple[bool
                 "kind": kind,
                 "title": subtask.get("title", ""),
                 "error_summary": str(codex_out.get("error_summary", "")),
+                "execution_mode": "codex" if bool(codex_out.get("ok", False)) else (exec_mode or "offline"),
+                "downgrade_reason": downgrade_reason or ("codex_disabled" if "disabled" in str(codex_out.get("error_summary", "")).lower() else ""),
             },
         )
         return bool(codex_out.get("ok", False)), str(codex_out.get("error_summary", "")), {
@@ -319,6 +331,8 @@ def _execute_bridge_subtask(subtask: Dict, run_dir: Path, tasklog) -> Tuple[bool
             "kind": kind,
             "title": subtask.get("title", ""),
             "error_summary": err,
+            "execution_mode": exec_mode or ("noop" if kind == "noop" else "offline"),
+            "downgrade_reason": downgrade_reason,
         },
     )
     artifacts = {
@@ -338,6 +352,8 @@ def _write_plan_report(report_root: Path, task_id: str, prompt: str, plan_items:
         f"- task_id: {task_id}",
         f"- prompt: {prompt}",
         f"- run_dir: {run_dir}",
+        f"- execution_mode: {('codex' if any(str(r.get('execution_mode','')) == 'codex' for r in results) else 'offline')}",
+        f"- downgrade_reason: {next((str(r.get('downgrade_reason','')) for r in results if str(r.get('downgrade_reason','')).strip()), '')}",
         "",
         "## Plan",
         "",
@@ -348,6 +364,8 @@ def _write_plan_report(report_root: Path, task_id: str, prompt: str, plan_items:
     for result in results:
         status = "success" if bool(result.get("ok", False)) else "failed"
         lines.append(f"- task{result.get('index')}: {status} ({result.get('title', '')})")
+        lines.append(f"  - execution_mode: {result.get('execution_mode', '')}")
+        lines.append(f"  - downgrade_reason: {result.get('downgrade_reason', '')}")
         if not bool(result.get("ok", False)):
             lines.append(f"  - error: {result.get('error_summary', '')}")
     lines.extend(["", "## Logs", ""])
@@ -379,6 +397,8 @@ def _process_task_file(
         "status": "running",
         "error_summary": "",
         "key_artifacts": {},
+        "execution_mode": "",
+        "downgrade_reason": "",
     }
     write_state(running_task, running_state)
 
@@ -506,6 +526,8 @@ def _process_task_file(
 
     runner_result: Dict = {}
     kind = str(task.get("kind", "")).strip() if bridge_mode else ""
+    exec_mode = "offline"
+    downgrade_reason = ""
     plan_items: List[Dict] = []
     sub_results: List[Dict] = []
     plan_prompt = ""
@@ -538,6 +560,8 @@ def _process_task_file(
                 "error_summary": err_sub,
                 "run_dir": str(sub_dir),
                 "artifacts": sub_artifacts,
+                "execution_mode": str((_read_json(sub_dir / "result.json") or {}).get("execution_mode", "")),
+                "downgrade_reason": str((_read_json(sub_dir / "result.json") or {}).get("downgrade_reason", "")),
             }
             _write_json(sub_dir / "result.json", sub_result)
             sub_results.append(sub_result)
@@ -547,6 +571,9 @@ def _process_task_file(
                 break
         _write_json(artifacts_dir / "plan_results.json", {"ok": overall_ok, "tasks": sub_results, "error_summary": overall_err})
         runner_result = {"ok": overall_ok, "error_summary": overall_err, "plan_tasks": sub_results}
+        exec_mode = "codex" if any(str(r.get("execution_mode", "")).strip() == "codex" for r in sub_results) else "offline"
+        reasons = [str(r.get("downgrade_reason", "")).strip() for r in sub_results if str(r.get("downgrade_reason", "")).strip()]
+        downgrade_reason = reasons[0] if reasons else ""
     elif bridge_mode and kind == "codex":
         payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
         prompt = str(payload.get("prompt", "")).strip()
@@ -567,12 +594,21 @@ def _process_task_file(
         _write_json(artifacts_dir / "codex_result.json", codex_out)
         tasklog("codex run finished")
         runner_result = {"ok": bool(codex_out.get("ok", False)), "error_summary": str(codex_out.get("error_summary", ""))}
+        if bool(codex_out.get("ok", False)):
+            exec_mode = "codex"
+            downgrade_reason = ""
+        else:
+            exec_mode = "offline"
+            msg = str(codex_out.get("error_summary", ""))
+            downgrade_reason = "codex_disabled" if "disabled" in msg.lower() else ""
     else:
         try:
             registry = AdapterRegistry()
             tasklog("runner started")
             runner_result = run_plan(plan, run_dir, registry)
             tasklog("runner finished")
+            exec_mode = "noop" if (bridge_mode and kind == "noop") else "offline"
+            downgrade_reason = "planner_fallback" if (bridge_mode and kind == "runplan") else ""
         except Exception as exc:
             artifacts = {"agent_task": str(artifacts_dir / "agent_task.json"), "task_log": str(task_log)}
             tasklog(f"runner exception: {exc}")
@@ -626,6 +662,25 @@ def _process_task_file(
             run_dir=run_dir,
         )
         artifacts["plan_report"] = str(report_path)
+
+    result_json_path = artifacts_dir / "result.json"
+    if result_json_path.exists():
+        enriched = _read_json(result_json_path)
+        enriched["execution_mode"] = exec_mode
+        enriched["downgrade_reason"] = downgrade_reason
+        _write_json(result_json_path, enriched)
+    else:
+        _write_json(
+            result_json_path,
+            {
+                "ok": runner_ok,
+                "error_summary": error_summary,
+                "execution_mode": exec_mode,
+                "downgrade_reason": downgrade_reason,
+            },
+        )
+    running_state["execution_mode"] = exec_mode
+    running_state["downgrade_reason"] = downgrade_reason
     if mode.branch_worker:
         running_state["mode"] = "branch-worker"
         running_state["publish_requested"] = bool(mode.push)

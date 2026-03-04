@@ -61,6 +61,8 @@ def build_task(*, title: str, kind: str, payload: Dict[str, Any], priority: int 
         "created_at": now_iso(),
         "payload": dict(payload),
         "priority": int(priority),
+        "execution_mode": "offline",
+        "downgrade_reason": "",
         "meta": {
             "priority": int(priority),
             "source": "bridge",

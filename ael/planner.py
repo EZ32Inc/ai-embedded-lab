@@ -55,6 +55,8 @@ def generate_plan(prompt: str) -> List[Dict]:
                 "payload": {
                     "prompt": f"Prepare changes for {test} testing on {board or 'target board'}. Original goal: {prompt}",
                     "repo_root": ".",
+                    "execution_mode": "codex",
+                    "downgrade_reason": "",
                 },
             }
         )
@@ -63,7 +65,11 @@ def generate_plan(prompt: str) -> List[Dict]:
             {
                 "kind": "noop",
                 "title": "prepare task context",
-                "payload": {"note": f"codex disabled; using local plan flow for: {prompt}"},
+                "payload": {
+                    "note": f"codex disabled; using local plan flow for: {prompt}",
+                    "execution_mode": "noop",
+                    "downgrade_reason": "codex_disabled",
+                },
             }
         )
     tasks.extend(
@@ -75,12 +81,18 @@ def generate_plan(prompt: str) -> List[Dict]:
                 "test": test,
                 "board": board,
                 "runplan": _noop_runplan(prompt, test=test, board=board),
+                "execution_mode": "offline",
+                "downgrade_reason": "planner_fallback",
             },
         },
         {
             "kind": "noop",
             "title": "verify results",
-            "payload": {"note": f"verify plan outcome for: {prompt}"},
+            "payload": {
+                "note": f"verify plan outcome for: {prompt}",
+                "execution_mode": "noop",
+                "downgrade_reason": "",
+            },
         },
         ]
     )
