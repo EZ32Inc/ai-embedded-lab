@@ -58,6 +58,16 @@ def _find_task(queue_root: Path, task_id: str) -> Tuple[Optional[str], Optional[
     return None, None
 
 
+def _lifecycle_from_state(state: str) -> str:
+    if state == "inbox":
+        return "planned"
+    if state == "running":
+        return "running"
+    if state in ("done", "failed"):
+        return "completed"
+    return state
+
+
 def _auth_enabled() -> bool:
     return bool(os.environ.get("AEL_BRIDGE_TOKEN", "").strip())
 
@@ -229,6 +239,7 @@ def _make_handler(queue_root: Path):
                 return
             task_payload = _read_json(task_path) or {}
             out: Dict[str, Any] = {"ok": True, "task_id": task_id, "state": state}
+            out["lifecycle"] = _lifecycle_from_state(state)
             out["task_path"] = str(task_path)
             if task_payload:
                 out["title"] = task_payload.get("title", "")

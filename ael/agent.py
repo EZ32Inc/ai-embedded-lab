@@ -329,6 +329,35 @@ def _execute_bridge_subtask(subtask: Dict, run_dir: Path, tasklog) -> Tuple[bool
     return ok, err, artifacts
 
 
+def _write_plan_report(report_root: Path, task_id: str, prompt: str, plan_items: List[Dict], results: List[Dict], run_dir: Path) -> Path:
+    report_root.mkdir(parents=True, exist_ok=True)
+    report_path = report_root / f"plan_{task_id}.md"
+    lines: List[str] = [
+        "# AEL Plan Execution Report",
+        "",
+        f"- task_id: {task_id}",
+        f"- prompt: {prompt}",
+        f"- run_dir: {run_dir}",
+        "",
+        "## Plan",
+        "",
+    ]
+    for idx, item in enumerate(plan_items, start=1):
+        lines.append(f"- {idx}. {item.get('title', '')} [{item.get('kind', '')}]")
+    lines.extend(["", "## Execution Results", ""])
+    for result in results:
+        status = "success" if bool(result.get("ok", False)) else "failed"
+        lines.append(f"- task{result.get('index')}: {status} ({result.get('title', '')})")
+        if not bool(result.get("ok", False)):
+            lines.append(f"  - error: {result.get('error_summary', '')}")
+    lines.extend(["", "## Logs", ""])
+    lines.append(f"- run_dir: {run_dir}")
+    lines.append(f"- task_log: {run_dir / 'logs' / 'task.log'}")
+    lines.append(f"- plan_json: {run_dir / 'plan.json'}")
+    report_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return report_path
+
+
 def _process_task_file(
     task_inbox_path: Path,
     queue_root: Path,
@@ -477,9 +506,13 @@ def _process_task_file(
 
     runner_result: Dict = {}
     kind = str(task.get("kind", "")).strip() if bridge_mode else ""
+    plan_items: List[Dict] = []
+    sub_results: List[Dict] = []
+    plan_prompt = ""
     if bridge_mode and kind == "plan":
         payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
         prompt = str(payload.get("prompt", "")).strip()
+        plan_prompt = prompt
         if not prompt:
             artifacts = {"agent_task": str(artifacts_dir / "agent_task.json"), "task_log": str(task_log)}
             return finalize(False, run_dir, "bridge plan task missing payload.prompt", artifacts)
@@ -491,7 +524,6 @@ def _process_task_file(
 
         tasks_root = run_dir / "tasks"
         tasks_root.mkdir(parents=True, exist_ok=True)
-        sub_results: List[Dict] = []
         overall_ok = True
         overall_err = ""
         for idx, subtask in enumerate(plan_items, start=1):
@@ -514,7 +546,7 @@ def _process_task_file(
                 overall_err = err_sub or f"subtask {idx} failed"
                 break
         _write_json(artifacts_dir / "plan_results.json", {"ok": overall_ok, "tasks": sub_results, "error_summary": overall_err})
-        runner_result = {"ok": overall_ok, "error_summary": overall_err}
+        runner_result = {"ok": overall_ok, "error_summary": overall_err, "plan_tasks": sub_results}
     elif bridge_mode and kind == "codex":
         payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
         prompt = str(payload.get("prompt", "")).strip()
@@ -584,6 +616,16 @@ def _process_task_file(
         artifacts["plan"] = str(plan_json_path)
     if plan_results_path.exists():
         artifacts["plan_results"] = str(plan_results_path)
+    if bridge_mode and kind == "plan":
+        report_path = _write_plan_report(
+            report_root=report_root,
+            task_id=task_id,
+            prompt=plan_prompt,
+            plan_items=plan_items,
+            results=sub_results,
+            run_dir=run_dir,
+        )
+        artifacts["plan_report"] = str(report_path)
     if mode.branch_worker:
         running_state["mode"] = "branch-worker"
         running_state["publish_requested"] = bool(mode.push)
