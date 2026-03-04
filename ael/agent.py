@@ -10,6 +10,8 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from ael.adapter_registry import AdapterRegistry
+from ael.bridge_task import is_bridge_task, noop_plan
+from ael.codex_driver import CodexDriver
 from ael.gates import run_gates
 from ael.queue import (
     claim_task,
@@ -219,6 +221,30 @@ def _task_validate(task: Dict) -> Tuple[List[str], List[str]]:
     return pre_cmds, post_cmds
 
 
+def _task_logger(log_path: Path):
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _write(message: str) -> None:
+        line = f"[{datetime.now().isoformat(timespec='seconds')}] {message}"
+        with open(log_path, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+
+    return _write
+
+
+def _bridge_run_plan(task: Dict) -> Tuple[Optional[Dict], str]:
+    kind = str(task.get("kind", "")).strip()
+    payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
+    if kind == "noop":
+        return noop_plan(task), ""
+    if kind == "runplan":
+        runplan = payload.get("runplan")
+        if not isinstance(runplan, dict):
+            return None, "bridge runplan task missing payload.runplan"
+        return runplan, ""
+    return None, ""
+
+
 def _process_task_file(
     task_inbox_path: Path,
     queue_root: Path,
@@ -278,9 +304,11 @@ def _process_task_file(
     if not isinstance(task, dict):
         return finalize(False, None, "invalid task JSON", {})
 
+    bridge_mode = is_bridge_task(task)
+
     task_version = str(task.get("task_version", "")).strip()
     is_api_task = isinstance(task.get("plan_file"), str) and bool(str(task.get("plan_file")).strip())
-    if task_version not in ("", "agenttask/0.1", "taskapi/0.3") and not is_api_task:
+    if task_version not in ("", "agenttask/0.1", "taskapi/0.3") and not is_api_task and not bridge_mode:
         return finalize(False, None, "unsupported task_version", {})
 
     if mode.branch_worker:
@@ -300,19 +328,41 @@ def _process_task_file(
         running_state["branch_name"] = branch_name
         write_state(running_task, running_state)
 
-    plan, plan_err = _load_plan(task, running_task.parent)
-    if not plan:
-        return finalize(False, None, plan_err or "plan resolution failed", {})
-
+    plan: Optional[Dict] = None
+    plan_err = ""
     run_dir_hint = None
-    meta = plan.get("meta", {}) if isinstance(plan.get("meta"), dict) else {}
-    if isinstance(meta.get("run_dir"), str):
-        run_dir_hint = meta.get("run_dir")
-    if isinstance(task.get("run_dir_hint"), str) and task.get("run_dir_hint"):
-        run_dir_hint = str(task.get("run_dir_hint"))
+    if bridge_mode:
+        kind = str(task.get("kind", "")).strip()
+        payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
+        if kind == "runplan":
+            if isinstance(payload.get("run_dir"), str):
+                run_dir_hint = str(payload.get("run_dir"))
+            elif isinstance(task.get("run_dir_hint"), str):
+                run_dir_hint = str(task.get("run_dir_hint"))
+            if not run_dir_hint:
+                run_dir_hint = str(queue_root / "running" / task_id)
+        elif kind in ("noop", "codex"):
+            run_dir_hint = str(queue_root / "running" / task_id)
+
+        plan, plan_err = _bridge_run_plan(task)
+    else:
+        plan, plan_err = _load_plan(task, running_task.parent)
+        if plan:
+            meta = plan.get("meta", {}) if isinstance(plan.get("meta"), dict) else {}
+            if isinstance(meta.get("run_dir"), str):
+                run_dir_hint = meta.get("run_dir")
+            if isinstance(task.get("run_dir_hint"), str) and task.get("run_dir_hint"):
+                run_dir_hint = str(task.get("run_dir_hint"))
+
+    if bridge_mode and str(task.get("kind", "")).strip() == "codex":
+        pass
+    elif not plan:
+        return finalize(False, None, plan_err or "plan resolution failed", {})
 
     if run_dir_hint and _safe_run_dir(run_dir_hint):
         run_dir = Path(run_dir_hint)
+    elif bridge_mode:
+        run_dir = queue_root / "running" / task_id
     else:
         run_dir = _default_run_dir(task_id)
 
@@ -322,6 +372,12 @@ def _process_task_file(
     logs_dir.mkdir(parents=True, exist_ok=True)
     running_state["run_dir"] = str(run_dir)
     write_state(running_task, running_state)
+    task_log = logs_dir / "task.log"
+    tasklog = _task_logger(task_log)
+    tasklog("task claimed")
+    tasklog(f"task_id={task_id}")
+    if bridge_mode:
+        tasklog(f"bridge kind={task.get('kind')}")
 
     _write_json(artifacts_dir / "agent_task.json", task)
 
@@ -335,12 +391,37 @@ def _process_task_file(
             }
             return finalize(False, run_dir, err_pre, artifacts)
 
-    try:
-        registry = AdapterRegistry()
-        runner_result = run_plan(plan, run_dir, registry)
-    except Exception as exc:
-        artifacts = {"agent_task": str(artifacts_dir / "agent_task.json")}
-        return finalize(False, run_dir, f"runner execution failed: {exc}", artifacts)
+    runner_result: Dict = {}
+    if bridge_mode and str(task.get("kind", "")).strip() == "codex":
+        payload = task.get("payload", {}) if isinstance(task.get("payload"), dict) else {}
+        prompt = str(payload.get("prompt", "")).strip()
+        if not prompt:
+            artifacts = {"agent_task": str(artifacts_dir / "agent_task.json"), "task_log": str(task_log)}
+            return finalize(False, run_dir, "bridge codex task missing payload.prompt", artifacts)
+        repo_root = str(payload.get("repo_root", "."))
+        timeout_s = int(payload.get("timeout_s", 1800))
+        transcript_path = artifacts_dir / "codex_transcript.log"
+        tasklog("codex run started")
+        codex = CodexDriver()
+        codex_out = codex.run(
+            repo_root=repo_root,
+            prompt=prompt,
+            timeout_s=timeout_s,
+            log_path=str(transcript_path),
+        )
+        _write_json(artifacts_dir / "codex_result.json", codex_out)
+        tasklog("codex run finished")
+        runner_result = {"ok": bool(codex_out.get("ok", False)), "error_summary": str(codex_out.get("error_summary", ""))}
+    else:
+        try:
+            registry = AdapterRegistry()
+            tasklog("runner started")
+            runner_result = run_plan(plan, run_dir, registry)
+            tasklog("runner finished")
+        except Exception as exc:
+            artifacts = {"agent_task": str(artifacts_dir / "agent_task.json"), "task_log": str(task_log)}
+            tasklog(f"runner exception: {exc}")
+            return finalize(False, run_dir, f"runner execution failed: {exc}", artifacts)
 
     if post_cmds:
         ok_post, err_post = _run_commands(post_cmds, logs_dir / "agent_validate_post.log")
@@ -360,9 +441,20 @@ def _process_task_file(
 
     artifacts = {
         "agent_task": str(artifacts_dir / "agent_task.json"),
-        "run_plan": str(artifacts_dir / "run_plan.json"),
-        "result": str(artifacts_dir / "result.json"),
+        "task_log": str(task_log),
     }
+    run_plan_path = artifacts_dir / "run_plan.json"
+    result_path = artifacts_dir / "result.json"
+    if run_plan_path.exists():
+        artifacts["run_plan"] = str(run_plan_path)
+    if result_path.exists():
+        artifacts["result"] = str(result_path)
+    codex_result_path = artifacts_dir / "codex_result.json"
+    codex_transcript_path = artifacts_dir / "codex_transcript.log"
+    if codex_result_path.exists():
+        artifacts["codex_result"] = str(codex_result_path)
+    if codex_transcript_path.exists():
+        artifacts["codex_transcript"] = str(codex_transcript_path)
     if mode.branch_worker:
         running_state["mode"] = "branch-worker"
         running_state["publish_requested"] = bool(mode.push)
