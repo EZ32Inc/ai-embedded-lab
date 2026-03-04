@@ -20,6 +20,7 @@ def main() -> int:
     queue_root = Path("/tmp/ael_agent_smoke_queue")
     run_dir = Path("/tmp/ael_agent_smoke_run")
     gates_path = Path("/tmp/ael_agent_smoke_gates.json")
+    report_root = Path("/tmp/ael_agent_smoke_reports")
 
     if queue_root.exists():
         shutil.rmtree(queue_root)
@@ -27,6 +28,8 @@ def main() -> int:
         shutil.rmtree(run_dir)
     if gates_path.exists():
         gates_path.unlink()
+    if report_root.exists():
+        shutil.rmtree(report_root)
     (queue_root / "inbox").mkdir(parents=True, exist_ok=True)
 
     original_branch_res = subprocess.run(
@@ -142,6 +145,8 @@ def main() -> int:
         str(queue_root),
         "--gates",
         str(gates_path),
+        "--report-root",
+        str(report_root),
     ]
     env = dict(**os.environ, AEL_AGENT_ALLOW_DIRTY="1")
     p = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True, env=env)
@@ -182,7 +187,7 @@ def main() -> int:
     if not (run_dir / "artifacts" / "result.json").exists():
         return _fail("result artifact missing")
 
-    nightly = repo_root / "reports" / f"nightly_{date.today().isoformat()}.md"
+    nightly = report_root / f"nightly_{date.today().isoformat()}.md"
     if not nightly.exists():
         return _fail("nightly report not found")
 

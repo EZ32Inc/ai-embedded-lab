@@ -5,13 +5,14 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 QUEUE_ROOT="/tmp/ael_agent_demo_queue"
 RUN_DIR="/tmp/ael_agent_demo_run"
 GATES_JSON="/tmp/ael_agent_demo_gates.json"
+REPORT_ROOT="/tmp/ael_agent_demo_reports"
 TASK_ID="agent-demo"
 TASK_NAME="2099-01-01_00-00-00_${TASK_ID}.json"
 TASK_PATH="${QUEUE_ROOT}/inbox/${TASK_NAME}"
 TODAY="$(date +%F)"
 BRANCH_NAME="agent/${TODAY}/task-0001-agent-demo"
 
-rm -rf "$QUEUE_ROOT" "$RUN_DIR"
+rm -rf "$QUEUE_ROOT" "$RUN_DIR" "$REPORT_ROOT"
 rm -f "$GATES_JSON"
 mkdir -p "$QUEUE_ROOT/inbox"
 
@@ -70,7 +71,7 @@ JSON
 
 (
   cd "$REPO_ROOT"
-  AEL_AGENT_ALLOW_DIRTY=1 python3 -m ael.agent --once --branch-worker --no-push --queue "$QUEUE_ROOT" --gates "$GATES_JSON"
+  AEL_AGENT_ALLOW_DIRTY=1 python3 -m ael.agent --once --branch-worker --no-push --queue "$QUEUE_ROOT" --gates "$GATES_JSON" --report-root "$REPORT_ROOT"
 )
 
 DONE_TASK="${QUEUE_ROOT}/done/${TASK_NAME}"
@@ -95,7 +96,7 @@ if [ ! -f "${RUN_DIR}/artifacts/run_plan.json" ] || [ ! -f "${RUN_DIR}/artifacts
   exit 2
 fi
 
-REPORT_PATH="${REPO_ROOT}/reports/nightly_${TODAY}.md"
+REPORT_PATH="${REPORT_ROOT}/nightly_${TODAY}.md"
 if [ ! -f "$REPORT_PATH" ]; then
   echo "[AGENT_DEMO] FAIL: report missing"
   exit 2

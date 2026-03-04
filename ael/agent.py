@@ -394,13 +394,14 @@ def _process_task_file(
 def run_sweep(
     queue_path: str | Path,
     mode: _AgentMode,
+    report_root: str | Path,
     max_tasks: Optional[int] = None,
     verbose: bool = False,
 ) -> int:
     queue_root = Path(queue_path)
     ensure_queue_layout(queue_root)
-    report_root = _repo_root() / "reports"
-    report_root.mkdir(parents=True, exist_ok=True)
+    report_root_path = Path(report_root)
+    report_root_path.mkdir(parents=True, exist_ok=True)
 
     processed = 0
     while True:
@@ -411,7 +412,7 @@ def run_sweep(
         _process_task_file(
             task_path,
             queue_root,
-            report_root,
+            report_root_path,
             mode=mode,
             task_index=processed + 1,
             verbose=verbose,
@@ -434,6 +435,11 @@ def main() -> int:
     parser.add_argument("--no-push", dest="push", action="store_false", help="Do not push branch on success")
     parser.add_argument("--remote", default="origin", help="Remote name for push in branch-worker mode")
     parser.add_argument("--gates", default=None, help="Optional gate commands config path")
+    parser.add_argument(
+        "--report-root",
+        default=os.environ.get("AEL_REPORT_ROOT") or str(_repo_root() / "reports"),
+        help="Directory for nightly reports",
+    )
 
     args = parser.parse_args()
     push_enabled = bool(args.push) if args.push is not None else bool(args.branch_worker)
@@ -457,11 +463,11 @@ def main() -> int:
                 return 2
 
     if args.once:
-        run_sweep(args.queue, mode=mode, max_tasks=args.max_tasks, verbose=args.verbose)
+        run_sweep(args.queue, mode=mode, report_root=args.report_root, max_tasks=args.max_tasks, verbose=args.verbose)
         return 0
 
     while True:
-        run_sweep(args.queue, mode=mode, max_tasks=args.max_tasks, verbose=args.verbose)
+        run_sweep(args.queue, mode=mode, report_root=args.report_root, max_tasks=args.max_tasks, verbose=args.verbose)
         time.sleep(max(0.1, float(args.poll)))
 
 
