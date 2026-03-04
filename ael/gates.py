@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -40,6 +41,81 @@ def _hardware_missing(text: str) -> bool:
         "download mode",
     ]
     return any(p in low for p in patterns)
+
+
+def _find_device(text: str) -> str:
+    m = re.search(r"(/dev/tty[A-Za-z0-9]+)", text or "")
+    return m.group(1) if m else ""
+
+
+def _classify_hardware_gate(command: str, exit_code: int, output: str) -> Dict:
+    low = (output or "").lower()
+    device = _find_device(output or "")
+    hints: List[str] = []
+    matched = ""
+    status = STATUS_PASS if int(exit_code) == 0 else STATUS_FAIL
+    summary = "hardware gate passed" if status == STATUS_PASS else f"hardware gate failed: {command}"
+
+    def _mark_har(reason: str, detail_hints: List[str]) -> None:
+        nonlocal status, summary, matched, hints
+        status = STATUS_HAR
+        matched = reason
+        summary = f"hardware gate needs manual action ({reason})"
+        hints = detail_hints
+
+    permission_patterns = ["permission denied", "could not open port", "cannot open"]
+    missing_patterns = ["no such file or directory", "port is busy or doesn't exist", "device not found"]
+    busy_patterns = ["resource busy", "port is busy"]
+    download_patterns = ["waiting for download", "download mode", "boot:0x0 (download"]
+    notifier_patterns = ["could not resolve host: discord.com", "discord webhook failed", "name or service not known"]
+
+    if status == STATUS_FAIL:
+        if any(p in low for p in download_patterns):
+            _mark_har(
+                "download_mode",
+                [
+                    "DUT appears in bootloader/download mode.",
+                    "Reset target and rerun gate.",
+                    "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
+                ],
+            )
+        elif any(p in low for p in permission_patterns):
+            _mark_har(
+                "serial_permission_denied",
+                [
+                    f"Fix serial permissions for {device or '/dev/tty*'} (dialout/uucp group).",
+                    "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
+                ],
+            )
+        elif any(p in low for p in missing_patterns):
+            _mark_har(
+                "serial_device_missing",
+                [
+                    f"Ensure device is connected ({device or '/dev/ttyACM*'}).",
+                    "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
+                ],
+            )
+        elif any(p in low for p in busy_patterns):
+            _mark_har(
+                "serial_port_busy",
+                [
+                    f"Release the serial port ({device or '/dev/ttyACM*'}) from other process.",
+                    "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
+                ],
+            )
+        elif any(p in low for p in notifier_patterns):
+            status = STATUS_SKIP
+            matched = "notifier_dns_warning"
+            summary = "hardware gate notifier warning only"
+            hints = ["Network/DNS issue for notifier; treat as non-fatal warning."]
+
+    return {
+        "status": status,
+        "summary": summary,
+        "hints": hints,
+        "matched_error": matched,
+        "device": device,
+    }
 
 
 def _load_gate_commands(path: str | None) -> List[str]:
@@ -116,14 +192,24 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
         status = STATUS_PASS if int(proc.returncode) == 0 else STATUS_FAIL
         summary = "gate passed" if status == STATUS_PASS else f"gate failed: {cmd}"
         hints: List[str] = []
-        if status == STATUS_FAIL:
-            if idx == 4 and _hardware_missing(combined):
+        extra_evidence: Dict[str, str] = {}
+        is_hardware_gate = "python3 -m ael pack --pack packs/esp32meter1.json" in cmd
+        if is_hardware_gate:
+            hw = _classify_hardware_gate(cmd, int(proc.returncode), combined)
+            status = str(hw.get("status", status))
+            summary = str(hw.get("summary", summary))
+            hints = [str(x) for x in hw.get("hints", []) if str(x).strip()]
+            extra_evidence = {
+                "matched_error": str(hw.get("matched_error", "")),
+                "device": str(hw.get("device", "")),
+            }
+        elif status == STATUS_FAIL:
+            if _hardware_missing(combined):
                 status = STATUS_HAR
-                summary = "hardware gate requires manual action"
-                hints.append("Verify hardware connection and permissions before retrying.")
-                hints.append("Rerun command: python3 -m ael pack --pack packs/esp32meter1.json")
-            else:
-                overall_status = STATUS_FAIL
+                summary = "gate requires manual action"
+                hints.append("External environment unavailable; rerun once fixed.")
+        if status == STATUS_FAIL:
+            overall_status = STATUS_FAIL
         gate_results.append(
             _mk_gate_result(
                 name=f"gate_{idx:02d}",
@@ -136,6 +222,8 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
                 output_text=combined,
             )
         )
+        if extra_evidence:
+            gate_results[-1]["evidence"].update(extra_evidence)
 
     if overall_status != STATUS_FAIL:
         har = [x for x in gate_results if x.get("status") == STATUS_HAR]
