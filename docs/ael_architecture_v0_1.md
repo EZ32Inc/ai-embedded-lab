@@ -1,354 +1,345 @@
-AEL Architecture v0.1
+# AEL Architecture v0.1
 
-AI Embedded Lab (AEL) is an AI-driven hardware validation framework designed to automatically build, run, and verify embedded systems using real hardware.
+AI Embedded Lab (AEL) is designed as an AI-driven embedded development execution platform.
 
-This document defines the core architecture of AEL v0.1.
+The architecture separates **planning**, **execution**, **hardware interaction**, and **verification** into independent layers so that AI can control and evolve the system safely.
 
-Design goals:
+---
 
-deterministic execution
+# 1. Core Pipeline Model
 
-data-driven system behavior
+AEL execution follows a deterministic pipeline:
 
-hardware-agnostic core engine
+Plan → Preflight → Build → Load → Check → Report
 
-AI-friendly interfaces
 
-easy extension through adapters
+### Plan
+Generate a machine-readable **RunPlan** describing the entire execution.
 
-1. High Level Architecture
+### Preflight
+Verify environment readiness:
+- probe connectivity
+- required tools
+- instrument availability
+- configuration validity
 
-AEL execution pipeline:
-
-CLI / AI Agent
-      │
-      ▼
-Plan Generator
-      │
-      ▼
-RunPlan (data only)
-      │
-      ▼
-Runner (execution engine)
-      │
-      ├── Build adapters
-      ├── Load adapters
-      ├── Check adapters
-      │
-      ▼
-Recovery Engine
-      │
-      ▼
-Artifacts + Result Report
-
-The architecture separates planning, execution, and verification.
-
-2. Core Execution Model
-
-AEL uses the following execution model:
-
-PLAN → PREFLIGHT → BUILD → RUN → CHECK → REPORT
-
-Each stage has a clear responsibility.
-
-2.1 PLAN
-
-PLAN determines what will be executed.
-
-Inputs:
-
-board configuration
-
-probe configuration
-
-instrument configuration
-
-test definition
-
-pack definition
-
-Output:
-
-RunPlan
-
-RunPlan is pure data describing the entire run.
-
-2.2 PREFLIGHT
-
-Preflight checks system readiness before execution.
+### Build
+Compile firmware or artifacts.
 
 Examples:
 
-compiler availability
+- ESP-IDF
+- CMake
+- ARM debug build
 
-debug probe connectivity
-
-instrument readiness
-
-DUT power presence
-
-required tools installed
-
-If preflight fails, execution stops.
-
-2.3 BUILD
-
-Compile firmware or software artifacts.
+### Load
+Load the firmware or program into target.
 
 Examples:
+
+- esptool
+- GDB
+- SWD loader
+
+### Check
+Observe or measure system behavior.
+
+Examples:
+
+- UART log capture
+- GPIO signature verification
+- instrument voltage measurement
+- logic analyzer analysis
+
+### Report
+Produce machine-readable artifacts describing execution results.
+
+Examples:
+
+artifacts/run_plan.json
+artifacts/result.json
+
+
+---
+
+# 2. High-Level Architecture
+
+            +----------------------+
+            |      AI / User       |
+            +----------+-----------+
+                       |
+                       v
+               +--------------+
+               | Orchestrator |
+               +--------------+
+                       |
+                       v
+                 Generate RunPlan
+                       |
+                       v
+                +--------------+
+                |    Runner    |
+                +--------------+
+                       |
+             Step dispatch via Registry
+                       |
+                       v
+               +----------------+
+               | AdapterRegistry |
+               +----------------+
+                       |
+        +--------------+--------------+
+        |              |              |
+        v              v              v
+   BuildAdapters   LoadAdapters   CheckAdapters
+        |              |              |
+        v              v              v
+   Build Tools     Debug/Flash    Instruments
+                   Interfaces     Observers
+
+
+---
+
+# 3. Runner
+
+Runner is the **execution engine of AEL**.
+
+Responsibilities:
+
+- Execute RunPlan sequentially
+- Dispatch steps to adapters
+- Manage retry and rewind
+- Handle recovery actions
+- Record artifacts
+- Produce result.json
+
+Runner **must remain hardware/tool agnostic**.
+
+Runner does NOT know:
+
+- ESP32
+- STM32
+- OpenOCD
+- esptool
+- UART
+- instruments
+
+Runner only knows:
+
+step.type
+
+
+Example:
 
 build.idf
-build.cmake
-build.make
-
-Outputs may include:
-
-firmware.elf
-firmware.bin
-
-Build should not depend on DUT hardware state.
-
-2.4 RUN
-
-RUN loads or executes firmware on the DUT.
-
-Examples:
-
-load.openocd
-load.esptool
-load.daplink
-
-RUN prepares the DUT for validation.
-
-2.5 CHECK
-
-CHECK verifies system behavior.
-
-Examples:
-
+load.gdbmi
 check.uart_log
-check.instrument_voltage
-check.gpio_signature
-check.logic_analyzer
 
-CHECK confirms that the DUT behaves correctly.
 
-2.6 REPORT
+---
 
-REPORT collects artifacts and execution results.
+# 4. RunPlan
 
-Typical artifacts:
+RunPlan is a machine-readable execution plan.
 
-run_plan.json
-result.json
-uart_log.txt
-instrument_measurements.json
-build_logs.txt
+It fully describes the pipeline.
 
-REPORT provides verification evidence.
+Example structure:
 
-3. RunPlan
+{
+"version": "runplan/0.1",
+"plan_id": "...",
 
-RunPlan is the central data structure in AEL.
+"inputs": {
+"board_id": "...",
+"probe_id": "...",
+"test_id": "..."
+},
 
-It describes the full execution plan.
+"steps": [
+{
+"name": "build",
+"type": "build.idf"
+},
+{
+"name": "load",
+"type": "load.idf_esptool"
+},
+{
+"name": "check_uart",
+"type": "check.uart_log"
+}
+]
+}
+
+
+RunPlan is validated via:
+
+schemas/runplan_v0_1.schema.json
+
+
+---
+
+# 5. Adapter Registry
+
+The Adapter Registry maps **step types** to adapters.
+
+Example:
+
+build.idf → BuildIDFAdapter
+build.cmake → BuildCMakeAdapter
+load.idf_esptool → EsptoolLoadAdapter
+check.uart_log → UARTObserveAdapter
+
+
+Registry interface:
+
+registry.get(step_type)
+registry.recovery(action_type)
+
+
+The registry isolates Runner from hardware/tool implementations.
+
+---
+
+# 6. Adapters
+
+Adapters implement hardware or tool interaction.
+
+All adapters follow a unified interface:
+
+execute(step, plan, ctx)
+
+
+Example adapter responsibilities:
+
+### Build Adapter
+Compile firmware.
+
+### Load Adapter
+Flash or load firmware.
+
+### Check Adapter
+Observe or measure behavior.
+
+Examples:
+
+- UART log analysis
+- GPIO signal verification
+- instrument measurements
+
+Adapters may write artifacts.
+
+---
+
+# 7. Runtime State
+
+Runtime state is stored in:
+
+artifacts/runtime_state.json
+
+
+It allows adapters to pass information between steps.
 
 Example:
 
 {
-  "version": "0.1",
-  "inputs": {
-    "board_id": "esp32s3_devkit",
-    "probe_id": "esp32jtag",
-    "instrument_id": "esp32s3_dev_c_meter",
-    "test_id": "esp32s3_gpio_signature_with_meter",
-    "pack_id": "esp32meter1"
-  },
-  "selected": {
-    "builder": "idf",
-    "loader": "esptool",
-    "checks": [
-      "uart_log",
-      "instrument_voltage",
-      "digital_signature"
-    ]
-  },
-  "steps": [
-    {"name": "build", "type": "build.idf"},
-    {"name": "load", "type": "load.esptool"},
-    {"name": "check_uart", "type": "check.uart_log"},
-    {"name": "check_voltage", "type": "check.instrument_voltage"}
-  ]
+"firmware_path": "build/app.elf"
 }
 
-RunPlan is generated before execution and remains immutable during the run.
 
-4. Runner
+---
 
-Runner is the execution engine.
+# 8. Artifacts
 
-Responsibilities:
+Every run produces machine-readable artifacts.
 
-execute RunPlan steps
+Typical layout:
 
-collect artifacts
+runs/<timestamp>/
 
-apply retry and recovery policies
+artifacts/
+    run_plan.json
+    result.json
+    runtime_state.json
+    uart_log.json
+    instrument_voltage.json
 
-produce result.json
 
-Runner must remain hardware-agnostic.
+These artifacts enable:
 
-Runner must NOT contain:
+- AI debugging
+- reproducibility
+- automated analysis
 
-board names
+---
 
-MCU names
+# 9. Recovery
 
-tool-specific logic
+Recovery allows Runner to automatically repair failed runs.
 
-Hardware behavior must be implemented in adapters.
+Example flow:
 
-5. Adapters
+Check failure
+↓
+Recovery action
+↓
+Rewind pipeline
+↓
+Re-run
 
-Adapters perform actual tool or hardware operations.
 
-Examples:
+Example recovery actions:
 
-adapters/build_idf.py
-adapters/load_esptool.py
-adapters/check_uart_log.py
-adapters/check_instrument_voltage.py
+reset.serial
+power_cycle
+reflash
 
-Adapter rules:
 
-Adapters MUST:
+Recovery policy is defined in RunPlan.
 
-execute one step
+---
 
-return structured result data
+# 10. Design Principles
 
-generate artifacts
+AEL architecture follows these rules.
 
-Adapters MUST NOT:
+### Hardware abstraction
 
-implement retry loops
+Core execution must never depend on specific boards.
 
-perform recovery
+### Tool isolation
 
-modify execution flow
+Build/load tools live only in adapters.
 
-6. Recovery Engine
+### Machine-readable artifacts
 
-Recovery is controlled by Runner.
+All results must be structured data.
 
-If a step fails, Runner may:
+### Deterministic pipeline
 
-retry step
-reset DUT
-reconnect probe
-rewind execution
+RunPlan defines the full execution graph.
 
-Recovery rules are defined in:
+### AI compatibility
 
-docs/recovery_model_v0_1.md
+AI can:
 
-Adapters may provide recovery hints, but recovery actions are executed by Runner.
+- generate RunPlan
+- analyze artifacts
+- modify code
+- trigger reruns
 
-7. Artifact System
+---
 
-Each run produces a unique directory.
+# 11. Future Extensions
 
-Example:
+Possible future extensions include:
 
-runs/2026-03-03_11-19-21_esp32s3_devkit_gpio_test/
+- adapter plugin system
+- distributed instrument execution
+- multi-board orchestration
+- simulator integration
+- AI-driven recovery strategies
 
-Artifacts stored may include:
+The current architecture already supports these extensions.
 
-run_plan.json
-result.json
-uart_log.txt
-build.log
-instrument_data.json
-
-Artifacts allow runs to be:
-
-audited
-
-replayed
-
-analyzed by AI
-
-8. AI Integration
-
-AEL is designed for AI-assisted development.
-
-AI systems may:
-
-generate RunPlan
-
-analyze result.json
-
-suggest recovery strategies
-
-optimize testing workflows
-
-RunPlan is pure structured data, enabling machine-driven workflows.
-
-9. Core Design Principles
-
-AEL architecture follows several principles.
-
-Data-Driven Execution
-
-Execution is defined by RunPlan, not hardcoded logic.
-
-Separation of Concerns
-
-System layers:
-
-Core Engine
-Adapters
-Configuration
-Artifacts
-Hardware Abstraction
-
-Runner never depends on specific hardware.
-
-Adapters encapsulate hardware interactions.
-
-Deterministic Runs
-
-The same RunPlan should produce reproducible results.
-
-AI Compatibility
-
-All outputs are machine-readable.
-
-10. Future Extensions
-
-Possible future capabilities:
-
-distributed hardware testing
-
-multi-board orchestration
-
-automated failure classification
-
-AI-generated RunPlans
-
-simulator integration
-
-Conclusion
-
-AEL architecture separates planning, execution, and verification.
-
-Core components:
-
-RunPlan
-Runner
-Adapters
-Recovery Engine
-Artifacts
-
-These components create a scalable platform for AI-driven embedded system validation.
