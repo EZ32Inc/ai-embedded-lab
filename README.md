@@ -362,3 +362,27 @@ This demonstrates AEL's core concept:
 
 AI can build, run, and validate embedded firmware on real hardware automatically.
 
+----------------------------------
+v0.11-autonomous-loop
+
+Milestone: AEL reached autonomous development loop (2026-03-04)
+
+AEL completed a full autonomous repository development cycle:
+
+- execute task queue sequentially
+- implement minimal scoped changes
+- run validation after every task
+- record task status with commit traceability
+- commit each completed step
+
+Primary outputs:
+
+- AIP HTTP instrument adapter
+- instrument manifest loader
+- AIP capability mapping in adapter registry
+- evidence writer helper
+- instrument contract validator
+
+Milestone document:
+
+- `docs/milestone_v0_11_autonomous_loop.md`
