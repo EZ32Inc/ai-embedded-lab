@@ -13,6 +13,7 @@ from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_pr
 from ael import assets
 from ael.bridge_server import run_server as run_bridge_server
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
+from ael.nightly import NightlyConfig, run_nightly
 from ael.submit import submit_to_bridge
 from ael import run_manager
 from ael.config_resolver import (
@@ -169,6 +170,19 @@ def main():
 
     status_p = sub.add_parser("status")
     status_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
+
+    nightly_p = sub.add_parser("nightly")
+    nightly_p.add_argument("--max-plans", type=int, default=3)
+    nightly_p.add_argument("--allow-on-master", action="store_true")
+    nightly_p.add_argument("--no-stash", action="store_true")
+    nightly_p.add_argument("--dry-run", action="store_true")
+    nightly_p.add_argument("--verbose", action="store_true")
+    nightly_p.add_argument("--once", action="store_true", help="Alias; nightly runs once by default.")
+    nightly_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
+    nightly_p.add_argument(
+        "--report-root",
+        default=os.environ.get("AEL_REPORT_ROOT") or str(Path(__file__).resolve().parents[1] / "reports"),
+    )
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -339,6 +353,30 @@ def main():
         )
     if args.cmd == "status":
         sys.exit(run_status(queue=str(args.queue)))
+    if args.cmd == "nightly":
+        cfg = NightlyConfig(
+            date_str=datetime.now().strftime("%Y-%m-%d"),
+            max_plans=int(args.max_plans),
+            allow_on_master=bool(args.allow_on_master),
+            stash_dirty=not bool(args.no_stash),
+            work_branch_prefix="agent",
+            backlog_sources=[str(Path(args.queue) / "inbox")],
+            dry_run=bool(args.dry_run),
+            verbose=bool(args.verbose),
+            queue_path=str(args.queue),
+            report_root=str(args.report_root),
+        )
+        print("Nightly run starting...")
+        summary = run_nightly(cfg)
+        print(f"Nightly report: {summary.get('report_path', '')}")
+        for item in summary.get("plans", []):
+            status = str(item.get("status", ""))
+            branch = str(item.get("branch", ""))
+            commit = str(item.get("commit", ""))
+            title = str(item.get("title", ""))
+            print(f"[{status}] {title} | branch={branch} | commit={commit or '-'}")
+        print("Nightly overall: " + ("OK" if bool(summary.get("ok", False)) else "FAILED"))
+        sys.exit(0 if bool(summary.get("ok", False)) else 1)
 
 
 def _check_tools(tools):

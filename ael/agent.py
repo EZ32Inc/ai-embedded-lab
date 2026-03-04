@@ -724,6 +724,61 @@ def run_sweep(
     return processed
 
 
+def execute_task_payload(
+    task: Dict,
+    queue_path: str | Path,
+    report_root: str | Path,
+    mode: Optional[_AgentMode] = None,
+    task_index: int = 1,
+    verbose: bool = False,
+) -> Dict:
+    queue_root = Path(queue_path)
+    ensure_queue_layout(queue_root)
+    report_root_path = Path(report_root)
+    report_root_path.mkdir(parents=True, exist_ok=True)
+    eff_mode = mode or _AgentMode(branch_worker=False, push=False, remote="origin", gates_path=None)
+
+    task_id = str(task.get("task_id", "")).strip() if isinstance(task, dict) else ""
+    if not task_id:
+        task_id = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + _slugify(str(task.get("title", "task")))
+    payload = dict(task) if isinstance(task, dict) else {}
+    payload["task_id"] = task_id
+
+    inbox_path = queue_root / "inbox" / f"{task_id}__{_slugify(str(payload.get('title', 'task')))}.json"
+    inbox_path.parent.mkdir(parents=True, exist_ok=True)
+    inbox_path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+    _process_task_file(
+        inbox_path,
+        queue_root,
+        report_root_path,
+        mode=eff_mode,
+        task_index=int(task_index),
+        verbose=verbose,
+    )
+
+    state_path = None
+    status = "unknown"
+    for state_name in ("done", "failed", "running", "inbox"):
+        cand = queue_root / state_name / inbox_path.name.replace(".json", ".state.json")
+        if cand.exists():
+            state_path = cand
+            status = state_name
+            break
+    state_payload = {}
+    if state_path:
+        try:
+            state_payload = json.loads(state_path.read_text(encoding="utf-8"))
+        except Exception:
+            state_payload = {}
+    return {
+        "task_id": task_id,
+        "status": status,
+        "state_path": str(state_path) if state_path else "",
+        "state": state_payload,
+    }
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(prog="ael.agent")
     parser.add_argument("--queue", default="queue", help="Queue root path")
