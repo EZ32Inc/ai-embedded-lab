@@ -104,7 +104,7 @@ python3 -m py_compile ael/adapter_registry.py
 
 # Task 4 — Evidence Writer Helper
 
-Status: [ ] TODO
+Status: [x] DONE (93d5066)
 
 Create helper:
 
