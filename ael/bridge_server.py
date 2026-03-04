@@ -4,7 +4,6 @@ import argparse
 import json
 import mimetypes
 import os
-import tempfile
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -91,9 +90,9 @@ def _write_task_atomic(inbox_dir: Path, payload: Dict[str, Any], filename: str) 
     if target.exists():
         raise FileExistsError(str(target))
     data = _json_bytes(payload)
-    fd, tmp_name = tempfile.mkstemp(prefix=".tmp_bridge_", suffix=".json", dir=str(inbox_dir))
+    tmp_name = str(inbox_dir / f".tmp_bridge_{os.getpid()}_{int(time.time() * 1000)}.json")
     try:
-        with os.fdopen(fd, "wb") as tmpf:
+        with open(tmp_name, "wb") as tmpf:
             tmpf.write(data)
             tmpf.flush()
             os.fsync(tmpf.fileno())

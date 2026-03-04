@@ -28,36 +28,35 @@ def _http_json(method: str, url: str, payload: dict | None = None) -> tuple[int,
         return int(resp.status), out if isinstance(out, dict) else {}
 
 
+def _extract_task_id(text: str) -> str:
+    for line in (text or "").splitlines():
+        line = line.strip()
+        if line.startswith("task_id:"):
+            return line.split(":", 1)[1].strip()
+    return ""
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     queue_root = Path("/tmp/ael_bridge_smoke_queue")
     report_root = Path("/tmp/ael_bridge_smoke_reports")
-    bridge_log = Path("/tmp/ael_bridge_smoke_bridge.log")
-    agent_log = Path("/tmp/ael_bridge_smoke_agent.log")
+    up_log = Path("/tmp/ael_bridge_smoke_up.log")
 
     for p in (queue_root, report_root):
         if p.exists():
             shutil.rmtree(p)
-    for p in (bridge_log, agent_log):
-        if p.exists():
-            p.unlink()
+    if up_log.exists():
+        up_log.unlink()
 
-    bridge_cmd = [
+    up_cmd = [
         sys.executable,
         "-m",
         "ael",
-        "bridge",
+        "up",
         "--host",
         "127.0.0.1",
         "--port",
         "8844",
-        "--queue",
-        str(queue_root),
-    ]
-    agent_cmd = [
-        sys.executable,
-        "-m",
-        "ael.agent",
         "--queue",
         str(queue_root),
         "--report-root",
@@ -66,14 +65,12 @@ def main() -> int:
         "0.2",
     ]
 
-    with open(bridge_log, "w", encoding="utf-8") as bf:
-        bridge_proc = subprocess.Popen(bridge_cmd, cwd=str(repo_root), stdout=bf, stderr=subprocess.STDOUT)
-    with open(agent_log, "w", encoding="utf-8") as af:
-        agent_proc = subprocess.Popen(agent_cmd, cwd=str(repo_root), stdout=af, stderr=subprocess.STDOUT)
+    with open(up_log, "w", encoding="utf-8") as lf:
+        up_proc = subprocess.Popen(up_cmd, cwd=str(repo_root), stdout=lf, stderr=subprocess.STDOUT)
 
     try:
         healthy = False
-        for _ in range(30):
+        for _ in range(40):
             try:
                 code, health = _http_json("GET", "http://127.0.0.1:8844/health")
                 if code == 200 and bool(health.get("ok")):
@@ -85,24 +82,21 @@ def main() -> int:
         if not healthy:
             return _fail("bridge health check failed")
 
-        code, created = _http_json(
-            "POST",
-            "http://127.0.0.1:8844/v1/tasks",
-            {
-                "title": "bridge_smoke",
-                "kind": "noop",
-                "payload": {},
-                "priority": 0,
-            },
+        submit = subprocess.run(
+            [sys.executable, "-m", "ael", "submit", "run gpio golden test", "--api", "http://127.0.0.1:8844/v1/tasks"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
         )
-        if code != 200 or not bool(created.get("ok", False)):
-            return _fail(f"task submit failed: {created}")
-        task_id = str(created.get("task_id", "")).strip()
+        if int(submit.returncode) != 0:
+            return _fail(f"NL submit command failed: {submit.stderr or submit.stdout}")
+        task_id = _extract_task_id(submit.stdout)
         if not task_id:
-            return _fail("task_id missing from submit response")
+            return _fail(f"task_id missing from submit output: {submit.stdout}")
+        print("[NL_SUBMIT] OK")
 
         status_payload = {}
-        deadline = time.time() + 10.0
+        deadline = time.time() + 12.0
         while time.time() < deadline:
             code, status_payload = _http_json("GET", f"http://127.0.0.1:8844/v1/tasks/{task_id}")
             if code == 200 and status_payload.get("state") in ("done", "failed"):
@@ -118,15 +112,15 @@ def main() -> int:
             return _fail(f"result ok=false: {result}")
 
         print("[BRIDGE_SMOKE] OK")
+        print("[AGENT_SMOKE] OK")
         return 0
     finally:
-        for proc in (agent_proc, bridge_proc):
-            if proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=5)
-                except Exception:
-                    proc.kill()
+        if up_proc.poll() is None:
+            up_proc.terminate()
+            try:
+                up_proc.wait(timeout=5)
+            except Exception:
+                up_proc.kill()
 
 
 if __name__ == "__main__":
