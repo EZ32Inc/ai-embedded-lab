@@ -314,3 +314,51 @@ See the [MIT LICENSE](https://choosealicense.com/licenses/mit/) file for details
 Early stage but actively used in daily development.
 
 Feedback and contribution is welcome.
+----------------------------------
+v0.11-ai-loop 
+
+Milestone: AI-controlled hardware validation loop (2026-03-03)
+
+AEL reached an important milestone: the system successfully executed a full AI-driven hardware development loop.
+
+Using Codex, the following workflow was completed autonomously:
+
+    Generate RunPlan
+
+    Execute BUILD → LOAD → CHECK pipeline
+
+    Flash firmware to real hardware
+
+    Capture UART logs
+
+    Measure GPIO voltage using instrument
+
+    Verify digital signature
+
+    Detect a runtime failure (UART port not set)
+
+    Implement a fix in the adapter
+
+    Re-run the full pipeline
+
+    Achieve PASS on real hardware
+
+All steps were executed through the AEL CLI and Runner architecture.
+
+Artifacts generated:
+
+    artifacts/run_plan.json
+
+    artifacts/result.json
+
+Golden test:
+
+python3 -m ael run \
+  --board esp32s3_devkit \
+  --test tests/esp32s3_gpio_signature_with_meter.json \
+  --probe configs/esp32jtag.yaml
+
+This demonstrates AEL's core concept:
+
+AI can build, run, and validate embedded firmware on real hardware automatically.
+
