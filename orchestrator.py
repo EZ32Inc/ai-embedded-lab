@@ -689,8 +689,20 @@ def run_pipeline(
     wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
     wiring_cfg = _require_wiring(wiring_cfg, ["swd", "reset", "verify"])
 
+    test_name = test_raw.get("name") if isinstance(test_raw, dict) else None
+    instrument_cfg = test_raw.get("instrument", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("instrument"), dict) else {}
+    instrument_id = instrument_cfg.get("id")
+    instrument_host = instrument_cfg.get("tcp", {}).get("host") if isinstance(instrument_cfg.get("tcp"), dict) else None
+    instrument_port = instrument_cfg.get("tcp", {}).get("port") if isinstance(instrument_cfg.get("tcp"), dict) else None
+
     print("AI: starting pipeline")
-    print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
+    if instrument_id:
+        banner_name = test_name or instrument_id
+        banner_host = instrument_host or "unknown"
+        banner_port = instrument_port if instrument_port is not None else "unknown"
+        print(f"Using instrument: {banner_name} ({instrument_id}) @ {banner_host}:{banner_port}")
+    else:
+        print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
     print(f"Wiring: swd={wiring_cfg.get('swd')} reset={wiring_cfg.get('reset')} verify={wiring_cfg.get('verify')}")
 
