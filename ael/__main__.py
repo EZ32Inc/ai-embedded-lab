@@ -59,6 +59,45 @@ def run_up(host: str, port: int, queue: str, report_root: str, poll: float) -> i
         return 0
 
 
+def _load_json(path: Path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _task_line(path: Path) -> str:
+    payload = _load_json(path)
+    task_id = str(payload.get("task_id", path.stem)).strip() or path.stem
+    title = str(payload.get("title", "")).strip() or path.name
+    state = path.parent.name
+    return f"{task_id} {title} ({state})"
+
+
+def run_status(queue: str) -> int:
+    qroot = Path(queue)
+    running = sorted([p for p in (qroot / "running").glob("*.json") if not p.name.endswith(".state.json")])
+    done = sorted([p for p in (qroot / "done").glob("*.json") if not p.name.endswith(".state.json")])
+
+    print("RUNNING TASKS")
+    print("-------------")
+    if running:
+        for p in running:
+            print(_task_line(p))
+    else:
+        print("(none)")
+
+    print("")
+    print("COMPLETED")
+    print("---------")
+    if done:
+        for p in done[-20:]:
+            print(_task_line(p))
+    else:
+        print("(none)")
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(prog="ael")
     # Follow docs/AI_USAGE_RULES.md: CLI is a deterministic control interface for AI agents.
@@ -127,6 +166,9 @@ def main():
         default=os.environ.get("AEL_REPORT_ROOT") or str(Path(__file__).resolve().parents[1] / "reports"),
     )
     up_p.add_argument("--poll", type=float, default=0.5, help="Agent queue poll interval in seconds")
+
+    status_p = sub.add_parser("status")
+    status_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -295,6 +337,8 @@ def main():
                 poll=float(args.poll),
             )
         )
+    if args.cmd == "status":
+        sys.exit(run_status(queue=str(args.queue)))
 
 
 def _check_tools(tools):
