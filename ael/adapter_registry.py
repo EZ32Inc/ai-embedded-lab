@@ -433,6 +433,21 @@ class _NoopRecoveryAdapter:
         return {"ok": False, "error_summary": "recovery action not implemented"}
 
 
+class _NoopCheckAdapter:
+    def execute(self, step, plan, ctx):
+        inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
+        out_json = inputs.get("out_json")
+        payload = {
+            "ok": True,
+            "name": step.get("name", ""),
+            "type": step.get("type", ""),
+            "note": inputs.get("note", "noop"),
+        }
+        if out_json:
+            _write_json(out_json, payload)
+        return {"ok": True, "result": payload}
+
+
 class _InstrumentAipHttpAdapter:
     def __init__(self, capability: str | None = None):
         self._capability = capability
@@ -465,6 +480,7 @@ class AdapterRegistry:
             "check.instrument_signature": _InstrumentSignatureAdapter(),
             "check.signal_verify": _SignalVerifyAdapter(),
             "check.instrument_selftest": _InstrumentSelftestAdapter(),
+            "check.noop": _NoopCheckAdapter(),
             "instrument.aip_http": _InstrumentAipHttpAdapter(),
             "instrument.aip_http.measure.voltage": self._capability_map["measure.voltage"],
             "instrument.aip_http.measure.digital": self._capability_map["measure.digital"],
