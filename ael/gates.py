@@ -61,6 +61,7 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
 
     for idx, cmd in enumerate(commands, start=1):
         log_path = logs_dir / f"gate_{idx:02d}.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
         proc = subprocess.run(
             cmd,
             shell=True,

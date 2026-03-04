@@ -19,11 +19,14 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     queue_root = Path("/tmp/ael_agent_smoke_queue")
     run_dir = Path("/tmp/ael_agent_smoke_run")
+    gates_path = Path("/tmp/ael_agent_smoke_gates.json")
 
     if queue_root.exists():
         shutil.rmtree(queue_root)
     if run_dir.exists():
         shutil.rmtree(run_dir)
+    if gates_path.exists():
+        gates_path.unlink()
     (queue_root / "inbox").mkdir(parents=True, exist_ok=True)
 
     original_branch_res = subprocess.run(
@@ -35,6 +38,30 @@ def main() -> int:
     if original_branch_res.returncode != 0:
         return _fail("failed to resolve current git branch")
     original_branch = (original_branch_res.stdout or "").strip()
+    smoke_branch = f"agent/{date.today().isoformat()}/task-0001-agent-smoke"
+    if original_branch == smoke_branch:
+        fallback = subprocess.run(
+            ["git", "checkout", "master"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+        )
+        if fallback.returncode != 0:
+            fallback = subprocess.run(
+                ["git", "checkout", "main"],
+                cwd=str(repo_root),
+                capture_output=True,
+                text=True,
+            )
+        if fallback.returncode != 0:
+            return _fail("failed to checkout a non-smoke branch for cleanup")
+        original_branch = (subprocess.run(
+            ["git", "rev-parse", "--abbrev-ref", "HEAD"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+        ).stdout or "").strip() or original_branch
+    subprocess.run(["git", "branch", "-D", smoke_branch], cwd=str(repo_root), capture_output=True, text=True)
 
     task_id = "agent-smoke"
     task_name = f"2099-01-01_00-00-00_{task_id}.json"
@@ -88,6 +115,21 @@ def main() -> int:
     }
 
     task_path.write_text(json.dumps(task, indent=2, sort_keys=True), encoding="utf-8")
+    gates_path.write_text(
+        json.dumps(
+            {
+                "commands": [
+                    "python3 -m py_compile ael/agent.py ael/queue.py ael/reporting.py",
+                    "python3 tools/runner_smoke.py",
+                    "python3 -m py_compile ael/runner.py",
+                    "python3 -m py_compile tools/agent_smoke.py",
+                ]
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
 
     cmd = [
         sys.executable,
@@ -98,6 +140,8 @@ def main() -> int:
         "--no-push",
         "--queue",
         str(queue_root),
+        "--gates",
+        str(gates_path),
     ]
     env = dict(**os.environ, AEL_AGENT_ALLOW_DIRTY="1")
     p = subprocess.run(cmd, cwd=str(repo_root), capture_output=True, text=True, env=env)

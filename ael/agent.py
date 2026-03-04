@@ -346,16 +346,42 @@ def _process_task_file(
             if not error_summary:
                 error_summary = "HUMAN_ACTION_REQUIRED: hardware gate unavailable"
             running_state["disposition"] = "HUMAN_ACTION_REQUIRED"
+            running_state["pushed"] = False
             return finalize(False, run_dir, error_summary, artifacts)
         if gate_overall != "pass":
             if not error_summary:
                 error_summary = "mandatory gates failed"
             running_state["disposition"] = "FAILED"
+            running_state["pushed"] = False
             return finalize(False, run_dir, error_summary, artifacts)
         if runner_ok:
+            branch_name = str(running_state.get("branch_name", "")).strip()
+            if mode.push and branch_name:
+                push_cmd = ["push", mode.remote, branch_name]
+                push_res = _git(push_cmd)
+                push_log_path = run_dir / "logs" / "agent_push.log"
+                push_log_path.write_text(
+                    "$ git " + " ".join(push_cmd) + "\n"
+                    + f"[exit_code] {push_res.returncode}\n\n"
+                    + (push_res.stdout or "")
+                    + ("\n" if push_res.stdout else "")
+                    + (push_res.stderr or ""),
+                    encoding="utf-8",
+                )
+                artifacts["push_log"] = str(push_log_path)
+                if int(push_res.returncode) != 0:
+                    running_state["disposition"] = "FAILED"
+                    running_state["pushed"] = False
+                    err_push = (push_res.stderr or push_res.stdout or "git push failed").strip()
+                    return finalize(False, run_dir, f"push failed: {err_push}", artifacts)
+                running_state["pushed"] = True
+                running_state["remote_branch"] = f"{mode.remote}/{branch_name}"
+            else:
+                running_state["pushed"] = False
             running_state["disposition"] = "DONE"
             return finalize(True, run_dir, "", artifacts)
         running_state["disposition"] = "FAILED"
+        running_state["pushed"] = False
         return finalize(False, run_dir, error_summary or "runner reported failure", artifacts)
 
     return finalize(runner_ok, run_dir, error_summary, artifacts)
