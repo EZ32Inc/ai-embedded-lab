@@ -9,6 +9,7 @@ from pathlib import Path
 
 from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import assets
+from ael.cli import submit_task
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
 from ael import run_manager
 from ael.config_resolver import (
@@ -66,6 +67,14 @@ def main():
     dut_promote.add_argument("--id", required=True)
     dut_promote.add_argument("--as", dest="as_id", required=False)
     dut_promote.add_argument("--delete-source", action="store_true")
+
+    submit_p = sub.add_parser("submit")
+    submit_p.add_argument("plan_file")
+    submit_p.add_argument("--api", default="http://127.0.0.1:8765/v1/tasks")
+    submit_p.add_argument("--task-id", default=None)
+    submit_p.add_argument("--description", default="")
+    submit_p.add_argument("--priority", default="normal")
+    submit_p.add_argument("--created-by", default="ael-submit")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -208,6 +217,17 @@ def main():
         if args.dut_cmd == "promote":
             code = dut_promote_cmd(args.id, args.as_id, args.delete_source)
             sys.exit(code)
+    if args.cmd == "submit":
+        status, payload = submit_task(
+            plan_file=args.plan_file,
+            api_url=args.api,
+            task_id=args.task_id,
+            description=args.description,
+            priority=args.priority,
+            created_by=args.created_by,
+        )
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0 if status == 200 and bool(payload.get("accepted")) else 1)
 
 
 def _check_tools(tools):
@@ -434,6 +454,8 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
 
     for t in tests:
         t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
+        print(f"Using pack: {pack_name}")
+        print(f"Pack test: {t}")
         probe_path = resolve_probe_config(
             repo_root,
             args=None,
