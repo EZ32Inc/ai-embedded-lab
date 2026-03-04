@@ -75,7 +75,7 @@ python3 -m py_compile ael/instrument_manifest.py
 
 # Task 3 — Adapter Registry Integration
 
-Status: [ ] TODO
+Status: [x] DONE (1ca6155)
 
 Update:
 
