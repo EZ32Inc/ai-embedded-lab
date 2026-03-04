@@ -73,6 +73,17 @@ def append_task_result(report_root: str | Path, record: Dict) -> Path:
     lines = path.read_text(encoding="utf-8").splitlines()
     lines = _insert_under_heading(lines, heading, entry)
 
+    gate_results = record.get("gate_results", [])
+    if isinstance(gate_results, list) and gate_results:
+        lines = _insert_under_heading(lines, heading, f"  gate summary for {task_id}:")
+        for item in gate_results:
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("name", "gate"))
+            status = str(item.get("status", ""))
+            summary = str(item.get("summary", ""))
+            lines = _insert_under_heading(lines, heading, f"  - {name}: {status} | {summary}")
+
     err = str(record.get("error_summary", "")).lower()
     needs_human = []
     for token in ("permission", "sudo", "device not found", "download mode"):

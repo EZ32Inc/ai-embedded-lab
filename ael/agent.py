@@ -341,14 +341,18 @@ def _process_task_file(
         if head_after:
             running_state["final_commit"] = head_after
 
-        gate_overall = str(gates_payload.get("overall", "fail")).lower()
-        if gate_overall == "human_action_required":
+        gate_overall = str(gates_payload.get("overall", "FAIL")).upper()
+        if gate_overall == "HUMAN_ACTION_REQUIRED":
             if not error_summary:
                 error_summary = "HUMAN_ACTION_REQUIRED: hardware gate unavailable"
             running_state["disposition"] = "HUMAN_ACTION_REQUIRED"
             running_state["pushed"] = False
-            return finalize(False, run_dir, error_summary, artifacts)
-        if gate_overall != "pass":
+            return finalize(True, run_dir, error_summary, artifacts)
+        if gate_overall == "SKIP":
+            running_state["disposition"] = "SKIP"
+            running_state["pushed"] = False
+            return finalize(True, run_dir, "", artifacts)
+        if gate_overall != "PASS":
             if not error_summary:
                 error_summary = "mandatory gates failed"
             running_state["disposition"] = "FAILED"

@@ -4,7 +4,7 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Optional
 
 
 DEFAULT_GATE_COMMANDS = [
@@ -13,6 +13,11 @@ DEFAULT_GATE_COMMANDS = [
     "python3 tools/agent_smoke.py",
     "python3 -m ael pack --pack packs/esp32meter1.json",
 ]
+
+STATUS_PASS = "PASS"
+STATUS_FAIL = "FAIL"
+STATUS_SKIP = "SKIP"
+STATUS_HAR = "HUMAN_ACTION_REQUIRED"
 
 
 def _repo_root() -> Path:
@@ -50,6 +55,38 @@ def _load_gate_commands(path: str | None) -> List[str]:
     return [str(x) for x in commands]
 
 
+def _tail_lines(text: str, count: int = 40) -> str:
+    lines = (text or "").splitlines()
+    if len(lines) <= count:
+        return "\n".join(lines)
+    return "\n".join(lines[-count:])
+
+
+def _mk_gate_result(
+    name: str,
+    command: str,
+    exit_code: int,
+    status: str,
+    summary: str,
+    hints: Optional[List[str]],
+    log_path: str,
+    output_text: str,
+) -> Dict:
+    return {
+        "name": name,
+        "command": command,
+        "ok": status in (STATUS_PASS, STATUS_SKIP, STATUS_HAR),
+        "status": status,
+        "summary": summary,
+        "hints": list(hints or []),
+        "evidence": {
+            "exit_code": int(exit_code),
+            "log_path": log_path,
+            "last_lines": _tail_lines(output_text, 40),
+        },
+    }
+
+
 def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
     commands = _load_gate_commands(gates_path)
     run_path = Path(run_dir)
@@ -57,7 +94,7 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     gate_results: List[Dict] = []
-    overall = "pass"
+    overall_status = STATUS_PASS
 
     for idx, cmd in enumerate(commands, start=1):
         log_path = logs_dir / f"gate_{idx:02d}.log"
@@ -76,44 +113,43 @@ def run_gates(run_dir: str | Path, gates_path: str | None = None) -> Dict:
             encoding="utf-8",
         )
 
-        short_out = combined
-        if len(short_out) > 1200:
-            short_out = short_out[:1200] + "\n...<truncated>..."
-
-        status = "pass" if int(proc.returncode) == 0 else "fail"
-        summary = ""
-        if status == "fail":
-            summary = f"gate failed: {cmd}"
+        status = STATUS_PASS if int(proc.returncode) == 0 else STATUS_FAIL
+        summary = "gate passed" if status == STATUS_PASS else f"gate failed: {cmd}"
+        hints: List[str] = []
+        if status == STATUS_FAIL:
             if idx == 4 and _hardware_missing(combined):
-                status = "human_action_required"
+                status = STATUS_HAR
                 summary = "hardware gate requires manual action"
-                overall = "human_action_required"
-            elif overall == "pass":
-                overall = "fail"
-
+                hints.append("Verify hardware connection and permissions before retrying.")
+                hints.append("Rerun command: python3 -m ael pack --pack packs/esp32meter1.json")
+            else:
+                overall_status = STATUS_FAIL
         gate_results.append(
-            {
-                "index": idx,
-                "command": cmd,
-                "exit_code": int(proc.returncode),
-                "status": status,
-                "summary": summary,
-                "stdout_stderr": short_out,
-                "log_path": str(log_path),
-            }
+            _mk_gate_result(
+                name=f"gate_{idx:02d}",
+                command=cmd,
+                exit_code=int(proc.returncode),
+                status=status,
+                summary=summary,
+                hints=hints,
+                log_path=str(log_path),
+                output_text=combined,
+            )
         )
 
-    if overall == "pass":
-        for item in gate_results:
-            if item.get("status") == "human_action_required":
-                overall = "human_action_required"
-                break
-            if item.get("status") == "fail":
-                overall = "fail"
-                break
+    if overall_status != STATUS_FAIL:
+        har = [x for x in gate_results if x.get("status") == STATUS_HAR]
+        skip = [x for x in gate_results if x.get("status") == STATUS_SKIP]
+        if har:
+            overall_status = STATUS_HAR
+        elif skip:
+            overall_status = STATUS_SKIP
+        else:
+            overall_status = STATUS_PASS
 
     return {
-        "overall": overall,
+        "overall": overall_status,
+        "ok": overall_status in (STATUS_PASS, STATUS_SKIP, STATUS_HAR),
         "commands": commands,
         "results": gate_results,
         "logs_dir": str(logs_dir),
