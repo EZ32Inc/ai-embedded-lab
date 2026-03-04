@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import subprocess
 import time
 from datetime import datetime
@@ -21,6 +20,20 @@ from ael.queue import (
 )
 from ael.reporting import append_task_result
 from ael.runner import run_plan
+
+
+class _AgentMode:
+    def __init__(
+        self,
+        branch_worker: bool = False,
+        push: bool = False,
+        remote: str = "origin",
+        gates_path: Optional[str] = None,
+    ):
+        self.branch_worker = bool(branch_worker)
+        self.push = bool(push)
+        self.remote = str(remote or "origin")
+        self.gates_path = str(gates_path) if gates_path else None
 
 
 def _now_iso() -> str:
@@ -116,7 +129,13 @@ def _task_validate(task: Dict) -> Tuple[List[str], List[str]]:
     return pre_cmds, post_cmds
 
 
-def _process_task_file(task_inbox_path: Path, queue_root: Path, report_root: Path, verbose: bool = False) -> bool:
+def _process_task_file(
+    task_inbox_path: Path,
+    queue_root: Path,
+    report_root: Path,
+    mode: _AgentMode,
+    verbose: bool = False,
+) -> bool:
     running_task = claim_task(task_inbox_path, queue_root)
     started = time.monotonic()
     started_at = _now_iso()
@@ -230,10 +249,23 @@ def _process_task_file(task_inbox_path: Path, queue_root: Path, report_root: Pat
         "run_plan": str(artifacts_dir / "run_plan.json"),
         "result": str(artifacts_dir / "result.json"),
     }
+    # v0.2 branch-worker skeleton hooks: task-level branch isolation + gates + publish.
+    # Full behavior is implemented incrementally in later tasks.
+    if mode.branch_worker:
+        running_state["mode"] = "branch-worker"
+        running_state["publish_requested"] = bool(mode.push)
+        running_state["remote"] = mode.remote
+        running_state["gates_path"] = mode.gates_path or ""
+
     return finalize(runner_ok, run_dir, error_summary, artifacts)
 
 
-def run_sweep(queue_path: str | Path, max_tasks: Optional[int] = None, verbose: bool = False) -> int:
+def run_sweep(
+    queue_path: str | Path,
+    mode: _AgentMode,
+    max_tasks: Optional[int] = None,
+    verbose: bool = False,
+) -> int:
     queue_root = Path(queue_path)
     ensure_queue_layout(queue_root)
     report_root = _repo_root() / "reports"
@@ -245,7 +277,7 @@ def run_sweep(queue_path: str | Path, max_tasks: Optional[int] = None, verbose: 
         if not tasks:
             break
         task_path = tasks[0]
-        _process_task_file(task_path, queue_root, report_root, verbose=verbose)
+        _process_task_file(task_path, queue_root, report_root, mode=mode, verbose=verbose)
         processed += 1
         if max_tasks is not None and processed >= max_tasks:
             break
@@ -259,15 +291,27 @@ def main() -> int:
     parser.add_argument("--once", action="store_true", help="Run one sweep and exit")
     parser.add_argument("--max-tasks", type=int, default=None, help="Optional max tasks to process")
     parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--branch-worker", action="store_true", help="Enable branch-worker mode (v0.2)")
+    parser.add_argument("--push", dest="push", action="store_true", default=None, help="Push branch on success")
+    parser.add_argument("--no-push", dest="push", action="store_false", help="Do not push branch on success")
+    parser.add_argument("--remote", default="origin", help="Remote name for push in branch-worker mode")
+    parser.add_argument("--gates", default=None, help="Optional gate commands config path")
 
     args = parser.parse_args()
+    push_enabled = bool(args.push) if args.push is not None else bool(args.branch_worker)
+    mode = _AgentMode(
+        branch_worker=bool(args.branch_worker),
+        push=push_enabled,
+        remote=str(args.remote),
+        gates_path=args.gates,
+    )
 
     if args.once:
-        run_sweep(args.queue, max_tasks=args.max_tasks, verbose=args.verbose)
+        run_sweep(args.queue, mode=mode, max_tasks=args.max_tasks, verbose=args.verbose)
         return 0
 
     while True:
-        run_sweep(args.queue, max_tasks=args.max_tasks, verbose=args.verbose)
+        run_sweep(args.queue, mode=mode, max_tasks=args.max_tasks, verbose=args.verbose)
         time.sleep(max(0.1, float(args.poll)))
 
 
