@@ -1,98 +1,151 @@
 from __future__ import annotations
 
+import json
 from datetime import date
 from pathlib import Path
 from typing import Dict, List
 
 
+_STATUS_ORDER = ["PASS", "FAIL", "SKIP", "HUMAN_ACTION_REQUIRED"]
+
+
+def _today_slug() -> str:
+    return date.today().isoformat()
+
+
 def _today_report_path(report_root: str | Path) -> Path:
-    d = date.today().isoformat()
     root = Path(report_root)
     root.mkdir(parents=True, exist_ok=True)
-    return root / f"nightly_{d}.md"
+    return root / f"nightly_{_today_slug()}.md"
 
 
-def _init_report(path: Path) -> None:
-    if path.exists():
-        return
-    title_date = path.stem.replace("nightly_", "")
-    content = [
-        f"# Nightly Report {title_date}",
-        "",
-        "## DONE",
-        "",
-        "## FAILED",
-        "",
-        "## Human action required",
-        "",
-    ]
-    path.write_text("\n".join(content), encoding="utf-8")
+def _today_data_path(report_root: str | Path) -> Path:
+    root = Path(report_root)
+    root.mkdir(parents=True, exist_ok=True)
+    return root / f"nightly_{_today_slug()}.json"
 
 
-def _insert_under_heading(lines: List[str], heading: str, entry: str) -> List[str]:
-    idx = -1
-    for i, line in enumerate(lines):
-        if line.strip() == heading:
-            idx = i
-            break
-    if idx < 0:
-        lines.extend([heading, "", entry, ""])
-        return lines
+def _load_records(path: Path) -> List[Dict]:
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if not isinstance(payload, list):
+        return []
+    return [x for x in payload if isinstance(x, dict)]
 
-    insert_at = idx + 1
-    while insert_at < len(lines):
-        cur = lines[insert_at].strip()
-        if cur.startswith("## "):
-            break
-        insert_at += 1
-    lines.insert(insert_at, entry)
-    return lines
+
+def _task_gate_rows(record: Dict) -> List[Dict]:
+    rows = []
+    gates = record.get("gate_results", [])
+    if isinstance(gates, list):
+        for g in gates:
+            if not isinstance(g, dict):
+                continue
+            rows.append(g)
+    if rows:
+        return rows
+
+    # Fallback for tasks without explicit gate payloads.
+    rows.append(
+        {
+            "name": "task",
+            "status": "PASS" if bool(record.get("ok", False)) else "FAIL",
+            "summary": str(record.get("error_summary", "")),
+            "command": "",
+            "hints": [],
+        }
+    )
+    return rows
+
+
+def _status_counts(records: List[Dict]) -> Dict[str, int]:
+    counts = {k: 0 for k in _STATUS_ORDER}
+    for rec in records:
+        for gate in _task_gate_rows(rec):
+            status = str(gate.get("status", "")).upper()
+            if status in counts:
+                counts[status] += 1
+    return counts
+
+
+def _duration_text(record: Dict) -> str:
+    try:
+        return f"{float(record.get('duration_s')):.2f}s"
+    except Exception:
+        return "n/a"
+
+
+def _rerun_cmd(gate: Dict) -> str:
+    cmd = str(gate.get("command", "")).strip()
+    return cmd if cmd else "n/a"
+
+
+def _render_markdown(records: List[Dict]) -> str:
+    day = _today_slug()
+    lines: List[str] = [f"# Nightly Report {day}", ""]
+
+    counts = _status_counts(records)
+    lines.extend(["## Status Counts", ""])
+    for key in _STATUS_ORDER:
+        lines.append(f"- {key}: {counts.get(key, 0)}")
+    lines.append("")
+
+    lines.extend(["## Tasks", ""])
+    for rec in records:
+        task_id = str(rec.get("task_id", ""))
+        run_dir = str(rec.get("run_dir", ""))
+        ok = bool(rec.get("ok", False))
+        lines.append(f"- {task_id} | run_dir={run_dir} | ok={str(ok).lower()} | duration={_duration_text(rec)}")
+        for gate in _task_gate_rows(rec):
+            name = str(gate.get("name", "gate"))
+            status = str(gate.get("status", "")).upper() or "PASS"
+            summary = str(gate.get("summary", ""))
+            lines.append(f"  - {name}: {status} | {summary}")
+            if status in ("FAIL", "HUMAN_ACTION_REQUIRED"):
+                lines.append(f"    - rerun: {_rerun_cmd(gate)}")
+        lines.append("")
+
+    lines.extend(["## Action Required", ""])
+    for rec in records:
+        task_id = str(rec.get("task_id", ""))
+        for gate in _task_gate_rows(rec):
+            status = str(gate.get("status", "")).upper()
+            if status != "HUMAN_ACTION_REQUIRED":
+                continue
+            summary = str(gate.get("summary", ""))
+            lines.append(f"- {task_id} | {summary}")
+            hints = gate.get("hints", [])
+            if isinstance(hints, list):
+                for h in hints:
+                    lines.append(f"  - {str(h)}")
+            lines.append(f"  - rerun: {_rerun_cmd(gate)}")
+    lines.append("")
+
+    lines.extend(["## Skipped", ""])
+    for rec in records:
+        task_id = str(rec.get("task_id", ""))
+        for gate in _task_gate_rows(rec):
+            status = str(gate.get("status", "")).upper()
+            if status != "SKIP":
+                continue
+            summary = str(gate.get("summary", ""))
+            lines.append(f"- {task_id} | {summary}")
+            lines.append(f"  - rerun: {_rerun_cmd(gate)}")
+    lines.append("")
+
+    return "\n".join(lines)
 
 
 def append_task_result(report_root: str | Path, record: Dict) -> Path:
-    path = _today_report_path(report_root)
-    _init_report(path)
+    md_path = _today_report_path(report_root)
+    data_path = _today_data_path(report_root)
 
-    task_id = str(record.get("task_id", ""))
-    run_dir = str(record.get("run_dir", ""))
-    ok = bool(record.get("ok", False))
-    duration_s = record.get("duration_s")
-    try:
-        duration_txt = f"{float(duration_s):.2f}s"
-    except Exception:
-        duration_txt = "n/a"
+    records = _load_records(data_path)
+    records.append(dict(record))
+    data_path.write_text(json.dumps(records, indent=2, sort_keys=True), encoding="utf-8")
 
-    if ok:
-        entry = f"- {task_id} | run_dir={run_dir} | ok=true | duration={duration_txt}"
-        heading = "## DONE"
-    else:
-        error_summary = str(record.get("error_summary", ""))
-        entry = f"- {task_id} | run_dir={run_dir} | ok=false | error={error_summary}"
-        heading = "## FAILED"
-
-    lines = path.read_text(encoding="utf-8").splitlines()
-    lines = _insert_under_heading(lines, heading, entry)
-
-    gate_results = record.get("gate_results", [])
-    if isinstance(gate_results, list) and gate_results:
-        lines = _insert_under_heading(lines, heading, f"  gate summary for {task_id}:")
-        for item in gate_results:
-            if not isinstance(item, dict):
-                continue
-            name = str(item.get("name", "gate"))
-            status = str(item.get("status", ""))
-            summary = str(item.get("summary", ""))
-            lines = _insert_under_heading(lines, heading, f"  - {name}: {status} | {summary}")
-
-    err = str(record.get("error_summary", "")).lower()
-    needs_human = []
-    for token in ("permission", "sudo", "device not found", "download mode"):
-        if token in err:
-            needs_human.append(token)
-
-    for token in needs_human:
-        hint = f"- {task_id}: human action required ({token})"
-        lines = _insert_under_heading(lines, "## Human action required", hint)
-
-    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    return path
+    md_path.write_text(_render_markdown(records), encoding="utf-8")
+    return md_path
