@@ -2,8 +2,8 @@
   "name": "smoke",
   "board": "rp2040_pico",
   "tests": [
-    "tests/blink_gpio.json",
-    "tests/gpio_signature.json",
-    "tests/uart_banner.json"
+    "tests/plans/blink_gpio.json",
+    "tests/plans/gpio_signature.json",
+    "tests/plans/uart_banner.json"
   ]
 }

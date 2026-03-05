@@ -79,7 +79,7 @@ def main() -> int:
             "test_id": "agent_smoke",
         },
         "selected": {
-            "test_config": "tests/none.json",
+            "test_config": "tests/plans/none.json",
         },
         "context": {
             "workspace_dir": str(repo_root),

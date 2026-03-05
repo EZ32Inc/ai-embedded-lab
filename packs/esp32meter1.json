@@ -2,6 +2,6 @@
   "name": "esp32meter1",
   "board": "esp32s3_devkit",
   "tests": [
-    "tests/esp32s3_gpio_signature_with_meter.json"
+    "tests/plans/esp32s3_gpio_signature_with_meter.json"
   ]
 }

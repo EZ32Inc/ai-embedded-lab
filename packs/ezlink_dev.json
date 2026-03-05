@@ -2,6 +2,6 @@
   "name": "ezlink_dev",
   "board": "esp32s3_devkit",
   "tests": [
-    "tests/esp32s3_gpio_signature.json"
+    "tests/plans/esp32s3_gpio_signature.json"
   ]
 }

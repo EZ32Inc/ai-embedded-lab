@@ -355,7 +355,7 @@ Golden test:
 
 python3 -m ael run \
   --board esp32s3_devkit \
-  --test tests/esp32s3_gpio_signature_with_meter.json \
+  --test tests/plans/esp32s3_gpio_signature_with_meter.json \
   --probe configs/esp32jtag.yaml
 
 This demonstrates AEL's core concept:

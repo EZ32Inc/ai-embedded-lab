@@ -179,7 +179,7 @@ Your run will have different IDs/paths/steps depending on board/probe/test.
     "board_config": "configs/boards/esp32s3_devkit.yaml",
     "probe_config": "configs/esp32jtag.yaml",
     "instrument_config": "configs/instruments/esp32s3_dev_c_meter.yaml",
-    "test_config": "tests/esp32s3_gpio_signature_with_meter.json",
+    "test_config": "tests/plans/esp32s3_gpio_signature_with_meter.json",
     "pack_config": "packs/esp32meter1.json"
   },
 

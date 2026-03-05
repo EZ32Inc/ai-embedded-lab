@@ -34,7 +34,7 @@ cat > "$TASK_PATH" <<JSON
     "plan_id": "agent-demo-plan",
     "created_at": "2026-03-04T00:00:00Z",
     "inputs": {"board_id": "demo", "test_id": "agent_demo"},
-    "selected": {"test_config": "tests/none.json"},
+    "selected": {"test_config": "tests/plans/none.json"},
     "context": {
       "workspace_dir": "${REPO_ROOT}",
       "run_root": "${REPO_ROOT}/runs",
