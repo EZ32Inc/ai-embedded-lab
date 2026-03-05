@@ -20,7 +20,7 @@ from ael.adapters import (
     preflight,
 )
 from ael import run_manager
-from tools import la_verify
+from ael.verification import la_verify
 
 
 @contextmanager
