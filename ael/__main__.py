@@ -22,6 +22,13 @@ from ael.config_resolver import (
     resolve_doctor_required_tools,
     resolve_probe_config,
 )
+from ael.default_verification import (
+    DEFAULT_CONFIG_PATH as DEFAULT_VERIFY_CONFIG_PATH,
+    load_setting as load_default_verification_setting,
+    preset_payload as default_verification_preset_payload,
+    run_default_setting,
+    save_setting as save_default_verification_setting,
+)
 
 
 def _run_agent_loop(queue: str, report_root: str, poll: float) -> None:
@@ -184,6 +191,26 @@ def main():
         "--report-root",
         default=os.environ.get("AEL_REPORT_ROOT") or str(ael_paths.reports_root()),
     )
+
+    verify_default_p = sub.add_parser("verify-default")
+    verify_default_sub = verify_default_p.add_subparsers(dest="verify_default_cmd", required=True)
+
+    verify_default_show = verify_default_sub.add_parser("show")
+    verify_default_show.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+
+    verify_default_set = verify_default_sub.add_parser("set")
+    verify_default_set_group = verify_default_set.add_mutually_exclusive_group(required=True)
+    verify_default_set_group.add_argument(
+        "--preset",
+        choices=["none", "preflight_only", "rp2040_only", "esp32s3_then_rp2040"],
+    )
+    verify_default_set_group.add_argument("--from-file")
+    verify_default_set.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+
+    verify_default_run = verify_default_sub.add_parser("run")
+    verify_default_run.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+    verify_default_run.add_argument("--skip-if-docs-only", action="store_true")
+    verify_default_run.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -378,6 +405,30 @@ def main():
             print(f"[{status}] {title} | branch={branch} | commit={commit or '-'}")
         print("Nightly overall: " + ("OK" if bool(summary.get("ok", False)) else "FAILED"))
         sys.exit(0 if bool(summary.get("ok", False)) else 1)
+    if args.cmd == "verify-default":
+        if args.verify_default_cmd == "show":
+            payload = load_default_verification_setting(args.file)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.verify_default_cmd == "set":
+            if args.preset:
+                payload = default_verification_preset_payload(args.preset)
+            else:
+                src_path = Path(args.from_file)
+                payload = load_default_verification_setting(str(src_path))
+            save_default_verification_setting(payload, args.file)
+            print(f"default_verification_setting updated: {args.file}")
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.verify_default_cmd == "run":
+            code, payload = run_default_setting(
+                path=args.file,
+                output_mode="normal",
+                skip_if_docs_only=bool(args.skip_if_docs_only),
+                docs_check_mode=str(args.docs_check_mode),
+            )
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(int(code))
 
 
 def _check_tools(tools):

@@ -1,7 +1,7 @@
 probe:
   name: ESP32JTAG
   transport: wifi
-  wifi_mode: AP
+  wifi_mode: ST
   web_scheme: https
   web_port: 443
   web_user: admin
@@ -10,7 +10,7 @@ probe:
   web_suppress_ssl_warnings: true
 
 connection:
-  ip: 192.168.4.1
+  ip: 192.168.2.63
   gdb_port: 4242
 
 gdb_cmd: "arm-none-eabi-gdb"
