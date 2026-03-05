@@ -554,6 +554,7 @@ def run_pipeline(
                 "name": "instrument_selftest",
                 "type": "check.instrument_selftest",
                 "inputs": {
+                    "instrument_id": instrument_id,
                     "cfg": {
                         "host": tcp_cfg.get("host"),
                         "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,

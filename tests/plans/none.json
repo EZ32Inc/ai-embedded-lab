@@ -1,0 +1,25 @@
+{
+  "version": "runplan/0.1",
+  "plan_id": "none",
+  "created_at": "1970-01-01T00:00:00",
+  "inputs": {
+    "note": "no-op placeholder plan for smoke tooling"
+  },
+  "selected": {
+    "test_config": "tests/plans/none.json"
+  },
+  "context": {},
+  "steps": [
+    {
+      "name": "noop",
+      "type": "check.noop",
+      "inputs": {
+        "note": "placeholder"
+      }
+    }
+  ],
+  "recovery_policy": {
+    "enabled": false
+  },
+  "meta": {}
+}

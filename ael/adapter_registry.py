@@ -10,7 +10,6 @@ from ael.adapters import (
     build_cmake,
     build_idf,
     build_stm32,
-    esp32s3_dev_c_meter_tcp,
     flash_bmda_gdbmi,
     flash_idf,
     instrument_aip_http,
@@ -21,6 +20,74 @@ from ael.adapters import (
 )
 from ael import run_manager
 from ael.verification import la_verify
+
+
+class _InstrumentBackend:
+    capabilities = frozenset()
+
+    def supports(self, capability: str) -> bool:
+        return capability in self.capabilities
+
+    def selftest(self, cfg, params, out_path):
+        raise NotImplementedError
+
+    def measure_digital(self, cfg, pins, duration_ms, out_path):
+        raise NotImplementedError
+
+    def measure_voltage(self, cfg, gpio, avg, out_path):
+        raise NotImplementedError
+
+
+class _Esp32MeterTcpBackend(_InstrumentBackend):
+    capabilities = frozenset({"selftest", "measure.digital", "measure.voltage"})
+
+    def __init__(self):
+        from ael.adapters import esp32s3_dev_c_meter_tcp
+
+        self._impl = esp32s3_dev_c_meter_tcp
+
+    def selftest(self, cfg, params, out_path):
+        return self._impl.selftest(
+            cfg,
+            out_gpio=int(params.get("out_gpio", 15)),
+            in_gpio=int(params.get("in_gpio", 11)),
+            adc_out=int(params.get("adc_out", 16)),
+            adc_in=int(params.get("adc_in", 4)),
+            dur_ms=int(params.get("dur_ms", 200)),
+            freq_hz=int(params.get("freq_hz", 1000)),
+            avg=int(params.get("avg", 16)),
+            settle_ms=int(params.get("settle_ms", 20)),
+            out_path=out_path,
+        )
+
+    def measure_digital(self, cfg, pins, duration_ms, out_path):
+        return self._impl.measure_digital(cfg, pins=pins, duration_ms=duration_ms, out_path=out_path)
+
+    def measure_voltage(self, cfg, gpio, avg, out_path):
+        return self._impl.measure_voltage(cfg, gpio=gpio, avg=avg, out_path=out_path)
+
+
+class _InstrumentBackendRegistry:
+    def __init__(self):
+        meter_backend = _Esp32MeterTcpBackend()
+        self._default_backend = meter_backend
+        self._by_id = {
+            "esp32s3_dev_c_meter": meter_backend,
+        }
+
+    def resolve(self, instrument_id: str | None, capability: str):
+        key = str(instrument_id or "").strip()
+        if key:
+            backend = self._by_id.get(key)
+            if backend is None:
+                raise KeyError(f"instrument backend not found for id: {key}")
+            if not backend.supports(capability):
+                raise KeyError(f"instrument backend for {key} does not support capability: {capability}")
+            return backend
+        # Temporary compatibility fallback for legacy plans that omit instrument_id.
+        if not self._default_backend.supports(capability):
+            raise KeyError(f"default instrument backend does not support capability: {capability}")
+        return self._default_backend
 
 
 @contextmanager
@@ -204,26 +271,22 @@ class _UartCheckAdapter:
 
 
 class _InstrumentSelftestAdapter:
+    def __init__(self, backend_registry: _InstrumentBackendRegistry):
+        self._backend_registry = backend_registry
+
     def execute(self, step, plan, ctx):
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
+        instrument_id = inputs.get("instrument_id")
         cfg = inputs.get("cfg", {})
         params = inputs.get("params", {})
         out_path = inputs.get("out_path")
         if not out_path:
             return {"ok": False, "error_summary": "selftest output path missing"}
         try:
-            payload = esp32s3_dev_c_meter_tcp.selftest(
-                cfg,
-                out_gpio=int(params.get("out_gpio", 15)),
-                in_gpio=int(params.get("in_gpio", 11)),
-                adc_out=int(params.get("adc_out", 16)),
-                adc_in=int(params.get("adc_in", 4)),
-                dur_ms=int(params.get("dur_ms", 200)),
-                freq_hz=int(params.get("freq_hz", 1000)),
-                avg=int(params.get("avg", 16)),
-                settle_ms=int(params.get("settle_ms", 20)),
-                out_path=out_path,
-            )
+            backend = self._backend_registry.resolve(instrument_id, "selftest")
+            payload = backend.selftest(cfg=cfg, params=params, out_path=out_path)
+        except KeyError as exc:
+            return {"ok": False, "error_summary": str(exc)}
         except Exception as exc:
             return {"ok": False, "error_summary": str(exc)}
         if not bool(payload.get("pass", False)):
@@ -232,8 +295,12 @@ class _InstrumentSelftestAdapter:
 
 
 class _InstrumentSignatureAdapter:
+    def __init__(self, backend_registry: _InstrumentBackendRegistry):
+        self._backend_registry = backend_registry
+
     def execute(self, step, plan, ctx):
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
+        instrument_id = inputs.get("instrument_id")
         cfg = inputs.get("cfg", {})
         links = inputs.get("links", [])
         analog_links = inputs.get("analog_links", [])
@@ -260,7 +327,11 @@ class _InstrumentSignatureAdapter:
         if not pins:
             return {"ok": False, "error_summary": "no instrument pins configured"}
 
-        meas = esp32s3_dev_c_meter_tcp.measure_digital(cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
+        try:
+            backend = self._backend_registry.resolve(instrument_id, "measure.digital")
+        except KeyError as exc:
+            return {"ok": False, "error_summary": str(exc)}
+        meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
         pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
         actual_by_gpio = {}
         for row in pin_rows:
@@ -308,7 +379,11 @@ class _InstrumentSignatureAdapter:
                 min_v = center - tol
                 max_v = center + tol
 
-            meas_v = esp32s3_dev_c_meter_tcp.measure_voltage(cfg, gpio=adc_gpio, avg=avg, out_path=None)
+            try:
+                analog_backend = self._backend_registry.resolve(instrument_id, "measure.voltage")
+            except KeyError as exc:
+                return {"ok": False, "error_summary": str(exc)}
+            meas_v = analog_backend.measure_voltage(cfg=cfg, gpio=adc_gpio, avg=avg, out_path=None)
             analog_measurements.append({"inst_adc_gpio": adc_gpio, "avg": avg, "response": meas_v})
             measured_v = _extract_voltage_v(meas_v)
             check = {
@@ -477,6 +552,7 @@ class _InstrumentSimHttpAdapter:
 
 class AdapterRegistry:
     def __init__(self):
+        self._instrument_backends = _InstrumentBackendRegistry()
         self._capability_map = {
             "measure.voltage": _InstrumentAipHttpAdapter("measure.voltage"),
             "measure.digital": _InstrumentAipHttpAdapter("measure.digital"),
@@ -496,9 +572,9 @@ class AdapterRegistry:
             "load.idf_esptool": _LoadAdapter("idf_esptool"),
             "load.gdbmi": _LoadAdapter("gdbmi"),
             "check.uart_log": _UartCheckAdapter(),
-            "check.instrument_signature": _InstrumentSignatureAdapter(),
+            "check.instrument_signature": _InstrumentSignatureAdapter(self._instrument_backends),
             "check.signal_verify": _SignalVerifyAdapter(),
-            "check.instrument_selftest": _InstrumentSelftestAdapter(),
+            "check.instrument_selftest": _InstrumentSelftestAdapter(self._instrument_backends),
             "check.noop": _NoopCheckAdapter(),
             "instrument.aip_http": _InstrumentAipHttpAdapter(),
             "instrument.aip_http.measure.voltage": self._capability_map["measure.voltage"],
