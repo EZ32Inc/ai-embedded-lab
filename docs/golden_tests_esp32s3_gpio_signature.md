@@ -40,3 +40,21 @@ Notes:
   - `instrument_digital.json`
   - `instrument_voltage.json` (when analog checks are configured)
   - `verify_result.json`
+
+## UART Download-Mode Recovery
+
+Some ESP32-S boards can remain in ROM download mode after flashing/reset.
+Typical UART output includes:
+
+`boot:0x0 (DOWNLOAD(USB/UART0))`
+
+`waiting for download`
+
+If this appears and no normal app logs follow:
+- Manually power-cycle the DUT or press reset, then rerun the test.
+- If it still stays in download mode, run monitor manually:
+
+```bash
+cd assets_golden/duts/esp32s3_devkit/gpio_signature/firmware
+idf.py -p /dev/ttyACM0 monitor
+```

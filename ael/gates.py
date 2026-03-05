@@ -76,7 +76,9 @@ def _classify_hardware_gate(command: str, exit_code: int, output: str) -> Dict:
                 "download_mode",
                 [
                     "DUT appears in bootloader/download mode.",
-                    "Reset target and rerun gate.",
+                    "Manually power-cycle DUT or press reset, then rerun gate.",
+                    "If still stuck, run manual monitor:",
+                    "cd assets_golden/duts/esp32s3_devkit/gpio_signature/firmware && idf.py -p /dev/ttyACM0 monitor",
                     "Rerun command: python3 -m ael pack --pack packs/esp32meter1.json",
                 ],
             )
