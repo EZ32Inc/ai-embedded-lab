@@ -1,6 +1,5 @@
 {
   "core_files": [
-    "orchestrator.py",
     "ael/orchestrator.py",
     "ael/__main__.py",
     "ael/run_manager.py",
