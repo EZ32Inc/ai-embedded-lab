@@ -5,4 +5,4 @@ Wiring expectations:
 - UART banner: AEL_READY ESP32S3
 
 Notes:
-- Uses firmware in `firmware/` (symlink to repo root firmware_esp32s3).
+- Uses DUT firmware project at `assets_golden/duts/esp32s3_devkit/gpio_signature/firmware`.
