@@ -9,7 +9,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
+from ael.orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import assets
 from ael.bridge_server import run_server as run_bridge_server
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
