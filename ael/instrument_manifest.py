@@ -1,26 +1,28 @@
 from __future__ import annotations
 
-import json
-from pathlib import Path
-from typing import Dict, Any
+import warnings
+from typing import Any, Dict
 
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
-
-
-def _manifest_path(instrument_id: str) -> Path:
-    if not instrument_id or not str(instrument_id).strip():
-        raise ValueError("instrument_id is required")
-    return _repo_root() / "configs" / "instruments" / f"{instrument_id}.json"
+from ael.instruments.manifest import load_manifests
 
 
 def load_manifest(instrument_id: str) -> Dict[str, Any]:
-    path = _manifest_path(instrument_id)
-    if not path.exists():
-        raise FileNotFoundError(f"instrument manifest not found: {path}")
-    with open(path, "r", encoding="utf-8") as f:
-        data = json.load(f)
+    """
+    Temporary compatibility shim.
+
+    Canonical manifest loading now lives in ``ael.instruments.manifest``.
+    """
+    if not instrument_id or not str(instrument_id).strip():
+        raise ValueError("instrument_id is required")
+    warnings.warn(
+        "ael.instrument_manifest.load_manifest() is deprecated; use "
+        "ael.instruments.manifest.load_manifests() or "
+        "ael.instruments.registry.InstrumentRegistry",
+        DeprecationWarning,
+        stacklevel=2,
+    )
+    manifests = load_manifests()
+    data = manifests.get(str(instrument_id).strip())
     if not isinstance(data, dict):
-        raise ValueError(f"instrument manifest must be a JSON object: {path}")
-    return data
+        raise FileNotFoundError(f"instrument manifest not found for id: {instrument_id}")
+    return dict(data)
