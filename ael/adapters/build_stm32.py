@@ -15,7 +15,7 @@ def run(board_cfg):
         print("Build: arm-none-eabi-gcc not found in PATH")
         return None
 
-    root = os.path.dirname(os.path.dirname(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     fw_dir = os.path.join(root, "firmware_stm32")
     build_dir = os.path.join(root, "artifacts", "build_stm32")
     os.makedirs(build_dir, exist_ok=True)

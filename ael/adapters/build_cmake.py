@@ -35,7 +35,7 @@ def run(board_cfg):
         print("Build: PICO_SDK_PATH not set or invalid")
         return None
 
-    root = os.path.dirname(os.path.dirname(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     fw_dir = os.path.join(root, "firmware")
     build_dir = os.path.join(root, "artifacts", "build")
     os.makedirs(build_dir, exist_ok=True)

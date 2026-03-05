@@ -47,7 +47,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     # already performs a hard reset and should hand off to app mode.
     post_flash_run = bool(flash_cfg.get("post_flash_run", False))
 
-    root = os.path.dirname(os.path.dirname(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     if project_dir:
         proj = os.path.join(root, project_dir)
     else:

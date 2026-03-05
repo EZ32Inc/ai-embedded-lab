@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from contextlib import contextmanager
 
-from notifiers import discord_webhook
+from ael.notifiers import discord_webhook
 from ael import run_manager
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan

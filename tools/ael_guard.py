@@ -149,7 +149,7 @@ def check_core_contamination(core_files: List[str],
 def check_adapter_heuristics(patterns: List[str]) -> List[str]:
     errors: List[str] = []
 
-    adapters_dir = REPO_ROOT / "adapters"
+    adapters_dir = REPO_ROOT / "ael" / "adapters"
     if not adapters_dir.exists():
         return errors
 
@@ -252,7 +252,7 @@ def main() -> int:
     else:
         adapter_errors: List[str] = []
         for rel in sorted(staged_files):
-            if not (rel.startswith("adapters/") and rel.endswith(".py")):
+            if not (rel.startswith("ael/adapters/") and rel.endswith(".py")):
                 continue
             path = REPO_ROOT / rel
             if not path.exists():
@@ -272,7 +272,7 @@ def main() -> int:
             if (REPO_ROOT / rel).exists():
                 compile_targets.append(rel)
 
-        adapters_dir = REPO_ROOT / "adapters"
+        adapters_dir = REPO_ROOT / "ael" / "adapters"
         if adapters_dir.exists():
             for p in adapters_dir.rglob("*.py"):
                 compile_targets.append(str(p.relative_to(REPO_ROOT)))

@@ -1,6 +1,6 @@
 import unittest
 
-from notifiers import discord_webhook
+from ael.notifiers import discord_webhook
 
 
 class TestDiscordNotifyFormat(unittest.TestCase):

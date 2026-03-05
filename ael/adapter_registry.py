@@ -6,7 +6,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from adapters import (
+from ael.adapters import (
     build_cmake,
     build_idf,
     build_stm32,

@@ -22,7 +22,7 @@ def run(board_cfg):
         print("Build: project_dir not set")
         return None
 
-    root = os.path.dirname(os.path.dirname(__file__))
+    root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     proj = os.path.join(root, project_dir)
     build_dir = os.path.join(root, "artifacts", "build_esp32s3")
     os.makedirs(build_dir, exist_ok=True)
