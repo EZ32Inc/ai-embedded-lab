@@ -6,4 +6,4 @@ Wiring expectations:
 - LED on PC13
 
 Notes:
-- Uses firmware in `firmware/` (symlink to repo root firmware_stm32).
+- Uses repo-root firmware project at `firmware/targets/stm32f103`.
