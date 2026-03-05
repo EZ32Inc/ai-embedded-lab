@@ -85,6 +85,8 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     do_continue = True
     reset_available = bool(flash_cfg.get("reset_available", True))
     launch_cmds = flash_cfg.get("gdb_launch_cmds", None)
+    retry_continue_on_remote_failure = bool(flash_cfg.get("retry_continue_on_remote_failure", False))
+    continue_retry_timeout_s = int(flash_cfg.get("continue_retry_timeout_s", 8))
 
     attempts = []
     strategies = [
@@ -154,17 +156,19 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 strategy_used = strat.get("name")
                 # If the probe reports a remote failure, try a delayed continue.
                 if (not launch_cmds) and ("remote failure reply" in out_l or "could not read registers" in out_l):
-                    if reset_available:
+                    if reset_available and retry_continue_on_remote_failure:
                         print("Flash: warning - remote failure reply, retrying continue")
                         time.sleep(0.5)
                         try:
-                            res2 = _run_continue(gdb_cmd, ip, port, target_id, timeout_s)
+                            res2 = _run_continue(gdb_cmd, ip, port, target_id, continue_retry_timeout_s)
                             if res2.stdout:
                                 print(res2.stdout.strip())
                             if res2.stderr:
                                 print(res2.stderr.strip())
                         except Exception as exc:
                             print(f"Flash: continue retry error ({exc})")
+                    elif reset_available:
+                        print("Flash: warning - remote failure reply after load; skipping continue retry")
                     else:
                         print("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
                 break

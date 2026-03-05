@@ -173,6 +173,28 @@ def _la_self_test(probe_cfg):
     except Exception as exc:
         print(f"Preflight: LA self-test error: {exc}")
         return False
+    finally:
+        # Always restore normal capture mode so external DUT captures are not contaminated.
+        try:
+            restore = {
+                "sampleRate": 1_000_000,
+                "triggerPosition": 50,
+                "triggerEnabled": False,
+                "triggerModeOR": True,
+                "captureInternalTestSignal": False,
+                "channels": ["disabled"] * 16,
+            }
+            requests.post(
+                f"{base_url}/la_configure",
+                json=restore,
+                headers={"Content-Type": "application/json"},
+                auth=auth,
+                timeout=5,
+                verify=verify_ssl,
+            ).raise_for_status()
+            print("Preflight: LA internal test signal reset -> OFF")
+        except Exception as exc:
+            print(f"Preflight: LA reset warning: {exc}")
 
 
 def _fetch_port_config(probe_cfg):

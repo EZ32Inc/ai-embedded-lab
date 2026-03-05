@@ -3,6 +3,8 @@ board:
   target: rp2040
   firmware:
     description: Blink GPIO25 ~1Hz
+  observe_map:
+    sig: P0.0
   default_wiring:
     swd: "P3"
     reset: "P2.0"
