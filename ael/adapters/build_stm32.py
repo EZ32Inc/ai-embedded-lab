@@ -16,7 +16,7 @@ def run(board_cfg):
         return None
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    fw_dir = os.path.join(root, "firmware_stm32")
+    fw_dir = os.path.join(root, "firmware", "targets", "stm32f103")
     build_dir = os.path.join(root, "artifacts", "build_stm32")
     os.makedirs(build_dir, exist_ok=True)
 

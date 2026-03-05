@@ -25,6 +25,7 @@ from ael.queue import (
 )
 from ael.reporting import append_task_result
 from ael.runner import run_plan
+from ael import paths as ael_paths
 
 
 class _AgentMode:
@@ -46,7 +47,7 @@ def _now_iso() -> str:
 
 
 def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[1]
+    return ael_paths.repo_root()
 
 
 def _git(cmd: List[str], cwd: Optional[Path] = None) -> subprocess.CompletedProcess:

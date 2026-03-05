@@ -36,7 +36,7 @@ def run(board_cfg):
         return None
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-    fw_dir = os.path.join(root, "firmware")
+    fw_dir = os.path.join(root, "firmware", "targets", "rp2040_pico")
     build_dir = os.path.join(root, "artifacts", "build")
     os.makedirs(build_dir, exist_ok=True)
 

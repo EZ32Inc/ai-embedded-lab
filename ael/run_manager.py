@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
+from ael import paths as ael_paths
 
 
 @dataclass
@@ -99,7 +100,8 @@ class Tee:
 def create_run(board_id: str, test_path: str, repo_root: str) -> RunPaths:
     test_name = Path(test_path).stem
     run_id = f"{datetime.now():%Y-%m-%d_%H-%M-%S}_{board_id}_{test_name}"
-    root = Path(repo_root) / "runs" / run_id
+    base_root = Path(repo_root) if repo_root else ael_paths.repo_root()
+    root = base_root / "runs" / run_id
     artifacts_dir = root / "artifacts"
     artifacts_dir.mkdir(parents=True, exist_ok=True)
     return RunPaths(

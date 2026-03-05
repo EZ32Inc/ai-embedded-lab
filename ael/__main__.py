@@ -11,6 +11,7 @@ from pathlib import Path
 
 from ael.orchestrator import run_cli, run_pipeline, _simple_yaml_load, _normalize_probe_cfg
 from ael import assets
+from ael import paths as ael_paths
 from ael.bridge_server import run_server as run_bridge_server
 from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
 from ael.nightly import NightlyConfig, run_nightly
@@ -164,7 +165,7 @@ def main():
     up_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
     up_p.add_argument(
         "--report-root",
-        default=os.environ.get("AEL_REPORT_ROOT") or str(Path(__file__).resolve().parents[1] / "reports"),
+        default=os.environ.get("AEL_REPORT_ROOT") or str(ael_paths.reports_root()),
     )
     up_p.add_argument("--poll", type=float, default=0.5, help="Agent queue poll interval in seconds")
 
@@ -181,7 +182,7 @@ def main():
     nightly_p.add_argument("--queue", default=os.environ.get("AEL_QUEUE_ROOT", "queue"))
     nightly_p.add_argument(
         "--report-root",
-        default=os.environ.get("AEL_REPORT_ROOT") or str(Path(__file__).resolve().parents[1] / "reports"),
+        default=os.environ.get("AEL_REPORT_ROOT") or str(ael_paths.reports_root()),
     )
 
     args = parser.parse_args()

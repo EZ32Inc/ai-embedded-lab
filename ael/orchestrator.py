@@ -10,11 +10,12 @@ from contextlib import contextmanager
 
 from ael.notifiers import discord_webhook
 from ael import run_manager
+from ael import paths as ael_paths
+from ael.adapters import build_artifacts
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 
-_INSTRUMENT_SELFTEST_CACHE = {}
-_REPO_ROOT = Path(__file__).resolve().parents[1]
+_REPO_ROOT = ael_paths.repo_root()
 
 
 def _simple_yaml_load(path):
@@ -166,10 +167,7 @@ def _resolve_builder_kind(board_cfg):
 
 
 def _default_firmware_path(board_cfg):
-    root = str(_REPO_ROOT)
-    if _resolve_builder_kind(board_cfg) == "arm_debug":
-        return os.path.join(root, "artifacts", "build_stm32", "stm32f103_app.elf")
-    return os.path.join(root, "artifacts", "build", "pico_blink.elf")
+    return build_artifacts.default_firmware_path(_REPO_ROOT, board_cfg, _resolve_builder_kind(board_cfg))
 
 
 def _copy_artifacts(firmware_path, artifacts_dir):
@@ -319,216 +317,21 @@ def _is_meter_digital_verify_test(test_raw):
     if not isinstance(test_raw, dict):
         return False
     inst = test_raw.get("instrument", {})
-    if not isinstance(inst, dict) or inst.get("id") != "esp32s3_dev_c_meter":
+    if not isinstance(inst, dict):
+        return False
+    instrument_id = str(inst.get("id") or "").strip()
+    if not instrument_id:
+        return False
+    _, _, manifest = _resolve_instrument_context(test_raw, {})
+    caps = manifest.get("capabilities", []) if isinstance(manifest, dict) else []
+    has_measure_digital = any(isinstance(c, dict) and c.get("name") == "measure.digital" for c in caps)
+    if not has_measure_digital:
         return False
     conns = test_raw.get("connections", {})
     if not isinstance(conns, dict):
         return False
     links = conns.get("dut_to_instrument", [])
     return isinstance(links, list) and len(links) > 0
-
-
-def _run_meter_digital_verify(test_raw, board_cfg, run_paths):
-    instrument_id, tcp_cfg, _manifest = _resolve_instrument_context(test_raw, board_cfg)
-    if instrument_id != "esp32s3_dev_c_meter":
-        return False, [], "meter instrument not configured"
-
-    links = test_raw.get("connections", {}).get("dut_to_instrument", [])
-    pins = []
-    expected_by_gpio = {}
-    for item in links:
-        if not isinstance(item, dict):
-            continue
-        if item.get("inst_gpio") is None:
-            continue
-        inst_gpio = int(item.get("inst_gpio"))
-        expect = str(item.get("expect", "")).strip().lower()
-        pins.append(inst_gpio)
-        expected_by_gpio[inst_gpio] = {
-            "expect": expect,
-            "dut_gpio": item.get("dut_gpio"),
-            "freq_hz": item.get("freq_hz"),
-        }
-    if not pins:
-        return False, [], "no instrument pins configured"
-
-    duration_ms = 500
-    meas_cfg = test_raw.get("measurement", {})
-    if isinstance(meas_cfg, dict) and meas_cfg.get("duration_ms") is not None:
-        duration_ms = int(meas_cfg.get("duration_ms"))
-    else:
-        instrument_cfg = test_raw.get("instrument", {})
-        if isinstance(instrument_cfg, dict):
-            meter_cfg = instrument_cfg.get("measure", {})
-            if isinstance(meter_cfg, dict) and meter_cfg.get("duration_ms") is not None:
-                duration_ms = int(meter_cfg.get("duration_ms"))
-
-    cfg = {
-        "host": tcp_cfg.get("host"),
-        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
-    }
-    instrument_path = str(Path(run_paths.artifacts_dir) / "instrument_digital.json")
-    verify_path = str(Path(run_paths.artifacts_dir) / "verify_result.json")
-    analog_path = str(Path(run_paths.artifacts_dir) / "instrument_voltage.json")
-
-    meas = esp32s3_dev_c_meter_tcp.measure_digital(
-        cfg,
-        pins=pins,
-        duration_ms=duration_ms,
-        out_path=instrument_path,
-    )
-    pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
-    actual_by_gpio = {}
-    for row in pin_rows:
-        if isinstance(row, dict) and row.get("gpio") is not None:
-            actual_by_gpio[int(row.get("gpio"))] = row
-
-    mismatches = []
-    checks = []
-    for gpio, exp in expected_by_gpio.items():
-        row = actual_by_gpio.get(gpio)
-        if not row:
-            mismatches.append({"inst_gpio": gpio, "reason": "missing_measurement"})
-            continue
-        actual_state = str(row.get("state", "")).strip().lower()
-        expect_state = exp.get("expect", "")
-        check = {
-            "inst_gpio": gpio,
-            "dut_gpio": exp.get("dut_gpio"),
-            "expect": expect_state,
-            "actual": actual_state,
-            "samples": row.get("samples"),
-            "ones": row.get("ones"),
-            "zeros": row.get("zeros"),
-            "transitions": row.get("transitions"),
-        }
-        checks.append(check)
-        if actual_state != expect_state:
-            mismatches.append(
-                {
-                    "inst_gpio": gpio,
-                    "reason": "state_mismatch",
-                    "expect": expect_state,
-                    "actual": actual_state,
-                }
-            )
-            continue
-        if expect_state == "toggle":
-            transitions = int(row.get("transitions", 0))
-            if transitions <= 0:
-                mismatches.append(
-                    {
-                        "inst_gpio": gpio,
-                        "reason": "toggle_no_transitions",
-                        "transitions": transitions,
-                    }
-                )
-
-    analog_checks = []
-    analog_links = test_raw.get("connections", {}).get("dut_to_instrument_analog", [])
-    analog_measurements = []
-
-    def _extract_voltage_v(payload):
-        if not isinstance(payload, dict):
-            return None
-        direct_v_keys = ("voltage_v", "v", "value_v", "voltage", "value")
-        for key in direct_v_keys:
-            val = payload.get(key)
-            if isinstance(val, (int, float)):
-                f = float(val)
-                if f > 10.0:
-                    return f / 1000.0
-                return f
-        mv = payload.get("mv")
-        if isinstance(mv, (int, float)):
-            return float(mv) / 1000.0
-        result = payload.get("result")
-        if isinstance(result, dict):
-            return _extract_voltage_v(result)
-        return None
-
-    for item in analog_links if isinstance(analog_links, list) else []:
-        if not isinstance(item, dict):
-            continue
-        adc_gpio = item.get("inst_adc_gpio")
-        if adc_gpio is None:
-            continue
-        adc_gpio = int(adc_gpio)
-        avg = int(item.get("avg", 16))
-        min_v = item.get("expect_v_min")
-        max_v = item.get("expect_v_max")
-        if min_v is not None:
-            min_v = float(min_v)
-        if max_v is not None:
-            max_v = float(max_v)
-        if min_v is None and max_v is None and item.get("expect_v") is not None:
-            center = float(item.get("expect_v"))
-            tol = float(item.get("tolerance_v", 0.2))
-            min_v = center - tol
-            max_v = center + tol
-
-        meas_v = esp32s3_dev_c_meter_tcp.measure_voltage(cfg, gpio=adc_gpio, avg=avg, out_path=None)
-        analog_measurements.append(
-            {
-                "inst_adc_gpio": adc_gpio,
-                "avg": avg,
-                "response": meas_v,
-            }
-        )
-        measured_v = _extract_voltage_v(meas_v)
-        check = {
-            "inst_adc_gpio": adc_gpio,
-            "dut_signal": item.get("dut_signal"),
-            "expect_v_min": min_v,
-            "expect_v_max": max_v,
-            "measured_v": measured_v,
-            "avg": avg,
-        }
-        analog_checks.append(check)
-
-        if measured_v is None:
-            mismatches.append({"inst_adc_gpio": adc_gpio, "reason": "voltage_missing"})
-            continue
-        if min_v is not None and measured_v < min_v:
-            mismatches.append(
-                {
-                    "inst_adc_gpio": adc_gpio,
-                    "reason": "voltage_below_min",
-                    "expect_v_min": min_v,
-                    "measured_v": measured_v,
-                }
-            )
-        if max_v is not None and measured_v > max_v:
-            mismatches.append(
-                {
-                    "inst_adc_gpio": adc_gpio,
-                    "reason": "voltage_above_max",
-                    "expect_v_max": max_v,
-                    "measured_v": measured_v,
-                }
-            )
-
-    if analog_measurements:
-        _write_json(analog_path, {"ok": True, "measurements": analog_measurements})
-
-    ok = len(mismatches) == 0
-    verify_payload = {
-        "ok": ok,
-        "type": "instrument_digital_verify",
-        "duration_ms": duration_ms,
-        "instrument_id": "esp32s3_dev_c_meter",
-        "host": cfg.get("host"),
-        "port": cfg.get("port"),
-        "checks": checks,
-        "analog_checks": analog_checks,
-        "mismatches": mismatches,
-    }
-    _write_json(verify_path, verify_payload)
-    err = "" if ok else "instrument digital verification failed"
-    artifacts = [instrument_path, verify_path]
-    if analog_measurements:
-        artifacts.append(analog_path)
-    return ok, artifacts, err
 
 
 def _resolve_board_path(repo_root, board_arg):
@@ -540,74 +343,6 @@ def _resolve_board_path(repo_root, board_arg):
     board_id = board_arg
     board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
     return str(board_path), board_id
-
-
-def _run_instrument_selftest(test_raw, board_cfg, run_paths):
-    instrument_id, tcp_cfg, manifest = _resolve_instrument_context(test_raw, board_cfg)
-    if not instrument_id:
-        return True, None, None
-
-    selftest_manifest = manifest.get("selftest", {}) if isinstance(manifest, dict) else {}
-    if instrument_id != "esp32s3_dev_c_meter" and not selftest_manifest:
-        return True, None, None
-
-    cache_key = (run_paths.run_id, instrument_id)
-    if cache_key in _INSTRUMENT_SELFTEST_CACHE:
-        cached = _INSTRUMENT_SELFTEST_CACHE[cache_key]
-        return bool(cached.get("pass")), cached.get("artifact"), cached.get("error")
-
-    artifact_path = str(Path(run_paths.artifacts_dir) / "instrument_selftest.json")
-    cfg = {
-        "host": tcp_cfg.get("host"),
-        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
-        "artifacts_dir": str(run_paths.artifacts_dir),
-    }
-
-    dig = selftest_manifest.get("digital", {}) if isinstance(selftest_manifest.get("digital"), dict) else {}
-    adc = selftest_manifest.get("adc", {}) if isinstance(selftest_manifest.get("adc"), dict) else {}
-    test_self = test_raw.get("selftest", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("selftest"), dict) else {}
-    test_dig = test_self.get("digital", {}) if isinstance(test_self.get("digital"), dict) else {}
-    test_adc = test_self.get("adc", {}) if isinstance(test_self.get("adc"), dict) else {}
-
-    out_gpio = int(test_dig.get("out_gpio", dig.get("out_gpio", 15)))
-    in_gpio = int(test_dig.get("in_gpio", dig.get("in_gpio", 11)))
-    dur_ms = int(test_dig.get("dur_ms", dig.get("dur_ms", 200)))
-    freq_hz = int(test_dig.get("freq_hz", dig.get("freq_hz", 1000)))
-    adc_out = int(test_adc.get("out_gpio", adc.get("out_gpio", 16)))
-    adc_in = int(test_adc.get("adc_gpio", adc.get("adc_gpio", 4)))
-    avg = int(test_adc.get("avg", adc.get("avg", 16)))
-    settle_ms = int(test_adc.get("settle_ms", adc.get("settle_ms", 20)))
-
-    try:
-        payload = esp32s3_dev_c_meter_tcp.selftest(
-            cfg,
-            out_gpio=out_gpio,
-            in_gpio=in_gpio,
-            adc_out=adc_out,
-            adc_in=adc_in,
-            dur_ms=dur_ms,
-            freq_hz=freq_hz,
-            avg=avg,
-            settle_ms=settle_ms,
-            out_path=artifact_path,
-        )
-        cache_value = {"pass": bool(payload.get("pass")), "artifact": artifact_path, "error": payload.get("error", "")}
-        _INSTRUMENT_SELFTEST_CACHE[cache_key] = cache_value
-        return bool(payload.get("pass")), artifact_path, payload.get("error", "")
-    except Exception as exc:
-        err_payload = {
-            "ok": False,
-            "type": "selftest",
-            "pass": False,
-            "error": str(exc),
-            "instrument_id": instrument_id,
-            "host": cfg.get("host"),
-            "port": cfg.get("port"),
-        }
-        _write_json(artifact_path, err_payload)
-        cache_value = {"pass": False, "artifact": artifact_path, "error": str(exc)}
-        _INSTRUMENT_SELFTEST_CACHE[cache_key] = cache_value
-        return False, artifact_path, str(exc)
 
 
 def _instrument_selftest_requested(test_raw, board_cfg):

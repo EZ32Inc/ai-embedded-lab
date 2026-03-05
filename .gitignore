@@ -8,12 +8,12 @@ progress/run_*.json
 pack_runs/
 runs
 assets_user/cache/
-firmware_esp32s3/build/
-firmware_esp32s3/sdkconfig
-firmware_esp32s3/sdkconfig.old
+firmware/targets/esp32s3/build/
+firmware/targets/esp32s3/sdkconfig
+firmware/targets/esp32s3/sdkconfig.old
 sdkconfig
 sdkconfig.old
-firmware_instruments/esp32s3_dev_c_meter/build
+firmware/instruments/esp32s3_dev_c_meter/build
 assets_golden/duts/esp32s3_devkit/gpio_signature/firmware/build/
 assets_golden/duts/esp32s3_devkit/gpio_signature/firmware/sdkconfig.old
 reports/nightly_*.md
