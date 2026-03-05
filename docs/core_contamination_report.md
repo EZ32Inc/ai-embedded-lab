@@ -75,5 +75,5 @@ Keywords (case-insensitive):
 
 Suggested boundary cleanup direction:
 - Keep Core limited to: run state machine, artifact bookkeeping, generic capability dispatch.
-- Move board/tool specifics to: `configs/boards/*`, `configs/probes/*`, `adapters/*`, and instrument manifests.
+- Move board/tool specifics to: `configs/boards/*`, `configs/probes/*`, `ael/adapters/*`, and instrument manifests.
 - Introduce adapter registries for build/flash/observe/instrument capabilities to remove direct imports and string-based board/tool switches from Core.

@@ -350,7 +350,7 @@ boards/
 packs/  
 tests/  
 instruments/  
-adapters/  
+ael/adapters/  
 
 tools/  
 

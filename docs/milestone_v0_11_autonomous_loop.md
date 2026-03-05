@@ -28,7 +28,7 @@ This was completed as a full AI-driven execution cycle in repository scope witho
 
 The following checks passed during execution:
 
-- `python3 -m py_compile ael/*.py adapters/*.py tools/*.py`
+- `python3 -m py_compile ael/*.py ael/adapters/*.py tools/*.py`
 - `python3 tools/ael_guard.py --fast`
 - `python3 tools/check_instrument_contract.py`
 

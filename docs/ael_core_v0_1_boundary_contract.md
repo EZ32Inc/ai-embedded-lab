@@ -294,7 +294,7 @@ Core code must not contain:
 Board and tool logic must exist only in:
 
 configs/
-adapters/
+ael/adapters/
 packs/
 
 

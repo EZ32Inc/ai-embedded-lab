@@ -19,7 +19,7 @@ Create a new adapter that implements the AEL Instrument Protocol (AIP).
 
 File:
 
-adapters/instrument_aip_http.py
+ael/adapters/instrument_aip_http.py
 
 Responsibilities:
 
@@ -41,7 +41,7 @@ instrument_digital.json
 
 Validation
 
-python3 -m py_compile adapters/instrument_aip_http.py
+python3 -m py_compile ael/adapters/instrument_aip_http.py
 
 ---
 
