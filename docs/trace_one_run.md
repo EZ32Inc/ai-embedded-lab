@@ -105,4 +105,5 @@ From `runs/2026-03-05_10-47-29_rp2040_pico_gpio_signature/`:
 
 - Exact user CLI command for this historical run is inferred (not directly logged as a single command line).
 - `recovery_policy.retries` exists in plan JSON, but effective retry counts are enforced by runner step-type defaults; coupling is implicit.
+- Retry budget precedence is now explicit in runner: `step.retry_budget` > `recovery_policy.retries` > built-in defaults.
 - `verify.log` is always part of result metadata even when signal verification primarily uses observe + measure files.

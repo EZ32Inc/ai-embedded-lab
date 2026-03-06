@@ -765,7 +765,7 @@ def run_pipeline(
         },
         "context": {
             "workspace_dir": str(repo_root),
-            "run_root": str(Path(repo_root) / "runs"),
+            "run_root": str(Path(run_paths.root).parent),
             "artifact_root": str(Path(run_paths.root) / "artifacts"),
             "log_root": str(Path(run_paths.root)),
         },

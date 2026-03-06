@@ -144,6 +144,17 @@ Purpose: Runner-controlled recovery limits and allow-list.
 Scopes:
 - `check`, `run`, `build`, `preflight`, `plan`
 
+Runner precedence for retry budget:
+- `step.retry_budget` overrides everything.
+- Else `recovery_policy.retries` is applied by step type class:
+  - `build.* -> build`
+  - `load.* -> load` (falls back to `run` if `load` is unset)
+  - `run.* -> run` (falls back to `load` if `run` is unset)
+  - `check.* -> check`
+  - `preflight.* -> preflight`
+  - `plan.* -> plan`
+- Else defaults apply: `build=1`, `load/run=2`, `check=2`, others `0`.
+
 ---
 
 ### `report` object (optional)

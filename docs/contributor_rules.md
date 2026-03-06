@@ -116,6 +116,14 @@ Any structural change must pass:
 
     CLI sanity check
 
+    Default verification when requested for hardware-facing changes
+
+Guard enforcement:
+
+- `tools/ael_guard.py --fast` runs non-hardware checks only.
+- Run hardware verification explicitly when requested:
+  `python3 -m ael verify-default run`
+
 If a change breaks golden tests, it is not acceptable.
 Rule 8 — Think Runtime, Not Script
 

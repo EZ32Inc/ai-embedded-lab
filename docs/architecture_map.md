@@ -3,7 +3,7 @@
 ## 1) Entry points
 
 - `ael/__main__.py:main`
-  - Main CLI entry (`python3 -m ael`), dispatches `run`, `pack`, `doctor`, `bridge`, `up`, `status`, `nightly`, `verify-default`, etc.
+  - Main CLI entry (`python3 -m ael`), dispatches core commands `run`, `pack`, `doctor`, `verify-default`, `instruments`, `dut`.
 - `ael/pipeline.py:main`
   - Runtime pipeline CLI (`run`) and home of `run_pipeline` execution path.
 - `ael_controlplane/agent.py:main`
@@ -105,7 +105,7 @@ Path traced from `ael run`:
 ## Immediate pain points noticed
 
 - Orchestration boundaries are mixed: `ael/pipeline.py` both composes plan and writes final reports.
-- Retry policy fields in plan (`recovery_policy.retries`) appear separate from actual retry decisions in `ael/runner.py` (`_retry_budget`), which can drift.
+- Retry policy handling was unified in runner (`step.retry_budget` > `recovery_policy.retries` > defaults), but docs and examples need to stay aligned as scopes evolve.
 - Recovery framework exists but default recovery is mostly noop (`reset.serial`).
 - Bridge/task-agent flow and direct `ael run` flow both execute plans but through different pre-processing paths.
 

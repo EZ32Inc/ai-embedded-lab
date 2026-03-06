@@ -34,19 +34,63 @@ def _step_type(step: Dict[str, Any]) -> str:
     return str(step.get("type", "")).strip()
 
 
-def _retry_budget(step: Dict[str, Any]) -> int:
+def _step_retry_class(step: Dict[str, Any]) -> str:
+    kind = _step_type(step)
+    if kind.startswith("build."):
+        return "build"
+    if kind.startswith("load."):
+        return "load"
+    if kind.startswith("run."):
+        return "run"
+    if kind.startswith("check."):
+        return "check"
+    if kind.startswith("preflight."):
+        return "preflight"
+    if kind.startswith("plan."):
+        return "plan"
+    return ""
+
+
+def _plan_retry_map(plan: Dict[str, Any]) -> Dict[str, int]:
+    out: Dict[str, int] = {}
+    policy = plan.get("recovery_policy", {}) if isinstance(plan, dict) else {}
+    if not isinstance(policy, dict):
+        return out
+    retries = policy.get("retries", {})
+    if not isinstance(retries, dict):
+        return out
+    for key, value in retries.items():
+        try:
+            out[str(key).strip().lower()] = max(0, int(value))
+        except Exception:
+            continue
+    return out
+
+
+def _retry_budget(step: Dict[str, Any], plan_retries: Dict[str, int]) -> int:
+    # 1) Explicit per-step override wins.
     if step.get("retry_budget") is not None:
         try:
             return max(0, int(step.get("retry_budget")))
         except Exception:
             return 0
 
-    kind = _step_type(step)
-    if kind.startswith("build."):
+    # 2) Plan policy retries by mapped class.
+    retry_class = _step_retry_class(step)
+    if retry_class:
+        if retry_class == "load" and "load" not in plan_retries and "run" in plan_retries:
+            return int(plan_retries["run"])
+        if retry_class == "run" and "run" not in plan_retries and "load" in plan_retries:
+            return int(plan_retries["load"])
+        if retry_class in plan_retries:
+            return int(plan_retries[retry_class])
+
+    # 3) Backward-compatible defaults.
+    if retry_class == "build":
         return 1
-    if kind.startswith("load.") or kind.startswith("run."):
+    if retry_class in ("load", "run"):
         return 2
-    if kind.startswith("check."):
+    if retry_class == "check":
         return 2
     return 0
 
@@ -172,6 +216,7 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     steps = plan.get("steps", [])
     if not isinstance(steps, list):
         steps = []
+    plan_retries = _plan_retry_map(plan)
 
     idx = 0
     guard = 0
@@ -197,7 +242,7 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
             result["error_summary"] = f"adapter lookup failed for {kind}: {exc}"
             break
 
-        budget = _retry_budget(step)
+        budget = _retry_budget(step, plan_retries)
         attempt = 0
         step_ok = False
         step_last: Dict[str, Any] = {"ok": False, "error_summary": "not_run"}
@@ -219,6 +264,7 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
                     "name": name,
                     "type": kind,
                     "attempt": attempt,
+                    "effective_retry_budget": budget,
                     "ok": step_ok,
                     "result": out,
                 }

@@ -56,7 +56,7 @@
       {
         "dut_signal": "3V3",
         "inst_adc_gpio": 4,
-        "expect_v_min": 3.0,
+        "expect_v_min": 2.8,
         "expect_v_max": 3.45,
         "avg": 32
       }

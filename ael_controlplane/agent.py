@@ -118,7 +118,7 @@ def _safe_run_dir(path_value: str) -> bool:
 def _default_run_dir(task_id: str) -> Path:
     ts = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
     safe_id = "".join(ch if ch.isalnum() or ch in ("-", "_") else "_" for ch in task_id)
-    return _repo_root() / "runs" / f"{ts}_agent_{safe_id}"
+    return ael_paths.runs_root() / f"{ts}_agent_{safe_id}"
 
 
 def _load_plan(task: Dict, task_dir: Path) -> Tuple[Optional[Dict], str]:
