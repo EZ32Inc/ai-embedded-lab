@@ -8,7 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
 from ael.adapters import preflight
-from ael.orchestrator import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
+from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 
 
 DEFAULT_CONFIG_PATH = ael_paths.repo_root() / "configs" / "default_verification_setting.yaml"
