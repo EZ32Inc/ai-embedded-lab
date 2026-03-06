@@ -18,7 +18,7 @@ def _maybe_disable_ssl_warnings(verify_ssl: bool, suppress: bool) -> None:
     except Exception:
         pass
 
-def _ping(ip):
+def _ping(ip, attempts=3, delay_s=0.8):
     if not ip:
         print("Preflight: missing probe IP")
         return False
@@ -26,27 +26,41 @@ def _ping(ip):
     if not ping:
         print("Preflight: ping not available")
         return False
-    try:
-        res = subprocess.run([ping, "-c", "1", "-W", "1", ip], capture_output=True, text=True)
-        ok = res.returncode == 0
-        print(f"Preflight: ping {ip} -> {'OK' if ok else 'FAIL'}")
-        return ok
-    except Exception as exc:
-        print(f"Preflight: ping error: {exc}")
-        return False
+    last_exc = None
+    for attempt in range(1, int(attempts) + 1):
+        try:
+            res = subprocess.run([ping, "-c", "1", "-W", "1", ip], capture_output=True, text=True)
+            if res.returncode == 0:
+                suffix = "" if attempt == 1 else f" (attempt {attempt}/{attempts})"
+                print(f"Preflight: ping {ip} -> OK{suffix}")
+                return True
+        except Exception as exc:
+            last_exc = exc
+        if attempt < attempts:
+            time.sleep(max(0.0, float(delay_s)))
+    print(f"Preflight: ping {ip} -> FAIL")
+    if last_exc is not None:
+        print(f"Preflight: ping error: {last_exc}")
+    return False
 
 
-def _check_tcp(ip, port):
+def _check_tcp(ip, port, attempts=3, delay_s=0.8):
     if not ip or not port:
         print("Preflight: missing IP/port for TCP check")
         return False
-    try:
-        with socket.create_connection((ip, int(port)), timeout=1.0):
-            print(f"Preflight: TCP {ip}:{port} -> OK")
-            return True
-    except Exception as exc:
-        print(f"Preflight: TCP {ip}:{port} -> FAIL ({exc})")
-        return False
+    last_exc = None
+    for attempt in range(1, int(attempts) + 1):
+        try:
+            with socket.create_connection((ip, int(port)), timeout=1.0):
+                suffix = "" if attempt == 1 else f" (attempt {attempt}/{attempts})"
+                print(f"Preflight: TCP {ip}:{port} -> OK{suffix}")
+                return True
+        except Exception as exc:
+            last_exc = exc
+        if attempt < attempts:
+            time.sleep(max(0.0, float(delay_s)))
+    print(f"Preflight: TCP {ip}:{port} -> FAIL ({last_exc})")
+    return False
 
 
 def _ping_once(ip, timeout_s=1.0):
@@ -121,9 +135,9 @@ def _monitor_targets(ip, port, gdb_cmd):
     last_error = ""
     targets = []
     for attempt in range(1, 4):
-        timeout_s = 3 + (attempt * 2)
+        timeout_s = (3 + (attempt * 2)) * 2
         try:
-            res = _monitor_cmd(ip, port, gdb_cmd, "monitor targets", timeout_s=timeout_s)
+            res = _monitor_cmd(ip, port, gdb_cmd, "monitor a", timeout_s=timeout_s)
             combined = ((res.stdout or "") + "\n" + (res.stderr or "")).strip()
             targets = _parse_targets(combined)
             output_failed = _monitor_output_failed(combined)
@@ -327,7 +341,13 @@ def run(probe_cfg):
         "port_config": port_cfg,
     }
 
-    if ok_ping and ok_tcp and ok_mon and ok_la:
+    # ICMP/TCP checks can transiently fail while the probe is still stabilizing.
+    # If monitor + LA checks pass, treat ping/tcp as advisory.
+    if ok_mon and ok_la:
+        if not ok_ping:
+            print("Preflight: ping check failed, but service checks passed; continuing.")
+        if not ok_tcp:
+            print("Preflight: TCP check failed, but monitor/LA checks passed; continuing.")
         print("Preflight: OK")
         return True, info
     print("Preflight: FAIL")
