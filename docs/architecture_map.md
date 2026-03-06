@@ -6,13 +6,13 @@
   - Main CLI entry (`python3 -m ael`), dispatches `run`, `pack`, `doctor`, `bridge`, `up`, `status`, `nightly`, `verify-default`, etc.
 - `ael/pipeline.py:main`
   - Runtime pipeline CLI (`run`) and home of `run_pipeline` execution path.
-- `ael/agent.py:main`
+- `ael_controlplane/agent.py:main`
   - Queue worker entry; processes tasks from `queue/inbox` to `queue/done|failed` via `run_sweep`.
-- `ael/task_api.py:main`
+- `ael_controlplane/task_api.py:main`
   - HTTP task ingest API (`/v1/tasks`) writing tasks into queue inbox.
-- `ael/bridge_server.py:main`
+- `ael_controlplane/bridge_server.py:main`
   - Bridge API server for task submit/status/result/artifact/stream endpoints.
-- `ael/submit.py:submit_to_bridge` (used by CLI `ael submit`)
+- `ael_controlplane/submit.py:submit_to_bridge`
   - Natural-language/JSON submit helper to bridge API.
 
 ## 2) One run lifecycle (hardware run path)
@@ -55,11 +55,11 @@ Path traced from `ael run`:
 - Build/flash/observe adapters:
   - `ael/adapters/*`
 - Agent/queue runner:
-  - `ael/agent.py`, `ael/queue.py`
+  - `ael_controlplane/agent.py`, `ael_controlplane/queue.py`
 - Bridge/API ingest and task control plane:
-  - `ael/bridge_server.py`, `ael/task_api.py`, `ael/bridge_task.py`, `ael/submit.py`
+  - `ael_controlplane/bridge_server.py`, `ael_controlplane/task_api.py`, `ael_controlplane/bridge_task.py`, `ael_controlplane/submit.py`
 - Planning/Codex integration:
-  - `ael/planner.py`, `ael/codex_driver.py`
+  - `ael_controlplane/planner.py`, `ael_controlplane/codex_driver.py`
 - Reporting/artifacts:
   - `ael/run_manager.py`, `ael/reporting.py`
 - Config/policy resolution:
@@ -87,10 +87,10 @@ Path traced from `ael run`:
 - `ael/__main__.py`
 - `ael/pipeline.py`
 - `ael/runner.py`
-- `ael/agent.py`
-- `ael/queue.py`
-- `ael/bridge_server.py`
-- `ael/task_api.py`
+- `ael_controlplane/agent.py`
+- `ael_controlplane/queue.py`
+- `ael_controlplane/bridge_server.py`
+- `ael_controlplane/task_api.py`
 - `ael/config_resolver.py`
 - `ael/reporting.py`
 - `ael/run_manager.py`

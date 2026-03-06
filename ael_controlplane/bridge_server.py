@@ -10,8 +10,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 from urllib.parse import unquote
 
-from ael.bridge_task import build_task, task_filename, validate_submit_request
-from ael.queue import ensure_queue_layout
+from ael_controlplane.bridge_task import build_task, task_filename, validate_submit_request
+from ael_controlplane.queue import ensure_queue_layout
 
 
 def _json_bytes(payload: Dict[str, Any]) -> bytes:

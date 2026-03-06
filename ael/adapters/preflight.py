@@ -49,57 +49,124 @@ def _check_tcp(ip, port):
         return False
 
 
+def _ping_once(ip, timeout_s=1.0):
+    if not ip:
+        return False
+    ping = shutil.which("ping")
+    if not ping:
+        return False
+    try:
+        wait_s = max(1, int(timeout_s))
+        res = subprocess.run([ping, "-c", "1", "-W", str(wait_s), ip], capture_output=True, text=True)
+        return res.returncode == 0
+    except Exception:
+        return False
+
+
+def _monitor_cmd(ip, port, gdb_cmd, command, timeout_s):
+    return subprocess.run(
+        [
+            gdb_cmd,
+            "-q",
+            "--nx",
+            "--batch",
+            "-ex",
+            f"target extended-remote {ip}:{port}",
+            "-ex",
+            command,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=timeout_s,
+    )
+
+
+def _monitor_output_failed(out_text: str) -> bool:
+    text = (out_text or "").lower()
+    failure_markers = (
+        "no usable targets found",
+        "error:",
+        "remote failure reply",
+        "timed out",
+        "connection timed out",
+        "connection refused",
+        "connection reset by peer",
+    )
+    return any(marker in text for marker in failure_markers)
+
+
+def _parse_targets(stdout_text: str):
+    targets = []
+    in_table = False
+    for raw in (stdout_text or "").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.lower().startswith("available targets"):
+            in_table = True
+            continue
+        if in_table and line[0].isdigit():
+            parts = line.split()
+            if len(parts) >= 3:
+                targets.append(" ".join(parts[2:]))
+        elif "rp2040" in line.lower():
+            targets.append(line)
+    return targets
+
+
 def _monitor_targets(ip, port, gdb_cmd):
     if not gdb_cmd:
         print("Preflight: gdb_cmd not set, skipping monitor targets")
         return False, []
+    last_error = ""
+    targets = []
+    for attempt in range(1, 4):
+        timeout_s = 3 + (attempt * 2)
+        try:
+            res = _monitor_cmd(ip, port, gdb_cmd, "monitor targets", timeout_s=timeout_s)
+            combined = ((res.stdout or "") + "\n" + (res.stderr or "")).strip()
+            targets = _parse_targets(combined)
+            output_failed = _monitor_output_failed(combined)
+            ok = (res.returncode == 0) and (not output_failed) and bool(targets)
+            if ok:
+                print("Preflight: monitor targets -> OK")
+                print("Preflight: targets: " + ", ".join(targets))
+                return True, targets
+            last_error = combined or f"return code {res.returncode}"
+            print(f"Preflight: monitor targets attempt {attempt}/3 -> FAIL")
+            if combined:
+                print(combined)
+        except subprocess.TimeoutExpired:
+            last_error = "timeout"
+            print(f"Preflight: monitor targets attempt {attempt}/3 -> FAIL (timeout)")
+        except Exception as exc:
+            last_error = str(exc)
+            print(f"Preflight: monitor targets attempt {attempt}/3 error: {exc}")
+        time.sleep(0.4)
+
+    # Fallback probe: sometimes monitor targets is flaky while debug stub responds.
     try:
-        res = subprocess.run(
-            [
-                gdb_cmd,
-                "-q",
-                "--nx",
-                "--batch",
-                "-ex",
-                f"target extended-remote {ip}:{port}",
-                "-ex",
-                "monitor targets",
-            ],
-            capture_output=True,
-            text=True,
-            timeout=3,
-        )
-        ok = res.returncode == 0
-        print("Preflight: monitor targets -> " + ("OK" if ok else "FAIL"))
-        if res.stdout:
-            print(res.stdout.strip())
-        if res.stderr and not ok:
-            print(res.stderr.strip())
-        targets = []
-        in_table = False
-        for raw in (res.stdout or "").splitlines():
-            line = raw.strip()
-            if not line:
-                continue
-            if line.lower().startswith("available targets"):
-                in_table = True
-                continue
-            if in_table and line[0].isdigit():
-                parts = line.split()
-                if len(parts) >= 3:
-                    targets.append(" ".join(parts[2:]))
-            elif "rp2040" in line.lower():
-                targets.append(line)
-        if targets:
-            print("Preflight: targets: " + ", ".join(targets))
-        return ok, targets
-    except subprocess.TimeoutExpired:
-        print("Preflight: monitor targets -> FAIL (timeout)")
-        print("Hint: Check connection or release GDB connection in another session if one is active.")
-        return False, []
+        res = _monitor_cmd(ip, port, gdb_cmd, "monitor version", timeout_s=8)
+        combined = ((res.stdout or "") + "\n" + (res.stderr or "")).strip()
+        output_failed = _monitor_output_failed(combined)
+        if res.returncode == 0 and not output_failed:
+            print("Preflight: monitor version fallback -> OK (targets unavailable)")
+            return True, targets
+        if combined:
+            last_error = combined
     except Exception as exc:
-        print(f"Preflight: monitor targets error: {exc}")
-        return False, []
+        last_error = str(exc)
+
+    print("Preflight: monitor targets -> FAIL")
+    if last_error:
+        print(last_error)
+    print("Hint: Check connection or release GDB connection in another session if one is active.")
+    ip_ok = _ping_once(ip, timeout_s=1.0)
+    print(f"Preflight: post-fail ping {ip} -> {'OK' if ip_ok else 'FAIL'}")
+    if ip_ok:
+        print("Hint: Probe IP is reachable but debug monitor is unhealthy.")
+        print("Hint: Power-cycle/reset ESP32JTAG, then retry. This can be automated in a future recovery step.")
+    return False, targets
 
 
 def _parse_samples(buffer: bytes):

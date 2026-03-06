@@ -28,5 +28,8 @@
   "adapter_heuristic_patterns": [
     "\\bin\\s+board_(id|name)\\b",
     "\\bboard_(id|name)\\b.*\\bin\\b"
+  ],
+  "core_forbidden_import_prefixes": [
+    "ael_controlplane"
   ]
 }

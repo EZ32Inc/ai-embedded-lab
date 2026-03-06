@@ -34,7 +34,7 @@ def main() -> int:
     # Ensure repository has at least one diff target.
     subprocess.run(["git", "status"], cwd=str(repo), capture_output=True, text=True)
 
-    from ael.review_pack import generate_review_pack
+    from ael_controlplane.review_pack import generate_review_pack
 
     path = generate_review_pack(branch=branch, task=task, artifacts=artifacts)
     if not path.exists():

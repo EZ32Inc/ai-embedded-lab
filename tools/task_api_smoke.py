@@ -47,7 +47,7 @@ def main() -> int:
     cmd = [
         sys.executable,
         "-m",
-        "ael.task_api",
+        "ael_controlplane.task_api",
         "--host",
         "127.0.0.1",
         "--port",
@@ -89,7 +89,7 @@ def main() -> int:
             return _fail("submitted task file missing in inbox")
 
         run_agent = subprocess.run(
-            [sys.executable, "-m", "ael.agent", "--once", "--queue", str(queue_root), "--report-root", str(report_root)],
+            [sys.executable, "-m", "ael_controlplane.agent", "--once", "--queue", str(queue_root), "--report-root", str(report_root)],
             cwd=str(repo_root),
             capture_output=True,
             text=True,

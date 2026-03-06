@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Dict, List, Optional, Tuple
 
 from ael.adapter_registry import AdapterRegistry
-from ael.bridge_task import is_bridge_task, noop_plan
-from ael.codex_driver import CodexDriver
+from ael_controlplane.bridge_task import is_bridge_task, noop_plan
+from ael_controlplane.codex_driver import CodexDriver
 from ael.gates import run_gates
-from ael.planner import generate_plan
-from ael.queue import (
+from ael_controlplane.planner import generate_plan
+from ael_controlplane.queue import (
     claim_task,
     ensure_queue_layout,
     finalize_task,
@@ -23,7 +23,7 @@ from ael.queue import (
     move_state,
     write_state,
 )
-from ael.reporting import append_task_result
+from ael_controlplane.reporting import append_task_result
 from ael.runner import run_plan
 from ael import paths as ael_paths
 
@@ -866,7 +866,7 @@ def main() -> int:
     )
 
     if bool(args.api):
-        from ael.task_api import run_server
+        from ael_controlplane.task_api import run_server
 
         return run_server(
             host=str(args.api_host),

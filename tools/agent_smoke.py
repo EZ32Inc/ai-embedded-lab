@@ -122,7 +122,7 @@ def main() -> int:
         json.dumps(
             {
                 "commands": [
-                    "python3 -m py_compile ael/agent.py ael/queue.py ael/reporting.py",
+                    "python3 -m py_compile ael_controlplane/agent.py ael_controlplane/queue.py ael_controlplane/reporting.py",
                     "python3 tools/runner_smoke.py",
                     "python3 -m py_compile ael/runner.py",
                     "python3 -m py_compile tools/agent_smoke.py",
@@ -137,7 +137,7 @@ def main() -> int:
     cmd = [
         sys.executable,
         "-m",
-        "ael.agent",
+        "ael_controlplane.agent",
         "--once",
         "--branch-worker",
         "--no-push",

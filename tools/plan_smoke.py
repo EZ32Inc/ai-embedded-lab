@@ -22,8 +22,13 @@ def _pick_free_port() -> int:
         return int(s.getsockname()[1])
 
 
-def _http_json(method: str, url: str) -> tuple[int, dict]:
-    req = request.Request(url=url, method=method)
+def _http_json(method: str, url: str, payload: dict | None = None) -> tuple[int, dict]:
+    data = None
+    headers = {}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = request.Request(url=url, method=method, data=data, headers=headers)
     with request.urlopen(req, timeout=5) as resp:
         body = (resp.read() or b"{}").decode("utf-8")
         payload = json.loads(body) if body else {}
@@ -42,25 +47,33 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     queue_root = Path("/tmp/ael_plan_smoke_queue")
     report_root = Path("/tmp/ael_plan_smoke_reports")
-    up_log = Path("/tmp/ael_plan_smoke_up.log")
+    bridge_log = Path("/tmp/ael_plan_smoke_bridge.log")
+    agent_log = Path("/tmp/ael_plan_smoke_agent.log")
     port = _pick_free_port()
     api_base = f"http://127.0.0.1:{port}"
 
     for p in (queue_root, report_root):
         if p.exists():
             shutil.rmtree(p)
-    if up_log.exists():
-        up_log.unlink()
+    for p in (bridge_log, agent_log):
+        if p.exists():
+            p.unlink()
 
-    up_cmd = [
+    bridge_cmd = [
         sys.executable,
         "-m",
-        "ael",
-        "up",
+        "ael_controlplane.bridge_server",
         "--host",
         "127.0.0.1",
         "--port",
         str(port),
+        "--queue",
+        str(queue_root),
+    ]
+    agent_cmd = [
+        sys.executable,
+        "-m",
+        "ael_controlplane.agent",
         "--queue",
         str(queue_root),
         "--report-root",
@@ -68,8 +81,10 @@ def main() -> int:
         "--poll",
         "0.2",
     ]
-    with open(up_log, "w", encoding="utf-8") as lf:
-        up_proc = subprocess.Popen(up_cmd, cwd=str(repo_root), stdout=lf, stderr=subprocess.STDOUT)
+    with open(bridge_log, "w", encoding="utf-8") as blf:
+        bridge_proc = subprocess.Popen(bridge_cmd, cwd=str(repo_root), stdout=blf, stderr=subprocess.STDOUT)
+    with open(agent_log, "w", encoding="utf-8") as alf:
+        agent_proc = subprocess.Popen(agent_cmd, cwd=str(repo_root), stdout=alf, stderr=subprocess.STDOUT)
 
     try:
         healthy = False
@@ -85,17 +100,21 @@ def main() -> int:
         if not healthy:
             return _fail("bridge health check failed")
 
-        submit = subprocess.run(
-            [sys.executable, "-m", "ael", "submit", "develop gpio golden test for stm32f103", "--api", f"{api_base}/v1/tasks"],
-            cwd=str(repo_root),
-            capture_output=True,
-            text=True,
+        code, submit_payload = _http_json(
+            "POST",
+            f"{api_base}/v1/tasks",
+            {
+                "title": "plan smoke",
+                "kind": "plan",
+                "payload": {"prompt": "develop gpio golden test for stm32f103"},
+                "priority": 0,
+            },
         )
-        if int(submit.returncode) != 0:
-            return _fail(f"submit failed: {submit.stderr or submit.stdout}")
-        task_id = _extract_task_id(submit.stdout)
+        if code != 200 or not bool(submit_payload.get("ok", False)):
+            return _fail(f"submit failed: {submit_payload}")
+        task_id = str(submit_payload.get("task_id", "")).strip()
         if not task_id:
-            return _fail(f"task_id missing from submit output: {submit.stdout}")
+            return _fail(f"task_id missing from submit payload: {submit_payload}")
 
         state = ""
         status_payload = {}
@@ -131,12 +150,18 @@ def main() -> int:
         print("[PLAN_SMOKE] OK")
         return 0
     finally:
-        if up_proc.poll() is None:
-            up_proc.terminate()
+        if bridge_proc.poll() is None:
+            bridge_proc.terminate()
             try:
-                up_proc.wait(timeout=5)
+                bridge_proc.wait(timeout=5)
             except Exception:
-                up_proc.kill()
+                bridge_proc.kill()
+        if agent_proc.poll() is None:
+            agent_proc.terminate()
+            try:
+                agent_proc.wait(timeout=5)
+            except Exception:
+                agent_proc.kill()
 
 
 if __name__ == "__main__":

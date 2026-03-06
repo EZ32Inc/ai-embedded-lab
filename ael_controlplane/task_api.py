@@ -8,7 +8,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
-from ael.queue import ensure_queue_layout
+from ael_controlplane.queue import ensure_queue_layout
 
 
 def _now_iso() -> str:

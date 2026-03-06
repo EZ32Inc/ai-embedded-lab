@@ -8,6 +8,8 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from ael_controlplane.nightly import NightlyConfig, run_nightly
+
 
 def _fail(msg: str) -> int:
     print(f"[NIGHTLY_SMOKE] FAIL: {msg}")
@@ -43,25 +45,21 @@ def main() -> int:
     _run(["git", "checkout", "-B", smoke_branch], cwd=repo)
     base_branch = smoke_branch
 
-    dry = _run(
-        [
-            sys.executable,
-            "-m",
-            "ael",
-            "nightly",
-            "--queue",
-            str(queue_root),
-            "--report-root",
-            str(report_root),
-            "--allow-on-master",
-            "--dry-run",
-            "--max-plans",
-            "1",
-        ],
-        cwd=repo,
+    dry_summary = run_nightly(
+        NightlyConfig(
+            date_str=datetime.now().strftime("%Y-%m-%d"),
+            max_plans=1,
+            allow_on_master=True,
+            stash_dirty=False,
+            dry_run=True,
+            verbose=False,
+            queue_path=str(queue_root),
+            backlog_sources=[str(queue_root / "inbox")],
+            report_root=str(report_root),
+        )
     )
-    if dry.returncode != 0:
-        return _fail(f"dry-run failed: {dry.stderr or dry.stdout}")
+    if not bool(dry_summary.get("ok", False)):
+        return _fail(f"dry-run failed: {dry_summary}")
 
     day = datetime.now().strftime("%Y-%m-%d")
     report = report_root / f"nightly_{day}.md"
@@ -70,24 +68,21 @@ def main() -> int:
 
     (queue_root / "inbox").mkdir(parents=True, exist_ok=True)
     (queue_root / "inbox" / "nightly_smoke_plan_1.json").write_text(json.dumps(task, indent=2), encoding="utf-8")
-    real = _run(
-        [
-            sys.executable,
-            "-m",
-            "ael",
-            "nightly",
-            "--queue",
-            str(queue_root),
-            "--report-root",
-            str(report_root),
-            "--allow-on-master",
-            "--max-plans",
-            "1",
-        ],
-        cwd=repo,
+    real_summary = run_nightly(
+        NightlyConfig(
+            date_str=datetime.now().strftime("%Y-%m-%d"),
+            max_plans=1,
+            allow_on_master=True,
+            stash_dirty=False,
+            dry_run=False,
+            verbose=False,
+            queue_path=str(queue_root),
+            backlog_sources=[str(queue_root / "inbox")],
+            report_root=str(report_root),
+        )
     )
-    if real.returncode != 0:
-        return _fail(f"real run failed: {real.stderr or real.stdout}")
+    if not bool(real_summary.get("ok", False)):
+        return _fail(f"real run failed: {real_summary}")
     if not report.exists():
         return _fail("real-run report missing")
 

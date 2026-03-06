@@ -7,7 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List
 
-from ael.agent import execute_task_payload
+from ael_controlplane.agent import execute_task_payload
 from ael.git_ops import (
     checkout,
     commit_all,
@@ -19,8 +19,8 @@ from ael.git_ops import (
     restore_stash,
     safe_branch_name,
 )
-from ael.nightly_report import write_nightly_report
-from ael.review_pack import generate_review_pack
+from ael_controlplane.nightly_report import write_nightly_report
+from ael_controlplane.review_pack import generate_review_pack
 
 
 @dataclass

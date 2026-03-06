@@ -112,6 +112,17 @@ def load_rules(path: Path) -> dict:
             if not isinstance(item, str):
                 raise RuntimeError(f"Invalid entry in '{field}' at index {idx}")
 
+    optional_list_fields = ["core_forbidden_import_prefixes"]
+    for field in optional_list_fields:
+        if field not in data:
+            data[field] = []
+            continue
+        if not isinstance(data[field], list):
+            raise RuntimeError(f"Rules field '{field}' must be a list")
+        for idx, item in enumerate(data[field]):
+            if not isinstance(item, str):
+                raise RuntimeError(f"Invalid entry in '{field}' at index {idx}")
+
     return data
 
 
@@ -143,6 +154,31 @@ def check_core_contamination(core_files: List[str],
                 f"(matches /{pat}/) -> {line}"
             )
 
+    return errors
+
+
+def check_core_forbidden_imports(core_files: List[str], prefixes: List[str]) -> List[str]:
+    errors: List[str] = []
+    if not prefixes:
+        return errors
+
+    import_patterns: List[Tuple[str, str]] = []
+    for p in prefixes:
+        escaped = re.escape(p)
+        import_patterns.append((p, rf"^\s*from\s+{escaped}(?:\.|\s|$)"))
+        import_patterns.append((p, rf"^\s*import\s+{escaped}(?:\.|\s|$)"))
+
+    for rel in core_files:
+        path = REPO_ROOT / rel
+        if not path.exists():
+            continue
+        for line_no, line in enumerate(_read_text(path).splitlines(), start=1):
+            for prefix, pat in import_patterns:
+                if re.search(pat, line):
+                    errors.append(
+                        f"CORE dependency violation in {rel}:{line_no} "
+                        f"(forbidden import prefix '{prefix}') -> {line.strip()}"
+                    )
     return errors
 
 
@@ -243,6 +279,10 @@ def main() -> int:
     errors += check_core_contamination(
         core_files_to_scan,
         rules["core_forbidden_patterns"]
+    )
+    errors += check_core_forbidden_imports(
+        core_files_to_scan,
+        rules.get("core_forbidden_import_prefixes", []),
     )
 
     if staged_files is None:

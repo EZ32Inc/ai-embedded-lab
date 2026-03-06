@@ -61,7 +61,7 @@ JSON
 cat > "$GATES_JSON" <<JSON
 {
   "commands": [
-    "python3 -m py_compile ael/agent.py ael/queue.py ael/reporting.py",
+    "python3 -m py_compile ael_controlplane/agent.py ael_controlplane/queue.py ael_controlplane/reporting.py",
     "python3 tools/runner_smoke.py",
     "python3 -m py_compile ael/runner.py",
     "python3 -m py_compile tools/agent_smoke.py"
@@ -71,7 +71,7 @@ JSON
 
 (
   cd "$REPO_ROOT"
-  AEL_AGENT_ALLOW_DIRTY=1 python3 -m ael.agent --once --branch-worker --no-push --queue "$QUEUE_ROOT" --gates "$GATES_JSON" --report-root "$REPORT_ROOT"
+  AEL_AGENT_ALLOW_DIRTY=1 python3 -m ael_controlplane.agent --once --branch-worker --no-push --queue "$QUEUE_ROOT" --gates "$GATES_JSON" --report-root "$REPORT_ROOT"
 )
 
 DONE_TASK="${QUEUE_ROOT}/done/${TASK_NAME}"
