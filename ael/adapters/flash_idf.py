@@ -34,6 +34,37 @@ def _first_tty():
     return None
 
 
+def _available_ttys():
+    return sorted(glob.glob("/dev/ttyACM*") + glob.glob("/dev/ttyUSB*"))
+
+
+def _wait_for_serial_ready(port, serial=None, attempts=5, delay_s=2.0):
+    # Give USB CDC time to re-enumerate after reset/disconnect windows.
+    if delay_s > 0:
+        time.sleep(delay_s)
+    for attempt in range(1, int(attempts) + 1):
+        ttys = _available_ttys()
+        if port and os.path.exists(port):
+            print(f"Flash: serial ready {port} (check {attempt}/{attempts})")
+            return port
+        if serial:
+            by_serial = _find_tty_by_serial(serial)
+            if by_serial and os.path.exists(by_serial):
+                print(
+                    f"Flash: serial moved {port or 'unknown'} -> {by_serial} "
+                    f"(check {attempt}/{attempts})"
+                )
+                return by_serial
+        if ttys:
+            print(f"Flash: serial check {attempt}/{attempts} found: {', '.join(ttys)}")
+        else:
+            print(f"Flash: serial check {attempt}/{attempts} found no /dev/ttyACM* or /dev/ttyUSB*")
+        if attempt < attempts and delay_s > 0:
+            time.sleep(delay_s)
+    print("Flash: WARN serial port did not become ready after settle checks; continuing")
+    return port
+
+
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     flash_cfg = flash_cfg or {}
     project_dir = flash_cfg.get("project_dir")
@@ -63,6 +94,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         print("Flash: no serial port found")
         return False
 
+    port = _wait_for_serial_ready(port=port, serial=serial, attempts=5, delay_s=2.0)
     print(f"Flash: ESP-IDF via idf.py port={port} baud={baud}")
     try:
         cmd = ["idf.py", "-C", proj]
