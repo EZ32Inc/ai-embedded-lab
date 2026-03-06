@@ -65,6 +65,23 @@ See `docs/AI_USAGE_RULES.md` for CLI design rules and deterministic execution gu
 
 ---
 
+## Latest Runs Helper
+
+Use the helper script below to quickly view the newest run folders and key logs:
+
+```bash
+tools/show_latest_runs.sh
+tools/show_latest_runs.sh 3
+```
+
+It prints:
+
+- latest run directories
+- run status (`ok` / `fail`)
+- key log paths (`preflight.log`, `build.log`, `flash.log`, `verify.log`)
+
+---
+
 ## Supported Targets (v0.1)
 
 - RP2040  
