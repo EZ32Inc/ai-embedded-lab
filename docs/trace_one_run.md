@@ -7,7 +7,7 @@
   - `tests/plans/gpio_signature.json`
   - `configs/boards/rp2040_pico.yaml`
   - `configs/esp32jtag.yaml`
-- Run instance traced: `runs/2026-03-05_10-47-29_rp2040_pico_gpio_signature` (successful, `ok: true`)
+- Run instance traced: `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature` (successful, `ok: true`)
 - Why chosen:
   - Has complete artifacts (`run_plan.json`, runner result, logs, meta, final result).
   - Uses the standard hardware flow (preflight -> build -> flash -> signal verify).
@@ -33,7 +33,7 @@ python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
 1. Entry point invoked: `ael/__main__.py:main`
    - Parses `run` args; resolves probe path; calls `ael.pipeline.run_cli`.
 2. Runtime pipeline started: `ael/pipeline.py:run_pipeline`
-   - Loads/merges probe+board+test config; creates run directory and initial artifact files.
+   - Loads/merges probe+board+test config; creates run directory and initial artifact files via `ael/run_manager.py:create_run`.
 3. Run plan assembled: `ael/pipeline.py:run_pipeline`
    - Constructs plan steps: `preflight.probe`, `build.cmake`, `load.gdbmi`, `check.signal_verify`.
 4. Plan execution invoked: `ael/runner.py:run_plan`
@@ -57,7 +57,7 @@ python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
 
 ## 4) Artifacts produced during the run
 
-From `runs/2026-03-05_10-47-29_rp2040_pico_gpio_signature/`:
+From `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature/`:
 
 - Core status:
   - `result.json`
@@ -78,6 +78,7 @@ From `runs/2026-03-05_10-47-29_rp2040_pico_gpio_signature/`:
 - Runner artifacts:
   - `artifacts/run_plan.json`
   - `artifacts/result.json`
+  - `artifacts/runtime_state.json`
 - Copied firmware artifacts:
   - `artifacts/pico_blink.elf`
   - `artifacts/pico_blink.uf2`
@@ -100,10 +101,12 @@ From `runs/2026-03-05_10-47-29_rp2040_pico_gpio_signature/`:
   - `ael/pipeline.py:_code_from_failed_step` maps failed step prefix to process exit code.
 - Final report composition:
   - `ael/pipeline.py:run_pipeline` writes aggregated `result.json` and `meta.json`.
+- Runs root selection:
+  - `ael/paths.py:runs_root` keeps default runs under repo-local `runs/` unless `AEL_RUNS_ROOT` overrides.
 
 ## 6) Gaps / unclear areas
 
-- Exact user CLI command for this historical run is inferred (not directly logged as a single command line).
+- Exact user CLI command for this run is inferred (not directly logged as a single command line).
 - `recovery_policy.retries` exists in plan JSON, but effective retry counts are enforced by runner step-type defaults; coupling is implicit.
 - Retry budget precedence is now explicit in runner: `step.retry_budget` > `recovery_policy.retries` > built-in defaults.
 - `verify.log` is always part of result metadata even when signal verification primarily uses observe + measure files.

@@ -3,116 +3,85 @@
 ## 1) Entry points
 
 - `ael/__main__.py:main`
-  - Main CLI entry (`python3 -m ael`), dispatches core commands `run`, `pack`, `doctor`, `verify-default`, `instruments`, `dut`.
+  - Main CLI entry (`python3 -m ael`) with core commands:
+    - `run`, `pack`, `doctor`, `verify-default`, `instruments`, `dut`
 - `ael/pipeline.py:main`
-  - Runtime pipeline CLI (`run`) and home of `run_pipeline` execution path.
-- `ael_controlplane/agent.py:main`
-  - Queue worker entry; processes tasks from `queue/inbox` to `queue/done|failed` via `run_sweep`.
-- `ael_controlplane/task_api.py:main`
-  - HTTP task ingest API (`/v1/tasks`) writing tasks into queue inbox.
-- `ael_controlplane/bridge_server.py:main`
-  - Bridge API server for task submit/status/result/artifact/stream endpoints.
-- `ael_controlplane/submit.py:submit_to_bridge`
-  - Natural-language/JSON submit helper to bridge API.
+  - Secondary CLI entry for direct pipeline run (`python3 -m ael.pipeline run ...`).
+- `ael/default_verification.py:run_default_setting`
+  - Called by `ael verify-default run`; supports `none`, `preflight_only`, `single_run`, `sequence`.
+- `ael_controlplane/*` (optional package, not part of default `ael` CLI)
+  - `agent.py`, `task_api.py`, `bridge_server.py`, `submit.py`
+- `ael/cli.py:main`
+  - Standalone submit helper (`python3 -m ael.cli submit ...`) for control-plane API.
 
 ## 2) One run lifecycle (hardware run path)
 
-Path traced from `ael run`:
+Path traced from `python3 -m ael run ...`:
 
-- Receive task/input:
-  - `ael/__main__.py:main` (`run` subcommand)
-- Prepare context/spec:
-  - `ael/config_resolver.py:resolve_probe_config`
+- Parse and resolve CLI input:
+  - `ael/__main__.py:main`
+  - board/probe resolution via `ael/config_resolver.py`
+- Start pipeline:
   - `ael/pipeline.py:run_cli` -> `run_pipeline`
-  - merges probe + board + test into effective config and creates run paths.
-- Generate code or plan:
-  - For hardware `ael run`, a runtime plan is assembled in `ael/pipeline.py:run_pipeline` (`plan` dict, not LLM codegen).
-  - Agent/bridge codegen/planning appears in `ael/agent.py` + `ael/planner.py` + `ael/codex_driver.py`.
-- Build:
-  - `ael/runner.py:run_plan` executes `build.*` step through `ael/adapter_registry.py:_BuildAdapter`
-  - adapter implementations in `ael/adapters/build_cmake.py`, `build_idf.py`, `build_stm32.py`.
-- Flash:
-  - `load.*` step via `_LoadAdapter` in `ael/adapter_registry.py`
-  - implementations in `ael/adapters/flash_bmda_gdbmi.py` or `flash_idf.py`.
-- Verify:
-  - `check.signal_verify` via `_SignalVerifyAdapter` (`observe_gpio_pin.run` + `ael/verification/la_verify.py`)
-  - or `check.instrument_signature` / `check.instrument_selftest` for instrument-based flows.
-- Retry if needed:
-  - Step retries handled in `ael/runner.py` (`_retry_budget`, per-step retry loop).
-  - Recovery action hook handled in `ael/runner.py:_run_recovery` (currently `reset.serial` maps to noop recovery adapter).
-- Report result:
-  - Runner writes `artifacts/run_plan.json` and `artifacts/result.json`.
-  - Pipeline layer writes top-level `result.json`, `meta.json`, and log/json pointers.
+  - run directory created by `ael/run_manager.py:create_run`
+- Build runtime plan:
+  - `run_pipeline` creates a `plan` dict and `steps` (`preflight`, `build`, `load`, `check_*`).
+- Execute plan:
+  - `ael/runner.py:run_plan` with retries/recovery hooks.
+  - adapter dispatch via `ael/adapter_registry.py`.
+- Build/flash/check:
+  - build adapters in `ael/adapters/build_*`
+  - flash adapters in `ael/adapters/flash_*`
+  - verify/observe adapters in `ael/adapters/*` + `ael/verification/la_verify.py`
+- Persist outputs:
+  - runner artifacts: `artifacts/run_plan.json`, `artifacts/result.json`, `artifacts/runtime_state.json`
+  - run-level outputs: `result.json`, `meta.json`, logs/json pointers, copied firmware artifacts.
 
 ## 3) Main components
 
-- Orchestration CLI:
-- `ael/__main__.py`, `ael/pipeline.py`
-- Generic plan runner:
-  - `ael/runner.py` (step execution, retry/recovery loop)
-- Adapter registry + dispatch:
+- Core CLI/orchestration:
+  - `ael/__main__.py`, `ael/pipeline.py`, `ael/default_verification.py`
+- Plan runner:
+  - `ael/runner.py`
+- Adapter registry/boundary:
   - `ael/adapter_registry.py`
-- Build/flash/observe adapters:
+- Build/flash/observe implementations:
   - `ael/adapters/*`
-- Agent/queue runner:
-  - `ael_controlplane/agent.py`, `ael_controlplane/queue.py`
-- Bridge/API ingest and task control plane:
-  - `ael_controlplane/bridge_server.py`, `ael_controlplane/task_api.py`, `ael_controlplane/bridge_task.py`, `ael_controlplane/submit.py`
-- Planning/Codex integration:
-  - `ael_controlplane/planner.py`, `ael_controlplane/codex_driver.py`
-- Reporting/artifacts:
-  - `ael/run_manager.py`, `ael/reporting.py`
-- Config/policy resolution:
-  - `ael/config_resolver.py`, `configs/boards/*.yaml`, `configs/*.yaml`, `tests/plans/*.json`
+- Verification helpers:
+  - `ael/verification/la_verify.py`
+- Run/log path management:
+  - `ael/run_manager.py`, `ael/paths.py`
+- Config and asset resolution:
+  - `ael/config_resolver.py`, `ael/assets.py`, `configs/*.yaml`, `tests/plans/*.json`
+- Optional control-plane package:
+  - `ael_controlplane/*`
 
-## 4) Communication/call relationships
+## 4) Communication and boundaries
 
-- Direct Python calls:
-  - CLI -> pipeline -> runner -> adapter registry -> adapter modules.
-- Subprocess calls:
-  - Build/flash invoke `cmake`, `idf.py`, `gdb` via adapters.
-- HTTP calls:
-  - `task_api` and `bridge_server` expose HTTP endpoints.
-  - LA/instrument adapters call HTTP device APIs.
-- Filesystem JSON/log artifacts:
-  - Queue states in `queue/inbox|running|done|failed`.
-  - Run artifacts in `runs/<run_id>/...` (`*.log`, `*.json`, `artifacts/*`).
-- Device/probe interfaces:
-  - SWD/GDB, serial UART, logic analyzer web API, instrument TCP/HTTP adapters.
+- Direct Python call chain:
+  - `ael` CLI -> pipeline -> runner -> adapter registry -> adapter
+- External tool subprocesses:
+  - `cmake`, `idf.py`, `arm-none-eabi-gdb`, and related toolchain commands
+- Device/API calls:
+  - probe/instrument TCP and HTTP(S) endpoints (preflight, LA capture, instrument ops)
+- Filesystem outputs:
+  - runs under `runs/<run_id>/...` (deterministic default from `ael/paths.py:runs_root`)
+  - queue/reports paths under repo root (`ael/paths.py`)
 
-## 5) Core vs adapter split
+## 5) Core vs optional control-plane split
 
-**Core orchestration**
+Core AEL package (`ael/`):
 
-- `ael/__main__.py`
-- `ael/pipeline.py`
-- `ael/runner.py`
-- `ael_controlplane/agent.py`
-- `ael_controlplane/queue.py`
-- `ael_controlplane/bridge_server.py`
-- `ael_controlplane/task_api.py`
-- `ael/config_resolver.py`
-- `ael/reporting.py`
-- `ael/run_manager.py`
+- Contains all functionality required by default CLI (`run`, `pack`, `doctor`, `verify-default`, `instruments`, `dut`).
+- Does not depend on `ael_controlplane/` for these commands.
 
-**Adapters / board-specific / tool-specific layers**
+Optional control-plane package (`ael_controlplane/`):
 
-- `ael/adapter_registry.py` (dispatch + adapter wiring; sits at boundary)
-- `ael/adapters/*` (build/flash/observe/instrument implementations)
-- `ael/verification/la_verify.py` (signal metrics helper)
-- `configs/boards/*.yaml` + test specs under `tests/plans/*.json` (hardware-specific behavior selection)
+- Depends on core AEL runtime as needed.
+- Provides task/queue/API/bridge workflows outside the default core CLI path.
 
-## Immediate pain points noticed
+## 6) Notes
 
-- Orchestration boundaries are mixed: `ael/pipeline.py` both composes plan and writes final reports.
-- Retry policy handling was unified in runner (`step.retry_budget` > `recovery_policy.retries` > defaults), but docs and examples need to stay aligned as scopes evolve.
-- Recovery framework exists but default recovery is mostly noop (`reset.serial`).
-- Bridge/task-agent flow and direct `ael run` flow both execute plans but through different pre-processing paths.
-
----
-
-## Non-goals
-
-- No architecture redesign.
-- No file/module renaming.
-- No behavior changes; this is a map of current implementation.
+- Retry budget precedence is in runner:
+  - `step.retry_budget` > `plan.recovery_policy.retries` > built-in defaults.
+- Recovery hook exists, but practical recovery actions are still limited.
