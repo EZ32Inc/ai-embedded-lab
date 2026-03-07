@@ -217,6 +217,8 @@ After the first end-to-end pass, AEL should emit a concise validation summary in
 - pass or fail
 - executed stages
 - key passed checks
+- serial or flash port, if known
+- instrument profile, selected AP/SSID, and endpoint, when available
 - evidence files
 - artifact paths
 - known cleanup items or caveats
@@ -234,9 +236,12 @@ This should include:
 - serial or flash port
 - instrument profile
 - endpoint
+- selected AP/SSID, when available
 - relevant wiring assumptions
 - evidence or artifact location
 - run id
+
+The user-facing validation output should stay concise and reuse existing run artifacts instead of dumping raw logs.
 
 This allows future work to start from a known-good bench state instead of reconstructing it from history.
 

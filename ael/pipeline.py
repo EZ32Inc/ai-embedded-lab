@@ -113,6 +113,13 @@ def _write_json(path, data):
         pass
 
 
+def _read_json(path):
+    try:
+        return json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
 def _copy_artifacts(firmware_path, artifacts_dir):
     if not firmware_path:
         return []
@@ -246,20 +253,188 @@ def _filter_plan_steps_by_stage(plan_steps, until_stage):
     return list(plan_steps)
 
 
-def _stage_execution_summary(until_stage):
+def _stage_execution_summary(until_stage, *, preflight_enabled=True):
     stages = ["plan", "pre-flight", "run", "check", "report"]
     stage = _normalize_until_stage(until_stage)
+    executed = ["plan"]
+    skipped = []
     if stage == "plan":
-        executed = ["plan", "report"]
+        if not preflight_enabled:
+            skipped.append("pre-flight")
     elif stage == "pre-flight":
-        executed = ["plan", "pre-flight", "report"]
+        if preflight_enabled:
+            executed.append("pre-flight")
+        else:
+            skipped.append("pre-flight")
     else:
-        executed = list(stages)
+        if preflight_enabled:
+            executed.append("pre-flight")
+        else:
+            skipped.append("pre-flight")
+        executed.extend(["run", "check"])
+    executed.append("report")
     return {
         "requested_until": stage,
         "executed": executed,
-        "deferred": [s for s in stages if s not in executed],
+        "skipped": skipped,
+        "deferred": [s for s in stages if s not in executed and s not in skipped],
     }
+
+
+def _key_passed_checks(evidence_payload):
+    checks = []
+    items = evidence_payload.get("items", []) if isinstance(evidence_payload, dict) else []
+    for item in items if isinstance(items, list) else []:
+        if not isinstance(item, dict) or str(item.get("status") or "").lower() != "pass":
+            continue
+        checks.append(str(item.get("kind") or item.get("summary") or item.get("source") or "pass"))
+    return checks
+
+
+def _wiring_assumption_lines(test_raw):
+    if not isinstance(test_raw, dict):
+        return []
+    out = []
+    connections = test_raw.get("connections", {}) if isinstance(test_raw.get("connections"), dict) else {}
+    for item in connections.get("dut_to_instrument", []) if isinstance(connections.get("dut_to_instrument"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        line = f"{item.get('dut_gpio')} -> GPIO{item.get('inst_gpio')} {item.get('expect')}"
+        freq_hz = item.get("freq_hz")
+        if freq_hz:
+            line += f" @{freq_hz}Hz"
+        out.append(line)
+    for item in connections.get("dut_to_instrument_analog", []) if isinstance(connections.get("dut_to_instrument_analog"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        out.append(
+            f"{item.get('dut_signal')} -> ADC GPIO{item.get('inst_adc_gpio')} "
+            f"{item.get('expect_v_min')}V..{item.get('expect_v_max')}V"
+        )
+    if connections.get("ground_required"):
+        out.append("GND -> GND")
+    return out
+
+
+def _build_validation_summary(
+    *,
+    run_id,
+    board_cfg,
+    test_path,
+    run_result_path,
+    result,
+    flash_info,
+    evidence_payload,
+    instrument_id,
+    instrument_host,
+    instrument_port,
+    selected_ssid,
+):
+    summary = {
+        "board": board_cfg.get("name"),
+        "test": Path(test_path).stem,
+        "run_id": run_id,
+        "overall_result": "pass" if result.get("ok") else "fail",
+        "executed_stages": list((result.get("stage_execution") or {}).get("executed", [])),
+        "key_checks_passed": _key_passed_checks(evidence_payload),
+        "serial_or_flash_port": flash_info.get("port") or None,
+        "instrument_profile": instrument_id or None,
+        "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
+        "key_artifact_paths": {
+            "run_plan": (result.get("json") or {}).get("run_plan"),
+            "runner_result": (result.get("json") or {}).get("runner_result"),
+            "result": run_result_path,
+        },
+        "key_evidence_paths": {
+            "evidence": (result.get("json") or {}).get("evidence"),
+            "verify_result": (result.get("json") or {}).get("verify_result"),
+            "uart_observe": (result.get("json") or {}).get("uart_observe"),
+        },
+        "cleanup_items": [],
+    }
+    if selected_ssid:
+        summary["selected_ap_ssid"] = selected_ssid
+    skipped = list((result.get("stage_execution") or {}).get("skipped", []))
+    if "pre-flight" in skipped:
+        summary["cleanup_items"].append("pre-flight skipped by configuration")
+    return summary
+
+
+def _build_last_known_good_setup(
+    *,
+    run_id,
+    board_cfg,
+    test_path,
+    flash_info,
+    instrument_id,
+    instrument_host,
+    instrument_port,
+    selected_ssid,
+    test_raw,
+    result,
+):
+    setup = {
+        "board": board_cfg.get("name"),
+        "test": Path(test_path).stem,
+        "port": flash_info.get("port") or None,
+        "instrument_profile": instrument_id or None,
+        "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
+        "run_id": run_id,
+        "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
+    }
+    wiring = _wiring_assumption_lines(test_raw)
+    if wiring:
+        setup["wiring_assumptions"] = wiring
+    if selected_ssid:
+        setup["selected_ap_ssid"] = selected_ssid
+    return setup
+
+
+def _print_success_summary(summary, last_known_good):
+    print(
+        "Summary: validation "
+        f"board={summary.get('board')} test={summary.get('test')} run_id={summary.get('run_id')} "
+        f"result={summary.get('overall_result')}"
+    )
+    print(f"Summary: executed_stages={','.join(summary.get('executed_stages', []))}")
+    if summary.get("key_checks_passed"):
+        print(f"Summary: key_checks_passed={', '.join(summary.get('key_checks_passed', []))}")
+    if summary.get("serial_or_flash_port"):
+        print(f"Summary: port={summary.get('serial_or_flash_port')}")
+    if summary.get("instrument_profile"):
+        line = f"Summary: instrument={summary.get('instrument_profile')}"
+        if summary.get("selected_ap_ssid"):
+            line += f" ssid={summary.get('selected_ap_ssid')}"
+        if summary.get("endpoint"):
+            line += f" endpoint={summary.get('endpoint')}"
+        print(line)
+    print(
+        "Summary: artifacts "
+        f"result={summary.get('key_artifact_paths', {}).get('result')} "
+        f"run_plan={summary.get('key_artifact_paths', {}).get('run_plan')}"
+    )
+    print(
+        "Summary: evidence "
+        f"evidence={summary.get('key_evidence_paths', {}).get('evidence')} "
+        f"verify={summary.get('key_evidence_paths', {}).get('verify_result')}"
+    )
+    if summary.get("cleanup_items"):
+        print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
+    print(
+        "LKG: "
+        f"board={last_known_good.get('board')} test={last_known_good.get('test')} "
+        f"port={last_known_good.get('port')} run_id={last_known_good.get('run_id')}"
+    )
+    if last_known_good.get("instrument_profile"):
+        line = f"LKG: instrument={last_known_good.get('instrument_profile')}"
+        if last_known_good.get("selected_ap_ssid"):
+            line += f" ssid={last_known_good.get('selected_ap_ssid')}"
+        if last_known_good.get("endpoint"):
+            line += f" endpoint={last_known_good.get('endpoint')}"
+        print(line)
+    if last_known_good.get("wiring_assumptions"):
+        print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
+    print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")
 
 
 def run_pipeline(
@@ -576,6 +751,7 @@ def run_pipeline(
         output_mode=output_mode,
         log_path=str(run_paths.preflight_log),
     )
+    preflight_enabled = preflight_step is not None
     if preflight_step is not None:
         plan_steps.append(preflight_step)
     else:
@@ -650,7 +826,7 @@ def run_pipeline(
                         status="failed",
                         stage=until_stage,
                         extra={
-                            "stage_execution": _stage_execution_summary(until_stage),
+                            "stage_execution": _stage_execution_summary(until_stage, preflight_enabled=preflight_enabled),
                             "result": {
                                 "ok": False,
                                 "termination": RunTermination.FAIL,
@@ -744,7 +920,7 @@ def run_pipeline(
     }
     if timeout_s is not None:
         plan["timeout_s"] = timeout_s
-    plan["stage_execution"] = _stage_execution_summary(until_stage)
+    plan["stage_execution"] = _stage_execution_summary(until_stage, preflight_enabled=preflight_enabled)
     plan["stages"] = ["plan", "pre-flight", "run", "check", "report"]
 
     registry = AdapterRegistry()
@@ -821,8 +997,41 @@ def run_pipeline(
             "count": len(evidence_items) if isinstance(evidence_items, list) else 0,
             "status_counts": evidence_counts,
         },
-        "stage_execution": _stage_execution_summary(until_stage),
+        "stage_execution": _stage_execution_summary(until_stage, preflight_enabled=preflight_enabled),
     }
+    if result["ok"]:
+        flash_info = _read_json(run_paths.flash_json)
+        verify_result = _read_json((result.get("json") or {}).get("verify_result"))
+        selected_ssid = None
+        if isinstance(verify_result, dict):
+            selected_ssid = verify_result.get("ssid") or verify_result.get("ap_ssid")
+        validation_summary = _build_validation_summary(
+            run_id=run_paths.run_id,
+            board_cfg=board_cfg,
+            test_path=test_path,
+            run_result_path=str(run_paths.result),
+            result=result,
+            flash_info=flash_info,
+            evidence_payload=evidence_payload,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            selected_ssid=selected_ssid,
+        )
+        last_known_good_setup = _build_last_known_good_setup(
+            run_id=run_paths.run_id,
+            board_cfg=board_cfg,
+            test_path=test_path,
+            flash_info=flash_info,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            selected_ssid=selected_ssid,
+            test_raw=test_raw,
+            result=result,
+        )
+        result["validation_summary"] = validation_summary
+        result["last_known_good_setup"] = last_known_good_setup
     _write_json(run_paths.result, result)
 
     timings = {"total_s": round(time.monotonic() - run_started_mono, 3)}
@@ -874,6 +1083,7 @@ def run_pipeline(
 
     if result["ok"]:
         print("PASS: Run verified")
+        _print_success_summary(result.get("validation_summary", {}), result.get("last_known_good_setup", {}))
         _emit_event(
             {
                 "type": "run_succeeded",

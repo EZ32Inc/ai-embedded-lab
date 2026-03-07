@@ -73,6 +73,7 @@ class Tee:
                 "PASS:",
                 "FAIL:",
                 "Summary:",
+                "LKG:",
                 "Run metadata saved:",
                 "Run log saved:",
                 "Hint:",
