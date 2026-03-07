@@ -2,10 +2,10 @@
   "mode": "sequence",
   "steps": [
     {
-      "board": "esp32s3_devkit",
-      "name": "esp32s3_golden_gpio",
+      "board": "esp32c3_devkit",
+      "name": "esp32c3_golden_gpio",
       "probe": "configs/esp32jtag.yaml",
-      "test": "tests/plans/esp32s3_gpio_signature_with_meter.json"
+      "test": "tests/plans/esp32c3_gpio_signature_with_meter.json"
     },
     {
       "board": "rp2040_pico",
