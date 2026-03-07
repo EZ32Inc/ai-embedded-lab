@@ -1,0 +1,35 @@
+board:
+  name: ESP32-C6 DevKit
+  target: esp32c6
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32c6
+  flash:
+    method: idf_esptool
+    target: esp32c6
+    port: null
+    baud: 460800
+    serial: null
+  observe_map:
+    sig: P0.0
+    gpio4: P0.0
+    gpio5: P0.1
+    gpio6: P0.2
+    gpio7: P0.3
+  observe:
+    la:
+      threshold_v: 1.6
+      default_sample_rate_hz: 260000
+  pins:
+    safe_output:
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+    strap_or_reserved:
+      - GPIO8
+      - GPIO9
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "P0.0"

@@ -221,15 +221,56 @@ def _resolve_board_path(repo_root, board_arg):
     return str(board_path), board_id
 
 
+def _normalize_until_stage(value):
+    raw = str(value or "report").strip().lower()
+    if raw in ("preflight", "pre-flight"):
+        return "pre-flight"
+    if raw in ("plan", "report"):
+        return raw
+    return "report"
+
+
+def _filter_plan_steps_by_stage(plan_steps, until_stage):
+    stage = _normalize_until_stage(until_stage)
+    if stage == "plan":
+        return []
+    if stage == "pre-flight":
+        out = []
+        for step in plan_steps:
+            if not isinstance(step, dict):
+                continue
+            if str(step.get("type", "")).startswith("preflight."):
+                out.append(step)
+        return out
+    return list(plan_steps)
+
+
+def _stage_execution_summary(until_stage):
+    stages = ["plan", "pre-flight", "run", "check", "report"]
+    stage = _normalize_until_stage(until_stage)
+    if stage == "plan":
+        executed = ["plan", "report"]
+    elif stage == "pre-flight":
+        executed = ["plan", "pre-flight", "report"]
+    else:
+        executed = list(stages)
+    return {
+        "requested_until": stage,
+        "executed": executed,
+        "deferred": [s for s in stages if s not in executed],
+    }
+
+
 def run_pipeline(
     probe_path,
     board_arg,
     test_path,
-    wiring,
+    wiring=None,
     output_mode="normal",
     skip_flash=False,
     no_build=False,
     verify_only=False,
+    until_stage="report",
     return_paths=False,
     run_request=None,
 ):
@@ -247,6 +288,7 @@ def run_pipeline(
                 no_build=bool(getattr(run_request, "no_build", no_build)),
                 verify_only=bool(getattr(run_request, "verify_only", verify_only)),
                 timeout_s=getattr(run_request, "timeout_s", None),
+                until_stage=getattr(run_request, "until_stage", until_stage),
             )
         probe_path = req.probe_path
         board_arg = req.board_id
@@ -256,10 +298,12 @@ def run_pipeline(
         skip_flash = bool(req.skip_flash)
         no_build = bool(req.no_build)
         verify_only = bool(req.verify_only)
+        until_stage = getattr(req, "until_stage", until_stage)
 
     repo_root = str(_REPO_ROOT)
     if not test_path:
         test_path = os.path.join(repo_root, "tests", "blink_gpio.json")
+    until_stage = _normalize_until_stage(until_stage)
 
     try:
         with open(test_path, "r", encoding="utf-8") as f:
@@ -553,9 +597,13 @@ def run_pipeline(
     }
     if timeout_s is not None:
         plan["timeout_s"] = timeout_s
+    plan["stage_execution"] = _stage_execution_summary(until_stage)
+    plan["stages"] = ["plan", "pre-flight", "run", "check", "report"]
 
     registry = AdapterRegistry()
-    runner_result = run_plan(plan, Path(run_paths.root), registry)
+    runner_plan = dict(plan)
+    runner_plan["steps"] = _filter_plan_steps_by_stage(plan_steps, until_stage)
+    runner_result = run_plan(runner_plan, Path(run_paths.root), registry)
     evidence_path = ael_evidence.write_runner_evidence(Path(run_paths.root), runner_result)
     evidence_payload = {}
     try:
@@ -626,6 +674,7 @@ def run_pipeline(
             "count": len(evidence_items) if isinstance(evidence_items, list) else 0,
             "status_counts": evidence_counts,
         },
+        "stage_execution": _stage_execution_summary(until_stage),
     }
     _write_json(run_paths.result, result)
 
@@ -751,11 +800,12 @@ def run(args):
             wiring=args.wiring,
             output_mode=args.output_mode,
             skip_flash=bool(args.skip_flash),
+            until_stage=getattr(args, "until_stage", "report"),
         ),
     )
 
 
-def run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal"):
+def run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal", until_stage="report"):
     return run_pipeline(
         probe_path=None,
         board_arg=None,
@@ -766,6 +816,7 @@ def run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal"):
             test_path=test_path,
             wiring=wiring,
             output_mode=output_mode,
+            until_stage=until_stage,
         ),
     )
 
@@ -779,6 +830,12 @@ def main():
     run_p.add_argument("--test", required=False, default=os.path.join("tests", "blink_gpio.json"))
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--skip-flash", action="store_true")
+    run_p.add_argument(
+        "--until-stage",
+        required=False,
+        default="report",
+        help="Stop after stage: plan, pre-flight, or report (default full flow).",
+    )
     out_group = run_p.add_mutually_exclusive_group()
     out_group.add_argument("--quiet", action="store_true", help="Concise console output")
     out_group.add_argument("--verbose", action="store_true", help="Verbose console output")

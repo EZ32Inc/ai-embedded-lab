@@ -1,0 +1,20 @@
+id: esp32c6_devkit
+mcu: esp32c6
+family: esp32
+description: ESP32-C6 DevKit GPIO waveform + UART banner (minimal phase-1 path)
+build:
+  type: idf
+  project_dir: firmware
+flash:
+  method: idf_esptool
+default_packs:
+  - packs/ezlink_dev.json
+tags:
+  - esp32
+  - esp32c6
+  - devkit
+verified:
+  status: false
+  verified_on:
+    bench_id: pending_hw
+  date: 2026-03-07

@@ -10,5 +10,5 @@ def default_firmware_path(repo_root: Path, board_cfg: Dict[str, Any], build_kind
         return str(repo_root / "artifacts" / "build_stm32" / "stm32f103_app.elf")
     if build_kind == "idf":
         target = str(board_cfg.get("target") or "esp32s3").strip()
-        return str(repo_root / "artifacts" / f"build_{target}" / "ael_esp32s3.elf")
+        return str(repo_root / "artifacts" / f"build_{target}" / f"ael_{target}.elf")
     return str(repo_root / "artifacts" / "build" / "pico_blink.elf")

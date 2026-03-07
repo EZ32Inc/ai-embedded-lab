@@ -24,7 +24,8 @@ def run(board_cfg):
 
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     proj = os.path.join(root, project_dir)
-    build_dir = os.path.join(root, "artifacts", "build_esp32s3")
+    target_name = str(target or "esp32s3").strip()
+    build_dir = os.path.join(root, "artifacts", f"build_{target_name}")
     os.makedirs(build_dir, exist_ok=True)
 
     try:
@@ -61,7 +62,7 @@ def run(board_cfg):
             print(exc.stderr.strip())
         return None
 
-    elf = os.path.join(build_dir, "ael_esp32s3.elf")
+    elf = os.path.join(build_dir, f"ael_{target_name}.elf")
     if not os.path.exists(elf):
         # fallback to any .elf under build dir
         for f in os.listdir(build_dir):

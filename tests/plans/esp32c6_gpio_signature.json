@@ -1,0 +1,23 @@
+{
+  "name": "esp32c6_gpio_signature",
+  "board": "esp32c6_devkit",
+  "pin": "sig",
+  "sample_rate_hz": 260000,
+  "duration_ms": 1000,
+  "min_freq_hz": 200.0,
+  "max_freq_hz": 200000.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "observe_uart": {
+    "enabled": true,
+    "port": null,
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 6,
+    "expect_patterns": [
+      "AEL_READY ESP32C6"
+    ]
+  }
+}

@@ -37,6 +37,12 @@ def main():
     run_p.add_argument("--probe", required=False, default=None)
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
+    run_p.add_argument(
+        "--until-stage",
+        required=False,
+        default="report",
+        help="Stop after stage: plan, pre-flight, or report (default full flow).",
+    )
     out_group = run_p.add_mutually_exclusive_group()
     out_group.add_argument("--quiet", action="store_true", help="Concise console output")
     out_group.add_argument("--verbose", action="store_true", help="Verbose console output")
@@ -165,6 +171,7 @@ def main():
             test_path=test_path,
             wiring=args.wiring,
             output_mode=output_mode,
+            until_stage=args.until_stage,
         )
         sys.exit(code)
     if args.cmd == "doctor":

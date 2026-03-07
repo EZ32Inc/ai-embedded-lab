@@ -24,4 +24,4 @@ class RunRequest:
     no_build: bool = False
     verify_only: bool = False
     timeout_s: Optional[float] = None
-
+    until_stage: Optional[str] = None
