@@ -2,6 +2,8 @@ import os
 import re
 import time
 
+from ael.adapters import control_download_mode_serial
+
 
 def _compile(patterns):
     return [re.compile(p, re.IGNORECASE) for p in patterns]
@@ -129,26 +131,17 @@ def _capture_bytes(serial_mod, port, baud, duration_s, startup_wait_s, start_del
 
 
 def _try_esp32_rts_reset(serial_mod, port):
-    # ESP32 USB CDC boards often expose EN reset via RTS. Pulse RTS then release.
-    ser = _open_capture_serial(serial_mod, port, 115200)
-    try:
-        try:
-            ser.dtr = False
-        except Exception:
-            pass
-        try:
-            ser.rts = True
-            time.sleep(0.12)
-            ser.rts = False
-            time.sleep(0.35)
-        except Exception:
-            return False, "failed to toggle RTS"
-    finally:
-        try:
-            ser.close()
-        except Exception:
-            pass
-    return True, "RTS reset pulse sent"
+    # Compatibility wrapper for legacy local helper shape.
+    out = control_download_mode_serial.assist_exit_download_mode(
+        {
+            "port": port,
+            "baud": 115200,
+            "pulse_ms": 120,
+            "settle_ms": 350,
+        },
+        serial_mod=serial_mod,
+    )
+    return bool(out.get("ok", False)), str(out.get("message") or "")
 
 
 def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patterns, forbid_patterns, boot_signatures):

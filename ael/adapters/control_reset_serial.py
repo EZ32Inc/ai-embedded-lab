@@ -4,7 +4,7 @@ import time
 from typing import Any, Dict
 
 
-def run(params: Dict[str, Any], *, action_type: str = "control.reset.serial") -> Dict[str, Any]:
+def run(params: Dict[str, Any], *, action_type: str = "control.reset.serial", serial_mod: Any = None) -> Dict[str, Any]:
     cfg = dict(params or {}) if isinstance(params, dict) else {}
     port = str(cfg.get("port") or "").strip()
     if not port:
@@ -13,13 +13,16 @@ def run(params: Dict[str, Any], *, action_type: str = "control.reset.serial") ->
     pulse_ms = max(20, int(cfg.get("pulse_ms", 120)))
     settle_ms = max(50, int(cfg.get("settle_ms", 350)))
 
-    try:
-        import serial  # type: ignore
-    except Exception as exc:
-        return {"ok": False, "error_summary": f"control.reset.serial requires pyserial: {exc}"}
+    serial_impl = serial_mod
+    if serial_impl is None:
+        try:
+            import serial as _serial  # type: ignore
+        except Exception as exc:
+            return {"ok": False, "error_summary": f"control.reset.serial requires pyserial: {exc}"}
+        serial_impl = _serial
 
     try:
-        ser = serial.Serial(
+        ser = serial_impl.Serial(
             port,
             baudrate=baud,
             timeout=0.1,
