@@ -10,6 +10,7 @@ from ael.adapters import (
     build_cmake,
     build_idf,
     build_stm32,
+    control_reset_serial,
     flash_bmda_gdbmi,
     flash_idf,
     instrument_aip_http,
@@ -760,48 +761,15 @@ class _NoopRecoveryAdapter:
 class _SerialResetRecoveryAdapter:
     def execute(self, action, plan, ctx):
         params = action.get("params", {}) if isinstance(action, dict) and isinstance(action.get("params"), dict) else {}
-        port = str(params.get("port") or "").strip()
-        if not port:
-            return {"ok": False, "error_summary": "reset.serial requires params.port"}
-        baud = int(params.get("baud", 115200))
-        pulse_ms = max(20, int(params.get("pulse_ms", 120)))
-        settle_ms = max(50, int(params.get("settle_ms", 350)))
-        try:
-            import serial  # type: ignore
-        except Exception as exc:
-            return {"ok": False, "error_summary": f"reset.serial requires pyserial: {exc}"}
-        try:
-            ser = serial.Serial(
-                port,
-                baudrate=baud,
-                timeout=0.1,
-                rtscts=False,
-                dsrdtr=False,
-            )
-            try:
-                try:
-                    ser.dtr = False
-                except Exception:
-                    pass
-                ser.rts = True
-                time.sleep(pulse_ms / 1000.0)
-                ser.rts = False
-                time.sleep(settle_ms / 1000.0)
-            finally:
-                try:
-                    ser.close()
-                except Exception:
-                    pass
-        except Exception as exc:
-            return {"ok": False, "error_summary": f"reset.serial failed on {port}: {exc}"}
-        return {
-            "ok": True,
-            "action_type": "reset.serial",
-            "port": port,
-            "baud": baud,
-            "pulse_ms": pulse_ms,
-            "settle_ms": settle_ms,
-        }
+        action_type = str(action.get("type") or "reset.serial").strip()
+        out = control_reset_serial.run(params, action_type=action_type)
+        if out.get("ok"):
+            return out
+        msg = str(out.get("error_summary") or "")
+        if action_type == "reset.serial":
+            msg = msg.replace("control.reset.serial", "reset.serial")
+            out["error_summary"] = msg
+        return out
 
 
 class _NoopCheckAdapter:
@@ -883,6 +851,7 @@ class AdapterRegistry:
         }
         self._recovery = {
             "reset.serial": _SerialResetRecoveryAdapter(),
+            "control.reset.serial": _SerialResetRecoveryAdapter(),
         }
 
     def get(self, step_type: str):

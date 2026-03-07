@@ -158,12 +158,16 @@ def _can_run_recovery(plan: Dict[str, Any], action_type: str) -> bool:
     if policy.get("enabled") is False:
         return False
 
+    aliases = failure_recovery.recovery_action_aliases(action_type)
+    if not aliases:
+        aliases = {str(action_type or "")}
     allowed = policy.get("allowed_actions")
     if allowed is None:
         return True
     if not isinstance(allowed, list):
         return False
-    return action_type in [str(x) for x in allowed]
+    allowed_set = {str(x) for x in allowed}
+    return bool(aliases.intersection(allowed_set))
 
 
 def _run_recovery(

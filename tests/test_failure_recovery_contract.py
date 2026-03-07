@@ -27,6 +27,14 @@ class TestFailureRecoveryContract(unittest.TestCase):
         self.assertEqual(failure_recovery.normalize_failure_kind("timeout"), "timeout")
         self.assertEqual(failure_recovery.normalize_failure_kind("NOPE"), "unknown")
 
+    def test_recovery_action_aliases_for_serial_reset(self):
+        legacy = failure_recovery.recovery_action_aliases("reset.serial")
+        role_first = failure_recovery.recovery_action_aliases("control.reset.serial")
+        self.assertIn("reset.serial", legacy)
+        self.assertIn("control.reset.serial", legacy)
+        self.assertIn("reset.serial", role_first)
+        self.assertIn("control.reset.serial", role_first)
+
 
 if __name__ == "__main__":
     unittest.main()

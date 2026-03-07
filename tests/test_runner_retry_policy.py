@@ -29,6 +29,45 @@ class _Registry:
         raise KeyError(action_type)
 
 
+class _RecoveryAdapter:
+    def execute(self, action, plan, ctx):
+        return {"ok": True, "action_type": action.get("type", "")}
+
+
+class _FailOnceWithRecoveryHintAdapter:
+    def __init__(self):
+        self.calls = 0
+
+    def execute(self, step, plan, ctx):
+        self.calls += 1
+        if self.calls == 1:
+            return {
+                "ok": False,
+                "error_summary": "need reset",
+                "failure_kind": "verification_miss",
+                "recovery_hint": {
+                    "kind": "verification_miss",
+                    "recoverable": True,
+                    "preferred_action": "control.reset.serial",
+                    "action_type": "control.reset.serial",
+                    "reason": "unit_test",
+                    "scope": "step",
+                    "retry": True,
+                    "params": {"port": "/dev/ttyFAKE0"},
+                },
+            }
+        return {"ok": True}
+
+
+class _RegistryWithRecovery(_Registry):
+    def __init__(self, adapters, recovery_adapters):
+        super().__init__(adapters)
+        self._recovery_adapters = dict(recovery_adapters)
+
+    def recovery(self, action_type: str):
+        return self._recovery_adapters[action_type]
+
+
 class _SleepAdapter:
     def __init__(self, sleep_s: float, ok: bool = True):
         self.sleep_s = float(sleep_s)
@@ -122,6 +161,25 @@ class TestRunnerRetryPolicy(unittest.TestCase):
         self.assertFalse(res.get("ok"))
         self.assertEqual(res.get("termination"), "timeout")
         self.assertEqual(res.get("error_summary"), "run timeout reached")
+
+    def test_recovery_action_alias_allowed_by_legacy_policy(self):
+        adapter = _FailOnceWithRecoveryHintAdapter()
+        registry = _RegistryWithRecovery(
+            {"check.noop": adapter},
+            {
+                "control.reset.serial": _RecoveryAdapter(),
+                "reset.serial": _RecoveryAdapter(),
+            },
+        )
+        plan = {
+            "steps": [{"name": "c1", "type": "check.noop", "retry_budget": 0}],
+            "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"check": 1}},
+        }
+        res = runner.run_plan(plan, self.run_dir, registry)
+        self.assertTrue(res.get("ok"))
+        self.assertEqual(len(res.get("recovery", [])), 1)
+        self.assertTrue(res["recovery"][0].get("ok"))
+        self.assertEqual(res["recovery"][0].get("action_type"), "control.reset.serial")
 
 
 if __name__ == "__main__":

@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+RECOVERY_ACTION_RESET_SERIAL = "reset.serial"
+RECOVERY_ACTION_CONTROL_RESET_SERIAL = "control.reset.serial"
+
 
 FAILURE_VERIFICATION_MISS = "verification_miss"
 FAILURE_VERIFICATION_MISMATCH = "verification_mismatch"
@@ -20,6 +23,18 @@ KNOWN_FAILURE_KINDS = {
     FAILURE_NON_RECOVERABLE,
     FAILURE_UNKNOWN,
 }
+
+_RECOVERY_ACTION_ALIASES = {
+    RECOVERY_ACTION_RESET_SERIAL: {RECOVERY_ACTION_RESET_SERIAL, RECOVERY_ACTION_CONTROL_RESET_SERIAL},
+    RECOVERY_ACTION_CONTROL_RESET_SERIAL: {RECOVERY_ACTION_RESET_SERIAL, RECOVERY_ACTION_CONTROL_RESET_SERIAL},
+}
+
+
+def recovery_action_aliases(action_type: Any) -> set[str]:
+    key = str(action_type or "").strip()
+    if not key:
+        return set()
+    return set(_RECOVERY_ACTION_ALIASES.get(key, {key}))
 
 
 def normalize_failure_kind(kind: Any) -> str:
