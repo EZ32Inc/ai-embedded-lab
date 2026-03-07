@@ -58,7 +58,7 @@ class TestPhaseFRecoveryCoverage(unittest.TestCase):
         }
 
         with patch(
-            "ael.adapter_registry.observe_uart_log.run",
+            "ael.adapter_registry.observe_log.run_serial_log",
             return_value={"ok": True, "bytes": 22, "lines": 2, "error_summary": ""},
         ), patch("ael.adapter_registry.time.sleep", return_value=None), patch("serial.Serial", _FakeSerial):
             res = runner.run_plan(plan, self.run_dir, registry)

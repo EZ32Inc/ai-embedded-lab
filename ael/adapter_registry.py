@@ -14,8 +14,8 @@ from ael.adapters import (
     flash_idf,
     instrument_aip_http,
     instrument_sim_http,
+    observe_log,
     observe_gpio_pin,
-    observe_uart_log,
     preflight,
 )
 from ael import run_manager
@@ -306,9 +306,9 @@ class _UartCheckAdapter:
                 pass
         if log_path:
             with _tee_output(log_path, output_mode):
-                uart_result = observe_uart_log.run(cfg, raw_log_path=raw_log_path)
+                uart_result = observe_log.run_serial_log(cfg, raw_log_path=raw_log_path)
         else:
-            uart_result = observe_uart_log.run(cfg, raw_log_path=raw_log_path)
+            uart_result = observe_log.run_serial_log(cfg, raw_log_path=raw_log_path)
         _write_json(out_json, uart_result)
         uart_facts = {
             "ok": bool(uart_result.get("ok", False)),
