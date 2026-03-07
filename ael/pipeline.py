@@ -14,6 +14,7 @@ from ael import paths as ael_paths
 from ael.adapters import build_artifacts
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
+from ael.run_contract import RunRequest, RunTermination
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -278,6 +279,27 @@ def _parse_endpoint_hint(endpoint_hint):
         return {}
 
 
+def _resolve_run_timeout_s(test_raw, request_timeout_s=None):
+    if request_timeout_s is not None:
+        try:
+            return max(0.0, float(request_timeout_s))
+        except Exception:
+            return None
+    if isinstance(test_raw, dict):
+        run_cfg = test_raw.get("run", {})
+        if isinstance(run_cfg, dict) and run_cfg.get("timeout_s") is not None:
+            try:
+                return max(0.0, float(run_cfg.get("timeout_s")))
+            except Exception:
+                return None
+        if test_raw.get("timeout_s") is not None:
+            try:
+                return max(0.0, float(test_raw.get("timeout_s")))
+            except Exception:
+                return None
+    return None
+
+
 def _resolve_instrument_context(test_raw, board_cfg):
     explicit = {}
     if isinstance(test_raw, dict):
@@ -372,7 +394,32 @@ def run_pipeline(
     no_build=False,
     verify_only=False,
     return_paths=False,
+    run_request=None,
 ):
+    if run_request is not None:
+        if isinstance(run_request, RunRequest):
+            req = run_request
+        else:
+            req = RunRequest(
+                probe_path=getattr(run_request, "probe_path", probe_path),
+                board_id=getattr(run_request, "board_id", board_arg),
+                test_path=getattr(run_request, "test_path", test_path),
+                wiring=getattr(run_request, "wiring", wiring),
+                output_mode=getattr(run_request, "output_mode", output_mode),
+                skip_flash=bool(getattr(run_request, "skip_flash", skip_flash)),
+                no_build=bool(getattr(run_request, "no_build", no_build)),
+                verify_only=bool(getattr(run_request, "verify_only", verify_only)),
+                timeout_s=getattr(run_request, "timeout_s", None),
+            )
+        probe_path = req.probe_path
+        board_arg = req.board_id
+        test_path = req.test_path
+        wiring = req.wiring
+        output_mode = req.output_mode
+        skip_flash = bool(req.skip_flash)
+        no_build = bool(req.no_build)
+        verify_only = bool(req.verify_only)
+
     repo_root = str(_REPO_ROOT)
     if not test_path:
         test_path = os.path.join(repo_root, "tests", "blink_gpio.json")
@@ -424,6 +471,8 @@ def run_pipeline(
         "git_dirty": git_info.get("dirty"),
         "git_status": git_info.get("status"),
     }
+    timeout_s = _resolve_run_timeout_s(test_raw, getattr(run_request, "timeout_s", None) if run_request is not None else None)
+    meta["timeout_s"] = timeout_s
 
     probe_cfg = _normalize_probe_cfg(probe_raw)
     board_cfg = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
@@ -593,9 +642,16 @@ def run_pipeline(
         known_firmware_path = _default_firmware_path(board_cfg)
         if not os.path.exists(known_firmware_path):
             result = {
+                "run_id": run_paths.run_id,
+                "termination": RunTermination.FAIL,
                 "ok": False,
+                "success": False,
                 "failed_step": "build",
                 "error_summary": "no build artifacts found",
+                "started_at": run_started.isoformat(),
+                "ended_at": datetime.now().isoformat(),
+                "timeout_s": timeout_s,
+                "retry_summary": {"step_attempts": 0, "recovery_attempts": 0},
                 "logs": {
                     "preflight": str(run_paths.preflight_log),
                     "build": str(run_paths.build_log),
@@ -619,7 +675,8 @@ def run_pipeline(
                 },
             }
             _write_json(run_paths.result, result)
-            meta["ended_at"] = datetime.now().isoformat()
+            meta["ended_at"] = result["ended_at"]
+            meta["termination"] = RunTermination.FAIL
             _write_json(run_paths.meta, meta)
             return (3, run_paths) if return_paths else 3
 
@@ -774,6 +831,8 @@ def run_pipeline(
         "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"build": 1, "run": 2, "check": 2}},
         "report": {"emit": ["*.log", "*.json", "artifacts/*"]},
     }
+    if timeout_s is not None:
+        plan["timeout_s"] = timeout_s
 
     registry = AdapterRegistry()
     runner_result = run_plan(plan, Path(run_paths.root), registry)
@@ -785,10 +844,24 @@ def run_pipeline(
     if _is_meter_digital_verify_test(test_raw):
         _write_json(run_paths.measure, {"ok": bool(runner_result.get("ok")), "type": "instrument_digital_verify"})
 
+    ended_at = datetime.now().isoformat()
+    termination = str(runner_result.get("termination") or (RunTermination.PASS if runner_result.get("ok") else RunTermination.FAIL))
+    if termination not in RunTermination.ALL:
+        termination = RunTermination.FAIL
     result = {
+        "run_id": run_paths.run_id,
+        "termination": termination,
         "ok": bool(runner_result.get("ok", False)),
+        "success": bool(runner_result.get("ok", False)),
         "failed_step": failed_step,
         "error_summary": runner_result.get("error_summary", ""),
+        "started_at": run_started.isoformat(),
+        "ended_at": ended_at,
+        "timeout_s": timeout_s,
+        "retry_summary": {
+            "step_attempts": len(runner_result.get("steps", [])) if isinstance(runner_result.get("steps"), list) else 0,
+            "recovery_attempts": len(runner_result.get("recovery", [])) if isinstance(runner_result.get("recovery"), list) else 0,
+        },
         "logs": {
             "preflight": str(run_paths.preflight_log),
             "build": str(run_paths.build_log),
@@ -822,8 +895,9 @@ def run_pipeline(
             timings[f"{s}_attempts"] = len(entries)
     meta.update(
         {
-            "ended_at": datetime.now().isoformat(),
+            "ended_at": ended_at,
             "timings": timings,
+            "termination": termination,
             "firmware": {"path": firmware_path, "sha256": _file_sha256(firmware_path) if firmware_path else ""},
             "runner_result": str(Path(run_paths.artifacts_dir) / "result.json"),
             "run_plan": str(Path(run_paths.artifacts_dir) / "run_plan.json"),
@@ -915,28 +989,43 @@ def run_pipeline(
         },
         notify_cfg,
     )
-    code = _code_from_failed_step(failed_step)
+    if termination == RunTermination.TIMEOUT:
+        code = 124
+    elif termination == RunTermination.SAFETY_ABORT:
+        code = 70
+    else:
+        code = _code_from_failed_step(failed_step)
     return (code, run_paths) if return_paths else code
 
 
 def run(args):
     return run_pipeline(
-        probe_path=args.probe,
-        board_arg=args.board,
-        test_path=args.test,
-        wiring=args.wiring,
-        output_mode=args.output_mode,
-        skip_flash=args.skip_flash,
+        probe_path=None,
+        board_arg=None,
+        test_path=None,
+        run_request=RunRequest(
+            probe_path=args.probe,
+            board_id=args.board,
+            test_path=args.test,
+            wiring=args.wiring,
+            output_mode=args.output_mode,
+            skip_flash=bool(args.skip_flash),
+        ),
     )
 
 
 def run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal"):
     return run_pipeline(
-        probe_path=probe_path,
-        board_arg=board_id,
-        test_path=test_path,
-        wiring=wiring,
-        output_mode=output_mode,
+        probe_path=None,
+        board_arg=None,
+        test_path=None,
+        run_request=RunRequest(
+            probe_path=probe_path,
+            board_id=board_id,
+            test_path=test_path,
+            wiring=wiring,
+            output_mode=output_mode,
+        ),
     )
 
 

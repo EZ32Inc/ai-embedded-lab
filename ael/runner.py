@@ -3,8 +3,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime
 import json
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
+from ael.run_contract import RunTermination
 
 
 @dataclass
@@ -208,6 +210,7 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
         "started_at": started_at,
         "finished_at": "",
         "ok": False,
+        "termination": RunTermination.FAIL,
         "steps": [],
         "recovery": [],
         "error_summary": "",
@@ -217,15 +220,29 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     if not isinstance(steps, list):
         steps = []
     plan_retries = _plan_retry_map(plan)
+    timeout_s: Optional[float] = None
+    timeout_raw = plan.get("timeout_s")
+    if timeout_raw is not None:
+        try:
+            timeout_s = max(0.0, float(timeout_raw))
+        except Exception:
+            timeout_s = None
+    result["timeout_s"] = timeout_s
+    start_monotonic = time.monotonic()
 
     idx = 0
     guard = 0
     guard_limit = max(100, len(steps) * 20)
 
     while idx < len(steps):
+        if timeout_s is not None and (time.monotonic() - start_monotonic) > timeout_s:
+            result["error_summary"] = "run timeout reached"
+            result["termination"] = RunTermination.TIMEOUT
+            break
         guard += 1
         if guard > guard_limit:
             result["error_summary"] = "execution guard limit reached"
+            result["termination"] = RunTermination.SAFETY_ABORT
             break
 
         step = steps[idx]
@@ -248,6 +265,11 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
         step_last: Dict[str, Any] = {"ok": False, "error_summary": "not_run"}
 
         while attempt <= budget:
+            if timeout_s is not None and (time.monotonic() - start_monotonic) > timeout_s:
+                step_last = {"ok": False, "error_summary": "run timeout reached"}
+                step_ok = False
+                result["termination"] = RunTermination.TIMEOUT
+                break
             attempt += 1
             try:
                 out = adapter.execute(step, plan, ctx)
@@ -303,6 +325,9 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     result["finished_at"] = _utc_now_iso()
     if result["ok"]:
         result["error_summary"] = ""
+        result["termination"] = RunTermination.PASS
+    elif result.get("termination") not in RunTermination.ALL:
+        result["termination"] = RunTermination.FAIL
 
     _write_json(ctx.artifacts_dir / "result.json", result)
     return result

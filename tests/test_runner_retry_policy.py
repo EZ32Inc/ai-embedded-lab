@@ -1,4 +1,5 @@
 import shutil
+import time
 import unittest
 from pathlib import Path
 
@@ -26,6 +27,16 @@ class _Registry:
 
     def recovery(self, action_type: str):
         raise KeyError(action_type)
+
+
+class _SleepAdapter:
+    def __init__(self, sleep_s: float, ok: bool = True):
+        self.sleep_s = float(sleep_s)
+        self.ok = bool(ok)
+
+    def execute(self, step, plan, ctx):
+        time.sleep(self.sleep_s)
+        return {"ok": self.ok, "error_summary": "" if self.ok else "sleep-fail"}
 
 
 class TestRunnerRetryPolicy(unittest.TestCase):
@@ -90,6 +101,27 @@ class TestRunnerRetryPolicy(unittest.TestCase):
         self.assertTrue(res.get("ok"))
         self.assertEqual(flaky.calls, 2)
         self.assertEqual(res["steps"][-1].get("effective_retry_budget"), 1)
+
+    def test_runner_sets_pass_termination(self):
+        flaky = _FlakyAdapter(fail_attempts=0)
+        plan = {"steps": [{"name": "c1", "type": "check.noop"}]}
+        res = runner.run_plan(plan, self.run_dir, _Registry({"check.noop": flaky}))
+        self.assertTrue(res.get("ok"))
+        self.assertEqual(res.get("termination"), "pass")
+
+    def test_timeout_termination_when_run_exceeds_timeout(self):
+        sleepy = _SleepAdapter(sleep_s=0.06, ok=True)
+        plan = {
+            "timeout_s": 0.01,
+            "steps": [
+                {"name": "c1", "type": "check.noop"},
+                {"name": "c2", "type": "check.noop"},
+            ],
+        }
+        res = runner.run_plan(plan, self.run_dir, _Registry({"check.noop": sleepy}))
+        self.assertFalse(res.get("ok"))
+        self.assertEqual(res.get("termination"), "timeout")
+        self.assertEqual(res.get("error_summary"), "run timeout reached")
 
 
 if __name__ == "__main__":
