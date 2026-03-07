@@ -19,6 +19,7 @@ from ael.adapters import (
     preflight,
 )
 from ael import run_manager
+from ael import evidence as ael_evidence
 from ael.verification import la_verify
 
 
@@ -265,9 +266,31 @@ class _UartCheckAdapter:
         else:
             uart_result = observe_uart_log.run(cfg, raw_log_path=raw_log_path)
         _write_json(out_json, uart_result)
+        evidence_item = ael_evidence.make_item(
+            kind="uart.verify",
+            source="check.uart_log",
+            ok=uart_result.get("ok", False),
+            summary=(uart_result.get("error_summary") or "uart capture validated"),
+            facts={
+                "bytes": uart_result.get("bytes"),
+                "lines": uart_result.get("lines"),
+                "crash_detected": uart_result.get("crash_detected"),
+                "missing_expect": uart_result.get("missing_expect", []),
+                "forbid_matched": uart_result.get("forbid_matched", []),
+            },
+            artifacts={
+                "uart_observe_json": out_json,
+                "uart_raw_log": raw_log_path,
+            },
+        )
         if not bool(uart_result.get("ok", False)):
-            return {"ok": False, "error_summary": uart_result.get("error_summary") or "uart observe failed", "result": uart_result}
-        return {"ok": True, "result": uart_result}
+            return {
+                "ok": False,
+                "error_summary": uart_result.get("error_summary") or "uart observe failed",
+                "result": uart_result,
+                "evidence": [evidence_item],
+            }
+        return {"ok": True, "result": uart_result, "evidence": [evidence_item]}
 
 
 class _InstrumentSelftestAdapter:
@@ -289,9 +312,26 @@ class _InstrumentSelftestAdapter:
             return {"ok": False, "error_summary": str(exc)}
         except Exception as exc:
             return {"ok": False, "error_summary": str(exc)}
+        evidence_item = ael_evidence.make_item(
+            kind="instrument.selftest",
+            source="check.instrument_selftest",
+            ok=payload.get("pass", False),
+            summary=(payload.get("error") or "instrument selftest passed"),
+            facts={
+                "instrument_id": instrument_id,
+                "host": cfg.get("host"),
+                "port": cfg.get("port"),
+                "pass": payload.get("pass", False),
+            },
+            artifacts={"instrument_selftest_json": out_path},
+        )
         if not bool(payload.get("pass", False)):
-            return {"ok": False, "error_summary": payload.get("error", "instrument selftest failed")}
-        return {"ok": True, "result": payload}
+            return {
+                "ok": False,
+                "error_summary": payload.get("error", "instrument selftest failed"),
+                "evidence": [evidence_item],
+            }
+        return {"ok": True, "result": payload, "evidence": [evidence_item]}
 
 
 class _InstrumentSignatureAdapter:
@@ -419,9 +459,32 @@ class _InstrumentSignatureAdapter:
             "mismatches": mismatches,
         }
         _write_json(verify_out, verify_payload)
+        evidence_item = ael_evidence.make_item(
+            kind="instrument.signature",
+            source="check.instrument_signature",
+            ok=ok,
+            summary=("instrument signature matched" if ok else "instrument signature mismatch"),
+            facts={
+                "instrument_id": inputs.get("instrument_id"),
+                "duration_ms": duration_ms,
+                "digital_checks": len(checks),
+                "analog_checks": len(analog_checks),
+                "mismatch_count": len(mismatches),
+            },
+            artifacts={
+                "verify_result_json": verify_out,
+                "instrument_digital_json": digital_out,
+                "instrument_voltage_json": analog_out,
+            },
+        )
         if not ok:
-            return {"ok": False, "error_summary": "instrument digital verification failed", "result": verify_payload}
-        return {"ok": True, "result": verify_payload}
+            return {
+                "ok": False,
+                "error_summary": "instrument digital verification failed",
+                "result": verify_payload,
+                "evidence": [evidence_item],
+            }
+        return {"ok": True, "result": verify_payload, "evidence": [evidence_item]}
 
 
 class _SignalVerifyAdapter:
@@ -499,9 +562,26 @@ class _SignalVerifyAdapter:
         measure["ok"] = bool(ok)
         if measure_path:
             _write_json(measure_path, measure)
+        evidence_item = ael_evidence.make_item(
+            kind="gpio.signal",
+            source="check.signal_verify",
+            ok=ok,
+            summary=("signal verify passed" if ok else "signal verify failed"),
+            facts={
+                "pin": pin_value,
+                "expected_hz": expected_hz,
+                "metrics": measure.get("metrics", {}),
+                "reasons": measure.get("reasons", []),
+                "duration_s": duration_s,
+            },
+            artifacts={
+                "measure_json": measure_path,
+                "observe_log": log_path,
+            },
+        )
         if not ok:
-            return {"ok": False, "error_summary": "verify failed", "result": measure}
-        return {"ok": True, "result": measure}
+            return {"ok": False, "error_summary": "verify failed", "result": measure, "evidence": [evidence_item]}
+        return {"ok": True, "result": measure, "evidence": [evidence_item]}
 
 
 class _NoopRecoveryAdapter:

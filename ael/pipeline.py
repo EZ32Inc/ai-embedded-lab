@@ -11,10 +11,11 @@ from contextlib import contextmanager
 from ael.notifiers import discord_webhook
 from ael import run_manager
 from ael import paths as ael_paths
-from ael.adapters import build_artifacts
+from ael import evidence as ael_evidence
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
+from ael import strategy_resolver
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -62,49 +63,8 @@ def _deep_merge(base, override):
     return out
 
 
-def _parse_wiring(s):
-    wiring = {}
-    if not s:
-        return wiring
-    parts = [p.strip() for p in s.split() if p.strip()]
-    for part in parts:
-        if "=" not in part:
-            continue
-        k, v = part.split("=", 1)
-        wiring[k.strip()] = v.strip()
-    return wiring
-
-
 def _normalize_probe_cfg(raw):
-    probe = raw.get("probe", {}) if isinstance(raw, dict) else {}
-    connection = raw.get("connection", {}) if isinstance(raw, dict) else {}
-    cfg = dict(probe)
-
-    if "ip" not in cfg and "ip" in connection:
-        cfg["ip"] = connection["ip"]
-    if "gdb_port" not in cfg and "gdb_port" in connection:
-        cfg["gdb_port"] = connection["gdb_port"]
-
-    if "gdb_cmd" not in cfg:
-        cfg["gdb_cmd"] = raw.get("gdb_cmd") if isinstance(raw, dict) else None
-
-    return cfg
-
-
-def _merge_wiring(defaults, overrides):
-    merged = dict(defaults or {})
-    merged.update(overrides or {})
-    return merged
-
-
-def _require_wiring(merged, required):
-    missing = [k for k in required if k not in merged or not merged[k]]
-    if missing:
-        for k in missing:
-            merged[k] = "UNKNOWN"
-        print(f"I am guessing {', '.join(missing)} — please confirm.")
-    return merged
-
+    return strategy_resolver.normalize_probe_cfg(raw)
 
 def _file_sha256(path):
     h = hashlib.sha256()
@@ -150,25 +110,6 @@ def _write_json(path, data):
             json.dump(data, f, indent=2, sort_keys=True)
     except Exception:
         pass
-
-
-def _resolve_builder_kind(board_cfg):
-    build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
-    if isinstance(build_cfg, dict):
-        kind = str(build_cfg.get("type", "")).strip().lower()
-        if kind:
-            return kind
-    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
-    if isinstance(flash_cfg, dict):
-        if flash_cfg.get("method") == "idf_esptool":
-            return "idf"
-        if flash_cfg.get("gdb_launch_cmds"):
-            return "arm_debug"
-    return "cmake"
-
-
-def _default_firmware_path(board_cfg):
-    return build_artifacts.default_firmware_path(_REPO_ROOT, board_cfg, _resolve_builder_kind(board_cfg))
 
 
 def _copy_artifacts(firmware_path, artifacts_dir):
@@ -269,93 +210,6 @@ def _emit_event(event, notify_cfg):
         print(f"Notify: error {exc}")
 
 
-def _parse_endpoint_hint(endpoint_hint):
-    if not endpoint_hint or ":" not in str(endpoint_hint):
-        return {}
-    host, port = str(endpoint_hint).rsplit(":", 1)
-    try:
-        return {"host": host.strip(), "port": int(port.strip())}
-    except Exception:
-        return {}
-
-
-def _resolve_run_timeout_s(test_raw, request_timeout_s=None):
-    if request_timeout_s is not None:
-        try:
-            return max(0.0, float(request_timeout_s))
-        except Exception:
-            return None
-    if isinstance(test_raw, dict):
-        run_cfg = test_raw.get("run", {})
-        if isinstance(run_cfg, dict) and run_cfg.get("timeout_s") is not None:
-            try:
-                return max(0.0, float(run_cfg.get("timeout_s")))
-            except Exception:
-                return None
-        if test_raw.get("timeout_s") is not None:
-            try:
-                return max(0.0, float(test_raw.get("timeout_s")))
-            except Exception:
-                return None
-    return None
-
-
-def _resolve_instrument_context(test_raw, board_cfg):
-    explicit = {}
-    if isinstance(test_raw, dict):
-        explicit = test_raw.get("instrument", {}) if isinstance(test_raw.get("instrument"), dict) else {}
-    if not explicit and isinstance(board_cfg, dict):
-        explicit = board_cfg.get("instrument", {}) if isinstance(board_cfg.get("instrument"), dict) else {}
-    instrument_id = explicit.get("id")
-    if not instrument_id:
-        return None, {}, {}
-
-    manifest = {}
-    try:
-        from ael.instruments.registry import InstrumentRegistry
-
-        manifest = InstrumentRegistry().get(instrument_id) or {}
-    except Exception:
-        manifest = {}
-
-    tcp_cfg = explicit.get("tcp", {}) if isinstance(explicit.get("tcp"), dict) else {}
-    if "host" not in tcp_cfg or "port" not in tcp_cfg:
-        endpoint = {}
-        transports = manifest.get("transports", []) if isinstance(manifest, dict) else []
-        for t in transports:
-            if isinstance(t, dict) and t.get("type") == "tcp":
-                endpoint = _parse_endpoint_hint(t.get("endpoint_hint"))
-                if endpoint:
-                    break
-        wifi_cfg = manifest.get("wifi", {}) if isinstance(manifest.get("wifi"), dict) else {}
-        host = tcp_cfg.get("host") or endpoint.get("host") or wifi_cfg.get("ap_ip")
-        port = tcp_cfg.get("port") or endpoint.get("port") or wifi_cfg.get("tcp_port")
-        tcp_cfg = {"host": host, "port": port}
-
-    return instrument_id, tcp_cfg, manifest
-
-
-def _is_meter_digital_verify_test(test_raw):
-    if not isinstance(test_raw, dict):
-        return False
-    inst = test_raw.get("instrument", {})
-    if not isinstance(inst, dict):
-        return False
-    instrument_id = str(inst.get("id") or "").strip()
-    if not instrument_id:
-        return False
-    _, _, manifest = _resolve_instrument_context(test_raw, {})
-    caps = manifest.get("capabilities", []) if isinstance(manifest, dict) else []
-    has_measure_digital = any(isinstance(c, dict) and c.get("name") == "measure.digital" for c in caps)
-    if not has_measure_digital:
-        return False
-    conns = test_raw.get("connections", {})
-    if not isinstance(conns, dict):
-        return False
-    links = conns.get("dut_to_instrument", [])
-    return isinstance(links, list) and len(links) > 0
-
-
 def _resolve_board_path(repo_root, board_arg):
     if not board_arg:
         return None, None
@@ -365,23 +219,6 @@ def _resolve_board_path(repo_root, board_arg):
     board_id = board_arg
     board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
     return str(board_path), board_id
-
-
-def _instrument_selftest_requested(test_raw, board_cfg):
-    if isinstance(test_raw, dict):
-        if bool(test_raw.get("instrument_selftest")):
-            return True
-        selftest_cfg = test_raw.get("selftest", {})
-        if isinstance(selftest_cfg, dict) and bool(selftest_cfg.get("enabled")):
-            return True
-        instrument_cfg = test_raw.get("instrument", {})
-        if isinstance(instrument_cfg, dict) and bool(instrument_cfg.get("selftest")):
-            return True
-        if isinstance(instrument_cfg, dict) and bool(instrument_cfg.get("run_selftest")):
-            return True
-    if isinstance(board_cfg, dict) and bool(board_cfg.get("instrument_selftest")):
-        return True
-    return False
 
 
 def run_pipeline(
@@ -451,6 +288,11 @@ def run_pipeline(
     _write_json(run_paths.result, {"ok": False, "failed_step": "", "error_summary": ""})
     _write_json(run_paths.flash_json, {"ok": False, "attempts": [], "strategy_used": "", "speed_khz": None})
     _write_json(run_paths.uart_observe, {"ok": False, "bytes": 0, "lines": 0})
+    evidence_path = ael_evidence.write_evidence(
+        Path(run_paths.root),
+        "evidence.json",
+        {"version": ael_evidence.EVIDENCE_VERSION, "items": []},
+    )
 
     probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
     board_raw = _simple_yaml_load(board_path) if board_path else {}
@@ -471,35 +313,27 @@ def run_pipeline(
         "git_dirty": git_info.get("dirty"),
         "git_status": git_info.get("status"),
     }
-    timeout_s = _resolve_run_timeout_s(test_raw, getattr(run_request, "timeout_s", None) if run_request is not None else None)
+    resolved = strategy_resolver.resolve_run_strategy(
+        probe_raw=probe_raw,
+        board_raw=board_raw,
+        test_raw=test_raw,
+        wiring=wiring or "",
+        request_timeout_s=(getattr(run_request, "timeout_s", None) if run_request is not None else None),
+        repo_root=_REPO_ROOT,
+    )
+    timeout_s = resolved.timeout_s
     meta["timeout_s"] = timeout_s
 
-    probe_cfg = _normalize_probe_cfg(probe_raw)
-    board_cfg = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
-    if not isinstance(board_cfg, dict):
-        board_cfg = {}
-    else:
-        board_cfg = dict(board_cfg)
-
-    test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
-    firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None
-    project_override = test_build.get("project_dir") or firmware_override
-    if project_override:
-        build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}
-        build_cfg = dict(build_cfg)
-        build_cfg["type"] = "idf"
-        build_cfg["project_dir"] = str(project_override)
-        board_cfg["build"] = build_cfg
-
-    wiring_overrides = _parse_wiring(wiring or "")
-    wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
-    wiring_cfg = _require_wiring(wiring_cfg, ["swd", "reset", "verify"])
-
-    test_name = test_raw.get("name") if isinstance(test_raw, dict) else None
-    instrument_cfg = test_raw.get("instrument", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("instrument"), dict) else {}
-    instrument_id = instrument_cfg.get("id")
-    instrument_host = instrument_cfg.get("tcp", {}).get("host") if isinstance(instrument_cfg.get("tcp"), dict) else None
-    instrument_port = instrument_cfg.get("tcp", {}).get("port") if isinstance(instrument_cfg.get("tcp"), dict) else None
+    probe_cfg = resolved.probe_cfg
+    board_cfg = resolved.board_cfg
+    wiring_cfg = resolved.wiring_cfg
+    test_name = resolved.test_name
+    instrument_id = resolved.instrument_id
+    instrument_host = resolved.instrument_host
+    instrument_port = resolved.instrument_port
+    missing_wiring = [k for k in ("swd", "reset", "verify") if wiring_cfg.get(k) == "UNKNOWN"]
+    if missing_wiring:
+        print(f"I am guessing {', '.join(missing_wiring)} — please confirm.")
 
     print("AI: starting pipeline")
     if instrument_id:
@@ -570,76 +404,39 @@ def run_pipeline(
         return None
 
     plan_steps = []
-    preflight_cfg = test_raw.get("preflight", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("preflight"), dict) else {}
-    preflight_enabled = True if preflight_cfg.get("enabled") is None else bool(preflight_cfg.get("enabled"))
-    if preflight_enabled:
-        plan_steps.append(
-            {
-                "name": "preflight",
-                "type": "preflight.probe",
-                "inputs": {
-                    "probe_cfg": probe_cfg,
-                    "out_json": str(run_paths.preflight),
-                    "output_mode": output_mode,
-                    "log_path": str(run_paths.preflight_log),
-                },
-            }
-        )
+    preflight_step = strategy_resolver.build_preflight_step(
+        test_raw=test_raw,
+        probe_cfg=probe_cfg,
+        out_json=str(run_paths.preflight),
+        output_mode=output_mode,
+        log_path=str(run_paths.preflight_log),
+    )
+    if preflight_step is not None:
+        plan_steps.append(preflight_step)
     else:
         _write_json(run_paths.preflight, {"skipped": True})
         with _tee_output(run_paths.preflight_log, output_mode):
             print("Preflight: SKIPPED (test config)")
 
-    if _instrument_selftest_requested(test_raw, board_cfg):
-        instrument_id, tcp_cfg, manifest = _resolve_instrument_context(test_raw, board_cfg)
-        selftest_manifest = manifest.get("selftest", {}) if isinstance(manifest, dict) else {}
-        dig = selftest_manifest.get("digital", {}) if isinstance(selftest_manifest.get("digital"), dict) else {}
-        adc = selftest_manifest.get("adc", {}) if isinstance(selftest_manifest.get("adc"), dict) else {}
-        test_self = test_raw.get("selftest", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("selftest"), dict) else {}
-        test_dig = test_self.get("digital", {}) if isinstance(test_self.get("digital"), dict) else {}
-        test_adc = test_self.get("adc", {}) if isinstance(test_self.get("adc"), dict) else {}
-        plan_steps.append(
-            {
-                "name": "instrument_selftest",
-                "type": "check.instrument_selftest",
-                "inputs": {
-                    "instrument_id": instrument_id,
-                    "cfg": {
-                        "host": tcp_cfg.get("host"),
-                        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
-                        "artifacts_dir": str(run_paths.artifacts_dir),
-                    },
-                    "params": {
-                        "out_gpio": int(test_dig.get("out_gpio", dig.get("out_gpio", 15))),
-                        "in_gpio": int(test_dig.get("in_gpio", dig.get("in_gpio", 11))),
-                        "dur_ms": int(test_dig.get("dur_ms", dig.get("dur_ms", 200))),
-                        "freq_hz": int(test_dig.get("freq_hz", dig.get("freq_hz", 1000))),
-                        "adc_out": int(test_adc.get("out_gpio", adc.get("out_gpio", 16))),
-                        "adc_in": int(test_adc.get("adc_gpio", adc.get("adc_gpio", 4))),
-                        "avg": int(test_adc.get("avg", adc.get("avg", 16))),
-                        "settle_ms": int(test_adc.get("settle_ms", adc.get("settle_ms", 20))),
-                    },
-                    "out_path": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
-                },
-            }
-        )
+    instrument_selftest_step = strategy_resolver.build_instrument_selftest_step(
+        test_raw=test_raw,
+        board_cfg=board_cfg,
+        artifacts_dir=Path(run_paths.artifacts_dir),
+    )
+    if instrument_selftest_step is not None:
+        plan_steps.append(instrument_selftest_step)
 
-    build_kind = _resolve_builder_kind(board_cfg)
-    known_firmware_path = None
-    if not verify_only and not no_build:
-        plan_steps.append(
-            {
-                "name": "build",
-                "type": f"build.{build_kind}",
-                "inputs": {
-                    "board_cfg": board_cfg,
-                    "output_mode": output_mode,
-                    "log_path": str(run_paths.build_log),
-                },
-            }
-        )
+    build_kind, known_firmware_path, build_step = strategy_resolver.resolve_build_stage(
+        board_cfg=board_cfg,
+        verify_only=verify_only,
+        no_build=no_build,
+        repo_root=_REPO_ROOT,
+        output_mode=output_mode,
+        build_log_path=str(run_paths.build_log),
+    )
+    if build_step is not None:
+        plan_steps.append(build_step)
     elif not verify_only and no_build:
-        known_firmware_path = _default_firmware_path(board_cfg)
         if not os.path.exists(known_firmware_path):
             result = {
                 "run_id": run_paths.run_id,
@@ -672,7 +469,9 @@ def run_pipeline(
                     "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
                     "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
                     "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
+                    "evidence": str(evidence_path),
                 },
+                "evidence": {"version": ael_evidence.EVIDENCE_VERSION, "count": 0, "status_counts": {"pass": 0, "fail": 0, "info": 0}},
             }
             _write_json(run_paths.result, result)
             meta["ended_at"] = result["ended_at"]
@@ -680,36 +479,20 @@ def run_pipeline(
             _write_json(run_paths.meta, meta)
             return (3, run_paths) if return_paths else 3
 
-    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
-    reset_unwired = wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA")
-    if reset_unwired:
-        flash_cfg = dict(flash_cfg)
-        flash_cfg["reset_available"] = False
-    if not verify_only and not skip_flash:
-        method = str(flash_cfg.get("method", "gdbmi")).strip()
-        if method == "idf_esptool":
-            if board_cfg.get("build", {}):
-                flash_cfg = dict(flash_cfg)
-                flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
-            target = board_cfg.get("target")
-            if target:
-                flash_cfg = dict(flash_cfg)
-                flash_cfg["target"] = target
-                flash_cfg["build_dir"] = os.path.join(repo_root, "artifacts", f"build_{target}")
-        plan_steps.append(
-            {
-                "name": "load",
-                "type": "load.idf_esptool" if method == "idf_esptool" else "load.gdbmi",
-                "inputs": {
-                    "probe_cfg": probe_cfg,
-                    "firmware_path": known_firmware_path,
-                    "flash_cfg": flash_cfg,
-                    "flash_json_path": str(run_paths.flash_json),
-                    "output_mode": output_mode,
-                    "log_path": str(run_paths.flash_log),
-                },
-            }
-        )
+    load_step, flash_cfg = strategy_resolver.resolve_load_stage(
+        board_cfg=board_cfg,
+        wiring_cfg=wiring_cfg,
+        probe_cfg=probe_cfg,
+        known_firmware_path=known_firmware_path,
+        verify_only=verify_only,
+        skip_flash=skip_flash,
+        repo_root=_REPO_ROOT,
+        output_mode=output_mode,
+        flash_json_path=str(run_paths.flash_json),
+        flash_log_path=str(run_paths.flash_log),
+    )
+    if load_step is not None:
+        plan_steps.append(load_step)
     elif skip_flash and not verify_only:
         with _tee_output(run_paths.flash_log, output_mode):
             print("Flash: SKIPPED (user requested skip)")
@@ -718,92 +501,29 @@ def run_pipeline(
             {"ok": False, "attempts": [], "strategy_used": "skipped", "speed_khz": flash_cfg.get("speed_khz")},
         )
 
-    observe_uart_cfg = {}
-    if isinstance(effective, dict):
-        observe_uart_cfg = effective.get("observe_uart", {}) or {}
-    if isinstance(observe_uart_cfg, dict) and observe_uart_cfg.get("enabled"):
-        observe_uart_cfg = dict(observe_uart_cfg)
-        observe_uart_cfg.setdefault("auto_reset_on_download", True)
-        observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
-        plan_steps.append(
-            {
-                "name": "check_uart",
-                "type": "check.uart_log",
-                "inputs": {
-                    "observe_uart_cfg": observe_uart_cfg,
-                    "raw_log_path": str(run_paths.observe_uart_log),
-                    "out_json": str(run_paths.uart_observe),
-                    "flash_json_path": str(run_paths.flash_json),
-                    "output_mode": output_mode,
-                    "log_path": str(run_paths.observe_uart_step_log),
-                },
-            }
-        )
+    uart_step = strategy_resolver.build_uart_step(
+        effective=effective,
+        board_cfg=board_cfg,
+        output_mode=output_mode,
+        observe_uart_log=str(run_paths.observe_uart_log),
+        uart_json=str(run_paths.uart_observe),
+        flash_json=str(run_paths.flash_json),
+        observe_uart_step_log=str(run_paths.observe_uart_step_log),
+    )
+    if uart_step is not None:
+        plan_steps.append(uart_step)
 
-    if _is_meter_digital_verify_test(test_raw):
-        instrument_id, tcp_cfg, _manifest = _resolve_instrument_context(test_raw, board_cfg)
-        links = test_raw.get("connections", {}).get("dut_to_instrument", [])
-        analog_links = test_raw.get("connections", {}).get("dut_to_instrument_analog", [])
-        duration_ms = 500
-        meas_cfg = test_raw.get("measurement", {})
-        if isinstance(meas_cfg, dict) and meas_cfg.get("duration_ms") is not None:
-            duration_ms = int(meas_cfg.get("duration_ms"))
-        plan_steps.append(
-            {
-                "name": "check_meter",
-                "type": "check.instrument_signature",
-                "inputs": {
-                    "instrument_id": instrument_id,
-                    "cfg": {
-                        "host": tcp_cfg.get("host"),
-                        "port": int(tcp_cfg.get("port")) if tcp_cfg.get("port") is not None else 9000,
-                    },
-                    "links": links,
-                    "analog_links": analog_links,
-                    "duration_ms": duration_ms,
-                    "digital_out": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
-                    "verify_out": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
-                    "analog_out": str(Path(run_paths.artifacts_dir) / "instrument_voltage.json"),
-                },
-            }
-        )
-    else:
-        observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
-        test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
-        pin_value = test_pin
-        if test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
-            pin_value = observe_map.get(test_pin)
-        if not pin_value:
-            pin_value = wiring_cfg.get("verify")
-        check_probe_cfg = dict(probe_cfg)
-        if isinstance(test_raw, dict) and test_raw.get("sample_rate_hz"):
-            check_probe_cfg["la_sample_rate"] = int(test_raw.get("sample_rate_hz"))
-        duration_s = float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0
-        if isinstance(test_raw, dict) and test_raw.get("duration_ms") and not test_raw.get("duration_s"):
-            duration_s = float(test_raw.get("duration_ms")) / 1000.0
-        plan_steps.append(
-            {
-                "name": "check_signal",
-                "type": "check.signal_verify",
-                "inputs": {
-                    "probe_cfg": check_probe_cfg,
-                    "pin": pin_value,
-                    "duration_s": duration_s,
-                    "expected_hz": float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
-                    "min_edges": int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,
-                    "max_edges": int(test_raw.get("max_edges", 6)) if isinstance(test_raw, dict) else 6,
-                    "log_path": str(run_paths.observe_log),
-                    "output_mode": output_mode,
-                    "measure_path": str(run_paths.measure),
-                    "test_limits": {
-                        "min_freq_hz": test_raw.get("min_freq_hz") if isinstance(test_raw, dict) else None,
-                        "max_freq_hz": test_raw.get("max_freq_hz") if isinstance(test_raw, dict) else None,
-                        "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
-                        "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
-                    },
-                },
-            }
-        )
+    verify_step = strategy_resolver.build_verify_step(
+        test_raw=test_raw,
+        board_cfg=board_cfg,
+        probe_cfg=probe_cfg,
+        wiring_cfg=wiring_cfg,
+        artifacts_dir=Path(run_paths.artifacts_dir),
+        observe_log=str(run_paths.observe_log),
+        output_mode=output_mode,
+        measure_path=str(run_paths.measure),
+    )
+    plan_steps.append(verify_step)
 
     plan = {
         "version": "runplan/0.1",
@@ -812,7 +532,7 @@ def run_pipeline(
         "inputs": {
             "board_id": board_id or "unknown",
             "probe_id": probe_cfg.get("name"),
-            "instrument_id": (_resolve_instrument_context(test_raw, board_cfg)[0] if isinstance(test_raw, dict) else None),
+            "instrument_id": (strategy_resolver.resolve_instrument_context(test_raw, board_cfg)[0] if isinstance(test_raw, dict) else None),
             "test_id": Path(test_path).stem,
         },
         "selected": {
@@ -836,12 +556,27 @@ def run_pipeline(
 
     registry = AdapterRegistry()
     runner_result = run_plan(plan, Path(run_paths.root), registry)
+    evidence_path = ael_evidence.write_runner_evidence(Path(run_paths.root), runner_result)
+    evidence_payload = {}
+    try:
+        evidence_payload = json.loads(Path(evidence_path).read_text(encoding="utf-8"))
+    except Exception:
+        evidence_payload = {"version": ael_evidence.EVIDENCE_VERSION, "items": []}
+    evidence_items = evidence_payload.get("items", []) if isinstance(evidence_payload, dict) else []
+    evidence_counts = {"pass": 0, "fail": 0, "info": 0}
+    for item in evidence_items if isinstance(evidence_items, list) else []:
+        if not isinstance(item, dict):
+            continue
+        st = str(item.get("status") or "").strip().lower()
+        if st in evidence_counts:
+            evidence_counts[st] += 1
 
     failed_step = _failed_step_name(runner_result)
     firmware_path = known_firmware_path or _extract_firmware_from_runner(runner_result)
     artifacts_copied = _copy_artifacts(firmware_path, run_paths.artifacts_dir)
 
-    if _is_meter_digital_verify_test(test_raw):
+    meter_verify = strategy_resolver.is_meter_digital_verify_test(test_raw, board_cfg)
+    if meter_verify:
         _write_json(run_paths.measure, {"ok": bool(runner_result.get("ok")), "type": "instrument_digital_verify"})
 
     ended_at = datetime.now().isoformat()
@@ -884,6 +619,12 @@ def run_pipeline(
             "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
             "run_plan": str(Path(run_paths.artifacts_dir) / "run_plan.json"),
             "runner_result": str(Path(run_paths.artifacts_dir) / "result.json"),
+            "evidence": str(evidence_path),
+        },
+        "evidence": {
+            "version": evidence_payload.get("version") if isinstance(evidence_payload, dict) else ael_evidence.EVIDENCE_VERSION,
+            "count": len(evidence_items) if isinstance(evidence_items, list) else 0,
+            "status_counts": evidence_counts,
         },
     }
     _write_json(run_paths.result, result)

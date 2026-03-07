@@ -61,6 +61,9 @@ class TestInstrumentBackendRouting(unittest.TestCase):
             )
         self.assertTrue(result.get("ok"))
         self.assertEqual(fake_registry.resolve_calls, [("esp32s3_dev_c_meter", "selftest")])
+        self.assertIsInstance(result.get("evidence"), list)
+        self.assertEqual(result["evidence"][0].get("kind"), "instrument.selftest")
+        self.assertEqual(result["evidence"][0].get("source"), "check.instrument_selftest")
 
     def test_signature_routes_digital_and_voltage_capabilities(self):
         registry = AdapterRegistry()
@@ -98,6 +101,9 @@ class TestInstrumentBackendRouting(unittest.TestCase):
                 ("esp32s3_dev_c_meter", "measure.voltage"),
             ],
         )
+        self.assertIsInstance(result.get("evidence"), list)
+        self.assertEqual(result["evidence"][0].get("kind"), "instrument.signature")
+        self.assertEqual(result["evidence"][0].get("source"), "check.instrument_signature")
 
     def test_signature_unknown_instrument_reports_error(self):
         registry = AdapterRegistry()
