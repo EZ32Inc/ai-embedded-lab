@@ -1,0 +1,19 @@
+{
+  "name": "recovery_demo_signal_fail_first",
+  "board": "rp2040_pico",
+  "pin": "PA0",
+  "duration_s": 1.0,
+  "expected_hz": 1.0,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "recovery_demo": {
+    "fail_first": true,
+    "action_type": "reset.serial",
+    "params": {
+      "port": "/dev/ttyACM0",
+      "baud": 115200,
+      "pulse_ms": 120,
+      "settle_ms": 350
+    }
+  }
+}

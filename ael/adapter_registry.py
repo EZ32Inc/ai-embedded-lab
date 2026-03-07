@@ -500,6 +500,36 @@ class _SignalVerifyAdapter:
         output_mode = inputs.get("output_mode", "normal")
         measure_path = inputs.get("measure_path")
         test_limits = inputs.get("test_limits", {})
+        recovery_demo = inputs.get("recovery_demo", {}) if isinstance(inputs.get("recovery_demo"), dict) else {}
+
+        if bool(recovery_demo.get("fail_first")):
+            state = _load_runtime_state(ctx)
+            key = f"recovery_demo_fail_first_done:{step.get('name', 'check_signal')}"
+            if not bool(state.get(key)):
+                state[key] = True
+                _save_runtime_state(ctx, state)
+                injected = {"ok": False, "metrics": {}, "reasons": ["recovery_demo_fail_first_injected"]}
+                if measure_path:
+                    _write_json(measure_path, injected)
+                evidence_item = ael_evidence.make_item(
+                    kind="gpio.signal",
+                    source="check.signal_verify",
+                    ok=False,
+                    summary="recovery demo injected first-attempt failure",
+                    facts={"injected_fail_first": True, "pin": pin_value},
+                    artifacts={"measure_json": measure_path, "observe_log": log_path},
+                )
+                return {
+                    "ok": False,
+                    "error_summary": "recovery demo injected fail-first",
+                    "result": injected,
+                    "evidence": [evidence_item],
+                    "recovery_hint": {
+                        "action_type": str(recovery_demo.get("action_type") or "reset.serial"),
+                        "params": dict(recovery_demo.get("params", {})) if isinstance(recovery_demo.get("params"), dict) else {},
+                        "reason": "recovery_demo_fail_first",
+                    },
+                }
 
         capture = {}
         if log_path:
@@ -589,6 +619,53 @@ class _NoopRecoveryAdapter:
         return {"ok": False, "error_summary": "recovery action not implemented"}
 
 
+class _SerialResetRecoveryAdapter:
+    def execute(self, action, plan, ctx):
+        params = action.get("params", {}) if isinstance(action, dict) and isinstance(action.get("params"), dict) else {}
+        port = str(params.get("port") or "").strip()
+        if not port:
+            return {"ok": False, "error_summary": "reset.serial requires params.port"}
+        baud = int(params.get("baud", 115200))
+        pulse_ms = max(20, int(params.get("pulse_ms", 120)))
+        settle_ms = max(50, int(params.get("settle_ms", 350)))
+        try:
+            import serial  # type: ignore
+        except Exception as exc:
+            return {"ok": False, "error_summary": f"reset.serial requires pyserial: {exc}"}
+        try:
+            ser = serial.Serial(
+                port,
+                baudrate=baud,
+                timeout=0.1,
+                rtscts=False,
+                dsrdtr=False,
+            )
+            try:
+                try:
+                    ser.dtr = False
+                except Exception:
+                    pass
+                ser.rts = True
+                time.sleep(pulse_ms / 1000.0)
+                ser.rts = False
+                time.sleep(settle_ms / 1000.0)
+            finally:
+                try:
+                    ser.close()
+                except Exception:
+                    pass
+        except Exception as exc:
+            return {"ok": False, "error_summary": f"reset.serial failed on {port}: {exc}"}
+        return {
+            "ok": True,
+            "action_type": "reset.serial",
+            "port": port,
+            "baud": baud,
+            "pulse_ms": pulse_ms,
+            "settle_ms": settle_ms,
+        }
+
+
 class _NoopCheckAdapter:
     def execute(self, step, plan, ctx):
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
@@ -667,7 +744,7 @@ class AdapterRegistry:
             "instrument.sim_http.uart_log": self._sim_capability_map["uart_log"],
         }
         self._recovery = {
-            "reset.serial": _NoopRecoveryAdapter(),
+            "reset.serial": _SerialResetRecoveryAdapter(),
         }
 
     def get(self, step_type: str):

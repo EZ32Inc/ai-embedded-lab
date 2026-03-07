@@ -84,6 +84,26 @@ def collect_from_runner_result(runner_result: Dict[str, Any] | Any) -> List[Dict
                     "artifacts": item.get("artifacts") if isinstance(item.get("artifacts"), dict) else {},
                 }
             )
+    recovery = runner_result.get("recovery", [])
+    if isinstance(recovery, list):
+        for r in recovery:
+            if not isinstance(r, dict):
+                continue
+            result = r.get("result", {}) if isinstance(r.get("result"), dict) else {}
+            items.append(
+                make_item(
+                    kind="recovery.action",
+                    source=str(r.get("action_type") or "recovery"),
+                    ok=r.get("ok", False),
+                    summary=(result.get("error_summary") or f"recovery action {r.get('action_type')}"),
+                    facts={
+                        "step": r.get("step"),
+                        "action_type": r.get("action_type"),
+                        "ok": r.get("ok", False),
+                    },
+                    artifacts={},
+                )
+            )
     return items
 
 

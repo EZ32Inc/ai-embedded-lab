@@ -412,7 +412,7 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
     duration_s = float(test_raw.get("duration_s", 3.0)) if isinstance(test_raw, dict) else 3.0
     if isinstance(test_raw, dict) and test_raw.get("duration_ms") and not test_raw.get("duration_s"):
         duration_s = float(test_raw.get("duration_ms")) / 1000.0
-    return {
+    step = {
         "name": "check_signal",
         "type": "check.signal_verify",
         "inputs": {
@@ -431,6 +431,12 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
                 "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
                 "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
             },
+            "recovery_demo": (test_raw.get("recovery_demo", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("recovery_demo"), dict) else {}),
         },
     }
-
+    recovery_demo = step["inputs"].get("recovery_demo", {})
+    if isinstance(recovery_demo, dict) and bool(recovery_demo.get("fail_first")):
+        # Ensure runner reaches recovery flow immediately on first injected failure.
+        step["retry_budget"] = 0
+        step["rewind_anchor"] = "check_signal"
+    return step
