@@ -23,6 +23,7 @@ from ael.default_verification import (
     run_default_setting,
     save_setting as save_default_verification_setting,
 )
+from ael import workflow_archive
 
 
 def main():
@@ -69,6 +70,36 @@ def main():
     instr_show.add_argument("id")
     instr_find = instr_sub.add_parser("find")
     instr_find.add_argument("--cap", required=True)
+    instr_wifi_scan = instr_sub.add_parser("wifi-scan")
+    instr_wifi_scan.add_argument("--id", required=True)
+    instr_wifi_scan.add_argument("--ifname", required=True)
+    instr_meter_list = instr_sub.add_parser("meter-list")
+    instr_meter_list.add_argument("--id", required=True)
+    instr_meter_list.add_argument("--ifname", required=True)
+    instr_wifi_connect = instr_sub.add_parser("wifi-connect")
+    instr_wifi_connect.add_argument("--id", required=True)
+    instr_wifi_connect.add_argument("--ifname", required=True)
+    instr_wifi_connect.add_argument("--ssid", default=None)
+    instr_wifi_connect.add_argument("--ssid-suffix", default=None)
+    instr_meter_setup = instr_sub.add_parser("meter-setup")
+    instr_meter_setup.add_argument("--id", required=True)
+    instr_meter_setup.add_argument("--port", required=True)
+    instr_meter_setup.add_argument("--ifname", required=True)
+    instr_meter_setup.add_argument("--ssid", default=None)
+    instr_meter_setup.add_argument("--ssid-suffix", default=None)
+    instr_meter_setup.add_argument("--timeout-s", type=float, default=30.0)
+    instr_meter_setup.add_argument("--interval-s", type=float, default=2.0)
+    instr_meter_ping = instr_sub.add_parser("meter-ping")
+    instr_meter_ping.add_argument("--id", required=True)
+    instr_meter_ping.add_argument("--host", default=None)
+    instr_meter_ping.add_argument("--port", type=int, default=None)
+    instr_meter_ready = instr_sub.add_parser("meter-ready")
+    instr_meter_ready.add_argument("--id", required=True)
+    instr_meter_ready.add_argument("--ifname", required=True)
+    instr_meter_ready.add_argument("--ssid", default=None)
+    instr_meter_ready.add_argument("--ssid-suffix", default=None)
+    instr_meter_ready.add_argument("--host", default=None)
+    instr_meter_ready.add_argument("--port", type=int, default=None)
 
     dut_p = sub.add_parser("dut")
     dut_sub = dut_p.add_subparsers(dest="dut_cmd", required=True)
@@ -99,6 +130,13 @@ def main():
     verify_default_run.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_run.add_argument("--skip-if-docs-only", action="store_true")
     verify_default_run.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
+
+    archive_p = sub.add_parser("workflow-archive")
+    archive_sub = archive_p.add_subparsers(dest="archive_cmd", required=True)
+    archive_show = archive_sub.add_parser("show")
+    archive_show.add_argument("--limit", type=int, default=20)
+    archive_show.add_argument("--run-id", default=None)
+    archive_show.add_argument("--source", default="global", help="global or a path to a JSONL archive file")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -180,7 +218,10 @@ def main():
         code = run_doctor(doc_probe, doc_board, args.test)
         sys.exit(code)
     if args.cmd == "instruments":
+        from ael.adapters import esp32s3_dev_c_meter_tcp
         from ael.instruments.registry import InstrumentRegistry
+        from ael.instruments import provision as instrument_provision
+        from ael.instruments import wifi as instrument_wifi
 
         registry = InstrumentRegistry()
         if args.instr_cmd == "list":
@@ -196,6 +237,103 @@ def main():
         if args.instr_cmd == "find":
             matches = registry.find_by_capability(args.cap)
             print(json.dumps(matches, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "wifi-scan":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_wifi.scan(ifname=args.ifname, manifest=inst)
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+                sys.exit(1)
+            instrument_wifi.print_json(payload)
+            sys.exit(0)
+        if args.instr_cmd == "meter-list":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_wifi.meter_list_report(ifname=args.ifname, manifest=inst)
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+                sys.exit(1)
+            instrument_wifi.print_json(payload)
+            sys.exit(0)
+        if args.instr_cmd == "wifi-connect":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_wifi.connect(
+                    ifname=args.ifname,
+                    manifest=inst,
+                    ssid=args.ssid,
+                    ssid_suffix=args.ssid_suffix,
+                )
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+                sys.exit(1)
+            instrument_wifi.print_json(payload)
+            sys.exit(0)
+        if args.instr_cmd == "meter-setup":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_provision.flash_wait_connect(
+                    port=args.port,
+                    ifname=args.ifname,
+                    manifest=inst,
+                    ssid=args.ssid,
+                    ssid_suffix=args.ssid_suffix,
+                    timeout_s=args.timeout_s,
+                    interval_s=args.interval_s,
+                )
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+                sys.exit(1)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "meter-ping":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            wifi_cfg = inst.get("wifi") if isinstance(inst.get("wifi"), dict) else {}
+            cfg = {
+                "host": args.host or wifi_cfg.get("ap_ip") or "192.168.4.1",
+                "port": args.port or wifi_cfg.get("tcp_port") or 9000,
+            }
+            try:
+                payload = esp32s3_dev_c_meter_tcp.ping(cfg)
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc), "host": cfg["host"], "port": cfg["port"]}, indent=2, sort_keys=True))
+                sys.exit(1)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "meter-ready":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_provision.ready_meter(
+                    ifname=args.ifname,
+                    manifest=inst,
+                    ssid=args.ssid,
+                    ssid_suffix=args.ssid_suffix,
+                    host=args.host,
+                    port=args.port,
+                )
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+                sys.exit(1)
+            print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0)
     if args.cmd == "pack":
         board_override = args.board
@@ -235,6 +373,11 @@ def main():
             verify_only=args.verify_only,
         )
         sys.exit(code)
+    if args.cmd == "workflow-archive":
+        if args.archive_cmd == "show":
+            records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)
+            print(json.dumps(records, indent=2, sort_keys=True))
+            sys.exit(0)
     if args.cmd == "dut":
         if args.dut_cmd == "create":
             code = dut_create_cmd(args.from_golden, args.to)

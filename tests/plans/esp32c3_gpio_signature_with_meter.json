@@ -1,0 +1,73 @@
+{
+  "name": "esp32c3_gpio_signature_with_meter",
+  "board": "esp32c3_devkit",
+  "dut": "esp32c3_devkit",
+  "firmware": "assets_golden/duts/esp32c3_devkit/gpio_signature/firmware",
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": null,
+    "baud": 115200,
+    "duration_s": 8,
+    "profile": "espidf",
+    "expect_patterns": [
+      "AEL_DUT_READY"
+    ]
+  },
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    },
+    "run_selftest": false,
+    "measure": {
+      "duration_ms": 500
+    }
+  },
+  "connections": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle",
+        "freq_hz": 1000
+      },
+      {
+        "dut_gpio": "X2(GPIO5)",
+        "inst_gpio": 12,
+        "expect": "toggle",
+        "freq_hz": 2000
+      },
+      {
+        "dut_gpio": "X3(GPIO6)",
+        "inst_gpio": 13,
+        "expect": "high"
+      },
+      {
+        "dut_gpio": "X4(GPIO7)",
+        "inst_gpio": 14,
+        "expect": "low"
+      }
+    ],
+    "dut_to_instrument_analog": [
+      {
+        "dut_signal": "3V3",
+        "inst_adc_gpio": 4,
+        "expect_v_min": 2.8,
+        "expect_v_max": 3.45,
+        "avg": 32
+      }
+    ],
+    "ground_required": true
+  },
+  "measurement": {
+    "duration_ms": 500
+  },
+  "uart_expect": {
+    "contains": "AEL_DUT_READY"
+  },
+  "notes": "Plan-level assumption derived from the ESP32-S3 golden GPIO meter path; confirm final AP identity and wiring on bench hardware."
+}

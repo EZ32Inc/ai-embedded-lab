@@ -64,3 +64,37 @@ Minimal example:
     { "name": "observe.logic", "version": "v0.1", "channels": 8 }
   ]
 }
+```
+
+## ESP32 Meter Wi-Fi Control
+
+For Wi-Fi instruments like `esp32s3_dev_c_meter`, AEL can normalize AP discovery and connection from the instrument manifest instead of relying on ad hoc shell commands.
+
+Examples:
+
+```bash
+python3 -m ael instruments meter-setup --id esp32s3_dev_c_meter --port /dev/ttyACM0 --ifname wlxf0090d36d617 --ssid-suffix 67A9
+python3 -m ael instruments meter-ready --id esp32s3_dev_c_meter --ifname wlxf0090d36d617 --ssid-suffix 67A9
+python3 -m ael instruments meter-list --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
+python3 -m ael instruments wifi-scan --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
+python3 -m ael instruments wifi-connect --id esp32s3_dev_c_meter --ifname wlxf0090d36d617 --ssid-suffix 67A9
+python3 -m ael instruments meter-ping --id esp32s3_dev_c_meter
+```
+
+Behavior:
+
+- `meter-setup` performs `flash -> wait for AP -> connect`
+- `meter-ready` performs `scan -> connect -> ping`
+- `meter-list` reports all visible `ESP32_GPIO_METER_XXXX` candidates in a canonical agent-facing structure
+- `wifi-scan` filters visible SSIDs by the manifest `wifi.ap_ssid_prefix`
+- `wifi-connect` uses the manifest password automatically
+- `meter-ping` verifies the instrument responds on the manifest TCP endpoint
+- if exactly one matching SSID is visible, `wifi-connect` may select it directly
+- if multiple matching SSIDs are visible, provide `--ssid` or `--ssid-suffix`
+
+Canonical `meter-list` fields:
+
+- `available_meters`: list of `{ssid, suffix, signal, in_use}`
+- `meter_count`
+- `selection_required`
+- `recommended_action`

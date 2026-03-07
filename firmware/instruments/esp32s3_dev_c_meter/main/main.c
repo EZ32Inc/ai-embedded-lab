@@ -651,6 +651,8 @@ void app_main(void) {
 
     gpio_init_defaults();
     adc_init();
+    ESP_LOGI(TAG, "Delaying SoftAP startup for power stabilization");
+    vTaskDelay(pdMS_TO_TICKS(3000));
     wifi_init_softap();
 
     xTaskCreate(tcp_server_task, "tcp_server", 4096, NULL, 5, NULL);

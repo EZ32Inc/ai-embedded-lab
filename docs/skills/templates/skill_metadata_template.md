@@ -16,6 +16,12 @@ created_from:
 last_validated:
   date:
   method:
+  stages:
+    plan:
+    pre-flight:
+    run:
+    check:
+    report:
 related_reports: []
 known_good_evidence: []
 known_pitfalls: []

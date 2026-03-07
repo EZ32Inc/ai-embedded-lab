@@ -22,6 +22,14 @@
 2. 
 3. 
 
+## Stage Status
+
+- Plan:
+- Pre-flight:
+- Run:
+- Check:
+- Report:
+
 ## Expected Evidence
 
 - 

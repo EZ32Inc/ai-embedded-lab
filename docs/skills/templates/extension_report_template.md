@@ -32,6 +32,24 @@
 - Not run:
 - Inferred vs validated:
 
+## Stage Completion
+
+- plan:
+- pre-flight:
+- run:
+- check:
+- report:
+
+## Post-Plan User Handoff
+
+- Current status:
+- Available test names:
+- Current instrument profile:
+- Current plan-level connection assumptions:
+- Not yet confirmed:
+- Information needed from user:
+- Recommended next action:
+
 ## Hardware-Dependent / Minimal Items
 
 - 

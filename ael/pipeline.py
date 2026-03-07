@@ -12,6 +12,7 @@ from ael.notifiers import discord_webhook
 from ael import run_manager
 from ael import paths as ael_paths
 from ael import evidence as ael_evidence
+from ael import workflow_archive
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
@@ -390,6 +391,126 @@ def run_pipeline(
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
     print(f"Wiring: swd={wiring_cfg.get('swd')} reset={wiring_cfg.get('reset')} verify={wiring_cfg.get('verify')}")
 
+    archive_context = workflow_archive.env_conversation_context()
+    archive_base = {
+        "run_id": run_paths.run_id,
+        "session_id": archive_context.get("session_id"),
+        "task_id": archive_context.get("task_id"),
+        "board": {
+            "id": board_id or "unknown",
+            "name": board_cfg.get("name"),
+            "target": board_cfg.get("target"),
+        },
+        "test": {
+            "name": Path(test_path).stem,
+            "path": str(test_path),
+        },
+        "probe": {
+            "name": probe_cfg.get("name"),
+            "path": probe_path,
+        },
+        "instrument": {
+            "id": instrument_id,
+            "host": instrument_host,
+            "port": instrument_port,
+        },
+        "selected": {
+            "board_config": str(board_path) if board_path else None,
+            "probe_config": str(probe_path) if probe_path else None,
+            "test_config": str(test_path),
+        },
+    }
+
+    workflow_archive.append_event(
+        {
+            **archive_base,
+            **workflow_archive.runtime_event(
+                action="run_started",
+                status="started",
+                stage="plan",
+                extra={
+                    "requested_until_stage": until_stage,
+                    "artifacts": {
+                        "run_root": str(run_paths.root),
+                        "config_effective": str(run_paths.config_effective),
+                        "meta": str(run_paths.meta),
+                    },
+                },
+            ),
+        },
+        run_root=run_paths.root,
+    )
+    if archive_context.get("user_request"):
+        workflow_archive.append_event(
+            {
+                **archive_base,
+                **workflow_archive.workflow_event(
+                    actor="user",
+                    action="request",
+                    text=archive_context.get("user_request"),
+                    status="captured",
+                    stage="plan",
+                ),
+            },
+            run_root=run_paths.root,
+        )
+    if archive_context.get("ai_response"):
+        workflow_archive.append_event(
+            {
+                **archive_base,
+                **workflow_archive.workflow_event(
+                    actor="assistant",
+                    action="response",
+                    text=archive_context.get("ai_response"),
+                    status="captured",
+                    stage="plan",
+                ),
+            },
+            run_root=run_paths.root,
+        )
+    if archive_context.get("user_confirmation"):
+        workflow_archive.append_event(
+            {
+                **archive_base,
+                **workflow_archive.workflow_event(
+                    actor="user",
+                    action="confirmation",
+                    text=archive_context.get("user_confirmation"),
+                    status="captured",
+                    stage="plan",
+                ),
+            },
+            run_root=run_paths.root,
+        )
+    if archive_context.get("user_correction"):
+        workflow_archive.append_event(
+            {
+                **archive_base,
+                **workflow_archive.workflow_event(
+                    actor="user",
+                    action="correction",
+                    text=archive_context.get("user_correction"),
+                    status="captured",
+                    stage="plan",
+                ),
+            },
+            run_root=run_paths.root,
+        )
+    if archive_context.get("ai_next_action"):
+        workflow_archive.append_event(
+            {
+                **archive_base,
+                **workflow_archive.workflow_event(
+                    actor="assistant",
+                    action="next_action",
+                    text=archive_context.get("ai_next_action"),
+                    status="planned",
+                    stage=until_stage,
+                ),
+            },
+            run_root=run_paths.root,
+        )
+
     _emit_event(
         {
             "type": "run_started",
@@ -521,6 +642,32 @@ def run_pipeline(
             meta["ended_at"] = result["ended_at"]
             meta["termination"] = RunTermination.FAIL
             _write_json(run_paths.meta, meta)
+            workflow_archive.append_event(
+                {
+                    **archive_base,
+                    **workflow_archive.runtime_event(
+                        action="run_finished",
+                        status="failed",
+                        stage=until_stage,
+                        extra={
+                            "stage_execution": _stage_execution_summary(until_stage),
+                            "result": {
+                                "ok": False,
+                                "termination": RunTermination.FAIL,
+                                "failed_step": "build",
+                                "error_summary": "no build artifacts found",
+                            },
+                            "artifacts": {
+                                "run_root": str(run_paths.root),
+                                "meta": str(run_paths.meta),
+                                "result": str(run_paths.result),
+                                "evidence": str(evidence_path),
+                            },
+                        },
+                    ),
+                },
+                run_root=run_paths.root,
+            )
             return (3, run_paths) if return_paths else 3
 
     load_step, flash_cfg = strategy_resolver.resolve_load_stage(
@@ -694,6 +841,36 @@ def run_pipeline(
         }
     )
     _write_json(run_paths.meta, meta)
+
+    workflow_archive.append_event(
+        {
+            **archive_base,
+            **workflow_archive.runtime_event(
+                action="run_finished",
+                status="completed" if result["ok"] else "failed",
+                stage=until_stage,
+                extra={
+                    "stage_execution": result.get("stage_execution"),
+                    "result": {
+                        "ok": result.get("ok"),
+                        "termination": termination,
+                        "failed_step": failed_step,
+                        "error_summary": result.get("error_summary"),
+                    },
+                    "artifacts": {
+                        "run_root": str(run_paths.root),
+                        "meta": str(run_paths.meta),
+                        "result": str(run_paths.result),
+                        "run_plan": str(Path(run_paths.artifacts_dir) / "run_plan.json"),
+                        "runner_result": str(Path(run_paths.artifacts_dir) / "result.json"),
+                        "evidence": str(evidence_path),
+                        "logs": result.get("logs"),
+                    },
+                },
+            ),
+        },
+        run_root=run_paths.root,
+    )
 
     if result["ok"]:
         print("PASS: Run verified")

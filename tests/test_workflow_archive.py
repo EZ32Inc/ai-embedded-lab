@@ -1,0 +1,90 @@
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from ael import pipeline
+
+
+def _read_jsonl(path: Path):
+    return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
+    monkeypatch.setenv("AEL_SESSION_ID", "sess-123")
+    monkeypatch.setenv("AEL_TASK_ID", "task-123")
+    monkeypatch.setenv("AEL_USER_REQUEST", "Add a new ESP32-C3 board and run plan.")
+    monkeypatch.setenv("AEL_AI_RESPONSE", "Creating the board path and running plan.")
+    monkeypatch.setenv("AEL_USER_CONFIRMATION", "Use the ESP32-S3 GPIO meter assumptions for now.")
+    monkeypatch.setenv("AEL_AI_NEXT_ACTION", "Run the plan stage for the new board.")
+
+    code, run_paths = pipeline.run_pipeline(
+        probe_path="configs/esp32jtag.yaml",
+        board_arg="esp32c3_devkit",
+        test_path="tests/plans/esp32c3_gpio_signature_with_meter.json",
+        output_mode="quiet",
+        until_stage="plan",
+        return_paths=True,
+    )
+
+    assert code == 0
+
+    global_archive = tmp_path / "workflow_archive" / "events.jsonl"
+    run_archive = run_paths.root / "workflow_events.jsonl"
+
+    assert global_archive.exists()
+    assert run_archive.exists()
+
+    records = _read_jsonl(global_archive)
+    assert [(r["category"], r["actor"], r["action"]) for r in records] == [
+        ("runtime", "ael", "run_started"),
+        ("workflow", "user", "request"),
+        ("workflow", "assistant", "response"),
+        ("workflow", "user", "confirmation"),
+        ("workflow", "assistant", "next_action"),
+        ("runtime", "ael", "run_finished"),
+    ]
+
+    finished = records[-1]
+    assert finished["run_id"] == run_paths.run_id
+    assert finished["session_id"] == "sess-123"
+    assert finished["board"]["id"] == "esp32c3_devkit"
+    assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
+    assert finished["stage"] == "plan"
+    assert finished["status"] == "completed"
+    assert finished["stage_execution"]["executed"] == ["plan", "report"]
+    assert "run_plan" in finished["artifacts"]
+
+
+def test_workflow_archive_show_cli(monkeypatch, tmp_path):
+    monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
+    monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("AEL_USER_REQUEST", "Inspect archive.")
+
+    code, _ = pipeline.run_pipeline(
+        probe_path="configs/esp32jtag.yaml",
+        board_arg="esp32c3_devkit",
+        test_path="tests/plans/esp32c3_gpio_signature_with_meter.json",
+        output_mode="quiet",
+        until_stage="plan",
+        return_paths=True,
+    )
+    assert code == 0
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    env["AEL_WORKFLOW_ARCHIVE_ROOT"] = str(tmp_path / "workflow_archive")
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "workflow-archive", "show", "--limit", "2"],
+        cwd=str(Path(__file__).resolve().parents[1]),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    payload = json.loads(res.stdout)
+    assert len(payload) == 2
+    assert payload[-1]["action"] == "run_finished"
