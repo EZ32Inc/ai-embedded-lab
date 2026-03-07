@@ -2,10 +2,11 @@ from __future__ import annotations
 
 import os
 import subprocess
-import tempfile
 import time
 from pathlib import Path
 from typing import Any
+
+import serial
 
 from ael.pipeline import _simple_yaml_load
 
@@ -78,48 +79,54 @@ def probe_chip(port: str, target: str) -> dict[str, Any]:
     }
 
 
+def _read_serial_text(port: str, timeout_s: float, baud: int = 115200) -> str:
+    deadline = time.time() + max(timeout_s, 0.5)
+    chunks: list[bytes] = []
+    with serial.Serial(port=port, baudrate=baud, timeout=0.2) as ser:
+        ser.reset_input_buffer()
+        while time.time() < deadline:
+            waiting = ser.in_waiting
+            if waiting:
+                chunks.append(ser.read(waiting))
+            else:
+                chunk = ser.read(256)
+                if chunk:
+                    chunks.append(chunk)
+            if chunks and sum(len(c) for c in chunks) >= 4096:
+                break
+    return b"".join(chunks).decode("utf-8", errors="replace")
+
+
 def capture_boot_log(port: str, target: str, boot_timeout_s: float = 8.0) -> dict[str, Any]:
     timeout_s = max(1.0, boot_timeout_s)
-    with tempfile.NamedTemporaryFile(prefix="ael_hwcheck_", suffix=".log", delete=False) as tmp:
-        tmp_path = tmp.name
-    try:
-        with open(tmp_path, "wb") as out_f:
-            cat_proc = subprocess.Popen(["timeout", f"{timeout_s:.0f}s", "cat", port], stdout=out_f, stderr=subprocess.PIPE)
-            time.sleep(1.0)
-            reset_proc = _run(
-                [
-                    "python3",
-                    "-m",
-                    "esptool",
-                    "--chip",
-                    target,
-                    "-p",
-                    port,
-                    "--before",
-                    "default_reset",
-                    "--after",
-                    "hard_reset",
-                    "chip_id",
-                ]
-            )
-            try:
-                cat_proc.wait(timeout=timeout_s + 2.0)
-            except subprocess.TimeoutExpired:
-                cat_proc.kill()
-                cat_proc.wait(timeout=2.0)
-        with open(tmp_path, "r", encoding="utf-8", errors="replace") as f:
-            serial_text = f.read()
-    finally:
-        try:
-            os.unlink(tmp_path)
-        except OSError:
-            pass
+    reset_proc: subprocess.CompletedProcess[str] | None = None
+    serial_text = _read_serial_text(port=port, timeout_s=min(timeout_s, 3.0))
+    if not serial_text.strip():
+        reset_proc = _run(
+            [
+                "python3",
+                "-m",
+                "esptool",
+                "--chip",
+                target,
+                "-p",
+                port,
+                "--before",
+                "default_reset",
+                "--after",
+                "hard_reset",
+                "chip_id",
+            ]
+        )
+        time.sleep(0.5)
+        serial_text = _read_serial_text(port=port, timeout_s=timeout_s)
     return {
         "ok": bool(serial_text.strip()),
-        "reset_ok": reset_proc.returncode == 0,
+        "reset_ok": (reset_proc.returncode == 0) if reset_proc is not None else True,
         "serial_nonempty": bool(serial_text.strip()),
         "serial_sample": "\n".join(serial_text.splitlines()[:20]),
-        "reset_raw": ((reset_proc.stdout or "") + (reset_proc.stderr or "")).strip(),
+        "serial_text": serial_text,
+        "reset_raw": (((reset_proc.stdout or "") + (reset_proc.stderr or "")).strip() if reset_proc is not None else ""),
     }
 
 
@@ -136,7 +143,7 @@ def run(board: str, port: str, expect_pattern: str | None = None, samples: int =
     }
     expect_ok = None
     if expect_pattern:
-        expect_ok = expect_pattern in str(boot_info.get("serial_sample") or "")
+        expect_ok = expect_pattern in str(boot_info.get("serial_text") or "")
     overall_ok = bool(port_info["stable"] and chip_info.get("ok"))
     if expect_pattern and not boot_info.get("serial_nonempty"):
         overall_ok = False

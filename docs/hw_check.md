@@ -14,7 +14,7 @@ What it checks:
 - serial device exists
 - serial device stays present across multiple samples
 - `esptool` can identify the chip on that port
-- best-effort boot log capture after reset
+- best-effort live UART capture, with reset-and-read fallback if needed
 - optional expected UART token is present
 
 Pass criteria:
