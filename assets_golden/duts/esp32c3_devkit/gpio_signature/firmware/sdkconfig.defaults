@@ -1,0 +1,4 @@
+# Keep the project target stable even from a clean checkout.
+CONFIG_ESPTOOLPY_FLASHSIZE_4MB=y
+# CONFIG_ESPTOOLPY_FLASHSIZE_2MB is not set
+CONFIG_ESPTOOLPY_FLASHSIZE="4MB"
