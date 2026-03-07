@@ -78,6 +78,40 @@ class _SleepAdapter:
         return {"ok": self.ok, "error_summary": "" if self.ok else "sleep-fail"}
 
 
+class _FailOnceWithoutHintUartAdapter:
+    def __init__(self):
+        self.calls = 0
+
+    def execute(self, step, plan, ctx):
+        self.calls += 1
+        if self.calls == 1:
+            return {"ok": False, "failure_kind": "verification_miss", "error_summary": "missing expect"}
+        return {"ok": True}
+
+
+class _AlwaysFailWithHintAdapter:
+    def __init__(self):
+        self.calls = 0
+
+    def execute(self, step, plan, ctx):
+        self.calls += 1
+        return {
+            "ok": False,
+            "failure_kind": "verification_miss",
+            "error_summary": f"still failing {self.calls}",
+            "recovery_hint": {
+                "kind": "verification_miss",
+                "recoverable": True,
+                "preferred_action": "reset.serial",
+                "action_type": "reset.serial",
+                "reason": "limit-test",
+                "scope": "step",
+                "retry": True,
+                "params": {"port": "/dev/ttyFAKE0"},
+            },
+        }
+
+
 class TestRunnerRetryPolicy(unittest.TestCase):
     def setUp(self):
         self.run_dir = Path("/tmp/ael_runner_retry_policy_test")
@@ -180,6 +214,46 @@ class TestRunnerRetryPolicy(unittest.TestCase):
         self.assertEqual(len(res.get("recovery", [])), 1)
         self.assertTrue(res["recovery"][0].get("ok"))
         self.assertEqual(res["recovery"][0].get("action_type"), "control.reset.serial")
+
+    def test_policy_synthesizes_uart_recovery_hint_when_missing(self):
+        adapter = _FailOnceWithoutHintUartAdapter()
+        registry = _RegistryWithRecovery(
+            {"check.uart_log": adapter},
+            {"reset.serial": _RecoveryAdapter(), "control.reset.serial": _RecoveryAdapter()},
+        )
+        plan = {
+            "steps": [
+                {
+                    "name": "u1",
+                    "type": "check.uart_log",
+                    "retry_budget": 0,
+                    "inputs": {"observe_uart_cfg": {"port": "/dev/ttyFAKE0", "baud": 115200}},
+                }
+            ],
+            "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"check": 1}},
+        }
+        res = runner.run_plan(plan, self.run_dir, registry)
+        self.assertTrue(res.get("ok"))
+        self.assertEqual(len(res.get("recovery", [])), 1)
+        self.assertTrue(res["recovery"][0].get("ok"))
+        self.assertEqual(res["recovery"][0].get("action_type"), "reset.serial")
+
+    def test_serial_reset_recovery_is_capped_to_one_attempt(self):
+        adapter = _AlwaysFailWithHintAdapter()
+        registry = _RegistryWithRecovery(
+            {"check.noop": adapter},
+            {"reset.serial": _RecoveryAdapter(), "control.reset.serial": _RecoveryAdapter()},
+        )
+        plan = {
+            "steps": [{"name": "c1", "type": "check.noop", "retry_budget": 0}],
+            "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"check": 2}},
+        }
+        res = runner.run_plan(plan, self.run_dir, registry)
+        self.assertFalse(res.get("ok"))
+        self.assertEqual(len(res.get("recovery", [])), 2)
+        self.assertTrue(res["recovery"][0].get("ok"))
+        self.assertFalse(res["recovery"][1].get("ok"))
+        self.assertIn("attempt limit reached", res["recovery"][1].get("result", {}).get("error_summary", ""))
 
 
 if __name__ == "__main__":

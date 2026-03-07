@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from ael.run_contract import RunTermination
 from ael import failure_recovery
+from ael import recovery_policy
 
 
 @dataclass
@@ -203,6 +204,14 @@ def _run_recovery(
     return bool(out.get("ok", False)), out
 
 
+def _record_recovery_attempt(attempts: Dict[str, int], action_type: str) -> None:
+    aliases = failure_recovery.recovery_action_aliases(action_type)
+    if not aliases:
+        aliases = {str(action_type or "")}
+    for key in aliases:
+        attempts[key] = int(attempts.get(key, 0)) + 1
+
+
 def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     if not isinstance(plan, dict):
         raise ValueError("plan must be a dict")
@@ -225,6 +234,7 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     if not isinstance(steps, list):
         steps = []
     plan_retries = _plan_retry_map(plan)
+    recovery_attempts_by_action: Dict[str, int] = {}
     timeout_s: Optional[float] = None
     timeout_raw = plan.get("timeout_s")
     if timeout_raw is not None:
@@ -305,11 +315,16 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
             continue
 
         summary = _summary_from_result(step_last)
-        hint = failure_recovery.normalize_recovery_hint(step_last.get("recovery_hint"))
+        hint = recovery_policy.resolve_hint(step, step_last)
         failure_kind = failure_recovery.normalize_failure_kind(step_last.get("failure_kind"))
 
         if hint:
-            rec_ok, rec_out = _run_recovery(plan, hint, ctx, registry)
+            action_type = str(hint.get("action_type") or "").strip()
+            if recovery_policy.allow_action_attempt(action_type, recovery_attempts_by_action):
+                rec_ok, rec_out = _run_recovery(plan, hint, ctx, registry)
+                _record_recovery_attempt(recovery_attempts_by_action, action_type)
+            else:
+                rec_ok, rec_out = False, {"ok": False, "error_summary": "recovery action attempt limit reached"}
             result["recovery"].append(
                 {
                     "step": name,
