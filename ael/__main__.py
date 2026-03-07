@@ -24,6 +24,7 @@ from ael.default_verification import (
     save_setting as save_default_verification_setting,
 )
 from ael import workflow_archive
+from ael import hw_check
 
 
 def main():
@@ -137,6 +138,14 @@ def main():
     archive_show.add_argument("--limit", type=int, default=20)
     archive_show.add_argument("--run-id", default=None)
     archive_show.add_argument("--source", default="global", help="global or a path to a JSONL archive file")
+
+    hw_check_p = sub.add_parser("hw-check")
+    hw_check_p.add_argument("--board", required=True)
+    hw_check_p.add_argument("--port", required=True)
+    hw_check_p.add_argument("--expect-pattern", default=None)
+    hw_check_p.add_argument("--samples", type=int, default=5)
+    hw_check_p.add_argument("--interval-s", type=float, default=1.0)
+    hw_check_p.add_argument("--boot-timeout-s", type=float, default=8.0)
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -378,6 +387,21 @@ def main():
             records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)
             print(json.dumps(records, indent=2, sort_keys=True))
             sys.exit(0)
+    if args.cmd == "hw-check":
+        try:
+            payload = hw_check.run(
+                board=args.board,
+                port=args.port,
+                expect_pattern=args.expect_pattern,
+                samples=args.samples,
+                interval_s=args.interval_s,
+                boot_timeout_s=args.boot_timeout_s,
+            )
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+            sys.exit(1)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "dut":
         if args.dut_cmd == "create":
             code = dut_create_cmd(args.from_golden, args.to)
