@@ -358,7 +358,7 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
     observe_uart_cfg = dict(observe_uart_cfg)
     observe_uart_cfg.setdefault("auto_reset_on_download", True)
     observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
-    return {
+    step = {
         "name": "check_uart",
         "type": "check.uart_log",
         "inputs": {
@@ -370,6 +370,11 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
             "log_path": observe_uart_step_log,
         },
     }
+    recovery_demo = observe_uart_cfg.get("recovery_demo", {}) if isinstance(observe_uart_cfg.get("recovery_demo"), dict) else {}
+    if bool(recovery_demo.get("fail_first")):
+        step["retry_budget"] = 0
+        step["rewind_anchor"] = "check_uart"
+    return step
 
 
 def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any, probe_cfg: Dict[str, Any] | Any, wiring_cfg: Dict[str, Any] | Any, artifacts_dir: Path, observe_log: str, output_mode: str, measure_path: str):

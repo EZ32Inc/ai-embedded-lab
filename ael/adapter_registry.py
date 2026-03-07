@@ -254,6 +254,48 @@ class _UartCheckAdapter:
         log_path = inputs.get("log_path")
         if not raw_log_path or not out_json:
             return {"ok": False, "error_summary": "uart output paths missing"}
+        recovery_demo = cfg.get("recovery_demo", {}) if isinstance(cfg.get("recovery_demo"), dict) else {}
+        if bool(recovery_demo.get("fail_first")):
+            state = _load_runtime_state(ctx)
+            key = f"recovery_demo_fail_first_done:{step.get('name', 'check_uart')}"
+            if not bool(state.get(key)):
+                state[key] = True
+                _save_runtime_state(ctx, state)
+                injected = {
+                    "ok": False,
+                    "bytes": 0,
+                    "lines": 0,
+                    "download_mode_detected": True,
+                    "error_summary": "recovery demo injected uart fail-first",
+                }
+                _write_json(out_json, injected)
+                recovery_hint = failure_recovery.make_recovery_hint(
+                    kind=failure_recovery.FAILURE_VERIFICATION_MISS,
+                    recoverable=True,
+                    preferred_action=str(recovery_demo.get("action_type") or "reset.serial"),
+                    reason="recovery_demo_uart_fail_first",
+                    params=(dict(recovery_demo.get("params", {})) if isinstance(recovery_demo.get("params"), dict) else {}),
+                )
+                evidence_item = ael_evidence.make_item(
+                    kind="uart.verify",
+                    source="check.uart_log",
+                    ok=False,
+                    summary="recovery demo injected first-attempt UART failure",
+                    facts={
+                        "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISS,
+                        "recovery_hint": recovery_hint,
+                        "injected_fail_first": True,
+                    },
+                    artifacts={"uart_observe_json": out_json, "uart_raw_log": raw_log_path},
+                )
+                return {
+                    "ok": False,
+                    "error_summary": "recovery demo injected uart fail-first",
+                    "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISS,
+                    "result": injected,
+                    "evidence": [evidence_item],
+                    "recovery_hint": recovery_hint,
+                }
         if not cfg.get("port") and flash_json_path:
             try:
                 flash_payload = json.loads(Path(flash_json_path).read_text(encoding="utf-8"))
@@ -565,6 +607,29 @@ class _SignalVerifyAdapter:
                     "result": injected,
                     "evidence": [evidence_item],
                     "recovery_hint": recovery_hint,
+                }
+            if bool(recovery_demo.get("fail_after_recovery")):
+                injected = {"ok": False, "metrics": {}, "reasons": ["recovery_demo_fail_after_recovery"]}
+                if measure_path:
+                    _write_json(measure_path, injected)
+                evidence_item = ael_evidence.make_item(
+                    kind="gpio.signal",
+                    source="check.signal_verify",
+                    ok=False,
+                    summary="recovery demo forced failure after recovery attempt",
+                    facts={
+                        "injected_fail_after_recovery": True,
+                        "pin": pin_value,
+                        "failure_kind": failure_recovery.FAILURE_NON_RECOVERABLE,
+                    },
+                    artifacts={"measure_json": measure_path, "observe_log": log_path},
+                )
+                return {
+                    "ok": False,
+                    "error_summary": "recovery demo forced fail after recovery",
+                    "failure_kind": failure_recovery.FAILURE_NON_RECOVERABLE,
+                    "result": injected,
+                    "evidence": [evidence_item],
                 }
 
         capture = {}
