@@ -98,6 +98,8 @@ def collect_from_runner_result(runner_result: Dict[str, Any] | Any) -> List[Dict
                     summary=(result.get("error_summary") or f"recovery action {r.get('action_type')}"),
                     facts={
                         "step": r.get("step"),
+                        "failure_kind": r.get("failure_kind"),
+                        "recovery_hint": r.get("recovery_hint") if isinstance(r.get("recovery_hint"), dict) else {},
                         "action_type": r.get("action_type"),
                         "ok": r.get("ok", False),
                     },

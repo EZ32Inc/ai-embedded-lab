@@ -7,6 +7,7 @@ import time
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 from ael.run_contract import RunTermination
+from ael import failure_recovery
 
 
 @dataclass
@@ -300,13 +301,16 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
             continue
 
         summary = _summary_from_result(step_last)
-        hint = step_last.get("recovery_hint") if isinstance(step_last.get("recovery_hint"), dict) else None
+        hint = failure_recovery.normalize_recovery_hint(step_last.get("recovery_hint"))
+        failure_kind = failure_recovery.normalize_failure_kind(step_last.get("failure_kind"))
 
         if hint:
             rec_ok, rec_out = _run_recovery(plan, hint, ctx, registry)
             result["recovery"].append(
                 {
                     "step": name,
+                    "failure_kind": failure_kind,
+                    "recovery_hint": hint,
                     "action_type": hint.get("action_type", ""),
                     "ok": rec_ok,
                     "result": rec_out,
@@ -326,8 +330,25 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     if result["ok"]:
         result["error_summary"] = ""
         result["termination"] = RunTermination.PASS
+        result["failure_kind"] = ""
     elif result.get("termination") not in RunTermination.ALL:
         result["termination"] = RunTermination.FAIL
+    if not result.get("ok"):
+        if result.get("termination") == RunTermination.TIMEOUT:
+            result["failure_kind"] = failure_recovery.FAILURE_TIMEOUT
+        else:
+            last_failure = failure_recovery.FAILURE_UNKNOWN
+            for entry in reversed(result.get("steps", [])):
+                if not isinstance(entry, dict):
+                    continue
+                out = entry.get("result", {})
+                if not isinstance(out, dict):
+                    continue
+                kind = failure_recovery.normalize_failure_kind(out.get("failure_kind"))
+                if kind != failure_recovery.FAILURE_UNKNOWN:
+                    last_failure = kind
+                    break
+            result["failure_kind"] = last_failure
 
     _write_json(ctx.artifacts_dir / "result.json", result)
     return result

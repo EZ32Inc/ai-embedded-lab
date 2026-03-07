@@ -20,6 +20,7 @@ from ael.adapters import (
 )
 from ael import run_manager
 from ael import evidence as ael_evidence
+from ael import failure_recovery
 from ael.verification import la_verify
 
 
@@ -266,6 +267,23 @@ class _UartCheckAdapter:
         else:
             uart_result = observe_uart_log.run(cfg, raw_log_path=raw_log_path)
         _write_json(out_json, uart_result)
+        error_summary = uart_result.get("error_summary") or "uart observe failed"
+        err_l = str(error_summary).lower()
+        if any(t in err_l for t in ("permission", "port not found", "failed to open", "cannot open", "could not open")):
+            failure_kind = failure_recovery.FAILURE_TRANSPORT_ERROR
+        elif bool(uart_result.get("download_mode_detected")):
+            failure_kind = failure_recovery.FAILURE_VERIFICATION_MISS
+        else:
+            failure_kind = failure_recovery.FAILURE_VERIFICATION_MISMATCH
+        recovery_hint = None
+        if bool(uart_result.get("download_mode_detected")):
+            recovery_hint = failure_recovery.make_recovery_hint(
+                kind=failure_kind,
+                recoverable=True,
+                preferred_action="reset.serial",
+                reason="uart download mode detected",
+                params={"port": cfg.get("port"), "baud": cfg.get("baud", 115200)},
+            )
         evidence_item = ael_evidence.make_item(
             kind="uart.verify",
             source="check.uart_log",
@@ -277,6 +295,8 @@ class _UartCheckAdapter:
                 "crash_detected": uart_result.get("crash_detected"),
                 "missing_expect": uart_result.get("missing_expect", []),
                 "forbid_matched": uart_result.get("forbid_matched", []),
+                "failure_kind": failure_kind if not bool(uart_result.get("ok", False)) else "",
+                "recovery_hint": recovery_hint if isinstance(recovery_hint, dict) else {},
             },
             artifacts={
                 "uart_observe_json": out_json,
@@ -286,9 +306,11 @@ class _UartCheckAdapter:
         if not bool(uart_result.get("ok", False)):
             return {
                 "ok": False,
-                "error_summary": uart_result.get("error_summary") or "uart observe failed",
+                "error_summary": error_summary,
+                "failure_kind": failure_kind,
                 "result": uart_result,
                 "evidence": [evidence_item],
+                "recovery_hint": recovery_hint,
             }
         return {"ok": True, "result": uart_result, "evidence": [evidence_item]}
 
@@ -370,7 +392,11 @@ class _InstrumentSignatureAdapter:
         try:
             backend = self._backend_registry.resolve(instrument_id, "measure.digital")
         except KeyError as exc:
-            return {"ok": False, "error_summary": str(exc)}
+            return {
+                "ok": False,
+                "error_summary": str(exc),
+                "failure_kind": failure_recovery.FAILURE_INSTRUMENT_NOT_READY,
+            }
         meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
         pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
         actual_by_gpio = {}
@@ -470,6 +496,7 @@ class _InstrumentSignatureAdapter:
                 "digital_checks": len(checks),
                 "analog_checks": len(analog_checks),
                 "mismatch_count": len(mismatches),
+                "failure_kind": (failure_recovery.FAILURE_VERIFICATION_MISMATCH if not ok else ""),
             },
             artifacts={
                 "verify_result_json": verify_out,
@@ -481,6 +508,7 @@ class _InstrumentSignatureAdapter:
             return {
                 "ok": False,
                 "error_summary": "instrument digital verification failed",
+                "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISMATCH,
                 "result": verify_payload,
                 "evidence": [evidence_item],
             }
@@ -516,19 +544,27 @@ class _SignalVerifyAdapter:
                     source="check.signal_verify",
                     ok=False,
                     summary="recovery demo injected first-attempt failure",
-                    facts={"injected_fail_first": True, "pin": pin_value},
+                    facts={
+                        "injected_fail_first": True,
+                        "pin": pin_value,
+                        "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISS,
+                    },
                     artifacts={"measure_json": measure_path, "observe_log": log_path},
+                )
+                recovery_hint = failure_recovery.make_recovery_hint(
+                    kind=failure_recovery.FAILURE_VERIFICATION_MISS,
+                    recoverable=True,
+                    preferred_action=str(recovery_demo.get("action_type") or "reset.serial"),
+                    reason="recovery_demo_fail_first",
+                    params=(dict(recovery_demo.get("params", {})) if isinstance(recovery_demo.get("params"), dict) else {}),
                 )
                 return {
                     "ok": False,
                     "error_summary": "recovery demo injected fail-first",
+                    "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISS,
                     "result": injected,
                     "evidence": [evidence_item],
-                    "recovery_hint": {
-                        "action_type": str(recovery_demo.get("action_type") or "reset.serial"),
-                        "params": dict(recovery_demo.get("params", {})) if isinstance(recovery_demo.get("params"), dict) else {},
-                        "reason": "recovery_demo_fail_first",
-                    },
+                    "recovery_hint": recovery_hint,
                 }
 
         capture = {}
@@ -556,13 +592,22 @@ class _SignalVerifyAdapter:
                 verify_edges=False,
             )
         if not ok_obs:
-            return {"ok": False, "error_summary": "observe failed"}
+            return {
+                "ok": False,
+                "error_summary": "observe failed",
+                "failure_kind": failure_recovery.FAILURE_TRANSPORT_ERROR,
+            }
 
         if not capture.get("blob"):
             measure = {"ok": False, "metrics": {}, "reasons": ["no_capture"]}
             if measure_path:
                 _write_json(measure_path, measure)
-            return {"ok": False, "error_summary": "verify failed", "result": measure}
+            return {
+                "ok": False,
+                "error_summary": "verify failed",
+                "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISS,
+                "result": measure,
+            }
 
         measure = la_verify.analyze_capture_bytes(
             capture.get("blob"),
@@ -603,6 +648,7 @@ class _SignalVerifyAdapter:
                 "metrics": measure.get("metrics", {}),
                 "reasons": measure.get("reasons", []),
                 "duration_s": duration_s,
+                "failure_kind": (failure_recovery.FAILURE_VERIFICATION_MISMATCH if not ok else ""),
             },
             artifacts={
                 "measure_json": measure_path,
@@ -610,7 +656,13 @@ class _SignalVerifyAdapter:
             },
         )
         if not ok:
-            return {"ok": False, "error_summary": "verify failed", "result": measure, "evidence": [evidence_item]}
+            return {
+                "ok": False,
+                "error_summary": "verify failed",
+                "failure_kind": failure_recovery.FAILURE_VERIFICATION_MISMATCH,
+                "result": measure,
+                "evidence": [evidence_item],
+            }
         return {"ok": True, "result": measure, "evidence": [evidence_item]}
 
 

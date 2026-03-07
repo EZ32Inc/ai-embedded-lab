@@ -73,6 +73,9 @@ class TestPhaseDRecoveryFlow(unittest.TestCase):
         self.assertEqual(len(res.get("recovery", [])), 1)
         self.assertEqual(res["recovery"][0].get("action_type"), "reset.serial")
         self.assertTrue(res["recovery"][0].get("ok"))
+        self.assertEqual(res["recovery"][0].get("failure_kind"), "verification_miss")
+        self.assertIsInstance(res["recovery"][0].get("recovery_hint"), dict)
+        self.assertEqual(res["recovery"][0]["recovery_hint"].get("preferred_action"), "reset.serial")
 
         step_entries = [s for s in res.get("steps", []) if s.get("name") == "check_signal"]
         self.assertEqual(len(step_entries), 2)
