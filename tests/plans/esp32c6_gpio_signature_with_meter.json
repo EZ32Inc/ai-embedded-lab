@@ -17,7 +17,7 @@
     ]
   },
   "instrument": {
-    "id": "esp32_instrument_basic",
+    "id": "esp32s3_dev_c_meter",
     "tcp": {
       "host": "192.168.4.1",
       "port": 9000
@@ -69,5 +69,5 @@
   "uart_expect": {
     "contains": "AEL_DUT_READY"
   },
-  "notes": "Placeholder AP SSID expected from instrument family: ESP32_GPIO_METER_XXXX"
+  "notes": "Expected meter AP family: ESP32_GPIO_METER_XXXX"
 }

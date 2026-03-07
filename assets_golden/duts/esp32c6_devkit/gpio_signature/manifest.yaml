@@ -15,5 +15,5 @@ pins:
   x3: 6
   x4: 7
 instrument:
-  id: esp32_instrument_basic
+  id: esp32s3_dev_c_meter
   measure_pins: [11, 12, 13, 14]
