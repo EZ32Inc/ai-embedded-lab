@@ -13,11 +13,17 @@ It is a short internal reference for:
 
 These documents are lightweight skill specs, not a runtime system.
 
+Supporting guidance:
+
+- [Skill Usage Guidance](/nvme1t/work/codex/ai-embedded-lab/docs/skills/USAGE.md)
+
 ## Current Available Skill Specs
 
 - [new_board_bringup](/nvme1t/work/codex/ai-embedded-lab/docs/skills/new_board_bringup_skill.md)
 - [plan_stage_readiness_summary](/nvme1t/work/codex/ai-embedded-lab/docs/skills/plan_stage_readiness_summary_skill.md)
 - [user_correction_and_setup_reprint](/nvme1t/work/codex/ai-embedded-lab/docs/skills/user_correction_and_setup_reprint_skill.md)
+- [validation_summary_emission](/nvme1t/work/codex/ai-embedded-lab/docs/skills/validation_summary_emission_skill.md)
+- [last_known_good_extraction](/nvme1t/work/codex/ai-embedded-lab/docs/skills/last_known_good_extraction_skill.md)
 - [default_verification_review](/nvme1t/work/codex/ai-embedded-lab/docs/skills/default_verification_review_skill.md)
 
 ## One-Line Purpose For Each Skill
@@ -25,6 +31,8 @@ These documents are lightweight skill specs, not a runtime system.
 - `new_board_bringup`: guides a new DUT board from first introduction through structured bring-up toward first validated execution.
 - `plan_stage_readiness_summary`: turns a successful `plan` stage into a clear readiness summary with assumptions, unknowns, and the next safe step.
 - `user_correction_and_setup_reprint`: absorbs user corrections to setup assumptions and reprints the updated setup clearly before work continues.
+- `validation_summary_emission`: turns a successful run result into a concise explanation of what was validated and what passed.
+- `last_known_good_extraction`: restates the reusable working setup from a successful run.
 - `default_verification_review`: interprets the default verification sequence as a baseline-health and confidence review.
 
 ## When To Use Which Skill
@@ -40,6 +48,12 @@ Practical situations:
 - After the user corrects setup assumptions:
   use `user_correction_and_setup_reprint`
 
+- After a successful run when summarizing what was validated:
+  use `validation_summary_emission`
+
+- After a successful run when restating the reusable working setup:
+  use `last_known_good_extraction`
+
 - After `python3 -m ael verify-default run`:
   use `default_verification_review`
 
@@ -51,8 +65,8 @@ Practical situations:
 The current first batch has a simple structure:
 
 - `new_board_bringup` is the higher-level bring-up workflow skill.
-- `plan_stage_readiness_summary` is a key sub-skill inside that bring-up flow.
-- `user_correction_and_setup_reprint` is another key sub-skill inside that bring-up flow.
+- `plan_stage_readiness_summary` and `user_correction_and_setup_reprint` are key sub-skills inside that bring-up flow.
+- `validation_summary_emission` and `last_known_good_extraction` are key post-success reporting skills.
 - `default_verification_review` is a baseline and system review skill, not part of the bring-up chain.
 
 ## Current Limits
