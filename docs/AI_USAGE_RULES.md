@@ -101,3 +101,12 @@ But CLI remains the stable execution layer.
 ## Summary
 
 Design CLI for AI consumption, not human usage.
+
+## Inventory Questions
+
+For DUT, MCU, and test-coverage questions, prefer the repo-native inventory command first:
+
+- `python3 -m ael inventory list`
+- `python3 -m ael inventory list --format text`
+
+Use manual repo inspection only as fallback when the inventory command is missing or insufficient.

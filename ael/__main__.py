@@ -25,6 +25,7 @@ from ael.default_verification import (
 )
 from ael import workflow_archive
 from ael import hw_check
+from ael import inventory
 
 
 def main():
@@ -131,6 +132,11 @@ def main():
     verify_default_run.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_run.add_argument("--skip-if-docs-only", action="store_true")
     verify_default_run.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
+
+    inventory_p = sub.add_parser("inventory")
+    inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
+    inventory_list = inventory_sub.add_parser("list")
+    inventory_list.add_argument("--format", choices=["json", "text"], default="json")
 
     archive_p = sub.add_parser("workflow-archive")
     archive_sub = archive_p.add_subparsers(dest="archive_cmd", required=True)
@@ -382,6 +388,14 @@ def main():
             verify_only=args.verify_only,
         )
         sys.exit(code)
+    if args.cmd == "inventory":
+        if args.inventory_cmd == "list":
+            payload = inventory.build_inventory(Path(repo_root))
+            if args.format == "text":
+                print(inventory.render_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
     if args.cmd == "workflow-archive":
         if args.archive_cmd == "show":
             records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)

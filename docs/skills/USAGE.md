@@ -43,6 +43,7 @@ A skill spec should influence behavior when:
 
 Examples:
 
+- inventory questions about DUTs, MCUs, or test coverage: use `python3 -m ael inventory list` first
 - adding a new board: use `new_board_bringup`
 - after successful `plan`: use `plan_stage_readiness_summary`
 - after user setup corrections: use `user_correction_and_setup_reprint`
