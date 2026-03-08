@@ -26,6 +26,7 @@ from ael.default_verification import (
 from ael import workflow_archive
 from ael import hw_check
 from ael import inventory
+from ael import stage_explain
 
 
 def main():
@@ -141,6 +142,12 @@ def main():
     inventory_describe.add_argument("--board", required=True)
     inventory_describe.add_argument("--test", required=True)
     inventory_describe.add_argument("--format", choices=["json", "text"], default="json")
+
+    explain_p = sub.add_parser("explain-stage")
+    explain_p.add_argument("--board", required=True)
+    explain_p.add_argument("--test", required=True)
+    explain_p.add_argument("--stage", required=True, choices=["plan", "pre-flight", "preflight", "run", "check"])
+    explain_p.add_argument("--format", choices=["json", "text"], default="json")
 
     archive_p = sub.add_parser("workflow-archive")
     archive_sub = archive_p.add_subparsers(dest="archive_cmd", required=True)
@@ -407,6 +414,13 @@ def main():
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)
+    if args.cmd == "explain-stage":
+        payload = stage_explain.explain_stage(board_id=args.board, test_path=args.test, stage=args.stage, repo_root=Path(repo_root))
+        if args.format == "text":
+            print(stage_explain.render_text(payload), end="")
+        else:
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "workflow-archive":
         if args.archive_cmd == "show":
             records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)

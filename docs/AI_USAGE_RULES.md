@@ -115,3 +115,13 @@ For detailed per-test questions such as connections, expected checks, or what a 
 - `python3 -m ael inventory describe-test --board <board_id> --test <test_path> --format text`
 
 Use manual repo inspection only as fallback when the inventory command is missing or insufficient.
+
+
+## Stage Questions
+
+For questions about what `plan`, `pre-flight`, `run`, or `check` include, prefer the repo-native stage explanation command first:
+
+- `python3 -m ael explain-stage --board <board_id> --test <test_path> --stage <stage>`
+- `python3 -m ael explain-stage --board <board_id> --test <test_path> --stage <stage> --format text`
+
+Use manual code inspection only as fallback when the stage explanation command is missing or insufficient.
