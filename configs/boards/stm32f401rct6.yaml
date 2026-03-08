@@ -1,10 +1,10 @@
 board:
-  name: STM32F103 Bluepill
-  target: stm32f103c8t6
+  name: STM32F401RCT6
+  target: stm32f401rct6
   build:
     type: arm_debug
-    project_dir: firmware/targets/stm32f103
-    artifact_stem: stm32f103_app
+    project_dir: firmware/targets/stm32f401rct6
+    artifact_stem: stm32f401_app
   firmware:
     description: Toggle PA4-PA7 fast, blink PC13
   flash:

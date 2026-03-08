@@ -15,8 +15,10 @@ def test_build_inventory_includes_key_duts_and_mcus():
     assert payload["ok"] is True
     assert "esp32c6_devkit" in payload["summary"]["duts_with_tests"]
     assert "rp2040_pico" in payload["summary"]["duts_with_tests"]
+    assert "stm32f401rct6" in payload["summary"]["duts_with_tests"]
     assert "esp32c6" in payload["summary"]["mcus_with_tests"]
     assert "rp2040" in payload["summary"]["mcus_with_tests"]
+    assert "stm32f401rct6" in payload["summary"]["mcus_with_tests"]
 
 
 def test_build_inventory_includes_pack_linked_stm32_test_and_no_missing_smoke_ref():

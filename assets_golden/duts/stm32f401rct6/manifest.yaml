@@ -1,0 +1,20 @@
+id: stm32f401rct6
+mcu: stm32f401rct6
+family: stm32f4
+description: STM32F401RCT6 GPIO waveform + LED
+build:
+  type: arm_debug
+  project_dir: firmware
+flash:
+  method: gdb_swd
+default_packs:
+  - packs/smoke_stm32f401.json
+tags:
+  - stm32
+  - stm32f4
+  - stm32f401
+verified:
+  status: false
+  verified_on:
+    bench_id: pending_hw
+  date: 2026-03-08
