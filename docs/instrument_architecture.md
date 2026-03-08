@@ -308,6 +308,7 @@ Bench setup is where the real-world mapping lives. It should not be buried insid
 Current practical direction:
 
 - meter-based DUT-to-instrument mapping should live under an explicit `bench_setup` block in the test/config layer rather than under a generic `connections` bucket
+- current selected setup facts such as AP/SSID, endpoint, and active serial/flash port should be grouped as current setup/run-time setup facts rather than scattered across generic summary fields
 
 ## Applying The Model To The Current Meter Path
 

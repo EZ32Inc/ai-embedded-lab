@@ -111,6 +111,13 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         test_raw=test_raw,
         result=result,
     )
+    current_setup = pipeline._build_current_setup(
+        flash_info=flash_info,
+        instrument_id="esp32s3_dev_c_meter",
+        instrument_host="192.168.4.1",
+        instrument_port=9000,
+        selected_ssid="ESP32_GPIO_METER_E7F1",
+    )
 
     assert summary["board"] == "ESP32-C6 DevKit"
     assert summary["test"] == "esp32c6_gpio_signature_with_meter"
@@ -126,3 +133,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
     assert "GND -> GND" in lkg["wiring_assumptions"]
+
+    assert current_setup["serial_or_flash_port"] == "/dev/ttyACM0"
+    assert current_setup["instrument_profile"] == "esp32s3_dev_c_meter"
+    assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
+    assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}

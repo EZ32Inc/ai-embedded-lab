@@ -360,6 +360,27 @@ def _build_validation_summary(
     return summary
 
 
+def _build_current_setup(
+    *,
+    flash_info,
+    instrument_id,
+    instrument_host,
+    instrument_port,
+    selected_ssid,
+):
+    setup = {
+        "serial_or_flash_port": flash_info.get("port") or None,
+        "instrument_profile": instrument_id or None,
+        "selected_endpoint": {
+            "host": instrument_host or None,
+            "port": instrument_port if instrument_port is not None else None,
+        },
+    }
+    if selected_ssid:
+        setup["selected_ap_ssid"] = selected_ssid
+    return setup
+
+
 def _build_last_known_good_setup(
     *,
     run_id,
@@ -390,7 +411,7 @@ def _build_last_known_good_setup(
     return setup
 
 
-def _print_success_summary(summary, last_known_good):
+def _print_success_summary(summary, last_known_good, current_setup):
     print(
         "Summary: validation "
         f"board={summary.get('board')} test={summary.get('test')} run_id={summary.get('run_id')} "
@@ -420,6 +441,17 @@ def _print_success_summary(summary, last_known_good):
     )
     if summary.get("cleanup_items"):
         print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
+    endpoint = current_setup.get("selected_endpoint", {}) if isinstance(current_setup.get("selected_endpoint"), dict) else {}
+    setup_line = "Summary: setup"
+    if current_setup.get("serial_or_flash_port"):
+        setup_line += f" port={current_setup.get('serial_or_flash_port')}"
+    if current_setup.get("selected_ap_ssid"):
+        setup_line += f" ssid={current_setup.get('selected_ap_ssid')}"
+    if endpoint.get("host") and endpoint.get("port") is not None:
+        setup_line += f" endpoint={endpoint.get('host')}:{endpoint.get('port')}"
+    if current_setup.get("instrument_profile"):
+        setup_line += f" instrument={current_setup.get('instrument_profile')}"
+    print(setup_line)
     print(
         "LKG: "
         f"board={last_known_good.get('board')} test={last_known_good.get('test')} "
@@ -1030,8 +1062,16 @@ def run_pipeline(
             test_raw=test_raw,
             result=result,
         )
+        current_setup = _build_current_setup(
+            flash_info=flash_info,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            selected_ssid=selected_ssid,
+        )
         result["validation_summary"] = validation_summary
         result["last_known_good_setup"] = last_known_good_setup
+        result["current_setup"] = current_setup
     _write_json(run_paths.result, result)
 
     timings = {"total_s": round(time.monotonic() - run_started_mono, 3)}
@@ -1083,7 +1123,11 @@ def run_pipeline(
 
     if result["ok"]:
         print("PASS: Run verified")
-        _print_success_summary(result.get("validation_summary", {}), result.get("last_known_good_setup", {}))
+        _print_success_summary(
+            result.get("validation_summary", {}),
+            result.get("last_known_good_setup", {}),
+            result.get("current_setup", {}),
+        )
         _emit_event(
             {
                 "type": "run_succeeded",
