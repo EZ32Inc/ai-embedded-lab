@@ -140,6 +140,27 @@ class TestInstrumentWifi(unittest.TestCase):
         self.assertTrue(out["ok"])
         self.assertEqual("pong", out["type"])
 
+    def test_ping_ip_uses_system_ping(self):
+        with patch(
+            "ael.instruments.provision.subprocess.run",
+            return_value=_Completed(returncode=0, stdout="1 packets transmitted, 1 received\n"),
+        ) as run_mock:
+            out = provision.ping_ip("192.168.4.1", timeout_s=2.0)
+        self.assertTrue(out["ok"])
+        self.assertEqual(["ping", "-c", "1", "-W", "2", "192.168.4.1"], out["command"])
+        run_mock.assert_called_once()
+
+    def test_ensure_meter_reachable_raises_clear_error(self):
+        with patch(
+            "ael.instruments.provision.ping_ip",
+            return_value={"ok": False, "host": "192.168.4.1", "returncode": 1},
+        ):
+            with self.assertRaisesRegex(
+                RuntimeError,
+                "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking",
+            ):
+                provision.ensure_meter_reachable(MANIFEST)
+
     def test_ready_meter_scans_connects_and_pings(self):
         with patch(
             "ael.instruments.provision.wifi.scan",

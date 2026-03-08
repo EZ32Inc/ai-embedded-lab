@@ -91,6 +91,47 @@ def flash_wait_connect(
     }
 
 
+def ping_ip(host: str, timeout_s: float = 1.0, count: int = 1) -> dict[str, Any]:
+    target = str(host or "").strip()
+    if not target:
+        raise ValueError("ping target host is required")
+    packets = max(1, int(count))
+    wait_s = max(1, int(timeout_s))
+    cmd = ["ping", "-c", str(packets), "-W", str(wait_s), target]
+    proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    return {
+        "ok": proc.returncode == 0,
+        "host": target,
+        "timeout_s": timeout_s,
+        "command": cmd,
+        "returncode": proc.returncode,
+        "stdout": proc.stdout,
+        "stderr": proc.stderr,
+    }
+
+
+def ensure_meter_reachable(
+    manifest: dict,
+    host: str | None = None,
+    timeout_s: float = 1.0,
+) -> dict[str, Any]:
+    wifi_cfg = manifest.get("wifi") if isinstance(manifest.get("wifi"), dict) else {}
+    target = str(host or wifi_cfg.get("ap_ip") or "192.168.4.1").strip()
+    inst_id = str(manifest.get("id") or "meter").strip()
+    result = ping_ip(target, timeout_s=timeout_s)
+    if not result.get("ok"):
+        raise RuntimeError(
+            f"meter {inst_id} at {target} is unreachable and needs manual checking. "
+            "Suggestion: add a meter reset feature."
+        )
+    return {
+        "ok": True,
+        "instrument_id": inst_id,
+        "host": target,
+        "ping": result,
+    }
+
+
 def ready_meter(
     ifname: str,
     manifest: dict,

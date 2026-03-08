@@ -88,3 +88,35 @@ def test_workflow_archive_show_cli(monkeypatch, tmp_path):
     payload = json.loads(res.stdout)
     assert len(payload) == 2
     assert payload[-1]["action"] == "run_finished"
+
+
+def test_pipeline_blocks_unreachable_meter_before_run(monkeypatch, tmp_path):
+    monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
+
+    def _fail_meter(*args, **kwargs):
+        raise RuntimeError(
+            "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. "
+            "Suggestion: add a meter reset feature."
+        )
+
+    monkeypatch.setattr("ael.pipeline.instrument_provision.ensure_meter_reachable", _fail_meter)
+
+    code, run_paths = pipeline.run_pipeline(
+        probe_path="configs/esp32jtag.yaml",
+        board_arg="esp32c6_devkit",
+        test_path="tests/plans/esp32c6_gpio_signature_with_meter.json",
+        output_mode="quiet",
+        return_paths=True,
+    )
+
+    assert code == 6
+    result = json.loads(Path(run_paths.result).read_text(encoding="utf-8"))
+    assert result["ok"] is False
+    assert result["failed_step"] == "check_meter_reachability"
+    assert "manual checking" in result["error_summary"]
+
+    records = _read_jsonl(run_paths.root / "workflow_events.jsonl")
+    assert records[-1]["action"] == "run_finished"
+    assert records[-1]["status"] == "failed"
+    assert records[-1]["result"]["failed_step"] == "check_meter_reachability"

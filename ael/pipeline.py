@@ -13,6 +13,7 @@ from ael import run_manager
 from ael import paths as ael_paths
 from ael import evidence as ael_evidence
 from ael import workflow_archive
+from ael.instruments import provision as instrument_provision
 from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
@@ -469,6 +470,32 @@ def _print_success_summary(summary, last_known_good, current_setup):
     print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")
 
 
+def _should_check_meter_reachability(until_stage, test_raw, board_cfg):
+    stage = _normalize_until_stage(until_stage)
+    if stage in ("plan", "pre-flight"):
+        return False
+    if not strategy_resolver.is_meter_digital_verify_test(test_raw, board_cfg):
+        return False
+    instrument_id, _tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+    return str(instrument_id or "").strip() == "esp32s3_dev_c_meter"
+
+
+def _ensure_meter_reachable_for_run(test_raw, board_cfg):
+    instrument_id, tcp_cfg, manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+    manifest_payload = dict(manifest) if isinstance(manifest, dict) else {}
+    manifest_payload.setdefault("id", instrument_id)
+    wifi_cfg = manifest_payload.get("wifi") if isinstance(manifest_payload.get("wifi"), dict) else {}
+    if not wifi_cfg:
+        wifi_cfg = {}
+    if tcp_cfg.get("host") and "ap_ip" not in wifi_cfg:
+        wifi_cfg["ap_ip"] = tcp_cfg.get("host")
+    manifest_payload["wifi"] = wifi_cfg
+    return instrument_provision.ensure_meter_reachable(
+        manifest=manifest_payload,
+        host=tcp_cfg.get("host"),
+    )
+
+
 def run_pipeline(
     probe_path,
     board_arg,
@@ -738,6 +765,81 @@ def run_pipeline(
         },
         notify_cfg,
     )
+
+    if _should_check_meter_reachability(until_stage, test_raw, board_cfg):
+        try:
+            _ensure_meter_reachable_for_run(test_raw, board_cfg)
+        except Exception as exc:
+            error_summary = str(exc)
+            print(error_summary)
+            ended_at = datetime.now().isoformat()
+            result = {
+                "run_id": run_paths.run_id,
+                "termination": RunTermination.FAIL,
+                "ok": False,
+                "success": False,
+                "failed_step": "check_meter_reachability",
+                "error_summary": error_summary,
+                "started_at": run_started.isoformat(),
+                "ended_at": ended_at,
+                "timeout_s": timeout_s,
+                "retry_summary": {"step_attempts": 0, "recovery_attempts": 0},
+                "logs": {
+                    "preflight": str(run_paths.preflight_log),
+                    "build": str(run_paths.build_log),
+                    "flash": str(run_paths.flash_log),
+                    "observe": str(run_paths.observe_log),
+                    "observe_uart": str(run_paths.observe_uart_step_log),
+                    "observe_uart_raw": str(run_paths.observe_uart_log),
+                    "verify": str(run_paths.verify_log),
+                },
+                "artifacts": [],
+                "json": {
+                    "flash": str(run_paths.flash_json),
+                    "measure": str(run_paths.measure),
+                    "uart_observe": str(run_paths.uart_observe),
+                    "preflight": str(run_paths.preflight),
+                    "meta": str(run_paths.meta),
+                    "config_effective": str(run_paths.config_effective),
+                    "instrument_selftest": str(Path(run_paths.artifacts_dir) / "instrument_selftest.json"),
+                    "instrument_digital": str(Path(run_paths.artifacts_dir) / "instrument_digital.json"),
+                    "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
+                    "evidence": str(evidence_path),
+                },
+                "evidence": {"version": ael_evidence.EVIDENCE_VERSION, "count": 0, "status_counts": {"pass": 0, "fail": 0, "info": 0}},
+                "stage_execution": _stage_execution_summary(until_stage, preflight_enabled=False),
+            }
+            _write_json(run_paths.result, result)
+            meta["ended_at"] = ended_at
+            meta["termination"] = RunTermination.FAIL
+            _write_json(run_paths.meta, meta)
+            workflow_archive.append_event(
+                {
+                    **archive_base,
+                    **workflow_archive.runtime_event(
+                        action="run_finished",
+                        status="failed",
+                        stage=until_stage,
+                        extra={
+                            "stage_execution": result["stage_execution"],
+                            "result": {
+                                "ok": False,
+                                "termination": RunTermination.FAIL,
+                                "failed_step": "check_meter_reachability",
+                                "error_summary": error_summary,
+                            },
+                            "artifacts": {
+                                "run_root": str(run_paths.root),
+                                "meta": str(run_paths.meta),
+                                "result": str(run_paths.result),
+                                "evidence": str(evidence_path),
+                            },
+                        },
+                    ),
+                },
+                run_root=run_paths.root,
+            )
+            return (6, run_paths) if return_paths else 6
 
     def _failed_step_name(runner_result):
         if runner_result.get("ok"):

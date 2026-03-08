@@ -134,3 +134,28 @@
     - "health assessment is present but not overstated"
     - "important caveats remain visible"
   notes: "Initial default-verification review case grounded in current coverage view."
+
+- case_id: default_verification_review_002
+  case_type: organic
+  intent_type: default_verification_review
+  user_question: "What is currently covered and is the default verification baseline healthy?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+    - "python3 -m ael verify-default run"
+  allow_retrieval_failure: true
+  must_use_formal_path: true
+  required_output_elements:
+    - "current default verification sequence or covered baseline paths"
+    - "current coverage summary"
+    - "baseline health assessment"
+    - "important caveats or weak points"
+  forbidden_failure_modes:
+    - "claiming the baseline is healthy when verify-default stopped on a guarded meter-unreachable failure"
+    - "hiding the meter reachability failure"
+    - "answering only from stale memory without current repo retrieval"
+  judge_rubric:
+    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "current covered baseline paths are summarized clearly even when the run stops early"
+    - "health assessment reflects the guarded meter-unreachable failure"
+    - "important caveats and operator action remain visible"
+  notes: "Covers the current guarded failure mode when the ESP32 meter is unreachable before the default baseline can proceed."

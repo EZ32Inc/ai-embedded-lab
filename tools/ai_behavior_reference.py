@@ -156,6 +156,7 @@ def _parse_args() -> argparse.Namespace:
     compare.add_argument("--answer-text", default="")
     compare.add_argument("--answer-file", default="")
     compare.add_argument("--reference-json", default="")
+    compare.add_argument("--retrieval-file", default="")
     compare.add_argument("--output-dir", default="")
     compare.add_argument("--judge-cmd", default="")
     return ap.parse_args()
@@ -182,6 +183,22 @@ def _load_reference_json(path_text: str, case_id: str) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         raise RuntimeError(f"invalid reference JSON: {path}")
     return payload
+
+
+def _load_retrieval_file(path_text: str) -> List[Dict[str, Any]]:
+    path = Path(path_text)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    if not path.exists():
+        raise RuntimeError(f"retrieval file not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if isinstance(payload, dict):
+        retrieval = payload.get("retrieval")
+    else:
+        retrieval = payload
+    if not isinstance(retrieval, list) or not all(isinstance(item, dict) for item in retrieval):
+        raise RuntimeError(f"invalid retrieval payload: {path}")
+    return retrieval
 
 
 def _write_json(path: Path, payload: Dict[str, Any]) -> None:
@@ -268,6 +285,14 @@ def _comparison_verdict(case: Dict[str, Any], approved_answer: str, fresh_answer
     }
 
 
+def _retrieval_failed(retrieval: List[Dict[str, Any]]) -> bool:
+    return any(int(item.get("returncode", 1)) != 0 for item in retrieval)
+
+
+def _allow_retrieval_failure(case: Dict[str, Any]) -> bool:
+    return bool(case.get("allow_retrieval_failure"))
+
+
 def _parse_semantic_judge_output(stdout: str) -> Dict[str, Any] | None:
     text = stdout.strip()
     if not text:
@@ -315,6 +340,7 @@ def _semantic_compare(
         "required_output_elements": case.get("required_output_elements", []),
         "forbidden_failure_modes": case.get("forbidden_failure_modes", []),
         "judge_rubric": case.get("judge_rubric", []),
+        "allow_retrieval_failure": _allow_retrieval_failure(case),
         "semantic_judge_prompt": _semantic_compare_prompt(),
     }
     result = _run_external_command(judge_cmd, payload)
@@ -366,9 +392,13 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     fresh_answer = _answer_text(args.answer_text, args.answer_file)
     reference = _load_reference_json(args.reference_json, args.case_id)
     approved_answer = str(reference.get("approved_answer_draft", ""))
-    run = run_case(case_file=case_file, case=case, mode="prompt-only", answer_text=fresh_answer)
-    retrieval_failed = any(int(item.get("returncode", 1)) != 0 for item in run["retrieval"])
-    if retrieval_failed:
+    if args.retrieval_file:
+        retrieval = _load_retrieval_file(args.retrieval_file)
+    else:
+        run = run_case(case_file=case_file, case=case, mode="prompt-only", answer_text=fresh_answer)
+        retrieval = run["retrieval"]
+    retrieval_failed = _retrieval_failed(retrieval)
+    if retrieval_failed and not _allow_retrieval_failure(case):
         comparison = {
             "mode": "retrieval_gate",
             "status": "error",
@@ -377,7 +407,7 @@ def _cmd_compare(args: argparse.Namespace) -> int:
             "verdict_source": "retrieval_failure",
         }
     elif args.judge_cmd:
-        comparison = _semantic_compare(case, reference, run["retrieval"], fresh_answer, args.judge_cmd)
+        comparison = _semantic_compare(case, reference, retrieval, fresh_answer, args.judge_cmd)
     else:
         fallback = _comparison_verdict(case, approved_answer, fresh_answer)
         comparison = {
@@ -397,15 +427,17 @@ def _cmd_compare(args: argparse.Namespace) -> int:
         "reference_path": args.reference_json or str(_approved_json_path(args.case_id)),
         "approved_answer": approved_answer,
         "fresh_answer": fresh_answer,
-        "retrieval": run["retrieval"],
+        "retrieval": retrieval,
         "comparison": comparison,
         "verdict": comparison["verdict"],
     }
     json_path = out_dir / f"{args.case_id}.compare.json"
     _write_json(json_path, payload)
-    retrieval_failed = any(int(item.get("returncode", 1)) != 0 for item in run["retrieval"])
-    if retrieval_failed:
+    retrieval_failed = _retrieval_failed(retrieval)
+    if retrieval_failed and not _allow_retrieval_failure(case):
         print("retrieval_status: failed")
+    elif retrieval_failed:
+        print("retrieval_status: completed_with_allowed_failures")
     else:
         print("retrieval_status: completed")
     print(f"verdict: {comparison['verdict']}")

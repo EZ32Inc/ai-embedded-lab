@@ -78,6 +78,7 @@ python3 -m ael instruments meter-ready --id esp32s3_dev_c_meter --ifname wlxf009
 python3 -m ael instruments meter-list --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
 python3 -m ael instruments wifi-scan --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
 python3 -m ael instruments wifi-connect --id esp32s3_dev_c_meter --ifname wlxf0090d36d617 --ssid-suffix 67A9
+python3 -m ael instruments meter-reachability --id esp32s3_dev_c_meter
 python3 -m ael instruments meter-ping --id esp32s3_dev_c_meter
 ```
 
@@ -88,6 +89,7 @@ Behavior:
 - `meter-list` reports all visible `ESP32_GPIO_METER_XXXX` candidates in a canonical agent-facing structure
 - `wifi-scan` filters visible SSIDs by the manifest `wifi.ap_ssid_prefix`
 - `wifi-connect` uses the manifest password automatically
+- `meter-reachability` ICMP-pings the meter IP before a run
 - `meter-ping` verifies the instrument responds on the manifest TCP endpoint
 - if exactly one matching SSID is visible, `wifi-connect` may select it directly
 - if multiple matching SSIDs are visible, provide `--ssid` or `--ssid-suffix`

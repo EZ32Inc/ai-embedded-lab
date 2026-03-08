@@ -7,7 +7,9 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
+from ael import strategy_resolver
 from ael.adapters import preflight
+from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 
 
@@ -118,12 +120,55 @@ def _run_preflight_only(repo_root: Path, probe_path: str | None) -> Tuple[int, D
     return (0 if ok else 2), {"ok": bool(ok), "result": info or {}}
 
 
+def _resolve_board_raw(repo_root: Path, board: str | None) -> Dict[str, Any]:
+    board_id = str(board or "").strip()
+    if not board_id:
+        return {}
+    board_path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
+    if not board_path.exists():
+        return {}
+    loaded = _simple_yaml_load(str(board_path))
+    return loaded if isinstance(loaded, dict) else {}
+
+
+def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: str | None) -> None:
+    if not test_path:
+        return
+    test_raw = _load_text_payload(Path(test_path))
+    if not isinstance(test_raw, dict):
+        return
+    board_raw = _resolve_board_raw(repo_root, board)
+    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    if not strategy_resolver.is_meter_digital_verify_test(test_raw, board_cfg):
+        return
+    instrument_id, tcp_cfg, manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+    if str(instrument_id or "").strip() != "esp32s3_dev_c_meter":
+        return
+    manifest_payload = dict(manifest) if isinstance(manifest, dict) else {}
+    manifest_payload.setdefault("id", instrument_id)
+    wifi_cfg = manifest_payload.get("wifi") if isinstance(manifest_payload.get("wifi"), dict) else {}
+    if not wifi_cfg:
+        wifi_cfg = {}
+    if tcp_cfg.get("host") and "ap_ip" not in wifi_cfg:
+        wifi_cfg["ap_ip"] = tcp_cfg.get("host")
+    manifest_payload["wifi"] = wifi_cfg
+    instrument_provision.ensure_meter_reachable(
+        manifest=manifest_payload,
+        host=tcp_cfg.get("host"),
+    )
+
+
 def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tuple[int, Dict[str, Any]]:
     probe = _resolve_path(repo_root, step.get("probe"), "configs/esp32jtag.yaml")
     board = step.get("board")
     test = _resolve_path(repo_root, step.get("test"))
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
+    try:
+        _ensure_step_meter_reachable(repo_root, str(board), test)
+    except Exception as exc:
+        print(f"default_verification: {exc}")
+        return 2, {"ok": False, "error": str(exc)}
     code = run_pipeline(
         probe_path=probe,
         board_arg=str(board),

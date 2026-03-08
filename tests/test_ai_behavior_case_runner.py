@@ -473,6 +473,82 @@ def test_reference_compare_prefers_semantic_judge_when_provided(tmp_path):
             approved_md.write_text(old_md, encoding="utf-8")
 
 
+def test_reference_compare_can_use_captured_retrieval_file(tmp_path):
+    approved_root = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_root / "inventory_current_duts_001.json"
+    approved_md = approved_root / "inventory_current_duts_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+    retrieval_file = tmp_path / "retrieval.json"
+    retrieval_file.write_text(
+        json.dumps(
+            {
+                "retrieval": [
+                    {
+                        "command": "python3 -m ael inventory list",
+                        "returncode": 0,
+                        "stdout": "{\"ok\": true}",
+                        "stderr": "",
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    try:
+        approved_root.mkdir(parents=True, exist_ok=True)
+        reference_answer = "Reference baseline answer"
+        approved_json.write_text(
+            json.dumps(
+                {
+                    "case": {"case_id": "inventory_current_duts_001"},
+                    "question": "What DUTs and tests do we currently have?",
+                    "approved_answer_draft": reference_answer,
+                    "status": "approved",
+                }
+            ),
+            encoding="utf-8",
+        )
+        approved_md.write_text(reference_answer, encoding="utf-8")
+        out_dir = tmp_path / "retrieval_file_compare"
+        res = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                "tests/ai_behavior_cases/organic_cases.yaml",
+                "inventory_current_duts_001",
+                "--answer-text",
+                reference_answer,
+                "--retrieval-file",
+                str(retrieval_file),
+                "--judge-cmd",
+                f"{sys.executable} tools/reference_semantic_judge.py",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "retrieval_status: completed" in res.stdout
+        assert "verdict: PASS" in res.stdout
+        payload = json.loads((out_dir / "inventory_current_duts_001.compare.json").read_text(encoding="utf-8"))
+        assert payload["retrieval"][0]["command"] == "python3 -m ael inventory list"
+        assert payload["comparison"]["verdict"] == "PASS"
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
+
+
 def test_reference_compare_stops_when_retrieval_fails(tmp_path):
     case_file = tmp_path / "failing_cases.yaml"
     case_file.write_text(
@@ -599,6 +675,87 @@ def test_reference_compare_builtin_semantic_judge_gives_pass_on_exact_match(tmp_
         payload = json.loads((out_dir / "inventory_current_duts_001.compare.json").read_text(encoding="utf-8"))
         assert payload["comparison"]["verdict"] == "PASS"
         assert payload["comparison"]["verdict_source"] == "semantic_judge"
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
+
+
+def test_reference_compare_allows_guarded_retrieval_failure_when_case_opted_in(tmp_path):
+    case_file = tmp_path / "cases.yaml"
+    case_file.write_text(
+        json.dumps(
+            [
+                {
+                    "case_id": "guarded_failure_case_001",
+                    "case_type": "organic",
+                    "intent_type": "default_verification_review",
+                    "user_question": "What is currently covered and is the default verification baseline healthy?",
+                    "expected_retrieval_path": [
+                        "python3 -c \"print('inventory ok')\"",
+                        "python3 -c \"import sys; print('meter unreachable'); sys.exit(2)\"",
+                    ],
+                    "allow_retrieval_failure": True,
+                    "required_output_elements": [
+                        "baseline health assessment",
+                    ],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    approved_root = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_root / "guarded_failure_case_001.json"
+    approved_md = approved_root / "guarded_failure_case_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+    try:
+        approved_root.mkdir(parents=True, exist_ok=True)
+        reference_answer = "baseline health assessment: not healthy because the meter is unreachable"
+        approved_json.write_text(
+            json.dumps(
+                {
+                    "case": {"case_id": "guarded_failure_case_001"},
+                    "question": "What is currently covered and is the default verification baseline healthy?",
+                    "approved_answer_draft": reference_answer,
+                    "status": "approved",
+                }
+            ),
+            encoding="utf-8",
+        )
+        approved_md.write_text(reference_answer, encoding="utf-8")
+        out_dir = tmp_path / "guarded_failure_compare"
+        res = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                str(case_file),
+                "guarded_failure_case_001",
+                "--answer-text",
+                reference_answer,
+                "--judge-cmd",
+                f"{sys.executable} tools/reference_semantic_judge.py",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "retrieval_status: completed_with_allowed_failures" in res.stdout
+        assert "verdict: PASS" in res.stdout
+        payload = json.loads((out_dir / "guarded_failure_case_001.compare.json").read_text(encoding="utf-8"))
+        assert payload["comparison"]["verdict"] == "PASS"
+        assert payload["comparison"]["verdict_source"] == "semantic_judge"
+        assert payload["comparison"]["judge_output"]["grounded_in_retrieval"] is True
     finally:
         if old_json is None:
             approved_json.unlink(missing_ok=True)

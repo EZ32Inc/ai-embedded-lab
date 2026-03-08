@@ -96,6 +96,10 @@ def main():
     instr_meter_ping.add_argument("--id", required=True)
     instr_meter_ping.add_argument("--host", default=None)
     instr_meter_ping.add_argument("--port", type=int, default=None)
+    instr_meter_reachability = instr_sub.add_parser("meter-reachability")
+    instr_meter_reachability.add_argument("--id", required=True)
+    instr_meter_reachability.add_argument("--host", default=None)
+    instr_meter_reachability.add_argument("--timeout-s", type=float, default=1.0)
     instr_meter_ready = instr_sub.add_parser("meter-ready")
     instr_meter_ready.add_argument("--id", required=True)
     instr_meter_ready.add_argument("--ifname", required=True)
@@ -339,6 +343,22 @@ def main():
                 payload = esp32s3_dev_c_meter_tcp.ping(cfg)
             except Exception as exc:
                 print(json.dumps({"ok": False, "error": str(exc), "host": cfg["host"], "port": cfg["port"]}, indent=2, sort_keys=True))
+                sys.exit(1)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.instr_cmd == "meter-reachability":
+            inst = registry.get(args.id)
+            if not inst:
+                print(json.dumps({"ok": False, "error": f"Instrument not found: {args.id}"}, indent=2, sort_keys=True))
+                sys.exit(2)
+            try:
+                payload = instrument_provision.ensure_meter_reachable(
+                    manifest=inst,
+                    host=args.host,
+                    timeout_s=args.timeout_s,
+                )
+            except Exception as exc:
+                print(json.dumps({"ok": False, "error": str(exc), "host": args.host}, indent=2, sort_keys=True))
                 sys.exit(1)
             print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0)

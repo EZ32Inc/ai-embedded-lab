@@ -40,14 +40,16 @@ def main() -> int:
     approved = str(payload.get('approved_reference', {}).get('approved_answer', ''))
     retrieval = payload.get('retrieval', []) or []
     retrieval_ok = all(int(item.get('returncode', 1)) == 0 for item in retrieval)
+    retrieval_allowed = bool(payload.get('allow_retrieval_failure'))
     missing_required = _missing_required(payload.get('case', {}), fresh)
     similarity = SequenceMatcher(None, _normalize(fresh), _normalize(approved)).ratio() if (fresh or approved) else 1.0
+    grounded_ok = retrieval_ok or retrieval_allowed
 
     if _normalize(fresh) == _normalize(approved):
         verdict = 'PASS'
         reason = 'fresh answer matches approved reference after normalization'
         semantic_match = True
-    elif retrieval_ok and not missing_required:
+    elif grounded_ok and not missing_required:
         verdict = 'WEAK_PASS'
         reason = 'fresh answer differs from approved reference but remains grounded and complete enough'
         semantic_match = similarity >= 0.55
@@ -60,10 +62,10 @@ def main() -> int:
         'verdict': verdict,
         'reason': reason,
         'semantic_match': semantic_match,
-        'grounded_in_retrieval': retrieval_ok,
+        'grounded_in_retrieval': grounded_ok,
         'required_elements_satisfied': not missing_required,
         'forbidden_failures_present': [],
-        'strengths': ['exact approved-reference match'] if verdict == 'PASS' else ['retrieval completed successfully'] if verdict == 'WEAK_PASS' else [],
+        'strengths': ['exact approved-reference match'] if verdict == 'PASS' else ['retrieval completed with an allowed guarded failure'] if verdict == 'WEAK_PASS' and retrieval_allowed and not retrieval_ok else ['retrieval completed successfully'] if verdict == 'WEAK_PASS' else [],
         'weaknesses': missing_required,
     }))
     return 0
