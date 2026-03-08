@@ -122,6 +122,20 @@ def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[s
     return instrument_id, tcp_cfg, manifest
 
 
+def resolve_bench_setup(test_raw: Dict[str, Any] | Any) -> Dict[str, Any]:
+    if not isinstance(test_raw, dict):
+        return {}
+    bench_setup = test_raw.get("bench_setup")
+    if isinstance(bench_setup, dict) and bench_setup:
+        return bench_setup
+    legacy = test_raw.get("connections", {})
+    if isinstance(legacy, dict):
+        return legacy
+    if isinstance(bench_setup, dict):
+        return bench_setup
+    return {}
+
+
 def instrument_selftest_requested(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any) -> bool:
     if isinstance(test_raw, dict):
         if bool(test_raw.get("instrument_selftest")):
@@ -153,7 +167,7 @@ def is_meter_digital_verify_test(test_raw: Dict[str, Any] | Any, board_cfg: Dict
     has_measure_digital = any(isinstance(c, dict) and c.get("name") == "measure.digital" for c in caps)
     if not has_measure_digital:
         return False
-    conns = test_raw.get("connections", {})
+    conns = resolve_bench_setup(test_raw)
     if not isinstance(conns, dict):
         return False
     links = conns.get("dut_to_instrument", [])
@@ -380,8 +394,9 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
 def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any, probe_cfg: Dict[str, Any] | Any, wiring_cfg: Dict[str, Any] | Any, artifacts_dir: Path, observe_log: str, output_mode: str, measure_path: str):
     if is_meter_digital_verify_test(test_raw, board_cfg):
         instrument_id, tcp_cfg, _manifest = resolve_instrument_context(test_raw, board_cfg)
-        links = test_raw.get("connections", {}).get("dut_to_instrument", [])
-        analog_links = test_raw.get("connections", {}).get("dut_to_instrument_analog", [])
+        bench_setup = resolve_bench_setup(test_raw)
+        links = bench_setup.get("dut_to_instrument", [])
+        analog_links = bench_setup.get("dut_to_instrument_analog", [])
         duration_ms = 500
         meas_cfg = test_raw.get("measurement", {})
         if isinstance(meas_cfg, dict) and meas_cfg.get("duration_ms") is not None:

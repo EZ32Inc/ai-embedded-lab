@@ -295,7 +295,7 @@ def _wiring_assumption_lines(test_raw):
     if not isinstance(test_raw, dict):
         return []
     out = []
-    connections = test_raw.get("connections", {}) if isinstance(test_raw.get("connections"), dict) else {}
+    connections = strategy_resolver.resolve_bench_setup(test_raw)
     for item in connections.get("dut_to_instrument", []) if isinstance(connections.get("dut_to_instrument"), list) else []:
         if not isinstance(item, dict):
             continue

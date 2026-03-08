@@ -27,7 +27,7 @@
       "duration_ms": 500
     }
   },
-  "connections": {
+  "bench_setup": {
     "dut_to_instrument": [
       {
         "dut_gpio": "X1(GPIO4)",

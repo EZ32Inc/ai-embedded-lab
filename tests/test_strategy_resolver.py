@@ -31,7 +31,7 @@ class TestStrategyResolver(unittest.TestCase):
     def test_build_verify_step_uses_meter_path_when_capability_present(self):
         test_raw = {
             "instrument": {"id": "meter1", "tcp": {"host": "192.168.4.1", "port": 9000}},
-            "connections": {"dut_to_instrument": [{"inst_gpio": 11, "expect": "high"}]},
+            "bench_setup": {"dut_to_instrument": [{"inst_gpio": 11, "expect": "high"}]},
         }
         board_cfg = {}
         probe_cfg = {}
@@ -55,6 +55,31 @@ class TestStrategyResolver(unittest.TestCase):
 
         self.assertEqual(step.get("name"), "check_meter")
         self.assertEqual(step.get("type"), "check.instrument_signature")
+
+    def test_build_verify_step_accepts_legacy_connections_shape(self):
+        test_raw = {
+            "instrument": {"id": "meter1", "tcp": {"host": "192.168.4.1", "port": 9000}},
+            "connections": {"dut_to_instrument": [{"inst_gpio": 11, "expect": "high"}]},
+        }
+
+        with patch.object(
+            strategy_resolver,
+            "resolve_instrument_context",
+            return_value=("meter1", {"host": "192.168.4.1", "port": 9000}, {"capabilities": [{"name": "measure.digital"}]}),
+        ):
+            step = strategy_resolver.build_verify_step(
+                test_raw=test_raw,
+                board_cfg={},
+                probe_cfg={},
+                wiring_cfg={"verify": "P0.0"},
+                artifacts_dir=Path("/tmp"),
+                observe_log="/tmp/observe.log",
+                output_mode="normal",
+                measure_path="/tmp/measure.json",
+            )
+
+        self.assertEqual(step.get("name"), "check_meter")
+        self.assertEqual(step.get("inputs", {}).get("links"), [{"inst_gpio": 11, "expect": "high"}])
 
 
 if __name__ == "__main__":
