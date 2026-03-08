@@ -1,49 +1,74 @@
-# AEL Skills (Minimum Framework v0.1)
+# AEL Skills Index
 
-A skill in AEL is a reusable, concrete engineering procedure derived from real extension work.
+## Purpose
 
-## Skill Types
+This document is the entry point for the current first batch of AEL skill specifications.
 
-- Target expansion: add a new board/target by reusing a known-good reference path.
-- Capability expansion: add or evolve a capability across one or more existing targets.
+It is a short internal reference for:
 
-## Skill States
+- users
+- Codex
+- Gemini or other models
+- future architecture and workflow work
 
-- `candidate`: first draft from recent real work.
-- `current`: recommended version for ongoing use.
-- `deprecated`: still readable but not preferred.
-- `obsolete`: retained only as historical context.
+These documents are lightweight skill specs, not a runtime system.
 
-## Standard Outputs for Real Extension Work
+## Current Available Skill Specs
 
-- Golden path implementation.
-- Extension report.
-- Skill draft or skill update.
-- Evidence baseline (validated and inferred parts clearly separated).
-- Friction notes (what slowed or blocked extension).
+- [new_board_bringup](/nvme1t/work/codex/ai-embedded-lab/docs/skills/new_board_bringup_skill.md)
+- [plan_stage_readiness_summary](/nvme1t/work/codex/ai-embedded-lab/docs/skills/plan_stage_readiness_summary_skill.md)
+- [user_correction_and_setup_reprint](/nvme1t/work/codex/ai-embedded-lab/docs/skills/user_correction_and_setup_reprint_skill.md)
+- [default_verification_review](/nvme1t/work/codex/ai-embedded-lab/docs/skills/default_verification_review_skill.md)
 
-## Staged Execution Alignment
+## One-Line Purpose For Each Skill
 
-For target-expansion work, explicitly track stage status with AEL terms:
+- `new_board_bringup`: guides a new DUT board from first introduction through structured bring-up toward first validated execution.
+- `plan_stage_readiness_summary`: turns a successful `plan` stage into a clear readiness summary with assumptions, unknowns, and the next safe step.
+- `user_correction_and_setup_reprint`: absorbs user corrections to setup assumptions and reprints the updated setup clearly before work continues.
+- `default_verification_review`: interprets the default verification sequence as a baseline-health and confidence review.
 
-- `plan`: structure, naming, and strategy consistency
-- `pre-flight`: non-runtime readiness and bench/probe checks
-- `run` / `check` / `report`: typically hardware-attached, may be intentionally deferred
+## When To Use Which Skill
 
-## Required Post-Plan Communication For New DUTs
+Practical situations:
 
-When a task adds or bootstraps a new DUT / board / MCU target and the work has reached `plan`, the AI should not stop at "plan passed" or "files were created".
+- Adding a new board:
+  use `new_board_bringup`
 
-If real bench wiring and runtime setup are not yet fully confirmed, the AI should proactively provide a structured post-`plan` handoff covering:
+- After `plan` on a new or uncertain path:
+  use `plan_stage_readiness_summary`
 
-- current status by stage: `plan`, `pre-flight`, `run / check / report`
-- available test names now created for the DUT
-- current instrument profile assumption, including whether it is confirmed or placeholder
-- current plan-level connection assumptions
-- not yet confirmed hardware/runtime details
-- concrete information still needed from the user
-- one recommended next action
+- After the user corrects setup assumptions:
+  use `user_correction_and_setup_reprint`
 
-Use explicit labels such as `completed`, `assumed`, `not yet confirmed`, and `needed from user`.
+- After `python3 -m ael verify-default run`:
+  use `default_verification_review`
 
-Do not present plan-level wiring or instrument assumptions as validated hardware truth unless they have actually been confirmed during `pre-flight` or later stages.
+- When reviewing current baseline confidence:
+  use `default_verification_review`
+
+## Relationship Between The Current Skills
+
+The current first batch has a simple structure:
+
+- `new_board_bringup` is the higher-level bring-up workflow skill.
+- `plan_stage_readiness_summary` is a key sub-skill inside that bring-up flow.
+- `user_correction_and_setup_reprint` is another key sub-skill inside that bring-up flow.
+- `default_verification_review` is a baseline and system review skill, not part of the bring-up chain.
+
+## Current Limits
+
+This current skill set is not:
+
+- a skill runtime
+- a dispatcher or registry
+- a complete skill library
+- the final shape of AEL skill formalization
+
+## Near-Term Usage Guidance
+
+These skill specs can already be used now as:
+
+- prompt patterns for Codex or Gemini
+- behavior and review checklists
+- output expectations in recurring workflow situations
+- lightweight references for future workflow and architecture work
