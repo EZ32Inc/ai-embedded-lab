@@ -205,6 +205,7 @@ def _comparison_verdict(case: Dict[str, Any], approved_answer: str, fresh_answer
     missing_required = _required_elements(case, fresh_answer)
     similarity = SequenceMatcher(None, approved_norm, fresh_norm).ratio() if approved_norm or fresh_norm else 1.0
     if fresh_norm == approved_norm:
+        missing_required = []
         verdict = "PASS"
         reason = "fresh answer matches approved reference after normalization"
     elif not missing_required:

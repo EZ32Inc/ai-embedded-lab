@@ -379,6 +379,7 @@ def test_reference_workflow_draft_approve_and_compare(tmp_path):
         compare_json = out_dir / "inventory_current_duts_001.compare.json"
         payload = json.loads(compare_json.read_text(encoding="utf-8"))
         assert payload["comparison"]["verdict"] == "PASS"
+        assert payload["comparison"]["missing_required_elements"] == []
     finally:
         if old_json is None:
             approved_json.unlink(missing_ok=True)
