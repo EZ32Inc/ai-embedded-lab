@@ -1,0 +1,112 @@
+- case_id: inventory_current_duts_001
+  case_type: organic
+  intent_type: inventory_question
+  user_question: "What DUTs and tests do we currently have?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "current DUT ids"
+    - "MCU names or families"
+    - "test names grouped by DUT or otherwise clearly associated"
+  forbidden_failure_modes:
+    - "using ad hoc repo inspection as the primary path when inventory exists"
+    - "inventing unsupported DUTs or tests"
+    - "omitting currently covered DUTs"
+  judge_rubric:
+    - "retrieval path used first is inventory list"
+    - "response is grounded in current generated repo state"
+    - "required DUT and test information is present"
+    - "no fabrication or stale-memory answer"
+  notes: "High-frequency retrieval case. Good quick sanity check."
+
+- case_id: inventory_board_tests_stm32f401_001
+  case_type: organic
+  intent_type: inventory_question
+  user_question: "What tests exist for stm32f401rct6?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "DUT id stm32f401rct6"
+    - "available test name gpio_signature"
+    - "clear indication that coverage comes through the current repo-native inventory path"
+  forbidden_failure_modes:
+    - "missing pack-linked coverage"
+    - "claiming direct board-specific plan files when none exist"
+    - "answering from stale memory instead of current inventory"
+  judge_rubric:
+    - "retrieval path used first is inventory list"
+    - "board-specific test coverage is identified correctly"
+    - "no invented extra tests"
+  notes: "Useful because STM32 coverage is currently pack-linked rather than fully board-plan-specific."
+
+- case_id: describe_test_stm32f401_001
+  case_type: organic
+  intent_type: test_detail_question
+  user_question: "Please show me stm32f401rct6 golden GPIO test connections and what will be tested."
+  expected_retrieval_path:
+    - "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json"
+  must_use_formal_path: true
+  required_output_elements:
+    - "probe identity ESP32JTAG"
+    - "connections including SWD, RESET, and observed signal"
+    - "expected signal checks"
+    - "current limitation that only the generic signal path is checked if that remains true"
+  forbidden_failure_modes:
+    - "using ad hoc repo reconstruction as the primary path"
+    - "claiming multi-pin validation when only the generic signal path is checked"
+    - "omitting what the test actually validates"
+  judge_rubric:
+    - "retrieval path used first is inventory describe-test"
+    - "connections and expected checks are correctly summarized"
+    - "limitations are not hidden or overstated"
+    - "answer stays grounded in current repo state"
+  notes: "Directly grounded in recent STM32F401 workflow."
+
+- case_id: explain_stage_plan_stm32f401_001
+  case_type: organic
+  intent_type: stage_semantics_question
+  user_question: "What's in plan?"
+  expected_retrieval_path:
+    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage plan"
+  must_use_formal_path: true
+  required_output_elements:
+    - "selected board and test"
+    - "selected probe path"
+    - "resolved wiring assumptions"
+    - "build or flash or check model selection"
+    - "what plan does not prove"
+  forbidden_failure_modes:
+    - "treating plan as real validation"
+    - "blending assumptions with confirmed hardware facts"
+    - "answering without using explain-stage first"
+  judge_rubric:
+    - "retrieval path used first is explain-stage plan"
+    - "response explains what plan includes"
+    - "response explicitly states what plan does not confirm"
+    - "no semantic overclaim"
+  notes: "High-frequency stage-semantics case."
+
+- case_id: explain_stage_preflight_stm32f401_001
+  case_type: organic
+  intent_type: stage_semantics_question
+  user_question: "What will be included in pre-flight?"
+  expected_retrieval_path:
+    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage pre-flight"
+  must_use_formal_path: true
+  required_output_elements:
+    - "expected pre-flight checks"
+    - "what pre-flight confirms"
+    - "what pre-flight does not prove"
+    - "current wiring assumptions when relevant"
+  forbidden_failure_modes:
+    - "claiming pre-flight proves DUT firmware behavior"
+    - "claiming pre-flight proves signal correctness"
+    - "answering without using explain-stage first"
+  judge_rubric:
+    - "retrieval path used first is explain-stage pre-flight"
+    - "response accurately describes probe-side readiness checks"
+    - "response explicitly states what pre-flight does not confirm"
+    - "no semantic overclaim"
+  notes: "Useful because pre-flight meaning is easy to overstate."
