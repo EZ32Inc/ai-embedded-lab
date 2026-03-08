@@ -73,6 +73,25 @@ def _run_command(command: str) -> Dict[str, Any]:
     }
 
 
+def _run_external_command(command: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    completed = subprocess.run(
+        command,
+        cwd=str(REPO_ROOT),
+        shell=True,
+        input=json.dumps(payload, indent=2, sort_keys=True),
+        capture_output=True,
+        text=True,
+    )
+    return {
+        "command": command,
+        "argv": shlex.split(command),
+        "returncode": int(completed.returncode),
+        "stdout": completed.stdout,
+        "stderr": completed.stderr,
+        "input_json": payload,
+    }
+
+
 def render_answer_prompt(case: Dict[str, Any], retrievals: List[Dict[str, Any]]) -> str:
     return f"""You are answering an AEL AI behavior test case.
 
@@ -165,6 +184,33 @@ def _answer_stage(case: Dict[str, Any], retrievals: List[Dict[str, Any]], answer
     }
 
 
+def _answer_stage_external(
+    case: Dict[str, Any],
+    retrievals: List[Dict[str, Any]],
+    answer_cmd: str,
+) -> Dict[str, Any]:
+    prompt = render_answer_prompt(case, retrievals)
+    payload = {
+        "stage": "answer",
+        "case": case,
+        "retrieval": retrievals,
+        "answer_prompt": prompt,
+    }
+    result = _run_external_command(answer_cmd, payload)
+    answer_text = result["stdout"].strip() or None
+    status = "completed" if result["returncode"] == 0 else "error"
+    return {
+        "mode": "external_command",
+        "status": status,
+        "answer_text": answer_text,
+        "answer_prompt": prompt,
+        "answer_command": answer_cmd,
+        "answer_return_code": result["returncode"],
+        "answer_stdout": result["stdout"],
+        "answer_stderr": result["stderr"],
+    }
+
+
 def _judge_stage(
     case: Dict[str, Any],
     retrievals: List[Dict[str, Any]],
@@ -183,6 +229,7 @@ def _judge_stage(
             "verdict": judge_verdict,
             "reason": judge_reason or "manual verdict supplied",
             "judge_prompt": prompt,
+            "verdict_source": "manual_verdict",
         }
 
     if mode == "stub":
@@ -198,6 +245,7 @@ def _judge_stage(
             "verdict": verdict,
             "reason": reason,
             "judge_prompt": prompt,
+            "verdict_source": "stub_logic",
         }
 
     verdict = "ERROR" if not retrieval_ok else "WEAK_PASS"
@@ -212,6 +260,74 @@ def _judge_stage(
         "verdict": verdict,
         "reason": reason,
         "judge_prompt": prompt,
+        "verdict_source": "prompt_only_fallback",
+    }
+
+
+def _parse_external_judge_stdout(stdout: str) -> Dict[str, str] | None:
+    text = stdout.strip()
+    if not text:
+        return None
+    try:
+        payload = json.loads(text)
+    except Exception:
+        payload = None
+    if isinstance(payload, dict):
+        verdict = str(payload.get("verdict", "")).strip().upper()
+        if verdict in VERDICTS:
+            reason = str(payload.get("reason", "")).strip() or "parsed from judge JSON output"
+            return {"verdict": verdict, "reason": reason}
+    first = text.splitlines()[0].strip()
+    if first in VERDICTS:
+        reason_lines = text.splitlines()[1:]
+        reason = "\n".join(reason_lines).strip() or "parsed from judge plain-text output"
+        return {"verdict": first, "reason": reason}
+    return None
+
+
+def _judge_stage_external(
+    case: Dict[str, Any],
+    retrievals: List[Dict[str, Any]],
+    answer_stage: Dict[str, Any],
+    judge_cmd: str,
+) -> Dict[str, Any]:
+    answer_text = str(answer_stage.get("answer_text") or "")
+    prompt = render_judge_prompt(case, retrievals, answer_text or "<no answer text>")
+    payload = {
+        "stage": "judge",
+        "case": case,
+        "retrieval": retrievals,
+        "answer_stage": answer_stage,
+        "judge_prompt": prompt,
+    }
+    result = _run_external_command(judge_cmd, payload)
+    parsed = _parse_external_judge_stdout(result["stdout"])
+    if result["returncode"] != 0:
+        verdict = "ERROR"
+        reason = "judge command failed"
+        status = "error"
+        verdict_source = "external_command_failure"
+    elif parsed:
+        verdict = parsed["verdict"]
+        reason = parsed["reason"]
+        status = "completed"
+        verdict_source = "external_command_parsed"
+    else:
+        verdict = "ERROR"
+        reason = "judge output could not be parsed"
+        status = "completed"
+        verdict_source = "external_command_fallback"
+    return {
+        "mode": "external_command",
+        "status": status,
+        "verdict": verdict,
+        "reason": reason,
+        "judge_prompt": prompt,
+        "judge_command": judge_cmd,
+        "judge_return_code": result["returncode"],
+        "judge_stdout": result["stdout"],
+        "judge_stderr": result["stderr"],
+        "verdict_source": verdict_source,
     }
 
 
@@ -222,6 +338,8 @@ def run_case(
     answer_text: str | None = None,
     judge_verdict: str | None = None,
     judge_reason: str | None = None,
+    answer_cmd: str | None = None,
+    judge_cmd: str | None = None,
 ) -> Dict[str, Any]:
     retrieval_cmds = case.get("expected_retrieval_path", []) or []
     if not isinstance(retrieval_cmds, list) or not retrieval_cmds:
@@ -231,9 +349,15 @@ def run_case(
     for cmd in retrieval_cmds:
         retrievals.append(_run_command(str(cmd)))
 
-    answer = _answer_stage(case, retrievals, answer_text)
+    if answer_cmd:
+        answer = _answer_stage_external(case, retrievals, answer_cmd)
+    else:
+        answer = _answer_stage(case, retrievals, answer_text)
     answer_text_value = answer.get("answer_text") or ""
-    judge = _judge_stage(case, retrievals, mode, str(answer_text_value), judge_verdict, judge_reason)
+    if judge_cmd:
+        judge = _judge_stage_external(case, retrievals, answer, judge_cmd)
+    else:
+        judge = _judge_stage(case, retrievals, mode, str(answer_text_value), judge_verdict, judge_reason)
 
     return {
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -244,6 +368,9 @@ def run_case(
         "answer_stage": answer,
         "judge_stage": judge,
         "verdict": judge.get("verdict", "ERROR"),
+        "answer_mode_used": answer.get("mode"),
+        "judge_mode_used": judge.get("mode"),
+        "verdict_source": judge.get("verdict_source", "legacy_or_stub"),
     }
 
 
@@ -268,6 +395,8 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--list-cases", action="store_true")
     ap.add_argument("--mode", choices=("prompt-only", "stub"), default="prompt-only")
     ap.add_argument("--output-dir", default="")
+    ap.add_argument("--answer-cmd", default="")
+    ap.add_argument("--judge-cmd", default="")
     ap.add_argument("--print-answer-prompt", action="store_true")
     ap.add_argument("--print-judge-prompt", action="store_true")
     ap.add_argument("--answer-text", default="")
@@ -332,6 +461,8 @@ def main() -> int:
             answer_text=args.answer_text or None,
             judge_verdict=args.judge_verdict or None,
             judge_reason=args.judge_reason or None,
+            answer_cmd=args.answer_cmd or None,
+            judge_cmd=args.judge_cmd or None,
         )
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)

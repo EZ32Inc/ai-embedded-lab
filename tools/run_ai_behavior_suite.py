@@ -38,6 +38,7 @@ def _summary_markdown(summary: Dict[str, Any]) -> str:
         f"- generated_at: `{summary['generated_at']}`",
         f"- case_file: `{summary['case_file']}`",
         f"- mode: `{summary['mode']}`",
+        f"- base_mode: `{summary.get('base_mode', summary['mode'])}`",
         f"- total_cases: `{summary['total_cases']}`",
         f"- PASS: `{summary['counts']['PASS']}`",
         f"- WEAK_PASS: `{summary['counts']['WEAK_PASS']}`",
@@ -45,6 +46,11 @@ def _summary_markdown(summary: Dict[str, Any]) -> str:
         f"- ERROR: `{summary['counts']['ERROR']}`",
         "",
     ]
+    if summary.get("answer_cmd"):
+        lines.insert(5, f"- answer_cmd: `{summary['answer_cmd']}`")
+    if summary.get("judge_cmd"):
+        insert_at = 6 if summary.get("answer_cmd") else 5
+        lines.insert(insert_at, f"- judge_cmd: `{summary['judge_cmd']}`")
     if summary["failed_or_error_case_ids"]:
         lines.append("## Failed Or Error Cases")
         lines.append("")
@@ -75,7 +81,15 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--output-dir", default="")
     ap.add_argument("--limit", type=int, default=0)
     ap.add_argument("--rerun-from-summary", default="")
+    ap.add_argument("--answer-cmd", default="")
+    ap.add_argument("--judge-cmd", default="")
     return ap.parse_args()
+
+
+def _effective_mode(base_mode: str, answer_cmd: str, judge_cmd: str) -> str:
+    if answer_cmd or judge_cmd:
+        return "external-command"
+    return base_mode
 
 
 def _load_summary_case_ids(path_text: str) -> List[str]:
@@ -118,10 +132,15 @@ def main() -> int:
     _ensure_dir(output_dir)
 
     print(f"case_file: {case_file}")
-    print(f"mode: {args.mode}")
+    effective_mode = _effective_mode(args.mode, args.answer_cmd, args.judge_cmd)
+    print(f"mode: {effective_mode}")
     print(f"output_dir: {output_dir}")
     if args.rerun_from_summary:
         print(f"rerun_from_summary: {args.rerun_from_summary}")
+    if args.answer_cmd:
+        print(f"answer_cmd: {args.answer_cmd}")
+    if args.judge_cmd:
+        print(f"judge_cmd: {args.judge_cmd}")
 
     case_rows: List[Dict[str, Any]] = []
     suite_exit = 0
@@ -129,7 +148,13 @@ def main() -> int:
         case_id = str(case.get("case_id"))
         print(f"running_case: {case_id}")
         try:
-            result = run_case(case_file=case_file, case=case, mode=args.mode)
+            result = run_case(
+                case_file=case_file,
+                case=case,
+                mode=args.mode,
+                answer_cmd=args.answer_cmd or None,
+                judge_cmd=args.judge_cmd or None,
+            )
         except Exception as exc:
             result = {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -155,7 +180,10 @@ def main() -> int:
     summary = {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "case_file": str(case_file),
-        "mode": args.mode,
+        "mode": effective_mode,
+        "base_mode": args.mode,
+        "answer_cmd": args.answer_cmd or None,
+        "judge_cmd": args.judge_cmd or None,
         "total_cases": len(case_rows),
         "counts": _counts(case_rows),
         "failed_or_error_case_ids": [item["case_id"] for item in case_rows if item["verdict"] in ("FAIL", "ERROR")],

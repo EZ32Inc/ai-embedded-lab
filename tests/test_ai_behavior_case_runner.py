@@ -13,6 +13,11 @@ def _env():
     return env
 
 
+def _write_script(path: Path, body: str) -> Path:
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
 def test_single_case_runner_persists_case_result(tmp_path):
     out_dir = tmp_path / "case_out"
     res = subprocess.run(
@@ -183,3 +188,122 @@ def test_review_helper_prints_human_digest(tmp_path):
     assert "total_cases: 2" in res.stdout
     assert "attention_cases: none" in res.stdout
     assert "inventory_current_duts_001: WEAK_PASS" in res.stdout
+
+
+def test_single_case_runner_supports_external_answer_and_judge_commands(tmp_path):
+    answer_script = _write_script(
+        tmp_path / "fake_answer.py",
+        (
+            "import json, sys\n"
+            "payload = json.load(sys.stdin)\n"
+            "assert payload['stage'] == 'answer'\n"
+            "print('Answer generated from external command')\n"
+        ),
+    )
+    judge_script = _write_script(
+        tmp_path / "fake_judge.py",
+        (
+            "import json, sys\n"
+            "payload = json.load(sys.stdin)\n"
+            "assert payload['stage'] == 'judge'\n"
+            "assert 'Answer generated from external command' in payload['answer_stage']['answer_text']\n"
+            "print(json.dumps({'verdict': 'PASS', 'reason': 'external judge accepted answer'}))\n"
+        ),
+    )
+    out_dir = tmp_path / "external_case"
+    res = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_ai_behavior_case.py",
+            "tests/ai_behavior_cases/organic_cases.yaml",
+            "inventory_current_duts_001",
+            "--output-dir",
+            str(out_dir),
+            "--answer-cmd",
+            f"{sys.executable} {answer_script}",
+            "--judge-cmd",
+            f"{sys.executable} {judge_script}",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=True,
+    )
+    assert "verdict: PASS" in res.stdout
+    payload = json.loads((out_dir / "inventory_current_duts_001.json").read_text(encoding="utf-8"))
+    assert payload["answer_stage"]["mode"] == "external_command"
+    assert payload["answer_stage"]["answer_return_code"] == 0
+    assert payload["answer_stage"]["answer_text"] == "Answer generated from external command"
+    assert payload["judge_stage"]["mode"] == "external_command"
+    assert payload["judge_stage"]["verdict"] == "PASS"
+    assert payload["verdict_source"] == "external_command_parsed"
+
+
+def test_single_case_runner_external_judge_failure_falls_back_to_error(tmp_path):
+    judge_script = _write_script(
+        tmp_path / "bad_judge.py",
+        "print('not a parseable verdict')\n",
+    )
+    out_dir = tmp_path / "bad_judge_case"
+    res = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_ai_behavior_case.py",
+            "tests/ai_behavior_cases/organic_cases.yaml",
+            "inventory_current_duts_001",
+            "--output-dir",
+            str(out_dir),
+            "--answer-text",
+            "manual answer",
+            "--judge-cmd",
+            f"{sys.executable} {judge_script}",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=False,
+    )
+    assert "verdict: ERROR" in res.stdout
+    payload = json.loads((out_dir / "inventory_current_duts_001.json").read_text(encoding="utf-8"))
+    assert payload["judge_stage"]["verdict"] == "ERROR"
+    assert payload["judge_stage"]["verdict_source"] == "external_command_fallback"
+
+
+def test_suite_runner_supports_external_answer_and_judge_commands(tmp_path):
+    answer_script = _write_script(
+        tmp_path / "suite_answer.py",
+        "import json, sys\njson.load(sys.stdin)\nprint('suite external answer')\n",
+    )
+    judge_script = _write_script(
+        tmp_path / "suite_judge.py",
+        "import json, sys\njson.load(sys.stdin)\nprint('{\"verdict\":\"PASS\",\"reason\":\"suite external judge\"}')\n",
+    )
+    out_dir = tmp_path / "suite_external"
+    res = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_ai_behavior_suite.py",
+            "tests/ai_behavior_cases/organic_cases.yaml",
+            "--limit",
+            "2",
+            "--output-dir",
+            str(out_dir),
+            "--answer-cmd",
+            f"{sys.executable} {answer_script}",
+            "--judge-cmd",
+            f"{sys.executable} {judge_script}",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=True,
+    )
+    assert "PASS: 2" in res.stdout
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["counts"]["PASS"] == 2
+    assert summary["mode"] == "external-command"
+    assert summary["answer_cmd"]
+    assert summary["judge_cmd"]
