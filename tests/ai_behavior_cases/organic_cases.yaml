@@ -110,3 +110,27 @@
     - "response explicitly states what pre-flight does not confirm"
     - "no semantic overclaim"
   notes: "Useful because pre-flight meaning is easy to overstate."
+
+- case_id: default_verification_review_001
+  case_type: organic
+  intent_type: default_verification_review
+  user_question: "What is currently covered and is the default verification baseline healthy?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+    - "python3 -m ael verify-default run"
+  must_use_formal_path: true
+  required_output_elements:
+    - "current default verification sequence or covered baseline paths"
+    - "current coverage summary"
+    - "baseline health assessment"
+    - "important caveats or weak points"
+  forbidden_failure_modes:
+    - "claiming overall system health beyond the exercised baseline"
+    - "omitting current caveats"
+    - "answering only from stale memory without current repo retrieval"
+  judge_rubric:
+    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "current covered baseline paths are summarized clearly"
+    - "health assessment is present but not overstated"
+    - "important caveats remain visible"
+  notes: "Initial default-verification review case grounded in current coverage view."

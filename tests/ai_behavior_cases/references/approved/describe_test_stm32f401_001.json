@@ -1,0 +1,57 @@
+{
+  "approved_answer_draft": "STM32F401RCT6 golden GPIO test:\n\n- board: stm32f401rct6\n- test: gpio_signature\n- probe: ESP32JTAG\n\nConnections:\n- SWD -> P3\n- RESET -> NC\n- PA4 -> P0.0\n\nWhat will be tested:\n- signal validation on PA4 through the generic sig path\n- duration: 1.0 s\n- expected frequency range: 200 Hz .. 100000 Hz\n- expected duty range: 0.4 .. 0.6\n- minimum edges: 2\n- maximum edges: 20000\n\nCurrent limitation:\n- this test currently validates the single generic signal path, not all toggled pins individually\n",
+  "approved_at": "2026-03-08T17:46:22.216294+00:00",
+  "approved_from": "/nvme1t/work/codex/ai-embedded-lab/artifacts/ai_behavior_references/20260308T174440Z/describe_test_stm32f401_001.draft.json",
+  "case": {
+    "case_id": "describe_test_stm32f401_001",
+    "case_type": "organic",
+    "expected_retrieval_path": [
+      "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json"
+    ],
+    "forbidden_failure_modes": [
+      "using ad hoc repo reconstruction as the primary path",
+      "claiming multi-pin validation when only the generic signal path is checked",
+      "omitting what the test actually validates"
+    ],
+    "intent_type": "test_detail_question",
+    "judge_rubric": [
+      "retrieval path used first is inventory describe-test",
+      "connections and expected checks are correctly summarized",
+      "limitations are not hidden or overstated",
+      "answer stays grounded in current repo state"
+    ],
+    "must_use_formal_path": true,
+    "notes": "Directly grounded in recent STM32F401 workflow.",
+    "required_output_elements": [
+      "probe identity ESP32JTAG",
+      "connections including SWD, RESET, and observed signal",
+      "expected signal checks",
+      "current limitation that only the generic signal path is checked if that remains true"
+    ],
+    "user_question": "Please show me stm32f401rct6 golden GPIO test connections and what will be tested."
+  },
+  "generated_at": "2026-03-08T17:44:40.052885+00:00",
+  "git_commit": "570aa0ecebc067b9e3ebd1c07b4dad84b73f65ea",
+  "question": "Please show me stm32f401rct6 golden GPIO test connections and what will be tested.",
+  "retrieval": [
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "ael",
+        "inventory",
+        "describe-test",
+        "--board",
+        "stm32f401rct6",
+        "--test",
+        "tests/plans/gpio_signature.json"
+      ],
+      "command": "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"board\": \"stm32f401rct6\",\n  \"board_context\": {\n    \"default_wiring\": {\n      \"reset\": \"NC\",\n      \"swd\": \"P3\",\n      \"verify\": \"P0.0\"\n    },\n    \"observe_map\": {\n      \"pa4\": \"P0.0\",\n      \"pa5\": \"P0.1\",\n      \"pa6\": \"P0.2\",\n      \"pa7\": \"P0.3\",\n      \"sig\": \"P0.0\"\n    },\n    \"target\": \"stm32f401rct6\"\n  },\n  \"connections\": [\n    {\n      \"from\": \"SWD\",\n      \"to\": \"P3\"\n    },\n    {\n      \"from\": \"RESET\",\n      \"to\": \"NC\"\n    },\n    {\n      \"from\": \"PA4\",\n      \"to\": \"P0.0\"\n    }\n  ],\n  \"expected_checks\": [\n    {\n      \"duration_s\": 1.0,\n      \"duty_max\": 0.6,\n      \"duty_min\": 0.4,\n      \"max_edges\": 20000,\n      \"max_freq_hz\": 100000.0,\n      \"min_edges\": 2,\n      \"min_freq_hz\": 200.0,\n      \"pin\": \"sig\",\n      \"type\": \"signal\"\n    }\n  ],\n  \"notes\": null,\n  \"ok\": true,\n  \"probe_or_instrument\": {\n    \"endpoint\": null,\n    \"id\": \"ESP32JTAG\",\n    \"kind\": \"probe\"\n  },\n  \"test\": {\n    \"name\": \"gpio_signature\",\n    \"path\": \"tests/plans/gpio_signature.json\",\n    \"validation_style\": \"signal\"\n  }\n}\n"
+    }
+  ],
+  "source_case_file": "/nvme1t/work/codex/ai-embedded-lab/tests/ai_behavior_cases/organic_cases.yaml",
+  "status": "approved"
+}

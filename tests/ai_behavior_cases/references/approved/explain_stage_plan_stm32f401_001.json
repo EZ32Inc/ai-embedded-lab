@@ -1,0 +1,59 @@
+{
+  "approved_answer_draft": "For this STM32F401RCT6 path, plan includes configuration and execution-shape resolution, not real hardware validation.\n\nPlan includes:\n- selected board: stm32f401rct6\n- selected test: gpio_signature\n- selected probe path: ESP32JTAG\n- resolved wiring assumptions: swd=P3, reset=NC, verify=P0.0\n- resolved board observe map: sig->P0.0, pa4->P0.0, pa5->P0.1, pa6->P0.2, pa7->P0.3\n- selected builder kind: arm_debug\n- selected firmware project: firmware/targets/stm32f401rct6\n- selected check model: signal verification on sig\n\nWhat plan does not prove:\n- probe reachability\n- DUT connection correctness\n- SWD function on the real board\n- flash success\n- PA4 toggling on hardware\n- overall real-hardware test pass\n",
+  "approved_at": "2026-03-08T17:46:22.252612+00:00",
+  "approved_from": "/nvme1t/work/codex/ai-embedded-lab/artifacts/ai_behavior_references/20260308T174440Z/explain_stage_plan_stm32f401_001.draft.json",
+  "case": {
+    "case_id": "explain_stage_plan_stm32f401_001",
+    "case_type": "organic",
+    "expected_retrieval_path": [
+      "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage plan"
+    ],
+    "forbidden_failure_modes": [
+      "treating plan as real validation",
+      "blending assumptions with confirmed hardware facts",
+      "answering without using explain-stage first"
+    ],
+    "intent_type": "stage_semantics_question",
+    "judge_rubric": [
+      "retrieval path used first is explain-stage plan",
+      "response explains what plan includes",
+      "response explicitly states what plan does not confirm",
+      "no semantic overclaim"
+    ],
+    "must_use_formal_path": true,
+    "notes": "High-frequency stage-semantics case.",
+    "required_output_elements": [
+      "selected board and test",
+      "selected probe path",
+      "resolved wiring assumptions",
+      "build or flash or check model selection",
+      "what plan does not prove"
+    ],
+    "user_question": "What's in plan?"
+  },
+  "generated_at": "2026-03-08T17:44:40.251071+00:00",
+  "git_commit": "570aa0ecebc067b9e3ebd1c07b4dad84b73f65ea",
+  "question": "What's in plan?",
+  "retrieval": [
+    {
+      "argv": [
+        "python3",
+        "-m",
+        "ael",
+        "explain-stage",
+        "--board",
+        "stm32f401rct6",
+        "--test",
+        "tests/plans/gpio_signature.json",
+        "--stage",
+        "plan"
+      ],
+      "command": "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage plan",
+      "returncode": 0,
+      "stderr": "",
+      "stdout": "{\n  \"board\": \"stm32f401rct6\",\n  \"does_not_confirm\": [\n    \"probe reachability\",\n    \"DUT presence\",\n    \"flash success\",\n    \"signal correctness on real hardware\"\n  ],\n  \"includes\": [\n    \"board and test selection\",\n    \"probe selection\",\n    \"builder and flash strategy resolution\",\n    \"wiring assumptions\",\n    \"check model selection\"\n  ],\n  \"ok\": true,\n  \"selected\": {\n    \"builder_kind\": \"arm_debug\",\n    \"check_model\": \"signal_verify\",\n    \"firmware_project\": \"firmware/targets/stm32f401rct6\",\n    \"flash_method\": null,\n    \"probe\": \"configs/esp32jtag.yaml\",\n    \"wiring\": {\n      \"reset\": \"NC\",\n      \"swd\": \"P3\",\n      \"verify\": \"P0.0\"\n    }\n  },\n  \"stage\": \"plan\",\n  \"test\": {\n    \"name\": \"gpio_signature\",\n    \"path\": \"tests/plans/gpio_signature.json\"\n  }\n}\n"
+    }
+  ],
+  "source_case_file": "/nvme1t/work/codex/ai-embedded-lab/tests/ai_behavior_cases/organic_cases.yaml",
+  "status": "approved"
+}
