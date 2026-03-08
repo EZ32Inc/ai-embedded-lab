@@ -4,10 +4,12 @@ Current v0.2 usage:
 
 ```bash
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml inventory_current_duts_001
+python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml --list-cases
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml describe_test_stm32f401_001 --mode stub
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml describe_test_stm32f401_001 --print-answer-prompt
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml describe_test_stm32f401_001 --print-judge-prompt --answer-text "<candidate answer>"
 python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yaml --mode stub
+python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yaml --mode stub --rerun-from-summary artifacts/ai_behavior_results/<timestamp>/summary.json
 ```
 
 Results are stored under:
@@ -20,6 +22,10 @@ Typical files:
 - `summary.json`
 - `summary.md`
 - `<case_id>.json`
+
+Useful helpers:
+- `--list-cases`: print the available case ids with intent and question
+- `--rerun-from-summary <summary.json>`: rerun only the prior suite's `FAIL` or `ERROR` cases
 
 Current modes:
 - `prompt-only`: execute retrieval and generate answer/judge prompts

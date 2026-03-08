@@ -264,7 +264,8 @@ def print_case_header(case: Dict[str, Any]) -> None:
 def _parse_args() -> argparse.Namespace:
     ap = argparse.ArgumentParser(prog="run_ai_behavior_case.py")
     ap.add_argument("case_file")
-    ap.add_argument("case_id")
+    ap.add_argument("case_id", nargs="?")
+    ap.add_argument("--list-cases", action="store_true")
     ap.add_argument("--mode", choices=("prompt-only", "stub"), default="prompt-only")
     ap.add_argument("--output-dir", default="")
     ap.add_argument("--print-answer-prompt", action="store_true")
@@ -298,6 +299,21 @@ def main() -> int:
     args = _parse_args()
     try:
         case_file = _resolve_case_file(args.case_file)
+        cases = load_cases(case_file)
+    except Exception as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    if args.list_cases:
+        for case in cases:
+            print(f"{case.get('case_id')}\t{case.get('intent_type')}\t{case.get('user_question')}")
+        return 0
+
+    if not args.case_id:
+        print("error: case_id is required unless --list-cases is used", file=sys.stderr)
+        return 2
+
+    try:
         case = load_case(case_file, args.case_id)
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)

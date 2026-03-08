@@ -74,7 +74,23 @@ def _parse_args() -> argparse.Namespace:
     ap.add_argument("--mode", choices=("prompt-only", "stub"), default="prompt-only")
     ap.add_argument("--output-dir", default="")
     ap.add_argument("--limit", type=int, default=0)
+    ap.add_argument("--rerun-from-summary", default="")
     return ap.parse_args()
+
+
+def _load_summary_case_ids(path_text: str) -> List[str]:
+    path = Path(path_text)
+    if not path.is_absolute():
+        path = REPO_ROOT / path
+    if not path.exists():
+        raise RuntimeError(f"summary file not found: {path}")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"summary file must contain a JSON object: {path}")
+    values = payload.get("failed_or_error_case_ids", [])
+    if not isinstance(values, list):
+        raise RuntimeError(f"summary file missing failed_or_error_case_ids list: {path}")
+    return [str(item) for item in values]
 
 
 def main() -> int:
@@ -86,6 +102,14 @@ def main() -> int:
         print(f"error: {exc}")
         return 2
 
+    if args.rerun_from_summary:
+        try:
+            rerun_ids = set(_load_summary_case_ids(args.rerun_from_summary))
+        except Exception as exc:
+            print(f"error: {exc}")
+            return 2
+        cases = [case for case in cases if str(case.get("case_id")) in rerun_ids]
+
     if args.limit > 0:
         cases = cases[: args.limit]
     output_dir = Path(args.output_dir) if args.output_dir else _default_output_dir()
@@ -96,6 +120,8 @@ def main() -> int:
     print(f"case_file: {case_file}")
     print(f"mode: {args.mode}")
     print(f"output_dir: {output_dir}")
+    if args.rerun_from_summary:
+        print(f"rerun_from_summary: {args.rerun_from_summary}")
 
     case_rows: List[Dict[str, Any]] = []
     suite_exit = 0
