@@ -146,3 +146,40 @@ def test_suite_runner_can_rerun_failed_or_error_cases_only(tmp_path):
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["total_cases"] == 1
     assert summary["cases"][0]["case_id"] == "inventory_board_tests_stm32f401_001"
+
+
+def test_review_helper_prints_human_digest(tmp_path):
+    out_dir = tmp_path / "suite_review"
+    subprocess.run(
+        [
+            sys.executable,
+            "tools/run_ai_behavior_suite.py",
+            "tests/ai_behavior_cases/organic_cases.yaml",
+            "--mode",
+            "stub",
+            "--limit",
+            "2",
+            "--output-dir",
+            str(out_dir),
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=True,
+    )
+    res = subprocess.run(
+        [
+            sys.executable,
+            "tools/review_ai_behavior_suite.py",
+            str(out_dir),
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=True,
+    )
+    assert "total_cases: 2" in res.stdout
+    assert "attention_cases: none" in res.stdout
+    assert "inventory_current_duts_001: WEAK_PASS" in res.stdout
