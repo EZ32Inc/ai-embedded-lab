@@ -15,7 +15,7 @@ python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yam
 python3 tools/review_ai_behavior_suite.py artifacts/ai_behavior_results/<timestamp>/
 python3 tools/ai_behavior_reference.py draft tests/ai_behavior_cases/organic_cases.yaml inventory_current_duts_001 --answer-file review_answer.txt
 python3 tools/ai_behavior_reference.py approve --draft-json artifacts/ai_behavior_references/<timestamp>/inventory_current_duts_001.draft.json
-python3 tools/ai_behavior_reference.py compare tests/ai_behavior_cases/organic_cases.yaml inventory_current_duts_001 --answer-file fresh_answer.txt
+python3 tools/ai_behavior_reference.py compare tests/ai_behavior_cases/organic_cases.yaml inventory_current_duts_001 --answer-file fresh_answer.txt --judge-cmd "<CMD>"
 ```
 
 Results are stored under:
@@ -55,10 +55,20 @@ Approved-reference flow:
 - `approve`: store the approved reference under `tests/ai_behavior_cases/references/approved/`
 - `compare`: compare a fresh answer against the approved reference
 
-Reference comparison is intentionally simple:
-- `PASS`: normalized text matches the approved reference
-- `WEAK_PASS`: text differs but still contains all required output elements
-- `FAIL`: required output elements are missing
+Reference comparison is AI-native by default when `--judge-cmd` is provided:
+- compare sends one structured semantic-judge JSON payload to the judge command on `stdin`
+- the judge should return structured JSON with:
+  - `verdict`
+  - `reason`
+  - `semantic_match`
+  - `grounded_in_retrieval`
+  - `required_elements_satisfied`
+  - `forbidden_failures_present`
+  - optional `strengths` / `weaknesses`
+
+Fallback:
+- if `--judge-cmd` is omitted, compare falls back to the older mechanical comparison path
+- that fallback remains only as a temporary fallback, not the intended primary mode
 
 This loop is intentionally lightweight.
 It automates retrieval and persistence now, while keeping answer/judge invocation simple and pluggable.

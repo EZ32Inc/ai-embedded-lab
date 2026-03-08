@@ -379,7 +379,87 @@ def test_reference_workflow_draft_approve_and_compare(tmp_path):
         compare_json = out_dir / "inventory_current_duts_001.compare.json"
         payload = json.loads(compare_json.read_text(encoding="utf-8"))
         assert payload["comparison"]["verdict"] == "PASS"
-        assert payload["comparison"]["missing_required_elements"] == []
+        assert payload["comparison"]["verdict_source"] == "mechanical_fallback"
+        assert payload["comparison"]["comparison_details"]["missing_required_elements"] == []
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
+
+
+def test_reference_compare_prefers_semantic_judge_when_provided(tmp_path):
+    approved_root = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_root / "inventory_current_duts_001.json"
+    approved_md = approved_root / "inventory_current_duts_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+    judge_script = _write_script(
+        tmp_path / "semantic_judge.py",
+        (
+            "import json, sys\n"
+            "payload = json.load(sys.stdin)\n"
+            "assert payload['stage'] == 'reference_compare_judge'\n"
+            "assert payload['approved_reference']['approved_answer']\n"
+            "assert payload['fresh_answer']\n"
+            "print(json.dumps({"
+            "'verdict': 'PASS',"
+            "'reason': 'semantic judge accepted answer',"
+            "'semantic_match': True,"
+            "'grounded_in_retrieval': True,"
+            "'required_elements_satisfied': True,"
+            "'forbidden_failures_present': [],"
+            "'strengths': ['matches approved answer semantically'],"
+            "'weaknesses': []"
+            "}))\n"
+        ),
+    )
+
+    try:
+        approved_root.mkdir(parents=True, exist_ok=True)
+        approved_json.write_text(
+            json.dumps(
+                {
+                    "case": {"case_id": "inventory_current_duts_001"},
+                    "question": "What DUTs and tests do we currently have?",
+                    "approved_answer_draft": "Reference baseline answer",
+                    "status": "approved",
+                }
+            ),
+            encoding="utf-8",
+        )
+        approved_md.write_text("Reference baseline answer", encoding="utf-8")
+
+        out_dir = tmp_path / "semantic_compare"
+        res = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                "tests/ai_behavior_cases/organic_cases.yaml",
+                "inventory_current_duts_001",
+                "--answer-text",
+                "Fresh semantic answer",
+                "--judge-cmd",
+                f"{sys.executable} {judge_script}",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "verdict: PASS" in res.stdout
+        payload = json.loads((out_dir / "inventory_current_duts_001.compare.json").read_text(encoding="utf-8"))
+        assert payload["comparison"]["verdict"] == "PASS"
+        assert payload["comparison"]["verdict_source"] == "semantic_judge"
+        assert payload["comparison"]["judge_output"]["semantic_match"] is True
     finally:
         if old_json is None:
             approved_json.unlink(missing_ok=True)
