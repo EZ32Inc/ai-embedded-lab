@@ -109,4 +109,9 @@ For DUT, MCU, and test-coverage questions, prefer the repo-native inventory comm
 - `python3 -m ael inventory list`
 - `python3 -m ael inventory list --format text`
 
+For detailed per-test questions such as connections, expected checks, or what a test will do, prefer:
+
+- `python3 -m ael inventory describe-test --board <board_id> --test <test_path>`
+- `python3 -m ael inventory describe-test --board <board_id> --test <test_path> --format text`
+
 Use manual repo inspection only as fallback when the inventory command is missing or insufficient.

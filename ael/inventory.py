@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
+from ael.pipeline import _simple_yaml_load
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -16,6 +17,15 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return json.loads(path.read_text(encoding="utf-8"))
     except Exception:
         return {}
+
+
+def _load_board_cfg(repo_root: Path, board_id: str) -> Dict[str, Any]:
+    path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
+    if not path.exists():
+        return {}
+    raw = _simple_yaml_load(str(path))
+    board = raw.get("board", {}) if isinstance(raw, dict) else {}
+    return board if isinstance(board, dict) else {}
 
 
 def _load_plan_index(repo_root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
@@ -80,6 +90,112 @@ def _infer_validation_style(payload: Dict[str, Any]) -> str:
     if payload.get("pin"):
         return "signal"
     return "generic"
+
+
+def _resolve_probe_or_instrument(payload: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(payload.get("instrument"), dict):
+        inst = payload["instrument"]
+        tcp = inst.get("tcp", {}) if isinstance(inst.get("tcp"), dict) else {}
+        return {
+            "kind": "instrument",
+            "id": inst.get("id"),
+            "endpoint": {
+                "host": tcp.get("host"),
+                "port": tcp.get("port"),
+            } if tcp else None,
+        }
+    return {
+        "kind": "probe",
+        "id": "ESP32JTAG",
+        "endpoint": None,
+    }
+
+
+def _build_connections(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    bench = payload.get("bench_setup", {}) if isinstance(payload.get("bench_setup"), dict) else {}
+    conns: List[Dict[str, Any]] = []
+    wiring = board_cfg.get("default_wiring", {}) if isinstance(board_cfg.get("default_wiring"), dict) else {}
+    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg.get("observe_map"), dict) else {}
+
+    if isinstance(payload.get("instrument"), dict):
+        for item in bench.get("dut_to_instrument", []) if isinstance(bench.get("dut_to_instrument"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            conn = {
+                "from": item.get("dut_gpio"),
+                "to": f"inst GPIO{item.get('inst_gpio')}",
+                "expect": item.get("expect"),
+            }
+            if item.get("freq_hz") is not None:
+                conn["freq_hz"] = item.get("freq_hz")
+            conns.append(conn)
+        for item in bench.get("dut_to_instrument_analog", []) if isinstance(bench.get("dut_to_instrument_analog"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            conn = {
+                "from": item.get("dut_signal"),
+                "to": f"inst ADC GPIO{item.get('inst_adc_gpio')}",
+                "expect_v_min": item.get("expect_v_min"),
+                "expect_v_max": item.get("expect_v_max"),
+            }
+            if item.get("avg") is not None:
+                conn["avg"] = item.get("avg")
+            conns.append(conn)
+        if bench.get("ground_required"):
+            conns.append({"from": "GND", "to": "inst GND", "required": True})
+        return conns
+
+    if wiring.get("swd"):
+        conns.append({"from": "SWD", "to": wiring.get("swd")})
+    if "reset" in wiring:
+        conns.append({"from": "RESET", "to": wiring.get("reset")})
+    pin = payload.get("pin")
+    if pin:
+        resolved = observe_map.get(str(pin), wiring.get("verify"))
+        signal_name = str(pin)
+        observed_label = signal_name
+        if signal_name == "sig":
+            for key, value in observe_map.items():
+                if key != "sig" and value == observe_map.get("sig"):
+                    observed_label = key.upper() if key.startswith("pa") or key.startswith("pb") or key.startswith("pc") else key
+                    break
+        conns.append({"from": observed_label, "to": resolved})
+    return conns
+
+
+def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    checks: List[Dict[str, Any]] = []
+    if payload.get("pin"):
+        checks.append(
+            {
+                "type": "signal",
+                "pin": payload.get("pin"),
+                "min_freq_hz": payload.get("min_freq_hz"),
+                "max_freq_hz": payload.get("max_freq_hz"),
+                "duty_min": payload.get("duty_min"),
+                "duty_max": payload.get("duty_max"),
+                "duration_s": payload.get("duration_s"),
+                "min_edges": payload.get("min_edges"),
+                "max_edges": payload.get("max_edges"),
+            }
+        )
+    uart = payload.get("observe_uart", {}) if isinstance(payload.get("observe_uart"), dict) else {}
+    if uart.get("enabled"):
+        checks.append(
+            {
+                "type": "uart",
+                "baud": uart.get("baud"),
+                "duration_s": uart.get("duration_s"),
+                "expect_patterns": uart.get("expect_patterns"),
+            }
+        )
+    if isinstance(payload.get("uart_expect"), dict):
+        checks.append({"type": "uart_expect", **payload.get("uart_expect")})
+    if isinstance(payload.get("instrument"), dict):
+        measure = payload.get("instrument", {}).get("measure", {})
+        if isinstance(measure, dict):
+            checks.append({"type": "instrument_measure", **measure})
+    return checks
 
 
 def _merge_tests(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -193,6 +309,70 @@ def build_inventory(repo_root: Path | None = None) -> Dict[str, Any]:
         "generic_tests": generic_plans,
     }
     return inventory
+
+
+def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) -> Dict[str, Any]:
+    root = Path(repo_root or REPO_ROOT)
+    path = Path(test_path)
+    if not path.is_absolute():
+        path = root / path
+    if not path.exists():
+        return {"ok": False, "error": f"test not found: {test_path}"}
+
+    payload = _load_json(path)
+    board_cfg = _load_board_cfg(root, board_id)
+    wiring = board_cfg.get("default_wiring", {}) if isinstance(board_cfg.get("default_wiring"), dict) else {}
+    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg.get("observe_map"), dict) else {}
+    result = {
+        "ok": True,
+        "board": board_id,
+        "test": {
+            "name": payload.get("name") or path.stem,
+            "path": path.relative_to(root).as_posix(),
+            "validation_style": _infer_validation_style(payload),
+        },
+        "probe_or_instrument": _resolve_probe_or_instrument(payload),
+        "connections": _build_connections(board_cfg, payload),
+        "expected_checks": _build_expected_checks(board_cfg, payload),
+        "board_context": {
+            "target": board_cfg.get("target"),
+            "observe_map": observe_map,
+            "default_wiring": wiring,
+        },
+        "notes": payload.get("notes"),
+    }
+    return result
+
+
+def render_describe_text(payload: Dict[str, Any]) -> str:
+    if not payload.get("ok"):
+        return f"error: {payload.get('error')}\n"
+    lines: List[str] = []
+    lines.append(f"board: {payload.get('board')}")
+    test = payload.get("test", {})
+    lines.append(f"test: {test.get('name')} ({test.get('path')})")
+    poi = payload.get("probe_or_instrument", {})
+    lines.append(f"{poi.get('kind')}: {poi.get('id')}")
+    endpoint = poi.get("endpoint")
+    if isinstance(endpoint, dict) and (endpoint.get("host") or endpoint.get("port")):
+        lines.append(f"endpoint: {endpoint.get('host')}:{endpoint.get('port')}")
+    lines.append("connections:")
+    for conn in payload.get("connections", []):
+        extra = []
+        if conn.get("expect"):
+            extra.append(str(conn.get("expect")))
+        if conn.get("freq_hz") is not None:
+            extra.append(f"{conn.get('freq_hz')}Hz")
+        if conn.get("expect_v_min") is not None and conn.get("expect_v_max") is not None:
+            extra.append(f"{conn.get('expect_v_min')}..{conn.get('expect_v_max')}V")
+        suffix = f" ({', '.join(extra)})" if extra else ""
+        lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
+    lines.append("expected_checks:")
+    for check in payload.get("expected_checks", []):
+        lines.append(f"  - {check.get('type')}: {json.dumps(check, sort_keys=True)}")
+    if payload.get("notes"):
+        lines.append(f"notes: {payload.get('notes')}")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def render_text(inventory: Dict[str, Any]) -> str:

@@ -137,6 +137,10 @@ def main():
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
     inventory_list = inventory_sub.add_parser("list")
     inventory_list.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_describe = inventory_sub.add_parser("describe-test")
+    inventory_describe.add_argument("--board", required=True)
+    inventory_describe.add_argument("--test", required=True)
+    inventory_describe.add_argument("--format", choices=["json", "text"], default="json")
 
     archive_p = sub.add_parser("workflow-archive")
     archive_sub = archive_p.add_subparsers(dest="archive_cmd", required=True)
@@ -396,6 +400,13 @@ def main():
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0)
+        if args.inventory_cmd == "describe-test":
+            payload = inventory.describe_test(board_id=args.board, test_path=args.test, repo_root=Path(repo_root))
+            if args.format == "text":
+                print(inventory.render_describe_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "workflow-archive":
         if args.archive_cmd == "show":
             records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)
