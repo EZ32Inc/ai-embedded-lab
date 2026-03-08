@@ -19,12 +19,12 @@ def test_build_inventory_includes_key_duts_and_mcus():
     assert "rp2040" in payload["summary"]["mcus_with_tests"]
 
 
-def test_build_inventory_includes_pack_linked_stm32_test_and_missing_ref():
+def test_build_inventory_includes_pack_linked_stm32_test_and_no_missing_smoke_ref():
     payload = inventory.build_inventory(REPO_ROOT)
     stm32 = next(item for item in payload["duts"] if item["dut_id"] == "stm32f103")
     assert any(test["name"] == "gpio_signature" and any(source["via"] == "pack" for source in test["sources"]) for test in stm32["tests"])
     rp2040 = next(item for item in payload["duts"] if item["dut_id"] == "rp2040_pico")
-    assert any(test["path"] == "tests/plans/uart_banner.json" and test.get("missing") for test in rp2040["tests"])
+    assert not any(test["path"] == "tests/plans/uart_banner.json" for test in rp2040["tests"])
 
 
 def test_inventory_cli_json_output():
