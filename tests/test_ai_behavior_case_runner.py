@@ -307,3 +307,84 @@ def test_suite_runner_supports_external_answer_and_judge_commands(tmp_path):
     assert summary["mode"] == "external-command"
     assert summary["answer_cmd"]
     assert summary["judge_cmd"]
+
+
+def test_reference_workflow_draft_approve_and_compare(tmp_path):
+    out_dir = tmp_path / "reference_workflow"
+    approved_root = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_root / "inventory_current_duts_001.json"
+    approved_md = approved_root / "inventory_current_duts_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+
+    try:
+        draft = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "draft",
+                "tests/ai_behavior_cases/organic_cases.yaml",
+                "inventory_current_duts_001",
+                "--answer-text",
+                "current DUT ids\nMCU names or families\ntest names grouped by DUT or otherwise clearly associated",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "draft_json:" in draft.stdout
+        draft_json = out_dir / "inventory_current_duts_001.draft.json"
+        assert draft_json.exists()
+
+        approve = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "approve",
+                "--draft-json",
+                str(draft_json),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "approved_json:" in approve.stdout
+        assert approved_json.exists()
+
+        compare = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                "tests/ai_behavior_cases/organic_cases.yaml",
+                "inventory_current_duts_001",
+                "--answer-text",
+                "current DUT ids\nMCU names or families\ntest names grouped by DUT or otherwise clearly associated",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "verdict: PASS" in compare.stdout
+        compare_json = out_dir / "inventory_current_duts_001.compare.json"
+        payload = json.loads(compare_json.read_text(encoding="utf-8"))
+        assert payload["comparison"]["verdict"] == "PASS"
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
