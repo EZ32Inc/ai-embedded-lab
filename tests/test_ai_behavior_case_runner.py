@@ -550,3 +550,90 @@ def test_reference_compare_stops_when_retrieval_fails(tmp_path):
             approved_md.unlink(missing_ok=True)
         else:
             approved_md.write_text(old_md, encoding="utf-8")
+
+
+def test_reference_compare_builtin_semantic_judge_gives_pass_on_exact_match(tmp_path):
+    approved_root = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_root / "inventory_current_duts_001.json"
+    approved_md = approved_root / "inventory_current_duts_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+    try:
+        approved_root.mkdir(parents=True, exist_ok=True)
+        reference_answer = "Reference baseline answer"
+        approved_json.write_text(
+            json.dumps(
+                {
+                    "case": {"case_id": "inventory_current_duts_001"},
+                    "question": "What DUTs and tests do we currently have?",
+                    "approved_answer_draft": reference_answer,
+                    "status": "approved",
+                }
+            ),
+            encoding="utf-8",
+        )
+        approved_md.write_text(reference_answer, encoding="utf-8")
+        out_dir = tmp_path / "builtin_judge_compare"
+        res = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                "tests/ai_behavior_cases/organic_cases.yaml",
+                "inventory_current_duts_001",
+                "--answer-text",
+                reference_answer,
+                "--judge-cmd",
+                f"{sys.executable} tools/reference_semantic_judge.py",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=True,
+        )
+        assert "retrieval_status: completed" in res.stdout
+        assert "verdict: PASS" in res.stdout
+        payload = json.loads((out_dir / "inventory_current_duts_001.compare.json").read_text(encoding="utf-8"))
+        assert payload["comparison"]["verdict"] == "PASS"
+        assert payload["comparison"]["verdict_source"] == "semantic_judge"
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
+
+
+def test_run_command_retries_transient_hardware_access_failure(monkeypatch):
+    import tools.run_ai_behavior_case as runner
+
+    calls = []
+
+    class Result:
+        def __init__(self, returncode, stdout, stderr):
+            self.returncode = returncode
+            self.stdout = stdout
+            self.stderr = stderr
+
+    def fake_run(command, cwd, shell, capture_output, text):
+        calls.append(command)
+        if len(calls) == 1:
+            return Result(4, "Could not open /dev/ttyACM0", "Permission denied: '/dev/ttyACM0'")
+        return Result(0, '{"ok": true}', "")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    monkeypatch.setattr(runner.time, "sleep", lambda _s: None)
+
+    result = runner._run_command("python3 -m ael verify-default run")
+    assert result["returncode"] == 0
+    assert result["retried"] is True
+    assert result["attempt_count"] == 2
+    assert len(result["attempts"]) == 2
+    assert result["attempts"][0]["returncode"] == 4
+    assert result["attempts"][1]["returncode"] == 0

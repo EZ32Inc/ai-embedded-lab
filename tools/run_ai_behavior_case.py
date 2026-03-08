@@ -6,6 +6,7 @@ import json
 import shlex
 import subprocess
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
@@ -56,21 +57,63 @@ def _git_commit() -> str | None:
     return value or None
 
 
-def _run_command(command: str) -> Dict[str, Any]:
-    completed = subprocess.run(
-        command,
-        cwd=str(REPO_ROOT),
-        shell=True,
-        capture_output=True,
-        text=True,
+def _should_retry_retrieval(command: str, result: Dict[str, Any], attempt: int, max_attempts: int) -> bool:
+    if attempt >= max_attempts:
+        return False
+    lowered = (str(result.get('stdout', '')) + "\n" + str(result.get('stderr', ''))).lower()
+    transient_markers = (
+        "permission denied: '/dev/ttyacm",
+        'could not open /dev/ttyacm',
+        'resource busy',
+        'device or resource busy',
+        'access is denied',
     )
-    return {
-        "command": command,
-        "argv": shlex.split(command),
-        "returncode": int(completed.returncode),
-        "stdout": completed.stdout,
-        "stderr": completed.stderr,
-    }
+    hardware_cmd = (
+        'python3 -m ael verify-default run' in command
+        or 'python3 -m ael run ' in command
+        or 'idf.py' in command
+    )
+    return hardware_cmd and any(marker in lowered for marker in transient_markers)
+
+
+def _run_command(command: str) -> Dict[str, Any]:
+    max_attempts = 2
+    attempts: List[Dict[str, Any]] = []
+    for attempt in range(1, max_attempts + 1):
+        started = datetime.now(timezone.utc)
+        completed = subprocess.run(
+            command,
+            cwd=str(REPO_ROOT),
+            shell=True,
+            capture_output=True,
+            text=True,
+        )
+        finished = datetime.now(timezone.utc)
+        result = {
+            "command": command,
+            "argv": shlex.split(command),
+            "returncode": int(completed.returncode),
+            "stdout": completed.stdout,
+            "stderr": completed.stderr,
+            "attempt": attempt,
+            "started_at": started.isoformat(),
+            "completed_at": finished.isoformat(),
+            "duration_seconds": round((finished - started).total_seconds(), 3),
+        }
+        attempts.append(result)
+        if result["returncode"] == 0:
+            break
+        if not _should_retry_retrieval(command, result, attempt, max_attempts):
+            break
+        time.sleep(3)
+
+    final = dict(attempts[-1])
+    final["attempt_count"] = len(attempts)
+    final["retried"] = len(attempts) > 1
+    if len(attempts) > 1:
+        final["attempts"] = attempts
+        final["retry_reason"] = "transient hardware access failure detected"
+    return final
 
 
 def _run_external_command(command: str, payload: Dict[str, Any]) -> Dict[str, Any]:

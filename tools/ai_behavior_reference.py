@@ -403,6 +403,11 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     }
     json_path = out_dir / f"{args.case_id}.compare.json"
     _write_json(json_path, payload)
+    retrieval_failed = any(int(item.get("returncode", 1)) != 0 for item in run["retrieval"])
+    if retrieval_failed:
+        print("retrieval_status: failed")
+    else:
+        print("retrieval_status: completed")
     print(f"verdict: {comparison['verdict']}")
     print(f"reason: {comparison['reason']}")
     print(f"compare_json: {json_path}")

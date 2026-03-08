@@ -56,6 +56,11 @@ Approved-reference flow:
 - `compare`: compare a fresh answer against the approved reference
 
 Reference comparison is AI-native by default when `--judge-cmd` is provided:
+A built-in deterministic judge is available for approved-reference workflows:
+```bash
+python3 tools/ai_behavior_reference.py compare tests/ai_behavior_cases/organic_cases.yaml inventory_current_duts_001 --answer-file fresh_answer.txt --judge-cmd "python3 tools/reference_semantic_judge.py"
+```
+
 - compare sends one structured semantic-judge JSON payload to the judge command on `stdin`
 - the judge should return structured JSON with:
   - `verdict`
