@@ -4,6 +4,8 @@ import subprocess
 import sys
 from pathlib import Path
 
+import yaml
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -460,6 +462,85 @@ def test_reference_compare_prefers_semantic_judge_when_provided(tmp_path):
         assert payload["comparison"]["verdict"] == "PASS"
         assert payload["comparison"]["verdict_source"] == "semantic_judge"
         assert payload["comparison"]["judge_output"]["semantic_match"] is True
+    finally:
+        if old_json is None:
+            approved_json.unlink(missing_ok=True)
+        else:
+            approved_json.write_text(old_json, encoding="utf-8")
+        if old_md is None:
+            approved_md.unlink(missing_ok=True)
+        else:
+            approved_md.write_text(old_md, encoding="utf-8")
+
+
+def test_reference_compare_stops_when_retrieval_fails(tmp_path):
+    case_file = tmp_path / "failing_cases.yaml"
+    case_file.write_text(
+        yaml.safe_dump(
+            [
+                {
+                    "case_id": "failing_case_001",
+                    "case_type": "organic",
+                    "intent_type": "inventory_question",
+                    "user_question": "failing retrieval case",
+                    "expected_retrieval_path": ["python3 -c \"import sys; sys.exit(7)\""],
+                    "required_output_elements": ["anything"],
+                    "forbidden_failure_modes": [],
+                    "judge_rubric": [],
+                }
+            ]
+        ),
+        encoding="utf-8",
+    )
+    approved_dir = REPO_ROOT / "tests" / "ai_behavior_cases" / "references" / "approved"
+    approved_json = approved_dir / "failing_case_001.json"
+    approved_md = approved_dir / "failing_case_001.md"
+    old_json = approved_json.read_text(encoding="utf-8") if approved_json.exists() else None
+    old_md = approved_md.read_text(encoding="utf-8") if approved_md.exists() else None
+    judge_script = _write_script(
+        tmp_path / "should_not_run_judge.py",
+        "raise SystemExit('judge should not run')\n",
+    )
+    try:
+        approved_dir.mkdir(parents=True, exist_ok=True)
+        approved_json.write_text(
+            json.dumps(
+                {
+                    "case": {"case_id": "failing_case_001"},
+                    "question": "failing retrieval case",
+                    "approved_answer_draft": "baseline",
+                    "status": "approved",
+                }
+            ),
+            encoding="utf-8",
+        )
+        approved_md.write_text("baseline", encoding="utf-8")
+        out_dir = tmp_path / "failing_compare"
+        res = subprocess.run(
+            [
+                sys.executable,
+                "tools/ai_behavior_reference.py",
+                "compare",
+                str(case_file),
+                "failing_case_001",
+                "--answer-text",
+                "fresh answer",
+                "--judge-cmd",
+                f"{sys.executable} {judge_script}",
+                "--output-dir",
+                str(out_dir),
+            ],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=_env(),
+            check=False,
+        )
+        assert "verdict: ERROR" in res.stdout
+        assert "retrieval stage failed; compare was not executed" in res.stdout
+        payload = json.loads((out_dir / "failing_case_001.compare.json").read_text(encoding="utf-8"))
+        assert payload["comparison"]["verdict_source"] == "retrieval_failure"
+        assert payload["comparison"]["mode"] == "retrieval_gate"
     finally:
         if old_json is None:
             approved_json.unlink(missing_ok=True)

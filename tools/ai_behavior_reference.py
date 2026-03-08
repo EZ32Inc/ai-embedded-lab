@@ -367,7 +367,16 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     reference = _load_reference_json(args.reference_json, args.case_id)
     approved_answer = str(reference.get("approved_answer_draft", ""))
     run = run_case(case_file=case_file, case=case, mode="prompt-only", answer_text=fresh_answer)
-    if args.judge_cmd:
+    retrieval_failed = any(int(item.get("returncode", 1)) != 0 for item in run["retrieval"])
+    if retrieval_failed:
+        comparison = {
+            "mode": "retrieval_gate",
+            "status": "error",
+            "verdict": "ERROR",
+            "reason": "retrieval stage failed; compare was not executed",
+            "verdict_source": "retrieval_failure",
+        }
+    elif args.judge_cmd:
         comparison = _semantic_compare(case, reference, run["retrieval"], fresh_answer, args.judge_cmd)
     else:
         fallback = _comparison_verdict(case, approved_answer, fresh_answer)
