@@ -8,6 +8,7 @@ from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
 from ael import strategy_resolver
+from ael.config_resolver import resolve_probe_config
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
@@ -159,11 +160,15 @@ def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: 
 
 
 def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tuple[int, Dict[str, Any]]:
-    probe = _resolve_path(repo_root, step.get("probe"), "configs/esp32jtag.yaml")
     board = step.get("board")
     test = _resolve_path(repo_root, step.get("test"))
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
+    probe = _resolve_path(
+        repo_root,
+        step.get("probe"),
+        resolve_probe_config(str(repo_root), args=None, board_id=str(board)),
+    )
     try:
         _ensure_step_meter_reachable(repo_root, str(board), test)
     except Exception as exc:

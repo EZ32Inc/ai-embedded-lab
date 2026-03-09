@@ -1,6 +1,7 @@
 board:
   name: STM32F401RCT6
   target: stm32f401rct6
+  probe_config: configs/esp32jtag.yaml
   clock_hz: 16000000
   build:
     type: arm_debug

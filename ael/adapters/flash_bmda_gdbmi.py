@@ -64,6 +64,17 @@ def _run_continue(gdb_cmd, ip, port, target_id, timeout_s):
     return subprocess.run(args, capture_output=True, text=True, timeout=timeout_s)
 
 
+def _contains_rejected_output(out: str, keywords) -> str:
+    if not keywords:
+        return ""
+    out_l = str(out or "").lower()
+    for keyword in keywords:
+        key = str(keyword or "").strip().lower()
+        if key and key in out_l:
+            return key
+    return ""
+
+
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not firmware_path or not os.path.exists(firmware_path):
         print("Flash: firmware not found")
@@ -87,6 +98,10 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     launch_cmds = flash_cfg.get("gdb_launch_cmds", None)
     retry_continue_on_remote_failure = bool(flash_cfg.get("retry_continue_on_remote_failure", False))
     continue_retry_timeout_s = int(flash_cfg.get("continue_retry_timeout_s", 8))
+    notice_output_keywords = flash_cfg.get("notice_output_keywords", [])
+    if not isinstance(notice_output_keywords, list):
+        notice_output_keywords = []
+    flash_log_path = str(flash_cfg.get("flash_log_path") or "").strip()
 
     attempts = []
     strategies = [
@@ -137,6 +152,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
             )
             out = (res.stdout or "") + (res.stderr or "")
             out_l = out.lower()
+            noticed_keyword = _contains_rejected_output(out, notice_output_keywords)
             attempt_ok = res.returncode == 0 and "failed" not in out_l
             attempts.append(
                 {
@@ -144,6 +160,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                     "strategy": strat.get("name"),
                     "ok": attempt_ok,
                     "returncode": res.returncode,
+                    "noticed_keyword": noticed_keyword or None,
                 }
             )
             print(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
@@ -151,6 +168,11 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                 print(res.stdout.strip())
             if res.stderr:
                 print(res.stderr.strip())
+            if noticed_keyword:
+                msg = f"There is warning/error during flash: matched '{noticed_keyword}'."
+                if flash_log_path:
+                    msg += f" Check more details in log file {flash_log_path}"
+                print(msg)
             if attempt_ok:
                 ok = True
                 strategy_used = strat.get("name")

@@ -7,6 +7,7 @@ The CLI should call into these helpers instead of embedding policy directly.
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import Any, Dict, Iterable, Optional
 
 
@@ -17,6 +18,27 @@ _DEFAULTS: Dict[str, str] = {
 }
 
 _NOTIFY_BOARDS = {"esp32s3_devkit"}
+
+
+def _board_probe_config(repo_root: str, board_id: Optional[str]) -> Optional[str]:
+    if not board_id:
+        return None
+    board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
+    if not board_path.exists():
+        return None
+    try:
+        import yaml  # type: ignore
+
+        payload = yaml.safe_load(board_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    board = payload.get("board")
+    if not isinstance(board, dict):
+        return None
+    probe_cfg = str(board.get("probe_config") or "").strip()
+    return probe_cfg or None
 
 
 def _arg(args: Any, name: str, default: Any = None) -> Any:
@@ -98,6 +120,12 @@ def resolve_probe_config(
     notify = resolve_notify_probe_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)
     if notify:
         return notify
+
+    policy_board = _board_for_policy(board_id, args, pack_meta)
+    board_probe = _board_probe_config(repo_root, policy_board)
+    if board_probe:
+        absolute = _use_absolute_paths(repo_root, pack_meta)
+        return _normalize_path(repo_root, board_probe, absolute)
 
     absolute = _use_absolute_paths(repo_root, pack_meta)
     return _normalize_path(repo_root, _DEFAULTS["probe_config"], absolute)

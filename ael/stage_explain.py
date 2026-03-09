@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from ael.pipeline import _simple_yaml_load
+from ael.config_resolver import resolve_probe_config
 from ael.strategy_resolver import (
     build_preflight_step,
     build_uart_step,
@@ -17,9 +18,6 @@ from ael.strategy_resolver import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_PROBE = "configs/esp32jtag.yaml"
-
-
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -39,7 +37,8 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     test_file = _abs(repo_root, test_path)
     if not test_file.exists():
         raise FileNotFoundError(f"test not found: {test_file}")
-    probe_path = repo_root / DEFAULT_PROBE
+    probe_rel = resolve_probe_config(str(repo_root), args=None, board_id=board_id)
+    probe_path = _abs(repo_root, probe_rel)
     board_raw = _simple_yaml_load(str(board_path))
     test_raw = _load_json(test_file)
     probe_raw = _simple_yaml_load(str(probe_path))

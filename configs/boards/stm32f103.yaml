@@ -1,6 +1,7 @@
 board:
   name: STM32F103 Bluepill
   target: stm32f103c8t6
+  probe_config: configs/esp32jtag.yaml
   clock_hz: 8000000
   build:
     type: arm_debug
@@ -11,6 +12,10 @@ board:
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
+    post_load_settle_s: 5.0
+    notice_output_keywords:
+      - "warning"
+      - "error"
     target_id: 1
     gdb_launch_cmds:
       - "file {firmware}"

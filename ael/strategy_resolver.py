@@ -339,13 +339,13 @@ def resolve_load_stage(
         return None, flash_cfg
 
     method = str(flash_cfg.get("method", "gdbmi")).strip()
+    flash_cfg = dict(flash_cfg)
+    flash_cfg["flash_log_path"] = flash_log_path
     if method == "idf_esptool":
         if board_cfg.get("build", {}):
-            flash_cfg = dict(flash_cfg)
             flash_cfg["project_dir"] = board_cfg.get("build", {}).get("project_dir")
         target = board_cfg.get("target")
         if target:
-            flash_cfg = dict(flash_cfg)
             flash_cfg["target"] = target
             flash_cfg["build_dir"] = os.path.join(str(repo_root), "artifacts", f"build_{target}")
     step = {
@@ -451,6 +451,7 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
                 "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
                 "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
             },
+            "verify_prep": (dict(board_cfg.get("verify_prep", {})) if isinstance(board_cfg, dict) and isinstance(board_cfg.get("verify_prep"), dict) else {}),
             "led_observe_cfg": (dict(test_raw.get("observe_led", {})) if isinstance(test_raw, dict) and isinstance(test_raw.get("observe_led"), dict) else {}),
             "recovery_demo": (test_raw.get("recovery_demo", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("recovery_demo"), dict) else {}),
         },

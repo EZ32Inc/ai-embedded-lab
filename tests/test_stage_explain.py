@@ -15,6 +15,13 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['check_model'] == 'signal_verify'
     assert payload['selected']['verification_views']['signal']['resolved_to'] == 'P0.0'
     assert payload['selected']['verification_views']['led']['resolved_to'] == 'P0.3'
+    assert payload['selected']['probe'] == 'configs/esp32jtag.yaml'
+
+
+def test_explain_plan_for_rp2040_uses_board_probe_config():
+    payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
+    assert payload['ok'] is True
+    assert payload['selected']['probe'] == 'configs/esp32jtag_rp2040.yaml'
 
 
 def test_explain_preflight_for_meter_disabled_path():

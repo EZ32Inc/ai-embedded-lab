@@ -242,6 +242,17 @@ class _LoadAdapter:
                 ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
         if not ok:
             return {"ok": False, "error_summary": "load failed"}
+        settle_s = 0.0
+        try:
+            settle_s = max(0.0, float(flash_cfg.get("post_load_settle_s", 0.0)))
+        except Exception:
+            settle_s = 0.0
+        stage_execution = plan.get("stage_execution", {}) if isinstance(plan, dict) and isinstance(plan.get("stage_execution"), dict) else {}
+        if str(stage_execution.get("requested_until") or "").strip().lower() == "run-exit":
+            settle_s = 0.0
+        if settle_s > 0.0:
+            print(f"Flash: settling {settle_s:.2f}s before next stage")
+            time.sleep(settle_s)
         return {"ok": True}
 
 
@@ -577,6 +588,7 @@ class _SignalVerifyAdapter:
         output_mode = inputs.get("output_mode", "normal")
         measure_path = inputs.get("measure_path")
         test_limits = inputs.get("test_limits", {})
+        verify_prep = inputs.get("verify_prep", {}) if isinstance(inputs.get("verify_prep"), dict) else {}
         led_observe_cfg = inputs.get("led_observe_cfg", {}) if isinstance(inputs.get("led_observe_cfg"), dict) else {}
         recovery_demo = inputs.get("recovery_demo", {}) if isinstance(inputs.get("recovery_demo"), dict) else {}
 
@@ -678,8 +690,18 @@ class _SignalVerifyAdapter:
             return False, {"ok": False, "metrics": {"attempts": attempts, "levels_seen": sorted(seen_levels)}, "reasons": ["led_level_never_changed"], "samples": samples}, first_capture
 
         capture = {}
+        prep_delay_s = 0.0
+        try:
+            prep_delay_s = max(0.0, float(verify_prep.get("delay_s", 0.0)))
+        except Exception:
+            prep_delay_s = 0.0
+        prep_message = str(verify_prep.get("message") or "").strip()
         if log_path:
             with _tee_output(log_path, output_mode):
+                if prep_message:
+                    print(prep_message)
+                if prep_delay_s > 0.0:
+                    time.sleep(prep_delay_s)
                 if led_observe_cfg.get("enabled"):
                     ok_obs, measure, first_capture = _led_level_poll()
                     if isinstance(first_capture, dict):
@@ -688,6 +710,10 @@ class _SignalVerifyAdapter:
                     ok_obs = _capture_once(capture)
                     measure = None
         else:
+            if prep_message:
+                print(prep_message)
+            if prep_delay_s > 0.0:
+                time.sleep(prep_delay_s)
             if led_observe_cfg.get("enabled"):
                 ok_obs, measure, first_capture = _led_level_poll()
                 if isinstance(first_capture, dict):

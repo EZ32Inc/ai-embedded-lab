@@ -83,3 +83,19 @@ def test_run_gdb_default_launch_still_adds_resume_and_detach():
     assert "monitor reset run" in args
     assert "continue" in args
     assert "detach" in args
+
+
+def test_contains_rejected_output_matches_keywords_case_insensitively():
+    keyword = flash_bmda_gdbmi._contains_rejected_output(
+        "Warning: Remote failure reply: E01\nCould not read registers\n",
+        ["error", "warning"],
+    )
+    assert keyword == "warning"
+
+
+def test_contains_rejected_output_returns_empty_when_clean():
+    keyword = flash_bmda_gdbmi._contains_rejected_output(
+        "Loading section .text\nTransfer rate: 1 KB/sec\n[Inferior 1 (Remote target) detached]\n",
+        ["error", "warning"],
+    )
+    assert keyword == ""

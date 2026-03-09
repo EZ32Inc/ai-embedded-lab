@@ -45,7 +45,7 @@ def main():
         "--until-stage",
         required=False,
         default="report",
-        help="Stop after stage: plan, pre-flight, or report (default full flow).",
+        help="Stop after stage: plan, pre-flight, run, run-exit, or report (default full flow).",
     )
     out_group = run_p.add_mutually_exclusive_group()
     out_group.add_argument("--quiet", action="store_true", help="Concise console output")

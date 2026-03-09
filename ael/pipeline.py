@@ -234,7 +234,7 @@ def _normalize_until_stage(value):
     raw = str(value or "report").strip().lower()
     if raw in ("preflight", "pre-flight"):
         return "pre-flight"
-    if raw in ("plan", "report"):
+    if raw in ("plan", "run", "run-exit", "check", "report"):
         return raw
     return "report"
 
@@ -250,6 +250,16 @@ def _filter_plan_steps_by_stage(plan_steps, until_stage):
                 continue
             if str(step.get("type", "")).startswith("preflight."):
                 out.append(step)
+        return out
+    if stage in ("run", "run-exit"):
+        out = []
+        for step in plan_steps:
+            if not isinstance(step, dict):
+                continue
+            step_type = str(step.get("type", ""))
+            if step_type.startswith("check."):
+                continue
+            out.append(step)
         return out
     return list(plan_steps)
 
@@ -267,6 +277,12 @@ def _stage_execution_summary(until_stage, *, preflight_enabled=True):
             executed.append("pre-flight")
         else:
             skipped.append("pre-flight")
+    elif stage in ("run", "run-exit"):
+        if preflight_enabled:
+            executed.append("pre-flight")
+        else:
+            skipped.append("pre-flight")
+        executed.append("run")
     else:
         if preflight_enabled:
             executed.append("pre-flight")
@@ -1061,6 +1077,8 @@ def run_pipeline(
     runner_plan = dict(plan)
     runner_plan["steps"] = _filter_plan_steps_by_stage(plan_steps, until_stage)
     runner_result = run_plan(runner_plan, Path(run_paths.root), registry)
+    if until_stage == "run-exit":
+        return (0, run_paths) if return_paths else 0
     evidence_path = ael_evidence.write_runner_evidence(Path(run_paths.root), runner_result)
     evidence_payload = {}
     try:

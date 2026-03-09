@@ -1,6 +1,10 @@
+from pathlib import Path
 from unittest.mock import patch
 
 from ael import default_verification
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_run_single_blocks_unreachable_esp32_meter(tmp_path):
@@ -62,3 +66,20 @@ def test_run_single_skips_meter_guard_for_non_meter_test(tmp_path):
     assert result == {"ok": True}
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
+
+
+def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
+    test_path = tmp_path / "gpio_signature.json"
+    test_path.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")
+    step = {"board": "rp2040_pico", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ) as run_mock:
+        code, result = default_verification._run_single(REPO_ROOT, step, "normal")
+
+    assert code == 0
+    assert result == {"ok": True}
+    guard_mock.assert_not_called()
+    assert run_mock.call_args.kwargs["probe_path"].endswith("configs/esp32jtag_rp2040.yaml")
