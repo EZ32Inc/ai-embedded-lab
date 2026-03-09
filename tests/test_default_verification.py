@@ -82,7 +82,7 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
     assert code == 0
     assert result == {"ok": True}
     guard_mock.assert_not_called()
-    assert run_mock.call_args.kwargs["probe_path"].endswith("configs/esp32jtag_rp2040.yaml")
+    assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
 
 
 def test_run_until_fail_stops_on_first_failure():

@@ -18,6 +18,8 @@ from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
+from ael.config_resolver import resolve_probe_instance
+from ael.probe_binding import load_probe_binding
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -345,6 +347,10 @@ def _build_validation_summary(
     instrument_id,
     instrument_host,
     instrument_port,
+    probe_instance_id,
+    probe_type,
+    probe_host,
+    probe_port,
     selected_ssid,
 ):
     summary = {
@@ -357,6 +363,9 @@ def _build_validation_summary(
         "serial_or_flash_port": flash_info.get("port") or None,
         "instrument_profile": instrument_id or None,
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "key_artifact_paths": {
             "run_plan": (result.get("json") or {}).get("run_plan"),
             "runner_result": (result.get("json") or {}).get("runner_result"),
@@ -383,11 +392,21 @@ def _build_current_setup(
     instrument_id,
     instrument_host,
     instrument_port,
+    probe_instance_id,
+    probe_type,
+    probe_host,
+    probe_port,
     selected_ssid,
 ):
     setup = {
         "serial_or_flash_port": flash_info.get("port") or None,
         "instrument_profile": instrument_id or None,
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": {
+            "host": probe_host or None,
+            "port": probe_port if probe_port is not None else None,
+        },
         "selected_endpoint": {
             "host": instrument_host or None,
             "port": instrument_port if instrument_port is not None else None,
@@ -407,6 +426,10 @@ def _build_last_known_good_setup(
     instrument_id,
     instrument_host,
     instrument_port,
+    probe_instance_id,
+    probe_type,
+    probe_host,
+    probe_port,
     selected_ssid,
     test_raw,
     result,
@@ -417,6 +440,9 @@ def _build_last_known_good_setup(
         "port": flash_info.get("port") or None,
         "instrument_profile": instrument_id or None,
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "run_id": run_id,
         "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
     }
@@ -446,6 +472,13 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if summary.get("endpoint"):
             line += f" endpoint={summary.get('endpoint')}"
         print(line)
+    if summary.get("probe_instance"):
+        line = f"Summary: probe_instance={summary.get('probe_instance')}"
+        if summary.get("probe_type"):
+            line += f" type={summary.get('probe_type')}"
+        if summary.get("probe_endpoint"):
+            line += f" endpoint={summary.get('probe_endpoint')}"
+        print(line)
     print(
         "Summary: artifacts "
         f"result={summary.get('key_artifact_paths', {}).get('result')} "
@@ -459,6 +492,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if summary.get("cleanup_items"):
         print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
     endpoint = current_setup.get("selected_endpoint", {}) if isinstance(current_setup.get("selected_endpoint"), dict) else {}
+    probe_endpoint = current_setup.get("probe_endpoint", {}) if isinstance(current_setup.get("probe_endpoint"), dict) else {}
     setup_line = "Summary: setup"
     if current_setup.get("serial_or_flash_port"):
         setup_line += f" port={current_setup.get('serial_or_flash_port')}"
@@ -468,6 +502,10 @@ def _print_success_summary(summary, last_known_good, current_setup):
         setup_line += f" endpoint={endpoint.get('host')}:{endpoint.get('port')}"
     if current_setup.get("instrument_profile"):
         setup_line += f" instrument={current_setup.get('instrument_profile')}"
+    if current_setup.get("probe_instance"):
+        setup_line += f" probe_instance={current_setup.get('probe_instance')}"
+    if probe_endpoint.get("host") and probe_endpoint.get("port") is not None:
+        setup_line += f" probe_endpoint={probe_endpoint.get('host')}:{probe_endpoint.get('port')}"
     print(setup_line)
     print(
         "LKG: "
@@ -480,6 +518,13 @@ def _print_success_summary(summary, last_known_good, current_setup):
             line += f" ssid={last_known_good.get('selected_ap_ssid')}"
         if last_known_good.get("endpoint"):
             line += f" endpoint={last_known_good.get('endpoint')}"
+        print(line)
+    if last_known_good.get("probe_instance"):
+        line = f"LKG: probe_instance={last_known_good.get('probe_instance')}"
+        if last_known_good.get("probe_type"):
+            line += f" type={last_known_good.get('probe_type')}"
+        if last_known_good.get("probe_endpoint"):
+            line += f" endpoint={last_known_good.get('probe_endpoint')}"
         print(line)
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
@@ -589,8 +634,15 @@ def run_pipeline(
         {"version": ael_evidence.EVIDENCE_VERSION, "items": []},
     )
 
-    probe_raw = _simple_yaml_load(probe_path) if probe_path else {}
     board_raw = _simple_yaml_load(board_path) if board_path else {}
+    board_probe_instance = resolve_probe_instance(repo_root, args=None, board_id=board_id)
+    binding = load_probe_binding(
+        repo_root,
+        probe_path=probe_path,
+        instance_id=board_probe_instance if not probe_path else None,
+    )
+    probe_path = binding.config_path
+    probe_raw = binding.raw
     effective = _deep_merge(_deep_merge(probe_raw, board_raw), test_raw)
     _write_json(run_paths.config_effective, effective)
     notify_cfg = effective.get("notify", {}) if isinstance(effective, dict) else {}
@@ -626,6 +678,10 @@ def run_pipeline(
     instrument_id = resolved.instrument_id
     instrument_host = resolved.instrument_host
     instrument_port = resolved.instrument_port
+    probe_instance_id = binding.instance_id
+    probe_type = binding.type_id
+    probe_host = binding.endpoint_host or probe_cfg.get("ip")
+    probe_port = binding.endpoint_port or probe_cfg.get("gdb_port")
     missing_wiring = [k for k in ("swd", "reset", "verify") if wiring_cfg.get(k) == "UNKNOWN"]
     if missing_wiring:
         print(f"I am guessing {', '.join(missing_wiring)} — please confirm.")
@@ -637,7 +693,12 @@ def run_pipeline(
         banner_port = instrument_port if instrument_port is not None else "unknown"
         print(f"Using instrument: {banner_name} ({instrument_id}) @ {banner_host}:{banner_port}")
     else:
-        print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
+        if probe_instance_id:
+            print(f"Using probe instance: {probe_instance_id} ({probe_type or probe_cfg.get('name', 'unknown')}) @ {probe_host or 'unknown'}:{probe_port or 'unknown'}")
+        else:
+            print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
+    if binding.legacy_warning:
+        print(f"Warning: {binding.legacy_warning}")
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
     print(f"Wiring: swd={wiring_cfg.get('swd')} reset={wiring_cfg.get('reset')} verify={wiring_cfg.get('verify')}")
 
@@ -658,6 +719,10 @@ def run_pipeline(
         "probe": {
             "name": probe_cfg.get("name"),
             "path": probe_path,
+            "instance_id": probe_instance_id,
+            "type": probe_type,
+            "endpoint": {"host": probe_host, "port": probe_port},
+            "legacy_warning": binding.legacy_warning,
         },
         "instrument": {
             "id": instrument_id,
@@ -1168,6 +1233,10 @@ def run_pipeline(
             instrument_id=instrument_id,
             instrument_host=instrument_host,
             instrument_port=instrument_port,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
             selected_ssid=selected_ssid,
         )
         last_known_good_setup = _build_last_known_good_setup(
@@ -1178,6 +1247,10 @@ def run_pipeline(
             instrument_id=instrument_id,
             instrument_host=instrument_host,
             instrument_port=instrument_port,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
             selected_ssid=selected_ssid,
             test_raw=test_raw,
             result=result,
@@ -1187,6 +1260,10 @@ def run_pipeline(
             instrument_id=instrument_id,
             instrument_host=instrument_host,
             instrument_port=instrument_port,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
             selected_ssid=selected_ssid,
         )
         result["validation_summary"] = validation_summary

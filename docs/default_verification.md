@@ -1,41 +1,51 @@
-# Default Verification Notes
+# Default Verification
 
-Use default verification to run the baseline golden sequence:
+Run the current baseline sequence with:
 
 ```bash
 python3 -m ael verify-default run
 ```
 
-Expected sequence:
+Stress it with:
 
-1. `esp32s3_golden_gpio`
+```bash
+python3 -m ael verify-default repeat-until-fail --limit 20
+```
+
+Current default sequence:
+
+1. `esp32c6_golden_gpio`
+   - board: `esp32c6_devkit`
+   - test: `tests/plans/esp32c6_gpio_signature_with_meter.json`
+   - evidence: UART + meter-backed `instrument.signature`
 2. `rp2040_golden_gpio_signature`
+   - board: `rp2040_pico`
+   - test: `tests/plans/gpio_signature.json`
+   - probe instance: `esp32jtag_rp2040_lab`
+   - evidence: logic-analyzer `gpio.signal`
+3. `stm32f103_golden_gpio_signature`
+   - board: `stm32f103`
+   - test: `tests/plans/gpio_signature.json`
+   - probe instance: `esp32jtag_stm32_golden`
+   - evidence: logic-analyzer `gpio.signal`
 
-## Manual Hardware Smoke Checklist
+Current validated baseline:
 
-Use this quick manual checklist after hardware/path changes:
+- default verification passed `10/10`
+- STM32F401 golden GPIO passed `10/10`
+- STM32F103 golden GPIO passed `10/10`
+- STM32F401 direct post-flash `+5s` stability benchmark passed `20/20`
 
-1. Preflight-only smoke (probe + monitor + LA):
+Known-good comparison artifacts:
 
-```bash
-python3 -m ael verify-default set --preset preflight_only
-python3 -m ael verify-default run
-```
+- ESP32-C6:
+  - `runs/2026-03-09_14-57-25_esp32c6_devkit_esp32c6_gpio_signature_with_meter/artifacts/evidence.json`
+- RP2040:
+  - `runs/2026-03-09_14-58-12_rp2040_pico_gpio_signature/artifacts/evidence.json`
+- STM32F103:
+  - `runs/2026-03-09_14-58-42_stm32f103_gpio_signature/artifacts/evidence.json`
 
-2. Full default sequence:
+Legacy note:
 
-```bash
-python3 -m ael verify-default set --preset esp32s3_then_rp2040
-python3 -m ael verify-default run
-```
-
-## RP2040 Flash Warning
-
-During RP2040 flash via BMDA/GDB, you may see log lines such as:
-
-- `warning: Remote failure reply: E01`
-- `Could not read registers; remote failure reply 'FF'`
-- `Flash: warning - remote failure reply after load; skipping continue retry`
-
-These are currently treated as non-fatal when load succeeds and downstream verify passes.
-The run should be considered healthy if the final result is `PASS: Run verified`.
+- old raw probe configs such as `configs/esp32jtag.yaml` are still accepted
+- they now warn: `Using legacy shared probe config; explicit instrument instance is recommended.`

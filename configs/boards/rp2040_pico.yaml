@@ -1,7 +1,7 @@
 board:
   name: RP2040 Pico
   target: rp2040
-  probe_config: configs/esp32jtag_rp2040.yaml
+  instrument_instance: esp32jtag_rp2040_lab
   firmware:
     description: Blink GPIO25 ~1Hz
   observe_map:

@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Any
 
 from ael.adapters import observe_gpio_pin
-from ael.config_resolver import resolve_probe_config
+from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load
+from ael.probe_binding import load_probe_binding
 
 
 def _repo_root() -> Path:
@@ -14,13 +15,15 @@ def _repo_root() -> Path:
 
 def resolve_probe_cfg(*, board: str | None = None, probe: str | None = None) -> tuple[str, dict[str, Any]]:
     repo_root = str(_repo_root())
+    instance_id = resolve_probe_instance(repo_root, args=None, board_id=board)
     probe_path = str(probe or resolve_probe_config(repo_root, args=None, board_id=board))
-    if not probe_path:
-        raise ValueError("probe config could not be resolved")
-    probe_full = probe_path if Path(probe_path).is_absolute() else str((_repo_root() / probe_path).resolve())
-    probe_raw = _simple_yaml_load(probe_full)
-    probe_cfg = _normalize_probe_cfg(probe_raw)
-    return probe_full, probe_cfg
+    binding = load_probe_binding(
+        repo_root,
+        probe_path=None if instance_id and not probe else probe_path,
+        instance_id=instance_id if instance_id and not probe else None,
+    )
+    probe_cfg = _normalize_probe_cfg(binding.raw)
+    return str(binding.config_path), probe_cfg
 
 
 def run(

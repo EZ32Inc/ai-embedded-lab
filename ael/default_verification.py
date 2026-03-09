@@ -8,10 +8,11 @@ from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
 from ael import strategy_resolver
-from ael.config_resolver import resolve_probe_config
+from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
+from ael.probe_binding import load_probe_binding
 
 
 DEFAULT_CONFIG_PATH = ael_paths.repo_root() / "configs" / "default_verification_setting.yaml"
@@ -68,7 +69,7 @@ def preset_payload(name: str) -> Dict[str, Any]:
         return {
             "version": 1,
             "mode": "preflight_only",
-            "probe": "configs/esp32jtag.yaml",
+            "instrument_instance": "esp32jtag_stm32_golden",
         }
     if key in ("rp2040_only", "rp2040_esp32jtag_only"):
         return {
@@ -76,7 +77,7 @@ def preset_payload(name: str) -> Dict[str, Any]:
             "mode": "single_run",
             "board": "rp2040_pico",
             "test": "tests/plans/gpio_signature.json",
-            "probe": "configs/esp32jtag.yaml",
+            "instrument_instance": "esp32jtag_rp2040_lab",
         }
     if key in ("esp32s3_then_rp2040", "esp32s3_gpio_then_rp2040"):
         return {
@@ -88,13 +89,13 @@ def preset_payload(name: str) -> Dict[str, Any]:
                     "name": "esp32s3_golden_gpio",
                     "board": "esp32s3_devkit",
                     "test": "tests/plans/esp32s3_gpio_signature_with_meter.json",
-                    "probe": "configs/esp32jtag.yaml",
+                    "instrument_instance": "esp32jtag_stm32_golden",
                 },
                 {
                     "name": "rp2040_golden_gpio_signature",
                     "board": "rp2040_pico",
                     "test": "tests/plans/gpio_signature.json",
-                    "probe": "configs/esp32jtag.yaml",
+                    "instrument_instance": "esp32jtag_rp2040_lab",
                 },
             ],
         }
@@ -111,11 +112,30 @@ def _resolve_path(repo_root: Path, value: str | None, default: str | None = None
     return str((repo_root / p).resolve())
 
 
-def _run_preflight_only(repo_root: Path, probe_path: str | None) -> Tuple[int, Dict[str, Any]]:
-    if not probe_path:
-        print("default_verification: preflight_only missing probe path")
-        return 2, {"ok": False, "error": "missing probe path"}
-    probe_raw = _simple_yaml_load(probe_path)
+def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[Dict[str, Any], str | None]:
+    config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
+    instance_id = str(step.get("instrument_instance") or "").strip() or resolve_probe_instance(
+        str(config_root),
+        args=None,
+        board_id=str(step.get("board") or ""),
+    )
+    probe_path = _resolve_path(
+        config_root,
+        step.get("probe"),
+        resolve_probe_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
+    )
+    binding = load_probe_binding(
+        config_root,
+        probe_path=None if instance_id else probe_path,
+        instance_id=instance_id or None,
+    )
+    if binding.legacy_warning:
+        print(f"default_verification: {binding.legacy_warning}")
+    return binding.raw, binding.config_path
+
+
+def _run_preflight_only(repo_root: Path, step: Dict[str, Any]) -> Tuple[int, Dict[str, Any]]:
+    probe_raw, _probe_path = _resolve_step_probe_binding(repo_root, step)
     probe_cfg = _normalize_probe_cfg(probe_raw)
     ok, info = preflight.run(probe_cfg)
     return (0 if ok else 2), {"ok": bool(ok), "result": info or {}}
@@ -164,11 +184,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     test = _resolve_path(repo_root, step.get("test"))
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
-    probe = _resolve_path(
-        repo_root,
-        step.get("probe"),
-        resolve_probe_config(str(repo_root), args=None, board_id=str(board)),
-    )
+    _probe_raw, probe = _resolve_step_probe_binding(repo_root, step)
     try:
         _ensure_step_meter_reachable(repo_root, str(board), test)
     except Exception as exc:
@@ -222,8 +238,7 @@ def run_default_setting(
         return 0, {"ok": True, "mode": mode, "results": results}
 
     if mode == "preflight_only":
-        probe = _resolve_path(repo_root, setting.get("probe"), "configs/esp32jtag.yaml")
-        code, result = _run_preflight_only(repo_root, probe)
+        code, result = _run_preflight_only(repo_root, setting)
         results.append({"name": "preflight_only", "code": code, "ok": code == 0, "result": result})
         return code, {"ok": code == 0, "mode": mode, "results": results}
 
@@ -244,12 +259,17 @@ def run_default_setting(
             step_name = str(step.get("name") or f"step_{idx:02d}")
             action = str(step.get("action") or "single_run").strip().lower()
             if action == "preflight_only":
-                probe = _resolve_path(repo_root, step.get("probe"), setting.get("probe") or "configs/esp32jtag.yaml")
-                code, result = _run_preflight_only(repo_root, probe)
+                if not step.get("probe") and setting.get("probe"):
+                    step["probe"] = setting.get("probe")
+                if not step.get("instrument_instance") and setting.get("instrument_instance"):
+                    step["instrument_instance"] = setting.get("instrument_instance")
+                code, result = _run_preflight_only(repo_root, step)
             else:
                 # default action is run test step
                 if not step.get("probe") and setting.get("probe"):
                     step["probe"] = setting.get("probe")
+                if not step.get("instrument_instance") and setting.get("instrument_instance"):
+                    step["instrument_instance"] = setting.get("instrument_instance")
                 code, result = _run_single(repo_root, step, output_mode)
             ok = code == 0
             results.append({"name": step_name, "code": code, "ok": ok, "result": result})

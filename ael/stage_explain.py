@@ -5,7 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from ael.pipeline import _simple_yaml_load
-from ael.config_resolver import resolve_probe_config
+from ael.config_resolver import resolve_probe_config, resolve_probe_instance
+from ael.probe_binding import load_probe_binding
 from ael.strategy_resolver import (
     build_preflight_step,
     build_uart_step,
@@ -38,15 +39,23 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     if not test_file.exists():
         raise FileNotFoundError(f"test not found: {test_file}")
     probe_rel = resolve_probe_config(str(repo_root), args=None, board_id=board_id)
-    probe_path = _abs(repo_root, probe_rel)
+    instance_id = resolve_probe_instance(str(repo_root), args=None, board_id=board_id)
+    binding = load_probe_binding(
+        repo_root,
+        probe_path=None if instance_id else probe_rel,
+        instance_id=instance_id,
+    )
+    probe_path = Path(str(binding.config_path))
     board_raw = _simple_yaml_load(str(board_path))
     test_raw = _load_json(test_file)
-    probe_raw = _simple_yaml_load(str(probe_path))
+    probe_raw = binding.raw
     resolved = resolve_run_strategy(probe_raw, board_raw, test_raw, wiring=None, request_timeout_s=None, repo_root=repo_root)
     return {
         "board_path": board_path.relative_to(repo_root).as_posix(),
         "test_path": test_file.relative_to(repo_root).as_posix(),
         "probe_path": probe_path.relative_to(repo_root).as_posix(),
+        "probe_instance_id": binding.instance_id,
+        "probe_type": binding.type_id,
         "board_raw": board_raw,
         "test_raw": test_raw,
         "probe_raw": probe_raw,
@@ -86,6 +95,8 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "test": {"name": test_raw.get("name"), "path": ctx["test_path"]},
         "selected": {
             "probe": ctx["probe_path"],
+            "probe_instance": ctx.get("probe_instance_id"),
+            "probe_type": ctx.get("probe_type"),
             "builder_kind": build_kind,
             "firmware_project": (board_cfg.get("build") or {}).get("project_dir"),
             "board_clock_hz": board_cfg.get("clock_hz"),

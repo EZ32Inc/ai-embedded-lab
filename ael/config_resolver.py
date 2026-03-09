@@ -13,6 +13,7 @@ from typing import Any, Dict, Iterable, Optional
 
 _DEFAULTS: Dict[str, str] = {
     "probe_config": os.path.join("configs", "esp32jtag.yaml"),
+    "probe_instance": "esp32jtag_stm32_golden",
     "notify_probe_config": os.path.join("configs", "esp32jtag_notify.yaml"),
     "doctor_board_config": os.path.join("configs", "boards", "rp2040_pico.yaml"),
 }
@@ -39,6 +40,27 @@ def _board_probe_config(repo_root: str, board_id: Optional[str]) -> Optional[str
         return None
     probe_cfg = str(board.get("probe_config") or "").strip()
     return probe_cfg or None
+
+
+def _board_probe_instance(repo_root: str, board_id: Optional[str]) -> Optional[str]:
+    if not board_id:
+        return None
+    board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
+    if not board_path.exists():
+        return None
+    try:
+        import yaml  # type: ignore
+
+        payload = yaml.safe_load(board_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(payload, dict):
+        return None
+    board = payload.get("board")
+    if not isinstance(board, dict):
+        return None
+    instance_id = str(board.get("instrument_instance") or "").strip()
+    return instance_id or None
 
 
 def _arg(args: Any, name: str, default: Any = None) -> Any:
@@ -122,6 +144,12 @@ def resolve_probe_config(
         return notify
 
     policy_board = _board_for_policy(board_id, args, pack_meta)
+    board_instance = _board_probe_instance(repo_root, policy_board)
+    if board_instance:
+        instance_rel = os.path.join("configs", "instrument_instances", f"{board_instance}.yaml")
+        absolute = _use_absolute_paths(repo_root, pack_meta)
+        return _normalize_path(repo_root, instance_rel, absolute)
+
     board_probe = _board_probe_config(repo_root, policy_board)
     if board_probe:
         absolute = _use_absolute_paths(repo_root, pack_meta)
@@ -129,6 +157,36 @@ def resolve_probe_config(
 
     absolute = _use_absolute_paths(repo_root, pack_meta)
     return _normalize_path(repo_root, _DEFAULTS["probe_config"], absolute)
+
+
+def resolve_probe_instance(
+    repo_root: str,
+    args: Any,
+    board_id: Optional[str] = None,
+    pack_meta: Optional[dict] = None,
+) -> Optional[str]:
+    user_instance = _arg(args, "instrument_instance")
+    if user_instance:
+        return str(user_instance)
+
+    explicit_probe = _arg(args, "probe")
+    if explicit_probe:
+        return None
+
+    notify = resolve_notify_probe_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)
+    if notify:
+        return None
+
+    policy_board = _board_for_policy(board_id, args, pack_meta)
+    board_instance = _board_probe_instance(repo_root, policy_board)
+    if board_instance:
+        return board_instance
+
+    board_probe = _board_probe_config(repo_root, policy_board)
+    if board_probe:
+        return None
+
+    return _DEFAULTS["probe_instance"]
 
 
 def resolve_board_config(repo_root: str, args: Any, pack_meta: Optional[dict] = None) -> Optional[str]:

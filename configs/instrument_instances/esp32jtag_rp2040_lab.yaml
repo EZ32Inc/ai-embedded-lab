@@ -1,0 +1,8 @@
+instance:
+  id: esp32jtag_rp2040_lab
+  type: esp32jtag
+  label: ESP32JTAG RP2040 Lab
+
+connection:
+  ip: 192.168.2.63
+  gdb_port: 4242

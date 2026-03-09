@@ -1,0 +1,8 @@
+instance:
+  id: esp32jtag_stm32_golden
+  type: esp32jtag
+  label: ESP32JTAG STM32 Golden
+
+connection:
+  ip: 192.168.2.98
+  gdb_port: 4242

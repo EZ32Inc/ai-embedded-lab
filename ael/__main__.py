@@ -16,6 +16,7 @@ from ael.config_resolver import (
     resolve_doctor_required_tools,
     resolve_probe_config,
 )
+from ael.probe_binding import load_probe_binding
 from ael.default_verification import (
     DEFAULT_CONFIG_PATH as DEFAULT_VERIFY_CONFIG_PATH,
     load_setting as load_default_verification_setting,
@@ -560,7 +561,8 @@ def run_doctor(probe_path, board_path, test_path):
     board_full = board_path if os.path.isabs(board_path) else os.path.join(repo_root, board_path)
     test_full = test_path if os.path.isabs(test_path) else os.path.join(repo_root, test_path)
 
-    probe_raw = _simple_yaml_load(probe_full)
+    binding = load_probe_binding(repo_root, probe_path=probe_path)
+    probe_raw = binding.raw
     board_raw = _simple_yaml_load(board_full)
     test_raw = {}
     try:
