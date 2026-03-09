@@ -61,3 +61,8 @@ python3 -m ael run --board stm32f103 --test tests/plans/gpio_signature.json
 Latest known-good golden GPIO run:
 - run id: `2026-03-09_07-51-57_stm32f103_gpio_signature`
 - artifact: `runs/2026-03-09_07-51-57_stm32f103_gpio_signature/result.json`
+
+Notes:
+- BMDA/GDB flash for STM32F103 is intentionally not wrapped in the generic tee logger.
+- That tee-wrapped path changed post-flash target behavior and could leave the DUT non-blinking after flash even when the GDB load/detach transcript looked correct.
+- BMDA flash now writes its own `flash.log` directly instead.

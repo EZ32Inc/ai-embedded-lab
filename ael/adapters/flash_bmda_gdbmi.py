@@ -75,6 +75,17 @@ def _contains_rejected_output(out: str, keywords) -> str:
     return ""
 
 
+def _append_flash_log(path: str, text: str) -> None:
+    target = str(path or "").strip()
+    if not target or not text:
+        return
+    try:
+        with open(target, "a", encoding="utf-8") as handle:
+            handle.write(text)
+    except Exception:
+        pass
+
+
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not firmware_path or not os.path.exists(firmware_path):
         print("Flash: firmware not found")
@@ -102,6 +113,10 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not isinstance(notice_output_keywords, list):
         notice_output_keywords = []
     flash_log_path = str(flash_cfg.get("flash_log_path") or "").strip()
+
+    def emit(line: str = "") -> None:
+        print(line)
+        _append_flash_log(flash_log_path, f"{line}\n")
 
     attempts = []
     strategies = [
@@ -131,7 +146,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         # If a custom reset strategy is set, only include it as attempt 2.
         strategies[1]["name"] = reset_strategy
 
-    print("Flash: BMDA via GDB (resilience ladder)")
+    emit("Flash: BMDA via GDB (resilience ladder)")
     ok = False
     strategy_used = ""
     last_error = ""
@@ -163,36 +178,36 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                     "noticed_keyword": noticed_keyword or None,
                 }
             )
-            print(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
+            emit(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
             if res.stdout:
-                print(res.stdout.strip())
+                emit(res.stdout.strip())
             if res.stderr:
-                print(res.stderr.strip())
+                emit(res.stderr.strip())
             if noticed_keyword:
                 msg = f"There is warning/error during flash: matched '{noticed_keyword}'."
                 if flash_log_path:
                     msg += f" Check more details in log file {flash_log_path}"
-                print(msg)
+                emit(msg)
             if attempt_ok:
                 ok = True
                 strategy_used = strat.get("name")
                 # If the probe reports a remote failure, try a delayed continue.
                 if (not launch_cmds) and ("remote failure reply" in out_l or "could not read registers" in out_l):
                     if reset_available and retry_continue_on_remote_failure:
-                        print("Flash: warning - remote failure reply, retrying continue")
+                        emit("Flash: warning - remote failure reply, retrying continue")
                         time.sleep(0.5)
                         try:
                             res2 = _run_continue(gdb_cmd, ip, port, target_id, continue_retry_timeout_s)
                             if res2.stdout:
-                                print(res2.stdout.strip())
+                                emit(res2.stdout.strip())
                             if res2.stderr:
-                                print(res2.stderr.strip())
+                                emit(res2.stderr.strip())
                         except Exception as exc:
-                            print(f"Flash: continue retry error ({exc})")
+                            emit(f"Flash: continue retry error ({exc})")
                     elif reset_available:
-                        print("Flash: warning - remote failure reply after load; skipping continue retry")
+                        emit("Flash: warning - remote failure reply after load; skipping continue retry")
                     else:
-                        print("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
+                        emit("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
                 break
             last_error = "flash attempt failed"
         except Exception as exc:
@@ -208,9 +223,9 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         time.sleep(0.2)
 
     if not ok:
-        print("Flash: FAIL")
+        emit("Flash: FAIL")
     else:
-        print("Flash: OK")
+        emit("Flash: OK")
 
     if flash_json_path:
         payload = {

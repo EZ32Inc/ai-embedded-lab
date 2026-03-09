@@ -229,12 +229,9 @@ class _LoadAdapter:
             firmware_path = state.get("firmware_path")
         if not firmware_path:
             return {"ok": False, "error_summary": "missing firmware path"}
-        if log_path:
+        if log_path and self.method == "idf_esptool":
             with _tee_output(log_path, output_mode):
-                if self.method == "idf_esptool":
-                    ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
-                else:
-                    ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
+                ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
         else:
             if self.method == "idf_esptool":
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
