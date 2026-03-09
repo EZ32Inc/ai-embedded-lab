@@ -2,6 +2,12 @@
   "mode": "sequence",
   "steps": [
     {
+      "board": "esp32c6_devkit",
+      "name": "esp32c6_golden_gpio",
+      "probe": "configs/esp32jtag.yaml",
+      "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"
+    },
+    {
       "board": "rp2040_pico",
       "name": "rp2040_golden_gpio_signature",
       "probe": "configs/esp32jtag_rp2040.yaml",
