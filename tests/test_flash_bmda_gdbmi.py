@@ -28,7 +28,7 @@ def test_run_gdb_respects_custom_launch_commands_without_forcing_resume():
             [],
             30,
             True,
-            ["file {firmware}", "monitor a", "attach {target_id}", "load", "detach"],
+            ["file {firmware}", "monitor a", "attach {target_id}", "load", "attach {target_id}", "detach"],
         )
 
     args = captured["args"]
@@ -43,6 +43,8 @@ def test_run_gdb_respects_custom_launch_commands_without_forcing_resume():
     assert "file /tmp/fw.elf" in args
     assert "attach 1" in args
     assert "load" in args
+    assert args.count("attach 1") == 2
+    assert args.index("load") < args.index("attach 1", args.index("load"))
     assert "detach" in args
     assert "continue" not in args
     assert "monitor reset run" not in args
@@ -115,7 +117,17 @@ def test_run_writes_flash_log_when_path_configured(tmp_path):
         ok = flash_bmda_gdbmi.run(
             {"ip": "192.168.2.98", "gdb_port": 4242, "gdb_cmd": "arm-none-eabi-gdb"},
             str(firmware),
-            flash_cfg={"gdb_launch_cmds": ["file {firmware}", "monitor a", "attach {target_id}", "load", "detach"], "flash_log_path": str(flash_log)},
+            flash_cfg={
+                "gdb_launch_cmds": [
+                    "file {firmware}",
+                    "monitor a",
+                    "attach {target_id}",
+                    "load",
+                    "attach {target_id}",
+                    "detach",
+                ],
+                "flash_log_path": str(flash_log),
+            },
         )
 
     assert ok is True
