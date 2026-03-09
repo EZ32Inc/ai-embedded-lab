@@ -25,6 +25,7 @@ from ael.default_verification import (
 )
 from ael import workflow_archive
 from ael import hw_check
+from ael import la_check
 from ael import inventory
 from ael import stage_explain
 
@@ -167,6 +168,14 @@ def main():
     hw_check_p.add_argument("--samples", type=int, default=5)
     hw_check_p.add_argument("--interval-s", type=float, default=1.0)
     hw_check_p.add_argument("--boot-timeout-s", type=float, default=8.0)
+
+    la_check_p = sub.add_parser("la-check")
+    la_check_p.add_argument("--pin", required=True)
+    la_check_p.add_argument("--board", required=False, help="Board id used to resolve default probe")
+    la_check_p.add_argument("--probe", required=False, default=None)
+    la_check_p.add_argument("--duration-s", type=float, default=1.0)
+    la_check_p.add_argument("--expected-hz", type=float, default=1.0)
+    la_check_p.add_argument("--min-edges", type=int, default=1)
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -460,6 +469,21 @@ def main():
             print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
             sys.exit(1)
         print(json.dumps(payload, indent=2, sort_keys=True))
+    if args.cmd == "la-check":
+        try:
+            payload = la_check.run(
+                pin=args.pin,
+                board=args.board,
+                probe=args.probe,
+                duration_s=args.duration_s,
+                expected_hz=args.expected_hz,
+                min_edges=args.min_edges,
+            )
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
+            sys.exit(1)
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0 if payload.get("toggling") else 1)
         sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "dut":
         if args.dut_cmd == "create":
