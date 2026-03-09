@@ -51,8 +51,8 @@ int main(void) {
             GPIOA_ODR ^= (1u << 7);
         }
 
-        // Blink PC13 (active low on bluepill) at a slower rate
-        if (++led_div >= 16380) { // ~5x slower than previous
+        // Blink PC13 (active low on bluepill) at 0.5 s intervals.
+        if (++led_div >= 8190) {
             led_div = 0;
             GPIOC_ODR ^= (1u << 13);
         }

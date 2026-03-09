@@ -2,12 +2,12 @@
   "name": "stm32f401_gpio_smoke",
   "board": "stm32f401rct6",
   "pin": "pc13",
-  "duration_s": 2.5,
-  "min_freq_hz": 0.2,
-  "max_freq_hz": 5.0,
+  "duration_s": 0.25,
+  "min_freq_hz": 0.5,
+  "max_freq_hz": 10.0,
   "duty_min": 0.2,
   "duty_max": 0.8,
   "min_edges": 1,
-  "max_edges": 6,
-  "notes": "Quick STM32F401 smoke path on PC13/P0.3 to catch broken firmware or wrong target register maps early."
+  "max_edges": 20,
+  "notes": "Quick STM32F401 smoke path on PC13/P0.3 using the faster 250 ms capture window."
 }
