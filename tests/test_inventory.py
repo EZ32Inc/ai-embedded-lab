@@ -56,6 +56,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert any(conn["from"] == "PA1" and conn["to"] == "P0.3" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
     assert payload["warnings"] == []
+    assert payload["board_context"]["clock_hz"] == 16000000
+    assert payload["board_context"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
 
 
@@ -80,3 +82,11 @@ def test_describe_test_for_meter_path():
     assert payload["probe_or_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert any(conn["from"] == "X1(GPIO4)" and conn["to"] == "inst GPIO11" for conn in payload["connections"])
     assert any(check["type"] == "instrument_measure" for check in payload["expected_checks"])
+
+
+def test_describe_test_for_stm32f401_led_blink():
+    payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_led_blink.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
+    assert any(check["type"] == "led" and check["pin"] == "led" for check in payload["expected_checks"])
+    assert not any(check["type"] == "signal" for check in payload["expected_checks"])

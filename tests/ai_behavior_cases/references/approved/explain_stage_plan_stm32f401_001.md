@@ -13,7 +13,9 @@ Plan includes:
 - selected test: gpio_signature
 - selected probe path: ESP32JTAG
 - resolved wiring assumptions: swd=P3, reset=NC, verify=P0.0
-- resolved board observe map: sig->P0.0, pa4->P0.0, pa3->P0.1, pa2->P0.2
+- resolved board clock: 16000000 Hz
+- resolved board observe map: sig->P0.0, pa4->P0.0, pa3->P0.1, pa2->P0.2, pa1->P0.3, led->LED
+- resolved verification views: signal->P0.0, led->LED
 - selected builder kind: arm_debug
 - selected firmware project: firmware/targets/stm32f401rct6
 - selected check model: signal verification on sig

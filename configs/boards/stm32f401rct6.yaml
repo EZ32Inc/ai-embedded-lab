@@ -1,6 +1,7 @@
 board:
   name: STM32F401RCT6
   target: stm32f401rct6
+  clock_hz: 16000000
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f401rct6
@@ -22,6 +23,17 @@ board:
     pa4: P0.0
     pa3: P0.1
     pa2: P0.2
+    pa1: P0.3
+    led: LED
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Generic GPIO signature capture on PA4
+    led:
+      pin: led
+      resolved_to: LED
+      description: Visual LED blink on PC13
   bench_connections:
     - from: PA4
       to: P0.0

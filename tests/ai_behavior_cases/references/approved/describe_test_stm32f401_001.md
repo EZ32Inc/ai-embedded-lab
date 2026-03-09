@@ -30,7 +30,7 @@ What will be tested:
 - maximum edges: 20000
 
 Current limitation:
-- this test currently validates the single generic signal path, not all toggled pins individually
+- this test validates the generic signal path on PA4, while LED blink is tracked as a separate verification view
 
 ## Retrieval Path
 

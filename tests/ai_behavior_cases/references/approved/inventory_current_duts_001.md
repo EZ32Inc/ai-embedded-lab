@@ -26,6 +26,8 @@ Current DUTs and tests:
 - stm32f103
   - gpio_signature
 - stm32f401rct6
+  - stm32f401_gpio_smoke
+  - stm32f401_led_blink
   - gpio_signature
 
 MCUs with tests:

@@ -109,6 +109,17 @@ def _monitor_output_failed(out_text: str) -> bool:
     return any(marker in text for marker in failure_markers)
 
 
+def _classify_monitor_failure(error_text: str, ip_reachable: bool) -> str:
+    text = (error_text or "").lower()
+    if any(marker in text for marker in ("connection refused", "connection reset by peer", "no route to host")):
+        return "probe_transport_unhealthy"
+    if any(marker in text for marker in ("timeout", "timed out", "connection timed out", "monitor command not supported")):
+        return "probe_busy_or_stuck" if ip_reachable else "probe_transport_unhealthy"
+    if "another session" in text or "already" in text:
+        return "probe_busy_or_stuck"
+    return "probe_monitor_failed"
+
+
 def _parse_targets(stdout_text: str):
     targets = []
     in_table = False
@@ -171,15 +182,21 @@ def _monitor_targets(ip, port, gdb_cmd):
     except Exception as exc:
         last_error = str(exc)
 
+    ip_ok = _ping_once(ip, timeout_s=1.0)
+    failure_kind = _classify_monitor_failure(last_error, ip_ok)
     print("Preflight: monitor targets -> FAIL")
     if last_error:
         print(last_error)
+    print(f"Preflight: monitor failure kind -> {failure_kind}")
     print("Hint: Check connection or release GDB connection in another session if one is active.")
-    ip_ok = _ping_once(ip, timeout_s=1.0)
     print(f"Preflight: post-fail ping {ip} -> {'OK' if ip_ok else 'FAIL'}")
     if ip_ok:
-        print("Hint: Probe IP is reachable but debug monitor is unhealthy.")
-        print("Hint: Power-cycle/reset ESP32JTAG, then retry. This can be automated in a future recovery step.")
+        if failure_kind == "probe_busy_or_stuck":
+            print("Hint: Probe IP is reachable; the debug monitor is likely busy or stuck in another session.")
+            print("Hint: Release the other debugger or reset ESP32JTAG, then retry.")
+        else:
+            print("Hint: Probe IP is reachable but debug monitor is unhealthy.")
+            print("Hint: Power-cycle/reset ESP32JTAG, then retry. This can be automated in a future recovery step.")
     return False, targets
 
 

@@ -38,6 +38,14 @@ class TestPreflightBehavior(unittest.TestCase):
         self.assertFalse(ok)
         self.assertFalse(info.get("monitor_ok"))
 
+    def test_classify_monitor_failure_marks_probe_busy(self):
+        kind = preflight._classify_monitor_failure('Command timed out after 8 seconds', True)
+        self.assertEqual(kind, "probe_busy_or_stuck")
+
+    def test_classify_monitor_failure_marks_transport_unhealthy(self):
+        kind = preflight._classify_monitor_failure('connection refused', False)
+        self.assertEqual(kind, "probe_transport_unhealthy")
+
 
 if __name__ == "__main__":
     unittest.main()

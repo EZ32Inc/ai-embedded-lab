@@ -1,0 +1,13 @@
+{
+  "name": "stm32f401_led_blink",
+  "board": "stm32f401rct6",
+  "observe_led": {
+    "enabled": true,
+    "pin": "led",
+    "duration_s": 2.5,
+    "expected_hz": 1.0,
+    "min_edges": 1,
+    "max_edges": 6
+  },
+  "notes": "Checks the PC13 LED blink path separately from the PA4 signal signature."
+}

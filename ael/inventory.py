@@ -206,6 +206,18 @@ def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -
         measure = payload.get("instrument", {}).get("measure", {})
         if isinstance(measure, dict):
             checks.append({"type": "instrument_measure", **measure})
+    led_observe = payload.get("observe_led", {}) if isinstance(payload.get("observe_led"), dict) else {}
+    if led_observe.get("enabled"):
+        checks.append(
+            {
+                "type": "led",
+                "pin": led_observe.get("pin") or "led",
+                "duration_s": led_observe.get("duration_s"),
+                "min_edges": led_observe.get("min_edges"),
+                "max_edges": led_observe.get("max_edges"),
+                "expected_hz": led_observe.get("expected_hz"),
+            }
+        )
     return checks
 
 
@@ -365,7 +377,9 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         "expected_checks": _build_expected_checks(board_cfg, payload),
         "board_context": {
             "target": board_cfg.get("target"),
+            "clock_hz": board_cfg.get("clock_hz"),
             "observe_map": observe_map,
+            "verification_views": (board_cfg.get("verification_views", {}) if isinstance(board_cfg.get("verification_views"), dict) else {}),
             "default_wiring": wiring,
         },
         "notes": payload.get("notes"),

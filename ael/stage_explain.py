@@ -89,8 +89,10 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "probe": ctx["probe_path"],
             "builder_kind": build_kind,
             "firmware_project": (board_cfg.get("build") or {}).get("project_dir"),
+            "board_clock_hz": board_cfg.get("clock_hz"),
             "flash_method": flash_cfg.get("method") if isinstance(flash_cfg, dict) else None,
             "wiring": resolved.wiring_cfg,
+            "verification_views": (board_cfg.get("verification_views", {}) if isinstance(board_cfg.get("verification_views"), dict) else {}),
             "check_model": check_model,
         },
         "includes": [
