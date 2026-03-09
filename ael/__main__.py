@@ -20,6 +20,7 @@ from ael.default_verification import (
     DEFAULT_CONFIG_PATH as DEFAULT_VERIFY_CONFIG_PATH,
     load_setting as load_default_verification_setting,
     preset_payload as default_verification_preset_payload,
+    run_until_fail as run_default_until_fail,
     run_default_setting,
     save_setting as save_default_verification_setting,
 )
@@ -138,6 +139,12 @@ def main():
     verify_default_run.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_run.add_argument("--skip-if-docs-only", action="store_true")
     verify_default_run.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
+
+    verify_default_repeat = verify_default_sub.add_parser("repeat-until-fail")
+    verify_default_repeat.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+    verify_default_repeat.add_argument("--limit", type=int, default=10)
+    verify_default_repeat.add_argument("--skip-if-docs-only", action="store_true")
+    verify_default_repeat.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
 
     inventory_p = sub.add_parser("inventory")
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
@@ -469,6 +476,7 @@ def main():
             print(json.dumps({"ok": False, "error": str(exc)}, indent=2, sort_keys=True))
             sys.exit(1)
         print(json.dumps(payload, indent=2, sort_keys=True))
+        sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "la-check":
         try:
             payload = la_check.run(
@@ -484,7 +492,6 @@ def main():
             sys.exit(1)
         print(json.dumps(payload, indent=2, sort_keys=True))
         sys.exit(0 if payload.get("toggling") else 1)
-        sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "dut":
         if args.dut_cmd == "create":
             code = dut_create_cmd(args.from_golden, args.to)
@@ -509,6 +516,16 @@ def main():
             sys.exit(0)
         if args.verify_default_cmd == "run":
             code, payload = run_default_setting(
+                path=args.file,
+                output_mode="normal",
+                skip_if_docs_only=bool(args.skip_if_docs_only),
+                docs_check_mode=str(args.docs_check_mode),
+            )
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(int(code))
+        if args.verify_default_cmd == "repeat-until-fail":
+            code, payload = run_default_until_fail(
+                limit=int(args.limit),
                 path=args.file,
                 output_mode="normal",
                 skip_if_docs_only=bool(args.skip_if_docs_only),

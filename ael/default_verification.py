@@ -261,3 +261,78 @@ def run_default_setting(
         return (0 if overall_ok else last_code or 1), {"ok": overall_ok, "mode": mode, "results": results}
 
     return 2, {"ok": False, "mode": mode, "error": f"unsupported mode: {mode}"}
+
+
+def _first_failed_step(payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    results = payload.get("results", []) if isinstance(payload, dict) else []
+    if not isinstance(results, list):
+        return None
+    for item in results:
+        if isinstance(item, dict) and not bool(item.get("ok", False)):
+            return item
+    return None
+
+
+def _failure_summary(payload: Dict[str, Any], code: int) -> Dict[str, Any]:
+    failed = _first_failed_step(payload)
+    summary: Dict[str, Any] = {"code": int(code)}
+    if failed is None:
+        return summary
+    summary["step_name"] = failed.get("name")
+    summary["step_code"] = failed.get("code")
+    result = failed.get("result", {}) if isinstance(failed.get("result"), dict) else {}
+    error = str(result.get("error") or "").strip()
+    if error:
+        summary["reason"] = error
+        return summary
+    summary["reason"] = result.get("error_summary") or payload.get("error") or "step failed"
+    return summary
+
+
+def run_until_fail(
+    limit: int,
+    path: str | None = None,
+    output_mode: str = "normal",
+    skip_if_docs_only: bool = False,
+    docs_check_mode: str = "changed",
+) -> Tuple[int, Dict[str, Any]]:
+    max_runs = max(1, int(limit))
+    runs: List[Dict[str, Any]] = []
+    for idx in range(1, max_runs + 1):
+        code, payload = run_default_setting(
+            path=path,
+            output_mode=output_mode,
+            skip_if_docs_only=skip_if_docs_only,
+            docs_check_mode=docs_check_mode,
+        )
+        run_record = {
+            "iteration": idx,
+            "code": int(code),
+            "ok": int(code) == 0,
+            "payload": payload,
+        }
+        runs.append(run_record)
+        if code != 0:
+            summary = _failure_summary(payload, code)
+            print(
+                f"default_verification: stopped on run {idx}/{max_runs}; "
+                f"failed step={summary.get('step_name', 'unknown')} code={summary.get('step_code', code)}"
+            )
+            reason = str(summary.get("reason") or "").strip()
+            if reason:
+                print(f"default_verification: failure reason: {reason}")
+            return code, {
+                "ok": False,
+                "mode": "repeat_until_fail",
+                "requested_runs": max_runs,
+                "completed_runs": idx,
+                "runs": runs,
+                "failure": summary,
+            }
+    return 0, {
+        "ok": True,
+        "mode": "repeat_until_fail",
+        "requested_runs": max_runs,
+        "completed_runs": max_runs,
+        "runs": runs,
+    }

@@ -83,3 +83,56 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
     assert result == {"ok": True}
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"].endswith("configs/esp32jtag_rp2040.yaml")
+
+
+def test_run_until_fail_stops_on_first_failure():
+    calls = [
+        (0, {"ok": True, "mode": "sequence", "results": [{"name": "ok_step", "code": 0, "ok": True, "result": {"ok": True}}]}),
+        (
+            6,
+            {
+                "ok": False,
+                "mode": "sequence",
+                "results": [
+                    {"name": "esp32c6_golden_gpio", "code": 0, "ok": True, "result": {"ok": True}},
+                    {
+                        "name": "stm32f103_golden_gpio_signature",
+                        "code": 6,
+                        "ok": False,
+                        "result": {"ok": False, "error": "edges=0 on verify"},
+                    },
+                ],
+            },
+        ),
+    ]
+
+    with patch("ael.default_verification.run_default_setting", side_effect=calls):
+        code, payload = default_verification.run_until_fail(limit=10)
+
+    assert code == 6
+    assert payload["ok"] is False
+    assert payload["completed_runs"] == 2
+    assert payload["failure"] == {
+        "code": 6,
+        "step_name": "stm32f103_golden_gpio_signature",
+        "step_code": 6,
+        "reason": "edges=0 on verify",
+    }
+    assert len(payload["runs"]) == 2
+
+
+def test_run_until_fail_reports_success_when_all_runs_pass():
+    with patch(
+        "ael.default_verification.run_default_setting",
+        side_effect=[
+            (0, {"ok": True, "mode": "sequence", "results": []}),
+            (0, {"ok": True, "mode": "sequence", "results": []}),
+            (0, {"ok": True, "mode": "sequence", "results": []}),
+        ],
+    ):
+        code, payload = default_verification.run_until_fail(limit=3)
+
+    assert code == 0
+    assert payload["ok"] is True
+    assert payload["completed_runs"] == 3
+    assert len(payload["runs"]) == 3
