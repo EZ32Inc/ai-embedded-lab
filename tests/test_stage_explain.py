@@ -14,6 +14,7 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['board_clock_hz'] == 16000000
     assert payload['selected']['check_model'] == 'signal_verify'
     assert payload['selected']['verification_views']['signal']['resolved_to'] == 'P0.0'
+    assert payload['selected']['verification_views']['led']['resolved_to'] == 'P0.3'
 
 
 def test_explain_preflight_for_meter_disabled_path():

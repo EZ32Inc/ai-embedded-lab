@@ -18,7 +18,7 @@ Connections:
 - PA4 -> P0.0
 - PA3 -> P0.1
 - PA2 -> P0.2
-- PA1 -> P0.3
+- PC13 -> P0.3
 - PC13 -> LED
 
 What will be tested:
@@ -29,8 +29,9 @@ What will be tested:
 - minimum edges: 2
 - maximum edges: 20000
 
-Current limitation:
-- this test validates the generic signal path on PA4, while LED blink is tracked as a separate verification view
+Current notes:
+- this test validates the generic signal path on PA4, while LED blink is tracked as a separate verification view on P0.3
+- inventory warns that PC13 is connected to two observation points: P0.3 and LED
 
 ## Retrieval Path
 

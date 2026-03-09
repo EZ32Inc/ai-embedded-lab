@@ -7,7 +7,7 @@ board:
     project_dir: firmware/targets/stm32f401rct6
     artifact_stem: stm32f401_app
   firmware:
-    description: Toggle PA2-PA4 fast, blink PC13 at 1 Hz
+    description: Toggle PA2-PA4 fast, blink PC13 at 0.5 s intervals
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
