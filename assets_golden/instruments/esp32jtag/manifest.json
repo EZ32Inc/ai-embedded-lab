@@ -6,6 +6,25 @@
     { "type": "tcp", "endpoint_hint": "192.168.4.1:4242" },
     { "type": "http", "endpoint_hint": "https://192.168.4.1:443" }
   ],
+  "communication": {
+    "primary": "gdb_remote",
+    "surfaces": [
+      {
+        "name": "gdb_remote",
+        "transport": "wifi",
+        "endpoint": "192.168.4.1:4242",
+        "protocol": "gdb_remote",
+        "invocation_style": "request_response"
+      },
+      {
+        "name": "web_api",
+        "transport": "wifi",
+        "endpoint": "https://192.168.4.1:443",
+        "protocol": "esp32jtag_web_api_v1",
+        "invocation_style": "request_response"
+      }
+    ]
+  },
   "capabilities": [
     { "name": "debug.swd" },
     { "name": "observe.logic", "channels": 8 },

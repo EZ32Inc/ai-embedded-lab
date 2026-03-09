@@ -53,6 +53,8 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     assert finished["session_id"] == "sess-123"
     assert finished["board"]["id"] == "esp32c3_devkit"
     assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
+    assert finished["probe"]["communication"]["primary"] == "gdb_remote"
+    assert finished["instrument"]["communication"]["protocol"] == "gpio_meter_v1"
     assert finished["stage"] == "plan"
     assert finished["status"] == "completed"
     assert finished["stage_execution"]["executed"] == ["plan", "report"]

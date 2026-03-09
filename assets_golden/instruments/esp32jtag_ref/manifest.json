@@ -27,6 +27,25 @@
       "mdns": { "service": "_ael._tcp", "name_hint": "esp32jtag" }
     }
   ],
+  "communication": {
+    "primary": "gdb_remote",
+    "surfaces": [
+      {
+        "name": "gdb_remote",
+        "transport": "wifi",
+        "endpoint": "192.168.1.50:9000",
+        "protocol": "gdb_remote",
+        "invocation_style": "request_response"
+      },
+      {
+        "name": "serial_control",
+        "transport": "serial",
+        "endpoint": "/dev/ttyACM*",
+        "protocol": "ael-rpc-serial-v0.1",
+        "invocation_style": "request_response"
+      }
+    ]
+  },
 
   "capabilities": [
     {

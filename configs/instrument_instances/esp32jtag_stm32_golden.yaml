@@ -6,3 +6,21 @@ instance:
 connection:
   ip: 192.168.2.98
   gdb_port: 4242
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: wifi
+      endpoint: 192.168.2.98:4242
+      protocol: gdb_remote
+      invocation_style: request_response
+    - name: web_api
+      transport: wifi
+      endpoint: https://192.168.2.98:443
+      protocol: esp32jtag_web_api_v1
+      invocation_style: request_response
+      auth:
+        type: basic
+      options:
+        tls_verify: false

@@ -15,6 +15,7 @@ class ProbeBinding:
     type_path: Optional[str]
     endpoint_host: Optional[str]
     endpoint_port: Optional[int]
+    communication: Dict[str, Any]
     legacy_warning: Optional[str]
 
 
@@ -48,6 +49,13 @@ def _int_or_none(value: Any) -> Optional[int]:
         return int(value)
     except Exception:
         return None
+
+
+def _normalize_communication(raw: Dict[str, Any]) -> Dict[str, Any]:
+    communication = raw.get("communication")
+    if isinstance(communication, dict):
+        return dict(communication)
+    return {}
 
 
 def load_probe_binding(
@@ -89,6 +97,7 @@ def load_probe_binding(
             type_path=str(type_path),
             endpoint_host=str(connection.get("ip") or "") or None,
             endpoint_port=_int_or_none(connection.get("gdb_port")),
+            communication=_normalize_communication(merged),
             legacy_warning=None,
         )
 
@@ -105,5 +114,6 @@ def load_probe_binding(
         type_path=None,
         endpoint_host=str(connection.get("ip") or "") or None,
         endpoint_port=_int_or_none(connection.get("gdb_port")),
+        communication=_normalize_communication(raw),
         legacy_warning=legacy_warning,
     )

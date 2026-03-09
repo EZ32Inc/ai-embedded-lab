@@ -18,6 +18,7 @@ class ResolvedRunStrategy:
     instrument_id: Optional[str]
     instrument_host: Optional[str]
     instrument_port: Optional[int]
+    instrument_communication: Dict[str, Any]
 
 
 def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
@@ -79,6 +80,12 @@ def _require_wiring(merged: Dict[str, Any], required: list[str]) -> Dict[str, An
         for k in missing:
             merged[k] = "UNKNOWN"
     return merged
+
+
+def _normalize_communication_metadata(payload: Dict[str, Any] | Any) -> Dict[str, Any]:
+    if isinstance(payload, dict) and isinstance(payload.get("communication"), dict):
+        return dict(payload.get("communication") or {})
+    return {}
 
 
 def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any):
@@ -224,10 +231,9 @@ def resolve_run_strategy(
     timeout_s = resolve_run_timeout_s(test_raw, request_timeout_s=request_timeout_s)
 
     test_name = test_raw.get("name") if isinstance(test_raw, dict) else None
-    instrument_cfg = test_raw.get("instrument", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("instrument"), dict) else {}
-    instrument_id = instrument_cfg.get("id")
-    instrument_host = instrument_cfg.get("tcp", {}).get("host") if isinstance(instrument_cfg.get("tcp"), dict) else None
-    instrument_port = instrument_cfg.get("tcp", {}).get("port") if isinstance(instrument_cfg.get("tcp"), dict) else None
+    instrument_id, instrument_tcp_cfg, instrument_manifest = resolve_instrument_context(test_raw, board_cfg)
+    instrument_host = instrument_tcp_cfg.get("host") if isinstance(instrument_tcp_cfg, dict) else None
+    instrument_port = instrument_tcp_cfg.get("port") if isinstance(instrument_tcp_cfg, dict) else None
     return ResolvedRunStrategy(
         probe_cfg=probe_cfg,
         board_cfg=board_cfg,
@@ -237,6 +243,7 @@ def resolve_run_strategy(
         instrument_id=instrument_id,
         instrument_host=instrument_host,
         instrument_port=instrument_port,
+        instrument_communication=_normalize_communication_metadata(instrument_manifest),
     )
 
 

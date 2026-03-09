@@ -18,6 +18,7 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['probe_type'] == 'esp32jtag'
+    assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
 
 
 def test_explain_plan_for_rp2040_uses_board_probe_config():
@@ -25,6 +26,7 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     assert payload['ok'] is True
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_rp2040_lab'
+    assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
 
 
 def test_explain_preflight_for_meter_disabled_path():
