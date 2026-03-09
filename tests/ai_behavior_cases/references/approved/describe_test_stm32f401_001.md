@@ -16,6 +16,10 @@ Connections:
 - SWD -> P3
 - RESET -> NC
 - PA4 -> P0.0
+- PA3 -> P0.1
+- PA2 -> P0.2
+- PA1 -> P0.3
+- PC13 -> LED
 
 What will be tested:
 - signal validation on PA4 through the generic sig path

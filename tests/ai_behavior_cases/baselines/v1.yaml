@@ -1,0 +1,10 @@
+version: 1
+type: baseline
+baseline_id: ael_ai_behavior_baseline_v1
+name: AEL AI Behavior Baseline v1
+source_case_file: ../organic_cases.yaml
+include_case_ids:
+  - inventory_current_duts_001
+  - describe_test_stm32f401_001
+  - explain_stage_plan_stm32f401_001
+  - default_verification_review_001

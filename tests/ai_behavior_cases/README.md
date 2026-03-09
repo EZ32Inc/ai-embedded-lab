@@ -10,6 +10,7 @@ python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml describe_test_stm32f401_001 --print-answer-prompt
 python3 tools/run_ai_behavior_case.py tests/ai_behavior_cases/organic_cases.yaml describe_test_stm32f401_001 --print-judge-prompt --answer-text "<candidate answer>"
 python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yaml --mode stub
+python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/baselines/v1.yaml --mode stub
 python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yaml --answer-cmd "<CMD>" --judge-cmd "<CMD>"
 python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/organic_cases.yaml --mode stub --rerun-from-summary artifacts/ai_behavior_results/<timestamp>/summary.json
 python3 tools/review_ai_behavior_suite.py artifacts/ai_behavior_results/<timestamp>/
@@ -34,6 +35,12 @@ Useful helpers:
 - `--rerun-from-summary <summary.json>`: rerun only the prior suite's `FAIL` or `ERROR` cases
 - `review_ai_behavior_suite.py`: print a concise human-facing digest from one suite result directory
 - `ai_behavior_reference.py`: manage reviewable Q&A references with `draft`, `approve`, and `compare`
+
+Baseline manifests:
+- the suite runner also accepts a lightweight baseline manifest instead of a raw case list
+- a baseline manifest points at a source case file plus an ordered `include_case_ids` list
+- current example:
+  - `python3 tools/run_ai_behavior_suite.py tests/ai_behavior_cases/baselines/v1.yaml`
 
 Current modes:
 - `prompt-only`: execute retrieval and generate answer/judge prompts

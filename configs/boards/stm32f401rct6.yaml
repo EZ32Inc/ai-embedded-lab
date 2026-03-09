@@ -6,7 +6,7 @@ board:
     project_dir: firmware/targets/stm32f401rct6
     artifact_stem: stm32f401_app
   firmware:
-    description: Toggle PA4-PA7 fast, blink PC13
+    description: Toggle PA1-PA4 fast, blink PC13 at 1 Hz
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
@@ -20,14 +20,24 @@ board:
   observe_map:
     sig: P0.0
     pa4: P0.0
-    pa5: P0.1
-    pa6: P0.2
-    pa7: P0.3
+    pa3: P0.1
+    pa2: P0.2
+  bench_connections:
+    - from: PA4
+      to: P0.0
+    - from: PA3
+      to: P0.1
+    - from: PA2
+      to: P0.2
+    - from: PA1
+      to: P0.3
+    - from: PC13
+      to: LED
   safe_pins:
+    - PA1
+    - PA2
+    - PA3
     - PA4
-    - PA5
-    - PA6
-    - PA7
     - PC13
   default_wiring:
     swd: "P3"

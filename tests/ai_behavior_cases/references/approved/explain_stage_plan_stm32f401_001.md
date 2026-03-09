@@ -13,7 +13,7 @@ Plan includes:
 - selected test: gpio_signature
 - selected probe path: ESP32JTAG
 - resolved wiring assumptions: swd=P3, reset=NC, verify=P0.0
-- resolved board observe map: sig->P0.0, pa4->P0.0, pa5->P0.1, pa6->P0.2, pa7->P0.3
+- resolved board observe map: sig->P0.0, pa4->P0.0, pa3->P0.1, pa2->P0.2
 - selected builder kind: arm_debug
 - selected firmware project: firmware/targets/stm32f401rct6
 - selected check model: signal verification on sig

@@ -117,6 +117,18 @@ def test_single_case_runner_can_list_cases():
     assert "describe_test_stm32f401_001" in res.stdout
 
 
+def test_load_cases_supports_baseline_manifest():
+    from tools.run_ai_behavior_case import load_cases
+
+    cases = load_cases(REPO_ROOT / "tests" / "ai_behavior_cases" / "baselines" / "v1.yaml")
+    assert [case["case_id"] for case in cases] == [
+        "inventory_current_duts_001",
+        "describe_test_stm32f401_001",
+        "explain_stage_plan_stm32f401_001",
+        "default_verification_review_001",
+    ]
+
+
 def test_suite_runner_can_rerun_failed_or_error_cases_only(tmp_path):
     out_dir = tmp_path / "suite_rerun"
     summary_path = tmp_path / "prior_summary.json"
@@ -153,6 +165,33 @@ def test_suite_runner_can_rerun_failed_or_error_cases_only(tmp_path):
     summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["total_cases"] == 1
     assert summary["cases"][0]["case_id"] == "inventory_board_tests_stm32f401_001"
+
+
+def test_suite_runner_accepts_baseline_manifest(tmp_path):
+    out_dir = tmp_path / "baseline_suite_out"
+    res = subprocess.run(
+        [
+            sys.executable,
+            "tools/run_ai_behavior_suite.py",
+            "tests/ai_behavior_cases/baselines/v1.yaml",
+            "--mode",
+            "stub",
+            "--limit",
+            "2",
+            "--output-dir",
+            str(out_dir),
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=_env(),
+        check=True,
+    )
+    assert "total_cases: 2" in res.stdout
+    summary = json.loads((out_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["total_cases"] == 2
+    assert summary["cases"][0]["case_id"] == "inventory_current_duts_001"
+    assert summary["cases"][1]["case_id"] == "describe_test_stm32f401_001"
 
 
 def test_review_helper_prints_human_digest(tmp_path):

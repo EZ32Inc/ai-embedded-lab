@@ -1,59 +1,79 @@
 #include <stdint.h>
 
-#define RCC_BASE 0x40021000
-#define RCC_APB2ENR (*(volatile uint32_t *)(RCC_BASE + 0x18))
+#define RCC_BASE 0x40023800u
+#define RCC_AHB1ENR (*(volatile uint32_t *)(RCC_BASE + 0x30u))
 
-#define GPIOA_BASE 0x40010800
-#define GPIOA_CRL (*(volatile uint32_t *)(GPIOA_BASE + 0x00))
-#define GPIOA_ODR (*(volatile uint32_t *)(GPIOA_BASE + 0x0C))
+#define GPIOA_BASE 0x40020000u
+#define GPIOA_MODER (*(volatile uint32_t *)(GPIOA_BASE + 0x00u))
+#define GPIOA_ODR (*(volatile uint32_t *)(GPIOA_BASE + 0x14u))
 
-#define GPIOC_BASE 0x40011000
-#define GPIOC_CRH (*(volatile uint32_t *)(GPIOC_BASE + 0x04))
-#define GPIOC_ODR (*(volatile uint32_t *)(GPIOC_BASE + 0x0C))
+#define GPIOC_BASE 0x40020800u
+#define GPIOC_MODER (*(volatile uint32_t *)(GPIOC_BASE + 0x00u))
+#define GPIOC_ODR (*(volatile uint32_t *)(GPIOC_BASE + 0x14u))
 
-#define RCC_IOPAEN (1u << 2)
-#define RCC_IOPCEN (1u << 4)
+#define SYSTICK_BASE 0xE000E010u
+#define SYST_CSR (*(volatile uint32_t *)(SYSTICK_BASE + 0x00u))
+#define SYST_RVR (*(volatile uint32_t *)(SYSTICK_BASE + 0x04u))
+#define SYST_CVR (*(volatile uint32_t *)(SYSTICK_BASE + 0x08u))
+
+#define RCC_GPIOAEN (1u << 0)
+#define RCC_GPIOCEN (1u << 2)
+#define SYST_CSR_ENABLE (1u << 0)
+#define SYST_CSR_CLKSOURCE (1u << 2)
+#define SYST_CSR_COUNTFLAG (1u << 16)
+
+static inline void gpio_set_output(volatile uint32_t *moder, uint32_t pin) {
+    const uint32_t shift = pin * 2u;
+    *moder &= ~(0x3u << shift);
+    *moder |= (0x1u << shift);
+}
 
 int main(void) {
-    // Enable GPIOA and GPIOC clocks
-    RCC_APB2ENR |= (RCC_IOPAEN | RCC_IOPCEN);
+    // Enable GPIOA and GPIOC on STM32F401.
+    RCC_AHB1ENR |= (RCC_GPIOAEN | RCC_GPIOCEN);
 
-    // Configure PA4..PA7 as output push-pull 50MHz (MODE=11, CNF=00)
-    // Each pin uses 4 bits in CRL. Clear bits for PA4-PA7 then set to 0b0011.
-    GPIOA_CRL &= ~(0xFFFFu << 16);
-    GPIOA_CRL |= (0x3333u << 16);
+    // Configure PA1, PA2, PA3, and PA4 as general purpose outputs.
+    gpio_set_output(&GPIOA_MODER, 1u);
+    gpio_set_output(&GPIOA_MODER, 2u);
+    gpio_set_output(&GPIOA_MODER, 3u);
+    gpio_set_output(&GPIOA_MODER, 4u);
 
-    // Configure PC13 as output push-pull 2MHz (MODE=10, CNF=00)
-    GPIOC_CRH &= ~(0xFu << 20);
-    GPIOC_CRH |= (0x2u << 20);
+    // Configure PC13 for the board LED.
+    gpio_set_output(&GPIOC_MODER, 13u);
+
+    // Run SysTick at 1 kHz from the default 16 MHz HSI core clock.
+    SYST_RVR = 15999u;
+    SYST_CVR = 0u;
+    SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_ENABLE;
 
     uint32_t div0 = 0;
     uint32_t div1 = 0;
     uint32_t div2 = 0;
     uint32_t div3 = 0;
-    uint32_t led_div = 0;
+    uint32_t led_ms = 0;
     while (1) {
-        // Distinct toggle rates for PA4..PA7
-        if (++div0 >= 200) { // fastest
+        if (++div0 >= 200u) {
             div0 = 0;
             GPIOA_ODR ^= (1u << 4);
         }
-        if (++div1 >= 400) {
+        if (++div1 >= 400u) {
             div1 = 0;
-            GPIOA_ODR ^= (1u << 5);
+            GPIOA_ODR ^= (1u << 3);
         }
-        if (++div2 >= 600) {
+        if (++div2 >= 600u) {
             div2 = 0;
-            GPIOA_ODR ^= (1u << 6);
+            GPIOA_ODR ^= (1u << 2);
         }
-        if (++div3 >= 800) {
+        if (++div3 >= 800u) {
             div3 = 0;
-            GPIOA_ODR ^= (1u << 7);
+            GPIOA_ODR ^= (1u << 1);
         }
 
-        // Blink PC13 at a slower rate.
-        if (++led_div >= 16380) { // ~5x slower than previous
-            led_div = 0;
+        if ((SYST_CSR & SYST_CSR_COUNTFLAG) != 0u) {
+            led_ms += 1u;
+        }
+        if (led_ms >= 1000u) {
+            led_ms = 0u;
             GPIOC_ODR ^= (1u << 13);
         }
     }

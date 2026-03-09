@@ -10,7 +10,7 @@ probe:
   web_suppress_ssl_warnings: true
 
 connection:
-  ip: 192.168.2.63
+  ip: 192.168.2.98
   gdb_port: 4242
 
 gdb_cmd: "arm-none-eabi-gdb"

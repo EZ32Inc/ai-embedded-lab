@@ -51,7 +51,26 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["probe_or_instrument"]["kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
+    assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
+    assert any(conn["from"] == "PA2" and conn["to"] == "P0.2" for conn in payload["connections"])
+    assert any(conn["from"] == "PA1" and conn["to"] == "P0.3" for conn in payload["connections"])
+    assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
+    assert payload["warnings"] == []
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
+
+
+def test_describe_test_warns_on_duplicate_mcu_pin_connections():
+    payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
+    assert payload["warnings"] == []
+    board_cfg = {
+        "bench_connections": [
+            {"from": "PA4", "to": "P0.0"},
+            {"from": "PA4", "to": "P0.3"},
+        ]
+    }
+    warnings = inventory._connection_warnings(board_cfg)
+    assert len(warnings) == 1
+    assert "MCU pin PA4 is connected to 2 observation points" in warnings[0]
 
 
 def test_describe_test_for_meter_path():

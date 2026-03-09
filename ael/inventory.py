@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from collections import Counter
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
@@ -116,6 +117,7 @@ def _build_connections(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> Li
     conns: List[Dict[str, Any]] = []
     wiring = board_cfg.get("default_wiring", {}) if isinstance(board_cfg.get("default_wiring"), dict) else {}
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg.get("observe_map"), dict) else {}
+    bench_connections = board_cfg.get("bench_connections", []) if isinstance(board_cfg.get("bench_connections"), list) else []
 
     if isinstance(payload.get("instrument"), dict):
         for item in bench.get("dut_to_instrument", []) if isinstance(bench.get("dut_to_instrument"), list) else []:
@@ -149,6 +151,15 @@ def _build_connections(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> Li
         conns.append({"from": "SWD", "to": wiring.get("swd")})
     if "reset" in wiring:
         conns.append({"from": "RESET", "to": wiring.get("reset")})
+    for item in bench_connections:
+        if not isinstance(item, dict):
+            continue
+        src = item.get("from")
+        dst = item.get("to")
+        if src and dst:
+            conns.append({"from": src, "to": dst})
+    if conns and len(conns) > 2:
+        return conns
     pin = payload.get("pin")
     if pin:
         resolved = observe_map.get(str(pin), wiring.get("verify"))
@@ -196,6 +207,24 @@ def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -
         if isinstance(measure, dict):
             checks.append({"type": "instrument_measure", **measure})
     return checks
+
+
+def _connection_warnings(board_cfg: Dict[str, Any]) -> List[str]:
+    bench_connections = board_cfg.get("bench_connections", []) if isinstance(board_cfg.get("bench_connections"), list) else []
+    from_counts = Counter()
+    for item in bench_connections:
+        if not isinstance(item, dict):
+            continue
+        src = str(item.get("from") or "").strip()
+        if src:
+            from_counts[src] += 1
+    warnings: List[str] = []
+    for src, count in sorted(from_counts.items()):
+        if count > 1:
+            warnings.append(
+                f"warning: MCU pin {src} is connected to {count} observation points; verify signal loading, shared ground, and whether the instrument supports parallel observation on that net."
+            )
+    return warnings
 
 
 def _merge_tests(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -340,6 +369,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "default_wiring": wiring,
         },
         "notes": payload.get("notes"),
+        "warnings": _connection_warnings(board_cfg),
     }
     return result
 
@@ -370,6 +400,8 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append("expected_checks:")
     for check in payload.get("expected_checks", []):
         lines.append(f"  - {check.get('type')}: {json.dumps(check, sort_keys=True)}")
+    for warning in payload.get("warnings", []):
+        lines.append(warning)
     if payload.get("notes"):
         lines.append(f"notes: {payload.get('notes')}")
     return "\n".join(lines).rstrip() + "\n"

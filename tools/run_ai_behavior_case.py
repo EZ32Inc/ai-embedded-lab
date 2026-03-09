@@ -29,11 +29,44 @@ def _load_yaml(path: Path) -> Any:
         return yaml.safe_load(f)
 
 
+def _resolve_yaml_path(path_text: str, base_path: Path) -> Path:
+    candidate = Path(path_text)
+    if candidate.is_absolute():
+        return candidate
+    return (base_path.parent / candidate).resolve()
+
+
+def _baseline_cases(payload: Dict[str, Any], path: Path) -> List[Dict[str, Any]]:
+    source_case_file = str(payload.get("source_case_file") or "").strip()
+    include_ids = payload.get("include_case_ids", [])
+    if not source_case_file:
+        raise RuntimeError(f"baseline file missing source_case_file: {path}")
+    if not isinstance(include_ids, list) or not include_ids:
+        raise RuntimeError(f"baseline file must define a non-empty include_case_ids list: {path}")
+    source_path = _resolve_yaml_path(source_case_file, path)
+    source_cases = load_cases(source_path)
+    by_id = {str(item.get("case_id")): item for item in source_cases if isinstance(item, dict)}
+    out: List[Dict[str, Any]] = []
+    missing = []
+    for raw_id in include_ids:
+        case_id = str(raw_id)
+        case = by_id.get(case_id)
+        if not case:
+            missing.append(case_id)
+            continue
+        out.append(case)
+    if missing:
+        raise RuntimeError(f"baseline file references unknown case ids: {', '.join(missing)}")
+    return out
+
+
 def load_cases(path: Path) -> List[Dict[str, Any]]:
     payload = _load_yaml(path)
-    if not isinstance(payload, list):
-        raise RuntimeError(f"Case file must contain a top-level list: {path}")
-    return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict) and str(payload.get("type") or "").strip().lower() == "baseline":
+        return _baseline_cases(payload, path)
+    raise RuntimeError(f"Case file must contain a top-level list or baseline definition: {path}")
 
 
 def load_case(path: Path, case_id: str) -> Dict[str, Any]:
