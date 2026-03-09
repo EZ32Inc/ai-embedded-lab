@@ -32,8 +32,7 @@ int main(void) {
     // Enable GPIOA and GPIOC on STM32F401.
     RCC_AHB1ENR |= (RCC_GPIOAEN | RCC_GPIOCEN);
 
-    // Configure PA1, PA2, PA3, and PA4 as general purpose outputs.
-    gpio_set_output(&GPIOA_MODER, 1u);
+    // Configure PA2, PA3, and PA4 as general purpose outputs.
     gpio_set_output(&GPIOA_MODER, 2u);
     gpio_set_output(&GPIOA_MODER, 3u);
     gpio_set_output(&GPIOA_MODER, 4u);
@@ -49,7 +48,6 @@ int main(void) {
     uint32_t div0 = 0;
     uint32_t div1 = 0;
     uint32_t div2 = 0;
-    uint32_t div3 = 0;
     uint32_t led_ms = 0;
     while (1) {
         if (++div0 >= 200u) {
@@ -63,10 +61,6 @@ int main(void) {
         if (++div2 >= 600u) {
             div2 = 0;
             GPIOA_ODR ^= (1u << 2);
-        }
-        if (++div3 >= 800u) {
-            div3 = 0;
-            GPIOA_ODR ^= (1u << 1);
         }
 
         if ((SYST_CSR & SYST_CSR_COUNTFLAG) != 0u) {

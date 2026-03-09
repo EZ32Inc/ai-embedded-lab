@@ -577,6 +577,7 @@ class _SignalVerifyAdapter:
         output_mode = inputs.get("output_mode", "normal")
         measure_path = inputs.get("measure_path")
         test_limits = inputs.get("test_limits", {})
+        led_observe_cfg = inputs.get("led_observe_cfg", {}) if isinstance(inputs.get("led_observe_cfg"), dict) else {}
         recovery_demo = inputs.get("recovery_demo", {}) if isinstance(inputs.get("recovery_demo"), dict) else {}
 
         if bool(recovery_demo.get("fail_first")):
@@ -639,37 +640,72 @@ class _SignalVerifyAdapter:
                     "evidence": [evidence_item],
                 }
 
-        capture = {}
-        if log_path:
-            with _tee_output(log_path, output_mode):
-                ok_obs = observe_gpio_pin.run(
-                    probe_cfg,
-                    pin=pin_value,
-                    duration_s=duration_s,
-                    expected_hz=expected_hz,
-                    min_edges=min_edges,
-                    max_edges=max_edges,
-                    capture_out=capture,
-                    verify_edges=False,
-                )
-        else:
-            ok_obs = observe_gpio_pin.run(
+        def _capture_once(local_capture):
+            return observe_gpio_pin.run(
                 probe_cfg,
                 pin=pin_value,
                 duration_s=duration_s,
                 expected_hz=expected_hz,
                 min_edges=min_edges,
                 max_edges=max_edges,
-                capture_out=capture,
+                capture_out=local_capture,
                 verify_edges=False,
             )
+
+        def _led_level_poll():
+            attempts = max(1, int(led_observe_cfg.get("max_attempts", 10)))
+            sleep_s = max(0.0, float(led_observe_cfg.get("sleep_s", 0.5)))
+            seen_levels = set()
+            samples = []
+            first_capture = None
+            for attempt in range(1, attempts + 1):
+                local_capture = {}
+                ok_local = _capture_once(local_capture)
+                if not ok_local or not local_capture.get("blob"):
+                    return False, {"ok": False, "metrics": {"attempts": attempt}, "reasons": ["led_capture_failed"], "samples": samples}, first_capture
+                if first_capture is None:
+                    first_capture = dict(local_capture)
+                high = int(local_capture.get("high", 0))
+                low = int(local_capture.get("low", 0))
+                level = 1 if high >= low else 0
+                seen_levels.add(level)
+                samples.append({"attempt": attempt, "level": level, "high": high, "low": low})
+                print(f"Verify: LED poll attempt {attempt}/{attempts} level={level} high={high} low={low}")
+                if len(seen_levels) >= 2:
+                    return True, {"ok": True, "metrics": {"attempts": attempt, "levels_seen": sorted(seen_levels)}, "reasons": [], "samples": samples}, first_capture
+                if attempt < attempts:
+                    time.sleep(sleep_s)
+            return False, {"ok": False, "metrics": {"attempts": attempts, "levels_seen": sorted(seen_levels)}, "reasons": ["led_level_never_changed"], "samples": samples}, first_capture
+
+        capture = {}
+        if log_path:
+            with _tee_output(log_path, output_mode):
+                if led_observe_cfg.get("enabled"):
+                    ok_obs, measure, first_capture = _led_level_poll()
+                    if isinstance(first_capture, dict):
+                        capture.update(first_capture)
+                else:
+                    ok_obs = _capture_once(capture)
+                    measure = None
+        else:
+            if led_observe_cfg.get("enabled"):
+                ok_obs, measure, first_capture = _led_level_poll()
+                if isinstance(first_capture, dict):
+                    capture.update(first_capture)
+            else:
+                ok_obs = _capture_once(capture)
+                measure = None
         signal_facts = {"observe_ok": bool(ok_obs), "has_capture": False, "measure_ok": False}
         if not ok_obs:
+            if led_observe_cfg.get("enabled") and measure_path and isinstance(measure, dict):
+                _write_json(measure_path, measure)
+                signal_facts.update({"has_capture": True, "measure_ok": False, "reasons": measure.get("reasons", []), "metrics": measure.get("metrics", {}), "pin": pin_value, "expected_hz": expected_hz, "duration_s": duration_s})
             verdict = check_eval.evaluate_signal_facts(signal_facts)
             return {
                 "ok": False,
                 "error_summary": verdict.get("error_summary") or "observe failed",
                 "failure_kind": verdict.get("failure_kind", failure_recovery.FAILURE_TRANSPORT_ERROR),
+                "result": measure if led_observe_cfg.get("enabled") else None,
                 "facts": signal_facts,
             }
 
@@ -687,32 +723,33 @@ class _SignalVerifyAdapter:
                 "facts": signal_facts,
             }
 
-        measure = la_verify.analyze_capture_bytes(
-            capture.get("blob"),
-            int(capture.get("sample_rate_hz", 0)),
-            int(capture.get("bit", 0)),
-            min_edges=min_edges,
-        )
-        ok = bool(measure.get("ok"))
-        metrics = measure.get("metrics", {})
-        min_f = test_limits.get("min_freq_hz")
-        max_f = test_limits.get("max_freq_hz")
-        duty_min = test_limits.get("duty_min")
-        duty_max = test_limits.get("duty_max")
-        if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
-            measure.setdefault("reasons", []).append("freq_below_min")
-            ok = False
-        if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
-            measure.setdefault("reasons", []).append("freq_above_max")
-            ok = False
-        if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
-            measure.setdefault("reasons", []).append("duty_below_min")
-            ok = False
-        if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
-            measure.setdefault("reasons", []).append("duty_above_max")
-            ok = False
+        if not led_observe_cfg.get("enabled"):
+            measure = la_verify.analyze_capture_bytes(
+                capture.get("blob"),
+                int(capture.get("sample_rate_hz", 0)),
+                int(capture.get("bit", 0)),
+                min_edges=min_edges,
+            )
+            ok = bool(measure.get("ok"))
+            metrics = measure.get("metrics", {})
+            min_f = test_limits.get("min_freq_hz")
+            max_f = test_limits.get("max_freq_hz")
+            duty_min = test_limits.get("duty_min")
+            duty_max = test_limits.get("duty_max")
+            if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
+                measure.setdefault("reasons", []).append("freq_below_min")
+                ok = False
+            if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
+                measure.setdefault("reasons", []).append("freq_above_max")
+                ok = False
+            if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
+                measure.setdefault("reasons", []).append("duty_below_min")
+                ok = False
+            if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
+                measure.setdefault("reasons", []).append("duty_above_max")
+                ok = False
 
-        measure["ok"] = bool(ok)
+            measure["ok"] = bool(ok)
         if measure_path:
             _write_json(measure_path, measure)
         signal_facts.update(

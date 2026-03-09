@@ -451,6 +451,7 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
                 "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
                 "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
             },
+            "led_observe_cfg": (dict(test_raw.get("observe_led", {})) if isinstance(test_raw, dict) and isinstance(test_raw.get("observe_led"), dict) else {}),
             "recovery_demo": (test_raw.get("recovery_demo", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("recovery_demo"), dict) else {}),
         },
     }

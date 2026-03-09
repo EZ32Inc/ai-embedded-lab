@@ -53,9 +53,10 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
     assert any(conn["from"] == "PA2" and conn["to"] == "P0.2" for conn in payload["connections"])
-    assert any(conn["from"] == "PA1" and conn["to"] == "P0.3" for conn in payload["connections"])
+    assert any(conn["from"] == "PC13" and conn["to"] == "P0.3" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
-    assert payload["warnings"] == []
+    assert len(payload["warnings"]) == 1
+    assert "MCU pin PC13 is connected to 2 observation points" in payload["warnings"][0]
     assert payload["board_context"]["clock_hz"] == 16000000
     assert payload["board_context"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
@@ -63,7 +64,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
 
 def test_describe_test_warns_on_duplicate_mcu_pin_connections():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
-    assert payload["warnings"] == []
+    assert len(payload["warnings"]) == 1
+    assert "MCU pin PC13 is connected to 2 observation points" in payload["warnings"][0]
     board_cfg = {
         "bench_connections": [
             {"from": "PA4", "to": "P0.0"},
@@ -87,6 +89,7 @@ def test_describe_test_for_meter_path():
 def test_describe_test_for_stm32f401_led_blink():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_led_blink.json", REPO_ROOT)
     assert payload["ok"] is True
+    assert any(conn["from"] == "PC13" and conn["to"] == "P0.3" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
     assert any(check["type"] == "led" and check["pin"] == "led" for check in payload["expected_checks"])
-    assert not any(check["type"] == "signal" for check in payload["expected_checks"])
+    assert any(check["type"] == "signal" and check["pin"] == "led" for check in payload["expected_checks"])
