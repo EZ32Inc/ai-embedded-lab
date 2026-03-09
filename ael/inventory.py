@@ -7,7 +7,9 @@ from collections import Counter
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
+from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
+from ael.probe_binding import load_probe_binding
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -93,10 +95,12 @@ def _infer_validation_style(payload: Dict[str, Any]) -> str:
     return "generic"
 
 
-def _resolve_probe_or_instrument(payload: Dict[str, Any]) -> Dict[str, Any]:
+def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(payload.get("instrument"), dict):
         inst = payload["instrument"]
         tcp = inst.get("tcp", {}) if isinstance(inst.get("tcp"), dict) else {}
+        manifest = InstrumentRegistry().get(str(inst.get("id") or "")) or {}
+        communication = manifest.get("communication", {}) if isinstance(manifest.get("communication"), dict) else {}
         return {
             "kind": "instrument",
             "id": inst.get("id"),
@@ -104,11 +108,21 @@ def _resolve_probe_or_instrument(payload: Dict[str, Any]) -> Dict[str, Any]:
                 "host": tcp.get("host"),
                 "port": tcp.get("port"),
             } if tcp else None,
+            "communication": communication,
         }
+    board_cfg = _load_board_cfg(root, board_id)
+    instance_id = str(board_cfg.get("instrument_instance") or "").strip() or None
+    probe_path = str(board_cfg.get("probe_config") or "").strip() or None
+    binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
     return {
         "kind": "probe",
-        "id": "ESP32JTAG",
-        "endpoint": None,
+        "id": binding.instance_id or binding.raw.get("probe", {}).get("name") or "ESP32JTAG",
+        "type": binding.type_id,
+        "endpoint": {
+            "host": binding.endpoint_host,
+            "port": binding.endpoint_port,
+        } if (binding.endpoint_host or binding.endpoint_port is not None) else None,
+        "communication": binding.communication,
     }
 
 
@@ -372,7 +386,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "path": path.relative_to(root).as_posix(),
             "validation_style": _infer_validation_style(payload),
         },
-        "probe_or_instrument": _resolve_probe_or_instrument(payload),
+        "probe_or_instrument": _resolve_probe_or_instrument(root, board_id, payload),
         "connections": _build_connections(board_cfg, payload),
         "expected_checks": _build_expected_checks(board_cfg, payload),
         "board_context": {
@@ -397,9 +411,15 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
     poi = payload.get("probe_or_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
+    if poi.get("type"):
+        lines.append(f"type: {poi.get('type')}")
     endpoint = poi.get("endpoint")
     if isinstance(endpoint, dict) and (endpoint.get("host") or endpoint.get("port")):
         lines.append(f"endpoint: {endpoint.get('host')}:{endpoint.get('port')}")
+    if isinstance(poi.get("communication"), dict) and poi.get("communication"):
+        lines.append("communication:")
+        for key, value in (poi.get("communication") or {}).items():
+            lines.append(f"  - {key}: {value}")
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []

@@ -42,3 +42,22 @@ def test_explain_check_for_meter_path_includes_uart_and_instrument():
     assert payload['ok'] is True
     assert any(item['type'] == 'uart' for item in payload['checks'])
     assert any(item['type'] == 'check.instrument_signature' for item in payload['checks'])
+
+
+def test_render_text_includes_communication_blocks_readably():
+    text = stage_explain.render_text(
+        {
+            "ok": True,
+            "stage": "plan",
+            "board": "stm32f401rct6",
+            "test": {"name": "gpio_signature", "path": "tests/plans/gpio_signature.json"},
+            "selected": {
+                "probe": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
+                "probe_communication": {"primary": "gdb_remote"},
+                "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
+            },
+        }
+    )
+    assert "probe_communication:" in text
+    assert "primary: gdb_remote" in text
+    assert "instrument_communication:" in text

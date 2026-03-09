@@ -10,6 +10,12 @@
       "adapter": "instrument.sim_http"
     }
   ],
+  "communication": {
+    "transport": "local_process",
+    "endpoint": "inproc:instrument_sim",
+    "protocol": "instrument.sim_http",
+    "invocation_style": "request_response"
+  },
   "capabilities": [
     {
       "name": "measure.digital",

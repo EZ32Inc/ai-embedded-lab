@@ -14,6 +14,12 @@
   "transports": [
     { "type": "serial", "endpoint_hint": "/dev/ttyACM*", "baud_default": 115200, "protocol": "line-json-v0.1" }
   ],
+  "communication": {
+    "transport": "serial",
+    "endpoint": "/dev/ttyACM*",
+    "protocol": "line-json-v0.1",
+    "invocation_style": "request_response"
+  },
 
   "capabilities": [
     {

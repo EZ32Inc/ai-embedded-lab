@@ -250,6 +250,11 @@ def render_text(payload: Dict[str, Any]) -> str:
     if payload.get("selected"):
         lines.append("selected:")
         for k, v in (payload.get("selected") or {}).items():
+            if k in ("probe_communication", "instrument_communication") and isinstance(v, dict):
+                lines.append(f"  - {k}:")
+                for inner_k, inner_v in v.items():
+                    lines.append(f"    {inner_k}: {inner_v}")
+                continue
             lines.append(f"  - {k}: {v}")
     if payload.get("checks") is not None:
         lines.append("checks:")

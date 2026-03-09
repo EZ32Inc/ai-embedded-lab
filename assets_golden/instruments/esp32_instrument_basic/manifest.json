@@ -16,6 +16,12 @@
       "protocol": "log-only"
     }
   ],
+  "communication": {
+    "transport": "wifi",
+    "endpoint": "192.168.4.1:9000",
+    "protocol": "gpio_meter_v1",
+    "invocation_style": "request_response"
+  },
   "channels": {
     "digital_inputs": [11, 12, 13, 14],
     "analog_inputs": [4],
