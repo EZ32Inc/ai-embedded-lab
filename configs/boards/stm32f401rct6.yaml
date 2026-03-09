@@ -18,6 +18,7 @@ board:
       - "monitor a"
       - "attach {target_id}"
       - "load"
+      - "attach {target_id}"
       - "detach"
   observe_map:
     sig: P0.0
