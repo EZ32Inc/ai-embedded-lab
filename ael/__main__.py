@@ -29,6 +29,7 @@ from ael import workflow_archive
 from ael import hw_check
 from ael import la_check
 from ael import inventory
+from ael import instrument_doctor
 from ael import stage_explain
 
 
@@ -76,6 +77,8 @@ def main():
     instr_show.add_argument("id")
     instr_find = instr_sub.add_parser("find")
     instr_find.add_argument("--cap", required=True)
+    instr_doctor = instr_sub.add_parser("doctor")
+    instr_doctor.add_argument("--id", required=True)
     instr_wifi_scan = instr_sub.add_parser("wifi-scan")
     instr_wifi_scan.add_argument("--id", required=True)
     instr_wifi_scan.add_argument("--ifname", required=True)
@@ -151,6 +154,8 @@ def main():
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
     inventory_list = inventory_sub.add_parser("list")
     inventory_list.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_instances = inventory_sub.add_parser("instances")
+    inventory_instances.add_argument("--format", choices=["json", "text"], default="json")
     inventory_describe = inventory_sub.add_parser("describe-test")
     inventory_describe.add_argument("--board", required=True)
     inventory_describe.add_argument("--test", required=True)
@@ -285,6 +290,10 @@ def main():
             matches = registry.find_by_capability(args.cap)
             print(json.dumps(matches, indent=2, sort_keys=True))
             sys.exit(0)
+        if args.instr_cmd == "doctor":
+            payload = instrument_doctor.doctor(repo_root, args.id)
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
         if args.instr_cmd == "wifi-scan":
             inst = registry.get(args.id)
             if not inst:
@@ -441,6 +450,13 @@ def main():
             payload = inventory.build_inventory(Path(repo_root))
             if args.format == "text":
                 print(inventory.render_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.inventory_cmd == "instances":
+            payload = inventory.build_instrument_instance_inventory(Path(repo_root))
+            if args.format == "text":
+                print(inventory.render_instance_text(payload), end="")
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0)

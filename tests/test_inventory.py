@@ -45,6 +45,32 @@ def test_inventory_cli_json_output():
     assert "esp32c3_devkit" in payload["summary"]["duts_with_tests"]
 
 
+def test_inventory_instances_cli_json_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "inventory", "instances"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    payload = json.loads(res.stdout)
+    assert payload["ok"] is True
+    assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["probe_instances"])
+    assert any(item["id"] == "esp32s3_dev_c_meter" for item in payload["instruments"])
+
+
+def test_build_instrument_instance_inventory_includes_references():
+    payload = inventory.build_instrument_instance_inventory(REPO_ROOT)
+    probe = next(item for item in payload["probe_instances"] if item["id"] == "esp32jtag_stm32_golden")
+    meter = next(item for item in payload["instruments"] if item["id"] == "esp32s3_dev_c_meter")
+    assert "stm32f103" in probe["referenced_by"]["boards"]
+    assert "stm32f401rct6" in probe["referenced_by"]["boards"]
+    assert "esp32c6_gpio_signature_with_meter.json" in " ".join(meter["referenced_by"]["plans"])
+
+
 def test_describe_test_for_stm32f401_gpio_signature():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
