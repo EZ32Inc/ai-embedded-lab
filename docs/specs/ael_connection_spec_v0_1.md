@@ -42,6 +42,18 @@ Those belong to the instrument-internal communication-access layer, not to Conne
 
 This specification defines the top-level **Connection** part in the AEL architecture.
 
+### Bench
+
+In this document, **Bench** means the concrete execution setup in which a DUT and one or more instruments are physically arranged and connected for a run.
+
+Bench includes the relevant:
+
+- wiring
+- connected observation and control paths
+- setup assumptions that make a specific validation meaningful
+
+Bench is an important contextual concept for Connection, but it is **not** a separate top-level architecture part.
+
 ### Important distinction
 
 #### AEL Connection (ConnA)
