@@ -337,7 +337,7 @@ Orchestrator → Instruments → Connections → DUTs
 
 ## License
 
-AEL is released under the [MIT License](https://choosealicense.com/licenses/mit/).
+AEL is released under the [Apache 2.0 License](https://choosealicense.com/licenses/apache-2.0/).
 
 The goal is to make it easy for developers, startups and hardware teams to experiment with AI-driven embedded workflows without legal friction.
 
@@ -347,7 +347,7 @@ You are free to:
 - integrate it into commercial products  
 - extend it for internal tooling  
 
-See the [MIT LICENSE](https://choosealicense.com/licenses/mit/) file for details.
+See the [Apache 2.0 LICENSE](https://choosealicense.com/licenses/apache-2.0/) file for details.
 
 ---
 
