@@ -60,6 +60,66 @@ def _normalize_list_of_mappings(raw: Any) -> List[Dict[str, Any]]:
     return [dict(item) for item in raw if isinstance(item, dict)]
 
 
+def _semantic_connection_warnings(
+    *,
+    board: Dict[str, Any],
+    test: Dict[str, Any],
+    resolved_wiring: Dict[str, Any],
+    observe_map: Dict[str, Any],
+    verification_views: Dict[str, Any],
+) -> List[str]:
+    warnings: List[str] = []
+
+    verify_target = str((resolved_wiring or {}).get("verify") or "").strip()
+    sig_target = str((observe_map or {}).get("sig") or "").strip()
+    if verify_target and verify_target != "UNKNOWN" and sig_target and verify_target != sig_target:
+        warnings.append(
+            f"verify wiring resolves to {verify_target}, but observe_map.sig resolves to {sig_target}"
+        )
+
+    if isinstance(verification_views, dict):
+        for view_name, raw_view in verification_views.items():
+            if not isinstance(raw_view, dict):
+                continue
+            pin = str(raw_view.get("pin") or "").strip()
+            resolved_to = str(raw_view.get("resolved_to") or "").strip()
+            if not pin or not resolved_to:
+                continue
+            observed = str((observe_map or {}).get(pin) or "").strip()
+            if observed and observed != resolved_to:
+                warnings.append(
+                    f"verification view {view_name} resolves {pin} to {resolved_to}, but observe_map[{pin}] resolves to {observed}"
+                )
+
+    pin_label = str((test or {}).get("pin") or "").strip()
+    if pin_label:
+        resolved_pin = str((observe_map or {}).get(pin_label) or "").strip()
+        if not resolved_pin and pin_label == "sig":
+            resolved_pin = sig_target
+        signal_view = verification_views.get("signal") if isinstance(verification_views, dict) else None
+        signal_target = ""
+        if isinstance(signal_view, dict):
+            signal_target = str(signal_view.get("resolved_to") or "").strip()
+        if resolved_pin and signal_target and resolved_pin != signal_target:
+            warnings.append(
+                f"test pin {pin_label} resolves to {resolved_pin}, but verification_views.signal resolves to {signal_target}"
+            )
+
+    bench_connections = _normalize_list_of_mappings(board.get("bench_connections"))
+    if bench_connections and isinstance(verification_views, dict):
+        by_target = {str(item.get("to") or "").strip() for item in bench_connections if str(item.get("to") or "").strip()}
+        for view_name, raw_view in verification_views.items():
+            if not isinstance(raw_view, dict):
+                continue
+            resolved_to = str(raw_view.get("resolved_to") or "").strip()
+            if resolved_to and resolved_to not in by_target and resolved_to != "LED":
+                warnings.append(
+                    f"verification view {view_name} resolves to {resolved_to}, but bench_connections do not mention that observation point"
+                )
+
+    return warnings
+
+
 def merge_wiring(defaults: Dict[str, Any] | Any, overrides: Dict[str, Any] | Any, required: List[str] | None = None) -> Dict[str, str]:
     merged: Dict[str, str] = {}
     for source in (defaults, overrides):
@@ -90,6 +150,8 @@ def connection_warnings(
         warnings.append(f"missing coarse wiring: {', '.join(missing)}")
 
     bench_connections = _normalize_list_of_mappings(board.get("bench_connections"))
+    observe_map = _normalize_mapping(board.get("observe_map"))
+    verification_views = _normalize_mapping(board.get("verification_views"))
     from_counts: Counter[str] = Counter()
     for item in bench_connections:
         src = str(item.get("from") or "").strip()
@@ -107,9 +169,17 @@ def connection_warnings(
     if bench_setup.get("ground_required") and bench_setup.get("ground_confirmed") is not True:
         warnings.append("bench_setup requires ground, but ground_confirmed is not true")
     if str((resolved_wiring or {}).get("verify") or "").strip() == "UNKNOWN":
-        observe_map = _normalize_mapping(board.get("observe_map"))
         if not observe_map:
             warnings.append("verify mapping is ambiguous because observe_map is missing")
+    warnings.extend(
+        _semantic_connection_warnings(
+            board=board,
+            test=test,
+            resolved_wiring=_normalize_mapping(resolved_wiring),
+            observe_map=observe_map,
+            verification_views=verification_views,
+        )
+    )
     return warnings
 
 

@@ -79,3 +79,18 @@ def test_normalize_connection_context_surfaces_validation_errors():
     )
     assert "default_wiring[verify] must be a non-empty string" in ctx.validation_errors
     assert "bench_setup.ground_required must be a boolean" in ctx.validation_errors
+
+
+def test_normalize_connection_context_warns_on_semantic_mapping_mismatch():
+    ctx = normalize_connection_context(
+        {
+            "default_wiring": {"verify": "P0.0"},
+            "observe_map": {"sig": "P0.1"},
+            "verification_views": {"signal": {"pin": "sig", "resolved_to": "P0.0"}},
+            "bench_connections": [{"from": "GPIO16", "to": "P0.0"}],
+        },
+        {"pin": "sig"},
+        required_wiring=["verify"],
+    )
+    assert "verify wiring resolves to P0.0, but observe_map.sig resolves to P0.1" in ctx.warnings
+    assert "test pin sig resolves to P0.1, but verification_views.signal resolves to P0.0" in ctx.warnings

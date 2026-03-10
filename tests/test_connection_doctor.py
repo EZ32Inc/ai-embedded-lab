@@ -20,6 +20,7 @@ def test_connection_doctor_for_meter_path_reports_clean_conn_a():
     assert payload["validation_errors"] == []
     assert payload["source_summary"]["bench_setup"] == "test.bench_setup"
     assert any(item["name"] == "ground_confirmation" and item["ok"] is True for item in payload["consistency_checks"])
+    assert any(item["name"] == "semantic_mapping_consistency" and item["ok"] is True for item in payload["consistency_checks"])
 
 
 def test_connection_doctor_for_stm32_path_surfaces_duplicate_observation_warning():
@@ -31,6 +32,7 @@ def test_connection_doctor_for_stm32_path_surfaces_duplicate_observation_warning
     assert payload["ok"] is True
     assert any("PC13 is connected to 2 observation points" in item for item in payload["warnings"])
     assert any(item["name"] == "duplicate_observation_points" and item["ok"] is False for item in payload["consistency_checks"])
+    assert any(item["name"] == "semantic_mapping_consistency" and item["ok"] is True for item in payload["consistency_checks"])
 
 
 def test_connection_doctor_cli_json_output():

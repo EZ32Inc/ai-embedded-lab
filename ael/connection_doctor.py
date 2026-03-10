@@ -28,6 +28,23 @@ def _consistency_checks(connection_setup: Dict[str, Any] | Any) -> List[Dict[str
             "detail": sorted(verification_views.keys()),
         }
     )
+    semantic_warning = next(
+        (
+            item
+            for item in warnings
+            if "observe_map.sig resolves" in str(item)
+            or "verification view" in str(item)
+            or "test pin" in str(item)
+        ),
+        None,
+    )
+    checks.append(
+        {
+            "name": "semantic_mapping_consistency",
+            "ok": semantic_warning is None,
+            "detail": semantic_warning or "ok",
+        }
+    )
     duplicate_warning = next((item for item in warnings if "observation points" in str(item)), None)
     checks.append(
         {
