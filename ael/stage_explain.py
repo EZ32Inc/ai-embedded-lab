@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from ael.connection_model import build_connection_setup
+from ael.connection_model import build_connection_setup, render_connection_setup_text
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.instrument_metadata import resolve_capability_surface
@@ -312,6 +312,10 @@ def render_text(payload: Dict[str, Any]) -> str:
                 for item in v:
                     lines.append(f"    {json.dumps(item, sort_keys=True)}")
                 continue
+            if k == "connection_setup" and isinstance(v, dict):
+                lines.append(f"  - {k}:")
+                lines.extend(render_connection_setup_text(v, indent="    "))
+                continue
             lines.append(f"  - {k}: {v}")
     if payload.get("checks") is not None:
         lines.append("checks:")
@@ -334,7 +338,14 @@ def render_text(payload: Dict[str, Any]) -> str:
     if payload.get("assumptions_in_effect"):
         lines.append("assumptions_in_effect:")
         for k, v in (payload.get("assumptions_in_effect") or {}).items():
+            if k == "connection_setup" and isinstance(v, dict):
+                lines.append(f"  - {k}:")
+                lines.extend(render_connection_setup_text(v, indent="    "))
+                continue
             lines.append(f"  - {k}: {v}")
+    if payload.get("connection_setup"):
+        lines.append("connection_setup:")
+        lines.extend(render_connection_setup_text(payload.get("connection_setup"), indent="  "))
     if payload.get("wiring_assumptions"):
         lines.append(f"wiring_assumptions: {payload.get('wiring_assumptions')}")
     return "\n".join(lines).rstrip() + "\n"

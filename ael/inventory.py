@@ -6,7 +6,12 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
-from ael.connection_model import build_connection_rows, build_connection_setup, normalize_connection_context
+from ael.connection_model import (
+    build_connection_rows,
+    build_connection_setup,
+    normalize_connection_context,
+    render_connection_setup_text,
+)
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
@@ -446,6 +451,25 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
     return result
 
 
+def describe_connection(board_id: str, test_path: str, repo_root: Path | None = None) -> Dict[str, Any]:
+    payload = describe_test(board_id=board_id, test_path=test_path, repo_root=repo_root)
+    if not payload.get("ok"):
+        return payload
+    return {
+        "ok": True,
+        "board": payload.get("board"),
+        "test": payload.get("test"),
+        "connection_setup": payload.get("connection_setup"),
+        "connections": payload.get("connections"),
+        "warnings": payload.get("warnings"),
+        "source_summary": (
+            payload.get("connection_setup", {}).get("source_summary")
+            if isinstance(payload.get("connection_setup"), dict)
+            else {}
+        ),
+    }
+
+
 def render_describe_text(payload: Dict[str, Any]) -> str:
     if not payload.get("ok"):
         return f"error: {payload.get('error')}\n"
@@ -472,6 +496,10 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append("metadata_validation_errors:")
         for item in poi.get("metadata_validation_errors") or []:
             lines.append(f"  - {item}")
+    conn_setup = payload.get("connection_setup", {})
+    if isinstance(conn_setup, dict) and conn_setup:
+        lines.append("connection_setup:")
+        lines.extend(render_connection_setup_text(conn_setup, indent="  "))
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []
@@ -490,6 +518,31 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append(warning)
     if payload.get("notes"):
         lines.append(f"notes: {payload.get('notes')}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_connection_text(payload: Dict[str, Any]) -> str:
+    if not payload.get("ok"):
+        return f"error: {payload.get('error')}\n"
+    lines: List[str] = []
+    lines.append(f"board: {payload.get('board')}")
+    test = payload.get("test", {})
+    lines.append(f"test: {test.get('name')} ({test.get('path')})")
+    lines.append("connection_setup:")
+    lines.extend(render_connection_setup_text(payload.get("connection_setup"), indent="  "))
+    lines.append("connections:")
+    for conn in payload.get("connections", []):
+        extra = []
+        if conn.get("expect"):
+            extra.append(str(conn.get("expect")))
+        if conn.get("freq_hz") is not None:
+            extra.append(f"{conn.get('freq_hz')}Hz")
+        if conn.get("expect_v_min") is not None and conn.get("expect_v_max") is not None:
+            extra.append(f"{conn.get('expect_v_min')}..{conn.get('expect_v_max')}V")
+        if conn.get("required") is True:
+            extra.append("required")
+        suffix = f" ({', '.join(extra)})" if extra else ""
+        lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
     return "\n".join(lines).rstrip() + "\n"
 
 

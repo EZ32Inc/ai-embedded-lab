@@ -234,3 +234,81 @@ def build_connection_setup(ctx: NormalizedConnectionContext) -> Dict[str, Any]:
         "warnings": list(ctx.warnings),
         "source_summary": dict(ctx.source_summary),
     }
+
+
+def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, indent: str = "") -> List[str]:
+    setup = connection_setup if isinstance(connection_setup, dict) else {}
+    lines: List[str] = []
+
+    source_summary = setup.get("source_summary")
+    if isinstance(source_summary, dict) and source_summary:
+        lines.append(f"{indent}source_summary:")
+        for key, value in source_summary.items():
+            if value:
+                lines.append(f"{indent}  - {key}: {value}")
+
+    resolved_wiring = setup.get("resolved_wiring")
+    if isinstance(resolved_wiring, dict) and resolved_wiring:
+        lines.append(f"{indent}resolved_wiring:")
+        for key, value in resolved_wiring.items():
+            lines.append(f"{indent}  - {key}: {value}")
+
+    verification_views = setup.get("verification_views")
+    if isinstance(verification_views, dict) and verification_views:
+        lines.append(f"{indent}verification_views:")
+        for name, view in verification_views.items():
+            if isinstance(view, dict):
+                pin = view.get("pin")
+                resolved_to = view.get("resolved_to")
+                if pin or resolved_to:
+                    lines.append(f"{indent}  - {name}: pin={pin} resolved_to={resolved_to}")
+                else:
+                    lines.append(f"{indent}  - {name}: {view}")
+            else:
+                lines.append(f"{indent}  - {name}: {view}")
+
+    bench_connections = setup.get("bench_connections")
+    if isinstance(bench_connections, list) and bench_connections:
+        lines.append(f"{indent}bench_connections:")
+        for item in bench_connections:
+            if not isinstance(item, dict):
+                continue
+            src = item.get("from")
+            dst = item.get("to")
+            if src or dst:
+                lines.append(f"{indent}  - {src} -> {dst}")
+            else:
+                lines.append(f"{indent}  - {item}")
+
+    bench_setup = setup.get("bench_setup")
+    if isinstance(bench_setup, dict) and bench_setup:
+        lines.append(f"{indent}bench_setup:")
+        for item in bench_setup.get("dut_to_instrument", []) if isinstance(bench_setup.get("dut_to_instrument"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            line = f"{item.get('dut_gpio')} -> inst GPIO{item.get('inst_gpio')}"
+            if item.get("expect"):
+                line += f" expect={item.get('expect')}"
+            if item.get("freq_hz") is not None:
+                line += f" freq_hz={item.get('freq_hz')}"
+            lines.append(f"{indent}  - {line}")
+        for item in bench_setup.get("dut_to_instrument_analog", []) if isinstance(bench_setup.get("dut_to_instrument_analog"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            line = (
+                f"{item.get('dut_signal')} -> inst ADC GPIO{item.get('inst_adc_gpio')} "
+                f"expect_v={item.get('expect_v_min')}..{item.get('expect_v_max')}"
+            )
+            lines.append(f"{indent}  - {line}")
+        if bench_setup.get("ground_required") is not None:
+            lines.append(f"{indent}  - ground_required: {bench_setup.get('ground_required')}")
+        if "ground_confirmed" in bench_setup:
+            lines.append(f"{indent}  - ground_confirmed: {bench_setup.get('ground_confirmed')}")
+
+    warnings = setup.get("warnings")
+    if isinstance(warnings, list) and warnings:
+        lines.append(f"{indent}warnings:")
+        for item in warnings:
+            lines.append(f"{indent}  - {item}")
+
+    return lines

@@ -95,6 +95,11 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["connection_setup"]["resolved_wiring"]["verify"] == "P0.0"
     assert payload["connection_setup"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
+    rendered = inventory.render_describe_text(payload)
+    assert "connection_setup:" in rendered
+    assert "source_summary:" in rendered
+    assert "resolved_wiring:" in rendered
+    assert "verification_views:" in rendered
 
 
 def test_describe_test_warns_on_duplicate_mcu_pin_connections():
@@ -113,6 +118,36 @@ def test_describe_test_for_meter_path():
     assert payload["probe_or_instrument"]["capability_surfaces"]["measure.digital"] == "primary"
     assert any(conn["from"] == "X1(GPIO4)" and conn["to"] == "inst GPIO11" for conn in payload["connections"])
     assert any(check["type"] == "instrument_measure" for check in payload["expected_checks"])
+    rendered = inventory.render_describe_text(payload)
+    assert "ground_required: True" in rendered
+    assert "ground_confirmed: True" in rendered
+
+
+def test_describe_connection_for_meter_path():
+    payload = inventory.describe_connection("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["source_summary"]["bench_setup"] == "test.bench_setup"
+    assert payload["connection_setup"]["bench_setup"]["ground_confirmed"] is True
+    text = inventory.render_connection_text(payload)
+    assert "connection_setup:" in text
+    assert "resolved_wiring:" in text
+    assert "ground_confirmed: True" in text
+    assert "X1(GPIO4) -> inst GPIO11" in text
+
+
+def test_inventory_describe_connection_cli_text_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "inventory", "describe-connection", "--board", "esp32c6_devkit", "--test", "tests/plans/esp32c6_gpio_signature_with_meter.json", "--format", "text"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "connection_setup:" in res.stdout
+    assert "ground_confirmed: True" in res.stdout
 
 
 def test_describe_test_for_stm32f401_led_blink():

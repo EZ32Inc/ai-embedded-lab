@@ -68,6 +68,12 @@ def test_render_text_includes_communication_blocks_readably():
                 "probe_capability_surfaces": {"swd": "gdb_remote"},
                 "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
                 "instrument_capability_surfaces": {"measure.digital": "primary"},
+                "connection_setup": {
+                    "source_summary": {"bench_setup": "test.bench_setup"},
+                    "resolved_wiring": {"verify": "P0.0"},
+                    "verification_views": {"signal": {"pin": "sig", "resolved_to": "P0.0"}},
+                    "bench_setup": {"ground_required": True, "ground_confirmed": True},
+                },
                 "capability_surface_plan": [{"capability": "swd", "surface": "gdb_remote"}],
             },
         }
@@ -77,4 +83,24 @@ def test_render_text_includes_communication_blocks_readably():
     assert "probe_capability_surfaces:" in text
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
+    assert "connection_setup:" in text
+    assert "ground_confirmed: True" in text
     assert "capability_surface_plan:" in text
+
+
+def test_render_text_includes_preflight_connection_setup_readably():
+    text = stage_explain.render_text(
+        {
+            "ok": True,
+            "stage": "pre-flight",
+            "board": "esp32c6_devkit",
+            "test": {"name": "gpio_signature", "path": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
+            "connection_setup": {
+                "source_summary": {"bench_setup": "test.bench_setup"},
+                "bench_setup": {"ground_required": True, "ground_confirmed": True},
+                "warnings": [],
+            },
+        }
+    )
+    assert "connection_setup:" in text
+    assert "ground_required: True" in text

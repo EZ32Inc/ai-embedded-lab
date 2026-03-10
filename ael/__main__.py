@@ -160,6 +160,10 @@ def main():
     inventory_describe.add_argument("--board", required=True)
     inventory_describe.add_argument("--test", required=True)
     inventory_describe.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_connection = inventory_sub.add_parser("describe-connection")
+    inventory_connection.add_argument("--board", required=True)
+    inventory_connection.add_argument("--test", required=True)
+    inventory_connection.add_argument("--format", choices=["json", "text"], default="json")
 
     explain_p = sub.add_parser("explain-stage")
     explain_p.add_argument("--board", required=True)
@@ -464,6 +468,13 @@ def main():
             payload = inventory.describe_test(board_id=args.board, test_path=args.test, repo_root=Path(repo_root))
             if args.format == "text":
                 print(inventory.render_describe_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
+        if args.inventory_cmd == "describe-connection":
+            payload = inventory.describe_connection(board_id=args.board, test_path=args.test, repo_root=Path(repo_root))
+            if args.format == "text":
+                print(inventory.render_connection_text(payload), end="")
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)
