@@ -272,7 +272,48 @@ def _worker_for_task(
         iteration_limit=max_iterations,
         stop_after_failure=stop_after_failure,
         log_fn=lambda message: _log_line(log_lock, message),
+        resource_keys=_task_resource_keys(repo_root, task),
     )
+
+
+def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
+    step = task.step()
+    keys = [f"dut:{task.board}"]
+
+    probe_raw, probe_path = _resolve_step_probe_binding(repo_root, step)
+    probe_cfg = _normalize_probe_cfg(probe_raw)
+    probe_host = str(probe_cfg.get("host") or "").strip()
+    probe_port = probe_cfg.get("gdb_port")
+    if probe_host and probe_port is not None:
+        keys.append(f"probe:{probe_host}:{probe_port}")
+    elif probe_path:
+        keys.append(f"probe_path:{probe_path}")
+
+    board_raw = _resolve_board_raw(repo_root, task.board)
+    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg.get("flash"), dict) else {}
+    flash_port = str(flash_cfg.get("port") or "").strip()
+    if flash_port:
+        keys.append(f"serial:{flash_port}")
+
+    test_path = _resolve_path(repo_root, step.get("test"))
+    if test_path:
+        test_raw = _load_text_payload(Path(test_path))
+        if isinstance(test_raw, dict):
+            instrument_id, tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+            host = str((tcp_cfg or {}).get("host") or "").strip()
+            port = (tcp_cfg or {}).get("port")
+            if instrument_id and host and port is not None:
+                keys.append(f"instrument:{instrument_id}:{host}:{port}")
+
+    deduped: List[str] = []
+    seen: set[str] = set()
+    for key in keys:
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(key)
+    return deduped
 
 
 def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) -> None:

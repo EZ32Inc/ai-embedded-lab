@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,7 @@ from ael import paths as ael_paths
 
 
 SCHEMA_VERSION = "ael.workflow_archive.event.v0.2"
+_APPEND_LOCK = threading.Lock()
 
 
 def archive_root() -> Path:
@@ -63,9 +65,10 @@ def append_event(event: dict, run_root: str | Path | None = None) -> dict:
     record = {"schema": SCHEMA_VERSION, **_normalize(event)}
     if "timestamp" not in record:
         record["timestamp"] = datetime.now().isoformat()
-    _append_jsonl(global_events_path(), record)
-    if run_root:
-        _append_jsonl(run_events_path(run_root), record)
+    with _APPEND_LOCK:
+        _append_jsonl(global_events_path(), record)
+        if run_root:
+            _append_jsonl(run_events_path(run_root), record)
     return record
 
 

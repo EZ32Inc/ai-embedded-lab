@@ -5,6 +5,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Tuple
 import time
 
+from ael import resource_locks
+
 
 VerificationRunner = Callable[[Path, Dict[str, Any], str], Tuple[int, Dict[str, Any]]]
 VerificationLogger = Callable[[str], None]
@@ -66,40 +68,42 @@ class VerificationWorker:
     iteration_limit: int = 1
     stop_after_failure: bool = False
     log_fn: VerificationLogger | None = None
+    resource_keys: List[str] = field(default_factory=list)
 
     def run(self) -> VerificationWorkerResult:
         iterations: List[Dict[str, Any]] = []
 
-        for iteration in range(1, self.iteration_limit + 1):
-            label = self.task.name if self.iteration_limit == 1 else f"{self.task.name} iteration {iteration}"
-            self._log(f"[START] {label}")
-            started = time.monotonic()
-            try:
-                code, result = self.runner(self.repo_root, self.task.step(), self.output_mode)
-            except Exception as exc:
-                code, result = 1, {"ok": False, "error": str(exc)}
-            elapsed = round(time.monotonic() - started, 3)
-            ok = code == 0
-            record = {
-                "name": self.task.name,
-                "board": self.task.board,
-                "action": self.task.action,
-                "iteration": iteration,
-                "code": int(code),
-                "ok": ok,
-                "elapsed_s": elapsed,
-                "result": result,
-            }
-            iterations.append(record)
-            self._log(f"[DONE] {label} {'PASS' if ok else 'FAIL'} ({elapsed:.3f}s)")
-            if not ok:
-                reason = ""
-                if isinstance(result, dict):
-                    reason = str(result.get("error") or result.get("error_summary") or "").strip()
-                if reason:
-                    self._log(f"[FAIL] {label} {reason}")
-                if self.stop_after_failure:
-                    break
+        with resource_locks.claim(self.resource_keys):
+            for iteration in range(1, self.iteration_limit + 1):
+                label = self.task.name if self.iteration_limit == 1 else f"{self.task.name} iteration {iteration}"
+                self._log(f"[START] {label}")
+                started = time.monotonic()
+                try:
+                    code, result = self.runner(self.repo_root, self.task.step(), self.output_mode)
+                except Exception as exc:
+                    code, result = 1, {"ok": False, "error": str(exc)}
+                elapsed = round(time.monotonic() - started, 3)
+                ok = code == 0
+                record = {
+                    "name": self.task.name,
+                    "board": self.task.board,
+                    "action": self.task.action,
+                    "iteration": iteration,
+                    "code": int(code),
+                    "ok": ok,
+                    "elapsed_s": elapsed,
+                    "result": result,
+                }
+                iterations.append(record)
+                self._log(f"[DONE] {label} {'PASS' if ok else 'FAIL'} ({elapsed:.3f}s)")
+                if not ok:
+                    reason = ""
+                    if isinstance(result, dict):
+                        reason = str(result.get("error") or result.get("error_summary") or "").strip()
+                    if reason:
+                        self._log(f"[FAIL] {label} {reason}")
+                    if self.stop_after_failure:
+                        break
 
         pass_count = sum(1 for item in iterations if item["ok"])
         fail_count = len(iterations) - pass_count

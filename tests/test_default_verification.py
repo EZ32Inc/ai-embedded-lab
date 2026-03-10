@@ -1,9 +1,12 @@
 import json
+import time
+import threading
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
 from ael import default_verification
+from ael.verification_model import VerificationTask, VerificationWorker
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -264,3 +267,66 @@ def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
     assert by_name["esp32"]["completed_iterations"] == 5
     assert payload["failure"]["step_name"] == "rp2040"
     assert payload["failure"]["iteration"] == 3
+
+
+def test_task_resource_keys_include_probe_and_instrument(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        json.dumps(
+            {
+                "name": "esp32c6_gpio_signature_with_meter",
+                "instrument": {
+                    "id": "esp32s3_dev_c_meter",
+                    "tcp": {"host": "192.168.4.1", "port": 9000},
+                },
+                "bench_setup": {
+                    "dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}],
+                    "ground_required": True,
+                    "ground_confirmed": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    task = VerificationTask(
+        name="esp32c6",
+        board="esp32c6_devkit",
+        config={"test": str(test_path), "probe": "configs/esp32jtag.yaml"},
+    )
+
+    keys = default_verification._task_resource_keys(REPO_ROOT, task)
+
+    assert "dut:esp32c6_devkit" in keys
+    assert any(key.endswith("/configs/instrument_instances/esp32jtag_stm32_golden.yaml") for key in keys)
+    assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in keys
+
+
+def test_worker_claims_shared_resources_serially():
+    events = []
+    lock = threading.Lock()
+
+    def runner(repo_root, step, output_mode):
+        with lock:
+            events.append(("start", step["name"], time.monotonic()))
+        time.sleep(0.05)
+        with lock:
+            events.append(("end", step["name"], time.monotonic()))
+        return 0, {"ok": True}
+
+    task_a = VerificationTask(name="a", board="board_a")
+    task_b = VerificationTask(name="b", board="board_b")
+    worker_a = VerificationWorker(task=task_a, repo_root=REPO_ROOT, output_mode="normal", runner=runner, resource_keys=["probe:shared"])
+    worker_b = VerificationWorker(task=task_b, repo_root=REPO_ROOT, output_mode="normal", runner=runner, resource_keys=["probe:shared"])
+
+    t1 = threading.Thread(target=worker_a.run)
+    t2 = threading.Thread(target=worker_b.run)
+    t1.start()
+    t2.start()
+    t1.join(timeout=2)
+    t2.join(timeout=2)
+
+    assert not t1.is_alive()
+    assert not t2.is_alive()
+    starts = {name: ts for kind, name, ts in events if kind == "start"}
+    ends = {name: ts for kind, name, ts in events if kind == "end"}
+    assert ends["a"] <= starts["b"] or ends["b"] <= starts["a"]
