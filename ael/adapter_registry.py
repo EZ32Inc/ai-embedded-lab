@@ -96,23 +96,16 @@ class _InstrumentBackendRegistry:
 
 @contextmanager
 def _tee_output(log_path: str, output_mode: str):
-    tee, f = run_manager.open_tee(Path(log_path), output_mode)
-    import sys
-
-    orig_out = sys.stdout
-    orig_err = sys.stderr
-    sys.stdout = tee
-    sys.stderr = tee
+    run_manager.ensure_thread_output_proxies()
+    tee, f = run_manager.open_tee(Path(log_path), output_mode, console=run_manager.base_stdout())
     try:
-        yield
+        with run_manager.route_thread_output(tee):
+            yield
     finally:
         try:
-            sys.stdout.flush()
-            sys.stderr.flush()
+            tee.flush()
         except Exception:
             pass
-        sys.stdout = orig_out
-        sys.stderr = orig_err
         f.close()
 
 

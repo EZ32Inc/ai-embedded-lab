@@ -145,21 +145,16 @@ def _copy_artifacts(firmware_path, artifacts_dir):
 
 @contextmanager
 def _tee_output(log_path, output_mode):
-    tee, f = run_manager.open_tee(Path(log_path), output_mode, console=sys.stdout)
-    orig_out = sys.stdout
-    orig_err = sys.stderr
-    sys.stdout = tee
-    sys.stderr = tee
+    run_manager.ensure_thread_output_proxies()
+    tee, f = run_manager.open_tee(Path(log_path), output_mode, console=run_manager.base_stdout())
     try:
-        yield
+        with run_manager.route_thread_output(tee):
+            yield
     finally:
         try:
-            sys.stdout.flush()
-            sys.stderr.flush()
+            tee.flush()
         except Exception:
             pass
-        sys.stdout = orig_out
-        sys.stderr = orig_err
         f.close()
 
 

@@ -1,8 +1,10 @@
 import os
 import sys
+import threading
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from contextlib import contextmanager
 from typing import Optional
 from ael import paths as ael_paths
 
@@ -98,6 +100,68 @@ class Tee:
         self._console.write(line)
 
 
+_ORIGINAL_STDOUT = sys.stdout
+_ORIGINAL_STDERR = sys.stderr
+_THREAD_STREAMS = threading.local()
+
+
+class ThreadLocalStreamProxy:
+    def __init__(self, default_stream):
+        self._default_stream = default_stream
+
+    def _target(self):
+        target = getattr(_THREAD_STREAMS, "target", None)
+        if target is None:
+            return self._default_stream
+        return target
+
+    def write(self, s):
+        return self._target().write(s)
+
+    def flush(self):
+        target = self._target()
+        if hasattr(target, "flush"):
+            target.flush()
+
+    def isatty(self):
+        target = self._target()
+        if hasattr(target, "isatty"):
+            return target.isatty()
+        return False
+
+    @property
+    def encoding(self):
+        return getattr(self._target(), "encoding", None)
+
+
+def ensure_thread_output_proxies():
+    if not isinstance(sys.stdout, ThreadLocalStreamProxy):
+        sys.stdout = ThreadLocalStreamProxy(_ORIGINAL_STDOUT)
+    if not isinstance(sys.stderr, ThreadLocalStreamProxy):
+        sys.stderr = ThreadLocalStreamProxy(_ORIGINAL_STDERR)
+
+
+def base_stdout():
+    return _ORIGINAL_STDOUT
+
+
+@contextmanager
+def route_thread_output(stream):
+    ensure_thread_output_proxies()
+    prev = getattr(_THREAD_STREAMS, "target", None)
+    _THREAD_STREAMS.target = stream
+    try:
+        yield
+    finally:
+        if prev is None:
+            try:
+                delattr(_THREAD_STREAMS, "target")
+            except AttributeError:
+                pass
+        else:
+            _THREAD_STREAMS.target = prev
+
+
 def create_run(board_id: str, test_path: str, repo_root: str) -> RunPaths:
     test_name = Path(test_path).stem
     run_id = f"{datetime.now():%Y-%m-%d_%H-%M-%S}_{board_id}_{test_name}"
@@ -129,7 +193,7 @@ def create_run(board_id: str, test_path: str, repo_root: str) -> RunPaths:
 
 def open_tee(path: Path, mode: str, console: Optional[object] = None):
     if console is None:
-        console = sys.stdout
+        console = base_stdout()
     f = open(path, "w", encoding="utf-8")
     return Tee(f, console, mode), f
 
