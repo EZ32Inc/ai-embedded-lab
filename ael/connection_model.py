@@ -120,6 +120,28 @@ def _semantic_connection_warnings(
     return warnings
 
 
+def _semantic_validation_errors(
+    *,
+    test: Dict[str, Any],
+    observe_map: Dict[str, Any],
+    verification_views: Dict[str, Any],
+) -> List[str]:
+    errors: List[str] = []
+    pin_label = str((test or {}).get("pin") or "").strip()
+    if not pin_label:
+        return errors
+    resolved_pin = str((observe_map or {}).get(pin_label) or "").strip()
+    signal_view = verification_views.get("signal") if isinstance(verification_views, dict) else None
+    signal_target = ""
+    if isinstance(signal_view, dict):
+        signal_target = str(signal_view.get("resolved_to") or "").strip()
+    if not resolved_pin and pin_label == "sig":
+        resolved_pin = str((observe_map or {}).get("sig") or "").strip()
+    if not resolved_pin and not signal_target:
+        errors.append(f"signal test pin {pin_label} has no resolved observation target")
+    return errors
+
+
 def merge_wiring(defaults: Dict[str, Any] | Any, overrides: Dict[str, Any] | Any, required: List[str] | None = None) -> Dict[str, str]:
     merged: Dict[str, str] = {}
     for source in (defaults, overrides):
@@ -200,6 +222,13 @@ def normalize_connection_context(
     verification_views = _normalize_mapping(board.get("verification_views"))
     warnings = connection_warnings(board, test_raw, resolved_wiring)
     validation_errors = validate_connection_metadata(board, test_raw)
+    validation_errors.extend(
+        _semantic_validation_errors(
+            test=test_raw if isinstance(test_raw, dict) else {},
+            observe_map=observe_map,
+            verification_views=verification_views,
+        )
+    )
     return NormalizedConnectionContext(
         default_wiring=defaults,
         resolved_wiring=resolved_wiring,
@@ -461,3 +490,26 @@ def build_connection_digest(connection_setup: Dict[str, Any] | Any) -> List[str]
             digest.append(f"validation_error {item}")
 
     return digest
+
+
+def diff_connection_setups(
+    left: Dict[str, Any] | Any,
+    right: Dict[str, Any] | Any,
+    *,
+    left_label: str = "left",
+    right_label: str = "right",
+) -> Dict[str, Any]:
+    left_setup = left if isinstance(left, dict) else {}
+    right_setup = right if isinstance(right, dict) else {}
+    left_digest = build_connection_digest(left_setup)
+    right_digest = build_connection_digest(right_setup)
+    left_only = [item for item in left_digest if item not in right_digest]
+    right_only = [item for item in right_digest if item not in left_digest]
+    return {
+        "ok": True,
+        "left_label": left_label,
+        "right_label": right_label,
+        "left_only": left_only,
+        "right_only": right_only,
+        "same": not left_only and not right_only,
+    }

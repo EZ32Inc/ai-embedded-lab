@@ -94,3 +94,11 @@ def test_normalize_connection_context_warns_on_semantic_mapping_mismatch():
     )
     assert "verify wiring resolves to P0.0, but observe_map.sig resolves to P0.1" in ctx.warnings
     assert "test pin sig resolves to P0.1, but verification_views.signal resolves to P0.0" in ctx.warnings
+
+
+def test_normalize_connection_context_rejects_signal_test_without_resolved_observation_target():
+    ctx = normalize_connection_context(
+        {},
+        {"pin": "sig"},
+    )
+    assert "signal test pin sig has no resolved observation target" in ctx.validation_errors

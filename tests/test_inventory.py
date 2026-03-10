@@ -151,6 +151,37 @@ def test_inventory_describe_connection_cli_text_output():
     assert "ground_confirmed: True" in res.stdout
 
 
+def test_inventory_diff_connection_cli_text_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ael",
+            "inventory",
+            "diff-connection",
+            "--board",
+            "rp2040_pico",
+            "--test",
+            "tests/plans/gpio_signature.json",
+            "--against-board",
+            "stm32f103",
+            "--against-test",
+            "tests/plans/gpio_signature.json",
+            "--format",
+            "text",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "left_only:" in res.stdout
+    assert "right_only:" in res.stdout
+
+
 def test_describe_test_for_stm32f401_led_blink():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_led_blink.json", REPO_ROOT)
     assert payload["ok"] is True

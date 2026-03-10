@@ -1,6 +1,9 @@
 import json
 from pathlib import Path
 
+from ael.connection_model import normalize_connection_context
+from ael.pipeline import _simple_yaml_load
+
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
@@ -31,3 +34,17 @@ def test_probe_observed_live_boards_explicitly_include_ground_in_bench_connectio
     for board_name in ("rp2040_pico", "stm32f103", "stm32f401rct6"):
         text = (boards_dir / f"{board_name}.yaml").read_text(encoding="utf-8")
         assert "from: GND" in text, f"{board_name} missing explicit GND bench connection"
+
+
+def test_live_signal_boards_have_no_semantic_conn_a_warnings_for_gpio_signature():
+    test_payload = _load_json(REPO_ROOT / "tests" / "plans" / "gpio_signature.json")
+    for board_name in ("rp2040_pico", "stm32f103"):
+        raw = _simple_yaml_load(str(REPO_ROOT / "configs" / "boards" / f"{board_name}.yaml"))
+        board_cfg = raw.get("board", {}) if isinstance(raw, dict) else {}
+        ctx = normalize_connection_context(board_cfg, test_payload, required_wiring=["verify"])
+        semantic = [
+            item
+            for item in ctx.warnings
+            if "observe_map.sig resolves" in item or "verification view" in item or "test pin" in item
+        ]
+        assert semantic == [], f"{board_name} has semantic ConnA warning(s): {semantic}"

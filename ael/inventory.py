@@ -9,6 +9,7 @@ from ael import assets
 from ael.connection_model import (
     build_connection_rows,
     build_connection_setup,
+    diff_connection_setups,
     normalize_connection_context,
     render_connection_setup_text,
 )
@@ -475,6 +476,34 @@ def describe_connection(board_id: str, test_path: str, repo_root: Path | None = 
     }
 
 
+def diff_connection(
+    *,
+    board_id: str,
+    test_path: str,
+    against_board: str,
+    against_test: str,
+    repo_root: Path | None = None,
+) -> Dict[str, Any]:
+    left = describe_connection(board_id=board_id, test_path=test_path, repo_root=repo_root)
+    if not left.get("ok"):
+        return left
+    right = describe_connection(board_id=against_board, test_path=against_test, repo_root=repo_root)
+    if not right.get("ok"):
+        return right
+    diff = diff_connection_setups(
+        left.get("connection_setup"),
+        right.get("connection_setup"),
+        left_label=f"{board_id}:{test_path}",
+        right_label=f"{against_board}:{against_test}",
+    )
+    return {
+        "ok": True,
+        "left": {"board": left.get("board"), "test": left.get("test")},
+        "right": {"board": right.get("board"), "test": right.get("test")},
+        "diff": diff,
+    }
+
+
 def render_describe_text(payload: Dict[str, Any]) -> str:
     if not payload.get("ok"):
         return f"error: {payload.get('error')}\n"
@@ -548,6 +577,25 @@ def render_connection_text(payload: Dict[str, Any]) -> str:
             extra.append("required")
         suffix = f" ({', '.join(extra)})" if extra else ""
         lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_connection_diff_text(payload: Dict[str, Any]) -> str:
+    if not payload.get("ok"):
+        return f"error: {payload.get('error')}\n"
+    diff = payload.get("diff", {}) if isinstance(payload.get("diff"), dict) else {}
+    left = payload.get("left", {}) if isinstance(payload.get("left"), dict) else {}
+    right = payload.get("right", {}) if isinstance(payload.get("right"), dict) else {}
+    lines: List[str] = []
+    lines.append(f"left: {left.get('board')} ({(left.get('test') or {}).get('path')})")
+    lines.append(f"right: {right.get('board')} ({(right.get('test') or {}).get('path')})")
+    lines.append(f"same: {diff.get('same')}")
+    lines.append("left_only:")
+    for item in diff.get("left_only", []) or []:
+        lines.append(f"  - {item}")
+    lines.append("right_only:")
+    for item in diff.get("right_only", []) or []:
+        lines.append(f"  - {item}")
     return "\n".join(lines).rstrip() + "\n"
 
 

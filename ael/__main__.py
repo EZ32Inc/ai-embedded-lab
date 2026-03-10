@@ -165,6 +165,12 @@ def main():
     inventory_connection.add_argument("--board", required=True)
     inventory_connection.add_argument("--test", required=True)
     inventory_connection.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_connection_diff = inventory_sub.add_parser("diff-connection")
+    inventory_connection_diff.add_argument("--board", required=True)
+    inventory_connection_diff.add_argument("--test", required=True)
+    inventory_connection_diff.add_argument("--against-board", required=True)
+    inventory_connection_diff.add_argument("--against-test", required=True)
+    inventory_connection_diff.add_argument("--format", choices=["json", "text"], default="json")
 
     connection_p = sub.add_parser("connection")
     connection_sub = connection_p.add_subparsers(dest="connection_cmd", required=True)
@@ -483,6 +489,19 @@ def main():
             payload = inventory.describe_connection(board_id=args.board, test_path=args.test, repo_root=Path(repo_root))
             if args.format == "text":
                 print(inventory.render_connection_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
+        if args.inventory_cmd == "diff-connection":
+            payload = inventory.diff_connection(
+                board_id=args.board,
+                test_path=args.test,
+                against_board=args.against_board,
+                against_test=args.against_test,
+                repo_root=Path(repo_root),
+            )
+            if args.format == "text":
+                print(inventory.render_connection_diff_text(payload), end="")
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)

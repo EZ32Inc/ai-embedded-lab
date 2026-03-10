@@ -35,6 +35,18 @@ def test_connection_doctor_for_stm32_path_surfaces_duplicate_observation_warning
     assert any(item["name"] == "semantic_mapping_consistency" and item["ok"] is True for item in payload["consistency_checks"])
 
 
+def test_connection_doctor_for_rp2040_path_reports_clean_semantics():
+    payload = connection_doctor.doctor(
+        board_id="rp2040_pico",
+        test_path="tests/plans/gpio_signature.json",
+        repo_root=REPO_ROOT,
+    )
+    assert payload["ok"] is True
+    assert payload["validation_errors"] == []
+    assert not any("observe_map.sig resolves" in item for item in payload["warnings"])
+    assert any(item["name"] == "semantic_mapping_consistency" and item["ok"] is True for item in payload["consistency_checks"])
+
+
 def test_connection_doctor_cli_json_output():
     env = os.environ.copy()
     env["PYTHONPATH"] = "."

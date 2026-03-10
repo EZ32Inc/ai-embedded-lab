@@ -13,7 +13,7 @@ board:
   default_wiring:
     swd: "P3"
     reset: "P2.0"
-    verify: "PA0"
+    verify: "P0.0"
   verification_views:
     signal:
       pin: sig
