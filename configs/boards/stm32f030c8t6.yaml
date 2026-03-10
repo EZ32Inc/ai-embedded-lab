@@ -1,0 +1,61 @@
+board:
+  name: STM32F030C8T6
+  target: stm32f030c8t6
+  instrument_instance: esp32jtag_stm32_golden
+  clock_hz: 8000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f030c8t6
+    artifact_stem: stm32f030_app
+  firmware:
+    description: Toggle PA2-PA4 fast, blink PC13 at 0.5 s intervals (provisional bring-up pattern)
+  flash:
+    speed_khz: 1000
+    reset_strategy: connect_under_reset
+    post_load_settle_s: 5.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "monitor a"
+      - "attach {target_id}"
+      - "load"
+      - "attach {target_id}"
+      - "detach"
+  observe_map:
+    sig: P0.0
+    pa4: P0.0
+    pa3: P0.1
+    pa2: P0.2
+    pc13: P0.3
+    led: P0.3
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Provisional GPIO signature capture on PA4
+    led:
+      pin: led
+      resolved_to: P0.3
+      description: Provisional machine-observed PC13 blink
+  bench_connections:
+    - from: PA4
+      to: P0.0
+    - from: PA3
+      to: P0.1
+    - from: PA2
+      to: P0.2
+    - from: PC13
+      to: P0.3
+    - from: PC13
+      to: LED
+    - from: GND
+      to: probe GND
+  safe_pins:
+    - PA2
+    - PA3
+    - PA4
+    - PC13
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "P0.0"
