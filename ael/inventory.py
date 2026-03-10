@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from datetime import datetime, timezone
 from pathlib import Path
-from collections import Counter
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
+from ael.connection_model import build_connection_rows, build_connection_setup, normalize_connection_context
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
@@ -138,68 +138,6 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
     }
 
 
-def _build_connections(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
-    bench = payload.get("bench_setup", {}) if isinstance(payload.get("bench_setup"), dict) else {}
-    conns: List[Dict[str, Any]] = []
-    wiring = board_cfg.get("default_wiring", {}) if isinstance(board_cfg.get("default_wiring"), dict) else {}
-    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg.get("observe_map"), dict) else {}
-    bench_connections = board_cfg.get("bench_connections", []) if isinstance(board_cfg.get("bench_connections"), list) else []
-
-    if isinstance(payload.get("instrument"), dict):
-        for item in bench.get("dut_to_instrument", []) if isinstance(bench.get("dut_to_instrument"), list) else []:
-            if not isinstance(item, dict):
-                continue
-            conn = {
-                "from": item.get("dut_gpio"),
-                "to": f"inst GPIO{item.get('inst_gpio')}",
-                "expect": item.get("expect"),
-            }
-            if item.get("freq_hz") is not None:
-                conn["freq_hz"] = item.get("freq_hz")
-            conns.append(conn)
-        for item in bench.get("dut_to_instrument_analog", []) if isinstance(bench.get("dut_to_instrument_analog"), list) else []:
-            if not isinstance(item, dict):
-                continue
-            conn = {
-                "from": item.get("dut_signal"),
-                "to": f"inst ADC GPIO{item.get('inst_adc_gpio')}",
-                "expect_v_min": item.get("expect_v_min"),
-                "expect_v_max": item.get("expect_v_max"),
-            }
-            if item.get("avg") is not None:
-                conn["avg"] = item.get("avg")
-            conns.append(conn)
-        if bench.get("ground_required"):
-            conns.append({"from": "GND", "to": "inst GND", "required": True})
-        return conns
-
-    if wiring.get("swd"):
-        conns.append({"from": "SWD", "to": wiring.get("swd")})
-    if "reset" in wiring:
-        conns.append({"from": "RESET", "to": wiring.get("reset")})
-    for item in bench_connections:
-        if not isinstance(item, dict):
-            continue
-        src = item.get("from")
-        dst = item.get("to")
-        if src and dst:
-            conns.append({"from": src, "to": dst})
-    if conns and len(conns) > 2:
-        return conns
-    pin = payload.get("pin")
-    if pin:
-        resolved = observe_map.get(str(pin), wiring.get("verify"))
-        signal_name = str(pin)
-        observed_label = signal_name
-        if signal_name == "sig":
-            for key, value in observe_map.items():
-                if key != "sig" and value == observe_map.get("sig"):
-                    observed_label = key.upper() if key.startswith("pa") or key.startswith("pb") or key.startswith("pc") else key
-                    break
-        conns.append({"from": observed_label, "to": resolved})
-    return conns
-
-
 def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     checks: List[Dict[str, Any]] = []
     if payload.get("pin"):
@@ -245,25 +183,6 @@ def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -
             }
         )
     return checks
-
-
-def _connection_warnings(board_cfg: Dict[str, Any]) -> List[str]:
-    bench_connections = board_cfg.get("bench_connections", []) if isinstance(board_cfg.get("bench_connections"), list) else []
-    from_counts = Counter()
-    for item in bench_connections:
-        if not isinstance(item, dict):
-            continue
-        src = str(item.get("from") or "").strip()
-        if src:
-            from_counts[src] += 1
-    warnings: List[str] = []
-    for src, count in sorted(from_counts.items()):
-        if count > 1:
-            warnings.append(
-                f"warning: MCU pin {src} is connected to {count} observation points; verify signal loading, shared ground, and whether the instrument supports parallel observation on that net."
-            )
-    return warnings
-
 
 def _merge_tests(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     merged: Dict[Tuple[str, str], Dict[str, Any]] = {}
@@ -497,8 +416,11 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
 
     payload = _load_json(path)
     board_cfg = _load_board_cfg(root, board_id)
-    wiring = board_cfg.get("default_wiring", {}) if isinstance(board_cfg.get("default_wiring"), dict) else {}
-    observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg.get("observe_map"), dict) else {}
+    connection_ctx = normalize_connection_context(
+        board_cfg,
+        payload,
+        required_wiring=["swd", "reset", "verify"],
+    )
     result = {
         "ok": True,
         "board": board_id,
@@ -508,17 +430,18 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "validation_style": _infer_validation_style(payload),
         },
         "probe_or_instrument": _resolve_probe_or_instrument(root, board_id, payload),
-        "connections": _build_connections(board_cfg, payload),
+        "connections": build_connection_rows(connection_ctx, payload),
         "expected_checks": _build_expected_checks(board_cfg, payload),
         "board_context": {
             "target": board_cfg.get("target"),
             "clock_hz": board_cfg.get("clock_hz"),
-            "observe_map": observe_map,
-            "verification_views": (board_cfg.get("verification_views", {}) if isinstance(board_cfg.get("verification_views"), dict) else {}),
-            "default_wiring": wiring,
+            "observe_map": dict(connection_ctx.observe_map),
+            "verification_views": dict(connection_ctx.verification_views),
+            "default_wiring": dict(connection_ctx.default_wiring),
         },
+        "connection_setup": build_connection_setup(connection_ctx),
         "notes": payload.get("notes"),
-        "warnings": _connection_warnings(board_cfg),
+        "warnings": [f"warning: {item}" for item in connection_ctx.warnings],
     }
     return result
 

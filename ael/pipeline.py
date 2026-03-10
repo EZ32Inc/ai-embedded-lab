@@ -19,6 +19,7 @@ from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
 from ael.config_resolver import resolve_probe_instance
+from ael.connection_model import build_connection_setup, wiring_assumption_lines
 from ael.probe_binding import load_probe_binding
 
 _REPO_ROOT = ael_paths.repo_root()
@@ -310,31 +311,6 @@ def _key_passed_checks(evidence_payload):
     return checks
 
 
-def _wiring_assumption_lines(test_raw):
-    if not isinstance(test_raw, dict):
-        return []
-    out = []
-    connections = strategy_resolver.resolve_bench_setup(test_raw)
-    for item in connections.get("dut_to_instrument", []) if isinstance(connections.get("dut_to_instrument"), list) else []:
-        if not isinstance(item, dict):
-            continue
-        line = f"{item.get('dut_gpio')} -> GPIO{item.get('inst_gpio')} {item.get('expect')}"
-        freq_hz = item.get("freq_hz")
-        if freq_hz:
-            line += f" @{freq_hz}Hz"
-        out.append(line)
-    for item in connections.get("dut_to_instrument_analog", []) if isinstance(connections.get("dut_to_instrument_analog"), list) else []:
-        if not isinstance(item, dict):
-            continue
-        out.append(
-            f"{item.get('dut_signal')} -> ADC GPIO{item.get('inst_adc_gpio')} "
-            f"{item.get('expect_v_min')}V..{item.get('expect_v_max')}V"
-        )
-    if connections.get("ground_required"):
-        out.append("GND -> GND")
-    return out
-
-
 def _build_validation_summary(
     *,
     run_id,
@@ -356,6 +332,7 @@ def _build_validation_summary(
     probe_communication,
     probe_capability_surfaces,
     selected_ssid,
+    connection_setup,
 ):
     summary = {
         "board": board_cfg.get("name"),
@@ -385,6 +362,7 @@ def _build_validation_summary(
             "uart_observe": (result.get("json") or {}).get("uart_observe"),
         },
         "cleanup_items": [],
+        "connection_setup": dict(connection_setup or {}),
     }
     if selected_ssid:
         summary["selected_ap_ssid"] = selected_ssid
@@ -409,6 +387,7 @@ def _build_current_setup(
     probe_communication,
     probe_capability_surfaces,
     selected_ssid,
+    connection_setup,
 ):
     setup = {
         "serial_or_flash_port": flash_info.get("port") or None,
@@ -427,6 +406,7 @@ def _build_current_setup(
             "host": instrument_host or None,
             "port": instrument_port if instrument_port is not None else None,
         },
+        "connection_setup": dict(connection_setup or {}),
     }
     if selected_ssid:
         setup["selected_ap_ssid"] = selected_ssid
@@ -451,7 +431,7 @@ def _build_last_known_good_setup(
     probe_communication,
     probe_capability_surfaces,
     selected_ssid,
-    test_raw,
+    connection_setup,
     result,
 ):
     setup = {
@@ -469,8 +449,9 @@ def _build_last_known_good_setup(
         "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
         "run_id": run_id,
         "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
+        "connection_setup": dict(connection_setup or {}),
     }
-    wiring = _wiring_assumption_lines(test_raw)
+    wiring = (connection_setup or {}).get("wiring_assumptions") if isinstance(connection_setup, dict) else None
     if wiring:
         setup["wiring_assumptions"] = wiring
     if selected_ssid:
@@ -550,6 +531,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if probe_endpoint.get("host") and probe_endpoint.get("port") is not None:
         setup_line += f" probe_endpoint={probe_endpoint.get('host')}:{probe_endpoint.get('port')}"
     print(setup_line)
+    conn = current_setup.get("connection_setup", {}) if isinstance(current_setup.get("connection_setup"), dict) else {}
+    if conn.get("warnings"):
+        print(f"Summary: connection_warnings={'; '.join(conn.get('warnings', []))}")
     print(
         "LKG: "
         f"board={last_known_good.get('board')} test={last_known_good.get('test')} "
@@ -577,6 +561,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
             print(f"LKG: probe_surfaces={surfaces}")
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
+    conn = last_known_good.get("connection_setup", {}) if isinstance(last_known_good.get("connection_setup"), dict) else {}
+    if conn.get("warnings"):
+        print(f"LKG: connection_warnings={'; '.join(conn.get('warnings', []))}")
     print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")
 
 
@@ -729,6 +716,8 @@ def run_pipeline(
     instrument_port = resolved.instrument_port
     instrument_communication = resolved.instrument_communication
     instrument_capability_surfaces = resolved.instrument_capability_surfaces
+    conn_setup = build_connection_setup(resolved.connection_ctx)
+    conn_setup["wiring_assumptions"] = wiring_assumption_lines(resolved.connection_ctx)
     probe_instance_id = binding.instance_id
     probe_type = binding.type_id
     probe_host = binding.endpoint_host or probe_cfg.get("ip")
@@ -791,6 +780,7 @@ def run_pipeline(
             "probe_config": str(probe_path) if probe_path else None,
             "test_config": str(test_path),
         },
+        "connection": dict(conn_setup),
     }
 
     workflow_archive.append_event(
@@ -1299,6 +1289,7 @@ def run_pipeline(
             probe_communication=probe_communication,
             probe_capability_surfaces=probe_capability_surfaces,
             selected_ssid=selected_ssid,
+            connection_setup=conn_setup,
         )
         last_known_good_setup = _build_last_known_good_setup(
             run_id=run_paths.run_id,
@@ -1317,7 +1308,7 @@ def run_pipeline(
             probe_communication=probe_communication,
             probe_capability_surfaces=probe_capability_surfaces,
             selected_ssid=selected_ssid,
-            test_raw=test_raw,
+            connection_setup=conn_setup,
             result=result,
         )
         current_setup = _build_current_setup(
@@ -1334,6 +1325,7 @@ def run_pipeline(
             probe_communication=probe_communication,
             probe_capability_surfaces=probe_capability_surfaces,
             selected_ssid=selected_ssid,
+            connection_setup=conn_setup,
         )
         result["validation_summary"] = validation_summary
         result["last_known_good_setup"] = last_known_good_setup

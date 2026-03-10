@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from ael.connection_model import build_connection_setup
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.instrument_metadata import resolve_capability_surface
@@ -152,7 +153,8 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "board_clock_hz": board_cfg.get("clock_hz"),
             "flash_method": flash_cfg.get("method") if isinstance(flash_cfg, dict) else None,
             "wiring": resolved.wiring_cfg,
-            "verification_views": (board_cfg.get("verification_views", {}) if isinstance(board_cfg.get("verification_views"), dict) else {}),
+            "verification_views": dict(resolved.connection_ctx.verification_views),
+            "connection_setup": build_connection_setup(resolved.connection_ctx),
             "check_model": check_model,
             "capability_surface_plan": capability_surface_plan,
         },
@@ -210,6 +212,7 @@ def _preflight_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "does_not_confirm": does_not_confirm,
         "reason_if_skipped": "pre-flight disabled by configuration" if not enabled else None,
         "wiring_assumptions": resolved.wiring_cfg,
+        "connection_setup": build_connection_setup(resolved.connection_ctx),
     }
 
 
@@ -230,6 +233,7 @@ def _run_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "assumptions_in_effect": {
             "wiring": ctx["resolved"].wiring_cfg,
             "firmware_project": (board_cfg.get("build") or {}).get("project_dir"),
+            "connection_setup": build_connection_setup(ctx["resolved"].connection_ctx),
         },
     }
 

@@ -1,4 +1,5 @@
 from ael import pipeline
+from ael.connection_model import build_connection_setup, normalize_connection_context, wiring_assumption_lines
 
 
 def test_normalize_until_stage_aliases():
@@ -85,6 +86,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
             "ground_required": True,
         }
     }
+    conn_setup = build_connection_setup(normalize_connection_context({}, test_raw))
+    conn_setup["wiring_assumptions"] = wiring_assumption_lines(normalize_connection_context({}, test_raw))
 
     summary = pipeline._build_validation_summary(
         run_id="run1",
@@ -106,6 +109,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
+        connection_setup=conn_setup,
     )
     lkg = pipeline._build_last_known_good_setup(
         run_id="run1",
@@ -124,7 +128,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
-        test_raw=test_raw,
+        connection_setup=conn_setup,
         result=result,
     )
     current_setup = pipeline._build_current_setup(
@@ -141,6 +145,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
+        connection_setup=conn_setup,
     )
 
     assert summary["board"] == "ESP32-C6 DevKit"
@@ -157,6 +162,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
+    assert summary["connection_setup"]["bench_setup"]["ground_required"] is True
 
     assert lkg["board"] == "ESP32-C6 DevKit"
     assert lkg["port"] == "/dev/ttyACM0"
@@ -181,6 +187,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
+    assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True
 
 
 def test_print_success_summary_includes_capability_surface_lines(capsys):

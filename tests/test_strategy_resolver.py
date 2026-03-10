@@ -26,6 +26,8 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(resolved.wiring_cfg.get("swd"), "P3")
         self.assertEqual(resolved.wiring_cfg.get("verify"), "P0.0")
         self.assertEqual(resolved.wiring_cfg.get("reset"), "UNKNOWN")
+        self.assertEqual(resolved.connection_ctx.resolved_wiring.get("verify"), "P0.0")
+        self.assertIn("missing coarse wiring: reset", resolved.connection_ctx.warnings)
         self.assertEqual(resolved.board_cfg.get("build", {}).get("type"), "idf")
         self.assertEqual(resolved.instrument_communication, {})
         self.assertEqual(resolved.instrument_capability_surfaces, {})

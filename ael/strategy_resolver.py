@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ael.adapters import build_artifacts
+from ael.connection_model import NormalizedConnectionContext, normalize_connection_context, resolve_bench_setup
 
 
 @dataclass(frozen=True)
@@ -13,6 +14,7 @@ class ResolvedRunStrategy:
     probe_cfg: Dict[str, Any]
     board_cfg: Dict[str, Any]
     wiring_cfg: Dict[str, Any]
+    connection_ctx: NormalizedConnectionContext
     timeout_s: Optional[float]
     test_name: Optional[str]
     instrument_id: Optional[str]
@@ -54,34 +56,6 @@ def resolve_run_timeout_s(test_raw: Dict[str, Any] | Any, request_timeout_s: Opt
             except Exception:
                 return None
     return None
-
-
-def _parse_wiring(s: Optional[str]) -> Dict[str, str]:
-    wiring: Dict[str, str] = {}
-    if not s:
-        return wiring
-    parts = [p.strip() for p in str(s).split() if p.strip()]
-    for part in parts:
-        if "=" not in part:
-            continue
-        k, v = part.split("=", 1)
-        wiring[k.strip()] = v.strip()
-    return wiring
-
-
-def _merge_wiring(defaults: Dict[str, Any] | Any, overrides: Dict[str, Any] | Any) -> Dict[str, Any]:
-    merged = dict(defaults or {})
-    merged.update(overrides or {})
-    return merged
-
-
-def _require_wiring(merged: Dict[str, Any], required: list[str]) -> Dict[str, Any]:
-    missing = [k for k in required if k not in merged or not merged[k]]
-    if missing:
-        for k in missing:
-            merged[k] = "UNKNOWN"
-    return merged
-
 
 def _normalize_communication_metadata(payload: Dict[str, Any] | Any) -> Dict[str, Any]:
     if isinstance(payload, dict) and isinstance(payload.get("communication"), dict):
@@ -143,21 +117,6 @@ def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[s
         tcp_cfg = {"host": host, "port": port}
 
     return instrument_id, tcp_cfg, manifest
-
-
-def resolve_bench_setup(test_raw: Dict[str, Any] | Any) -> Dict[str, Any]:
-    if not isinstance(test_raw, dict):
-        return {}
-    bench_setup = test_raw.get("bench_setup")
-    if isinstance(bench_setup, dict) and bench_setup:
-        return bench_setup
-    legacy = test_raw.get("connections", {})
-    if isinstance(legacy, dict):
-        return legacy
-    if isinstance(bench_setup, dict):
-        return bench_setup
-    return {}
-
 
 def instrument_selftest_requested(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any) -> bool:
     if isinstance(test_raw, dict):
@@ -241,9 +200,13 @@ def resolve_run_strategy(
         build_cfg["project_dir"] = str(project_override)
         board_cfg["build"] = build_cfg
 
-    wiring_overrides = _parse_wiring(wiring)
-    wiring_cfg = _merge_wiring(board_cfg.get("default_wiring", {}), wiring_overrides)
-    wiring_cfg = _require_wiring(wiring_cfg, ["swd", "reset", "verify"])
+    connection_ctx = normalize_connection_context(
+        board_cfg,
+        test_raw,
+        wiring=wiring,
+        required_wiring=["swd", "reset", "verify"],
+    )
+    wiring_cfg = dict(connection_ctx.resolved_wiring)
     timeout_s = resolve_run_timeout_s(test_raw, request_timeout_s=request_timeout_s)
 
     test_name = test_raw.get("name") if isinstance(test_raw, dict) else None
@@ -254,6 +217,7 @@ def resolve_run_strategy(
         probe_cfg=probe_cfg,
         board_cfg=board_cfg,
         wiring_cfg=wiring_cfg,
+        connection_ctx=connection_ctx,
         timeout_s=timeout_s,
         test_name=test_name,
         instrument_id=instrument_id,
