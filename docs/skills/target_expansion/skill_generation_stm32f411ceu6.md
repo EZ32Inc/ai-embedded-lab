@@ -1,48 +1,65 @@
-# STM32F411CEU6 GPIO Golden Target Generation
+# STM32F411CEU6 official-source case study
 
-Current formal method:
-- fetch ST's official `STM32CubeF4` source with `tools/fetch_stm32cubef4.sh`
-- use the repo-local cache at `third_party/cache/STM32CubeF4`
-- copy the device support files from ST into `firmware/targets/stm32f411ceu6/vendor/`
-- keep AEL-owned glue in:
-  - `firmware/targets/stm32f411ceu6/main.c`
-  - `firmware/targets/stm32f411ceu6/Makefile`
-  - `firmware/targets/stm32f411ceu6/stm32f411.ld`
-  - `firmware/targets/stm32f411ceu6/provenance.md`
+This file is a case-study example, not the primary rule document.
 
-Official ST source used:
-- startup:
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/gcc/startup_stm32f411xe.s`
-- system file:
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/system_stm32f4xx.c`
-- device headers:
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f4xx.h`
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Include/stm32f411xe.h`
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Include/system_stm32f4xx.h`
-- memory template reference:
-  - `Drivers/CMSIS/Device/ST/STM32F4xx/Source/Templates/iar/linker/stm32f411xe_flash.icf`
+Primary rules now live in:
+- [dut_target_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/dut_target_generation_policy_v0_1.md)
+- [stm32_official_source_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32_official_source_generation_policy_v0_1.md)
+- [stm32_generation_catalog_v0_1.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32_generation_catalog_v0_1.json)
 
-Board-level AEL assumptions kept separate:
-- probe/instrument: `esp32jtag_stm32_golden`
-- primary verify signal: `PA4 -> P0.0`
-- auxiliary signals: `PA3 -> P0.1`, `PA2 -> P0.2`
-- provisional LED assumption: `PC13 -> P0.3` and `PC13 -> LED`
+## Why this target matters
 
-Generation rules:
-- do not hand-define raw peripheral base addresses when ST CMSIS headers already provide them
-- do not copy ST BSP board-wiring assumptions into AEL
-- keep copied ST files under `vendor/`
-- record exact upstream revision and copied paths in `provenance.md`
+`stm32f411ceu6` is the first STM32 target in AEL rebuilt from official ST
+source support rather than from a purely provisional template-derived target.
 
-Validation for this target:
-- build with `make -C firmware/targets/stm32f411ceu6 clean all`
-- validate plan stage with:
-  - `python3 -m ael inventory describe-test --board stm32f411ceu6 --test tests/plans/gpio_signature.json`
-  - `python3 -m ael inventory describe-connection --board stm32f411ceu6 --test tests/plans/gpio_signature.json`
-  - `python3 -m ael explain-stage --board stm32f411ceu6 --test tests/plans/gpio_signature.json --stage plan`
+## Source basis used
 
-What still needs real hardware confirmation:
-- package pin exposure for `PA2`, `PA3`, `PA4`, `PC13`
-- whether the actual board LED is on `PC13`
-- SWD wiring on the intended bench slot
-- full flash and verify behavior on real hardware
+- fetched ST STM32Cube source with:
+  - `tools/fetch_stm32cubef4.sh`
+- source cache:
+  - `third_party/cache/STM32CubeF4`
+- copied official device support into:
+  - `firmware/targets/stm32f411ceu6/vendor/`
+
+Copied ST source classes:
+- GCC startup file
+- family system file
+- STM32F411 device headers
+- memory-template basis for the linker script
+
+## AEL-owned vs copied files
+
+Copied ST files:
+- `vendor/st/startup_stm32f411xe.s`
+- `vendor/st/system_stm32f4xx.c`
+- `vendor/include/st/stm32f4xx.h`
+- `vendor/include/st/stm32f411xe.h`
+- `vendor/include/st/system_stm32f4xx.h`
+
+AEL-owned files:
+- `main.c`
+- `Makefile`
+- `stm32f411.ld`
+- `provenance.md`
+
+## What this case study proves
+
+- the STM32Cube cache workflow is sufficient for target-local vendor extraction
+- an AEL target can use official STM32 startup/system/CMSIS support without
+  adopting ST board BSP assumptions
+- provenance can be recorded locally in a way that keeps the cache itself
+  gitignored
+
+## Validation completed
+
+- target build passed
+- AEL plan stage passed for:
+  - `inventory describe-test`
+  - `inventory describe-connection`
+  - `explain-stage --stage plan`
+
+## Remaining caveats
+
+- board-level GPIO and LED mapping remain provisional
+- no hardware flash/verify result has been claimed yet
+- `PC13` dual observation mapping is still a known bench assumption to review

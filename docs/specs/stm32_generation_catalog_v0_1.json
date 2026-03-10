@@ -1,0 +1,203 @@
+{
+  "version": "v0.1",
+  "enums": {
+    "family": [
+      "stm32f0",
+      "stm32f1",
+      "stm32f4",
+      "stm32f7",
+      "stm32g4"
+    ],
+    "generation_class": [
+      "verified_local_baseline",
+      "official_source_based",
+      "provisional_template_based"
+    ],
+    "validation_status": [
+      "hardware_verified_repeated",
+      "hardware_verified_single",
+      "build_and_plan_verified",
+      "plan_verified_only"
+    ],
+    "baseline_recommendation": [
+      "recommended",
+      "candidate",
+      "not_recommended_yet"
+    ],
+    "pilot_candidate_category": [
+      "process_hardening",
+      "cross_family_proof"
+    ],
+    "pilot_recommendation_level": [
+      "primary",
+      "secondary",
+      "not_selected"
+    ]
+  },
+  "targets": [
+    {
+      "board_id": "stm32f103",
+      "target_id": "stm32f103c8t6",
+      "display_name": "STM32F103 Bluepill",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_repeated",
+      "baseline_recommendation": "recommended",
+      "notes": [
+        "Current golden GPIO baseline in default verification.",
+        "Known stable BMDA attach-load-attach-detach flash sequence.",
+        "Board id is stm32f103 even though the MCU is stm32f103c8t6."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Already established as a local baseline; less useful than F401 for a same-family F4 comparison with F411."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage beyond existing F1 baseline."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f401rct6",
+      "target_id": "stm32f401rct6",
+      "display_name": "STM32F401RCT6",
+      "family": "stm32f4",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_repeated",
+      "baseline_recommendation": "recommended",
+      "notes": [
+        "Hardware-validated repeated golden GPIO baseline.",
+        "Closest current local baseline to stm32f411ceu6 in family and core class.",
+        "Still uses provisional AEL-owned startup/system code rather than official-source support."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "primary",
+          "reason": "Lowest-risk second pilot because it shares the STM32F4 family with stm32f411ceu6 and already has repeated hardware validation."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not expand the process beyond the STM32F4 family."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f411ceu6",
+      "target_id": "stm32f411ceu6",
+      "display_name": "STM32F411CEU6",
+      "family": "stm32f4",
+      "generation_class": "official_source_based",
+      "validation_status": "build_and_plan_verified",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "First official-source-based STM32 pilot in AEL.",
+        "Uses ST STM32CubeF4 startup/system/CMSIS support with AEL-owned main and linker script.",
+        "Board-level PC13 mapping remains provisional and plan-stage only."
+      ],
+      "official_source": {
+        "repo": "https://github.com/STMicroelectronics/STM32CubeF4.git",
+        "provenance_path": "firmware/targets/stm32f411ceu6/provenance.md"
+      },
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Already used as the first official-source pilot."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Already covers the initial STM32F4 official-source proof."
+        }
+      }
+    },
+    {
+      "board_id": "stm32g431cbu6",
+      "target_id": "stm32g431cbu6",
+      "display_name": "STM32G431CBU6",
+      "family": "stm32g4",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Current target is provisional and template-derived.",
+        "No hardware validation yet.",
+        "Strong candidate to prove the method on a non-F family while staying on Cortex-M4."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "secondary",
+          "reason": "Higher risk than F401 because it changes family and register support model at the same time."
+        },
+        "cross_family_proof": {
+          "recommendation": "primary",
+          "reason": "Best current candidate for broader proof because it moves from F4 to G4 without jumping to a much heavier MCU class."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f756bgt6",
+      "target_id": "stm32f756bgt6",
+      "display_name": "STM32F756BGT6",
+      "family": "stm32f7",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Current target is provisional and template-derived.",
+        "Cortex-M7 and broader device complexity make it a later pilot rather than the next one."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Too large a jump for process hardening."
+        },
+        "cross_family_proof": {
+          "recommendation": "secondary",
+          "reason": "Useful eventually, but less controlled than STM32G431 for the next family expansion."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f030c8t6",
+      "target_id": "stm32f030c8t6",
+      "display_name": "STM32F030C8T6",
+      "family": "stm32f0",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Current target is provisional and template-derived.",
+        "Moves to Cortex-M0 and a different low-level family model, so it is better after the method is hardened further."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Too much architectural change for the immediate next pilot."
+        },
+        "cross_family_proof": {
+          "recommendation": "secondary",
+          "reason": "Broadens family coverage, but M0 support is a sharper change than STM32G431."
+        }
+      }
+    }
+  ],
+  "second_pilot_recommendation": {
+    "process_hardening_candidate": {
+      "board_id": "stm32f401rct6",
+      "why": [
+        "Same STM32F4 family as the first official-source pilot.",
+        "Already repeated-hardware-verified in AEL.",
+        "Best target for proving the workflow can replace a known-good provisional/local baseline without changing too many variables."
+      ]
+    },
+    "cross_family_proof_candidate": {
+      "board_id": "stm32g431cbu6",
+      "why": [
+        "Expands the method to STM32G4 rather than staying in STM32F4.",
+        "Keeps the jump smaller than STM32F756BGT6 by staying on Cortex-M4.",
+        "Better next-family proof candidate than F7 or F0 at the current maturity level."
+      ]
+    }
+  }
+}
