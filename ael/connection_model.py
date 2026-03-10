@@ -101,11 +101,8 @@ def connection_warnings(
     bench_setup = resolve_bench_setup(test)
     if isinstance(test.get("instrument"), dict) and not bench_setup:
         warnings.append("instrument test has no bench_setup or legacy connections block")
-    if bench_setup.get("ground_required") and not any(
-        str(item.get("from") or "").strip().upper() == "GND"
-        for item in bench_connections
-    ):
-        warnings.append("bench_setup requires ground, but board bench_connections do not explicitly mention GND")
+    if bench_setup.get("ground_required") and bench_setup.get("ground_confirmed") is not True:
+        warnings.append("bench_setup requires ground, but ground_confirmed is not true")
     if str((resolved_wiring or {}).get("verify") or "").strip() == "UNKNOWN":
         observe_map = _normalize_mapping(board.get("observe_map"))
         if not observe_map:

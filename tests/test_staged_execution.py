@@ -84,6 +84,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
                 {"dut_signal": "3V3", "inst_adc_gpio": 4, "expect_v_min": 2.8, "expect_v_max": 3.45}
             ],
             "ground_required": True,
+            "ground_confirmed": True,
         }
     }
     conn_setup = build_connection_setup(normalize_connection_context({}, test_raw))
@@ -163,6 +164,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
     assert summary["connection_setup"]["bench_setup"]["ground_required"] is True
+    assert summary["connection_setup"]["bench_setup"]["ground_confirmed"] is True
 
     assert lkg["board"] == "ESP32-C6 DevKit"
     assert lkg["port"] == "/dev/ttyACM0"

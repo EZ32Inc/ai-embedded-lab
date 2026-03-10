@@ -61,7 +61,8 @@
         "avg": 32
       }
     ],
-    "ground_required": true
+    "ground_required": true,
+    "ground_confirmed": true
   },
   "measurement": {
     "duration_ms": 500
