@@ -30,6 +30,7 @@ from ael import hw_check
 from ael import la_check
 from ael import inventory
 from ael import instrument_doctor
+from ael import connection_doctor
 from ael import stage_explain
 
 
@@ -164,6 +165,13 @@ def main():
     inventory_connection.add_argument("--board", required=True)
     inventory_connection.add_argument("--test", required=True)
     inventory_connection.add_argument("--format", choices=["json", "text"], default="json")
+
+    connection_p = sub.add_parser("connection")
+    connection_sub = connection_p.add_subparsers(dest="connection_cmd", required=True)
+    connection_doctor_p = connection_sub.add_parser("doctor")
+    connection_doctor_p.add_argument("--board", required=True)
+    connection_doctor_p.add_argument("--test", required=True)
+    connection_doctor_p.add_argument("--format", choices=["json", "text"], default="json")
 
     explain_p = sub.add_parser("explain-stage")
     explain_p.add_argument("--board", required=True)
@@ -485,6 +493,23 @@ def main():
         else:
             print(json.dumps(payload, indent=2, sort_keys=True))
         sys.exit(0 if payload.get("ok") else 1)
+    if args.cmd == "connection":
+        if args.connection_cmd == "doctor":
+            payload = connection_doctor.doctor(board_id=args.board, test_path=args.test, repo_root=Path(repo_root))
+            if args.format == "text":
+                print(inventory.render_connection_text(payload), end="")
+                checks = payload.get("consistency_checks") or []
+                if checks:
+                    print("consistency_checks:")
+                    for item in checks:
+                        print(f"  - {item.get('name')}: ok={item.get('ok')} detail={item.get('detail')}")
+                if payload.get("validation_errors"):
+                    print("validation_errors:")
+                    for item in payload.get("validation_errors") or []:
+                        print(f"  - {item}")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "workflow-archive":
         if args.archive_cmd == "show":
             records = workflow_archive.read_events(limit=args.limit, run_id=args.run_id, source=args.source)

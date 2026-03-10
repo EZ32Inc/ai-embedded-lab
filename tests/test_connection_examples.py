@@ -24,3 +24,10 @@ def test_meter_backed_live_plans_explicitly_confirm_ground_when_required():
         assert isinstance(bench_setup, dict), f"meter plan missing bench_setup: {path.name}"
         assert bench_setup.get("ground_required") is True, f"meter plan missing ground_required: {path.name}"
         assert bench_setup.get("ground_confirmed") is True, f"meter plan missing ground_confirmed: {path.name}"
+
+
+def test_probe_observed_live_boards_explicitly_include_ground_in_bench_connections():
+    boards_dir = REPO_ROOT / "configs" / "boards"
+    for board_name in ("rp2040_pico", "stm32f103", "stm32f401rct6"):
+        text = (boards_dir / f"{board_name}.yaml").read_text(encoding="utf-8")
+        assert "from: GND" in text, f"{board_name} missing explicit GND bench connection"

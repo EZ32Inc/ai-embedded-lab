@@ -324,3 +324,70 @@ def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, inde
             lines.append(f"{indent}  - {item}")
 
     return lines
+
+
+def build_connection_digest(connection_setup: Dict[str, Any] | Any) -> List[str]:
+    setup = connection_setup if isinstance(connection_setup, dict) else {}
+    digest: List[str] = []
+
+    resolved_wiring = setup.get("resolved_wiring")
+    if isinstance(resolved_wiring, dict):
+        parts = []
+        for key in ("swd", "reset", "verify"):
+            value = str(resolved_wiring.get(key) or "").strip()
+            if value:
+                parts.append(f"{key}={value}")
+        if parts:
+            digest.append("wiring: " + ", ".join(parts))
+
+    verification_views = setup.get("verification_views")
+    if isinstance(verification_views, dict):
+        for name, view in verification_views.items():
+            if not isinstance(view, dict):
+                continue
+            pin = str(view.get("pin") or "").strip()
+            resolved_to = str(view.get("resolved_to") or "").strip()
+            if pin and resolved_to:
+                digest.append(f"view {name}: {pin}->{resolved_to}")
+
+    bench_connections = setup.get("bench_connections")
+    if isinstance(bench_connections, list):
+        for item in bench_connections:
+            if not isinstance(item, dict):
+                continue
+            src = str(item.get("from") or "").strip()
+            dst = str(item.get("to") or "").strip()
+            if src and dst:
+                digest.append(f"net {src}->{dst}")
+
+    bench_setup = setup.get("bench_setup")
+    if isinstance(bench_setup, dict):
+        for item in bench_setup.get("dut_to_instrument", []) if isinstance(bench_setup.get("dut_to_instrument"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            src = str(item.get("dut_gpio") or "").strip()
+            dst = str(item.get("inst_gpio") or "").strip()
+            if src and dst:
+                digest.append(f"digital {src}->GPIO{dst}")
+        for item in bench_setup.get("dut_to_instrument_analog", []) if isinstance(bench_setup.get("dut_to_instrument_analog"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            src = str(item.get("dut_signal") or "").strip()
+            dst = str(item.get("inst_adc_gpio") or "").strip()
+            if src and dst:
+                digest.append(f"analog {src}->ADC{dst}")
+        if bench_setup.get("ground_required") is True:
+            ground_confirmed = bench_setup.get("ground_confirmed")
+            digest.append(f"ground required confirmed={ground_confirmed}")
+
+    warnings = setup.get("warnings")
+    if isinstance(warnings, list):
+        for item in warnings:
+            digest.append(f"warning {item}")
+
+    validation_errors = setup.get("validation_errors")
+    if isinstance(validation_errors, list):
+        for item in validation_errors:
+            digest.append(f"validation_error {item}")
+
+    return digest

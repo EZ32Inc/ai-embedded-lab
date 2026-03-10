@@ -19,7 +19,7 @@ from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
 from ael.config_resolver import resolve_probe_instance
-from ael.connection_model import build_connection_setup, wiring_assumption_lines
+from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines
 from ael.probe_binding import load_probe_binding
 
 _REPO_ROOT = ael_paths.repo_root()
@@ -363,6 +363,7 @@ def _build_validation_summary(
         },
         "cleanup_items": [],
         "connection_setup": dict(connection_setup or {}),
+        "connection_digest": build_connection_digest(connection_setup),
     }
     if selected_ssid:
         summary["selected_ap_ssid"] = selected_ssid
@@ -407,6 +408,7 @@ def _build_current_setup(
             "port": instrument_port if instrument_port is not None else None,
         },
         "connection_setup": dict(connection_setup or {}),
+        "connection_digest": build_connection_digest(connection_setup),
     }
     if selected_ssid:
         setup["selected_ap_ssid"] = selected_ssid
@@ -450,6 +452,7 @@ def _build_last_known_good_setup(
         "run_id": run_id,
         "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
         "connection_setup": dict(connection_setup or {}),
+        "connection_digest": build_connection_digest(connection_setup),
     }
     wiring = (connection_setup or {}).get("wiring_assumptions") if isinstance(connection_setup, dict) else None
     if wiring:
@@ -534,6 +537,8 @@ def _print_success_summary(summary, last_known_good, current_setup):
     conn = current_setup.get("connection_setup", {}) if isinstance(current_setup.get("connection_setup"), dict) else {}
     if conn.get("warnings"):
         print(f"Summary: connection_warnings={'; '.join(conn.get('warnings', []))}")
+    if current_setup.get("connection_digest"):
+        print(f"Summary: connection_digest={'; '.join(current_setup.get('connection_digest', []))}")
     print(
         "LKG: "
         f"board={last_known_good.get('board')} test={last_known_good.get('test')} "
@@ -564,6 +569,8 @@ def _print_success_summary(summary, last_known_good, current_setup):
     conn = last_known_good.get("connection_setup", {}) if isinstance(last_known_good.get("connection_setup"), dict) else {}
     if conn.get("warnings"):
         print(f"LKG: connection_warnings={'; '.join(conn.get('warnings', []))}")
+    if last_known_good.get("connection_digest"):
+        print(f"LKG: connection_digest={'; '.join(last_known_good.get('connection_digest', []))}")
     print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")
 
 
@@ -781,6 +788,7 @@ def run_pipeline(
             "test_config": str(test_path),
         },
         "connection": dict(conn_setup),
+        "connection_digest": build_connection_digest(conn_setup),
     }
 
     workflow_archive.append_event(

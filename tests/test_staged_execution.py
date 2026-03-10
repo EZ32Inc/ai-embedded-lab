@@ -165,6 +165,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
     assert summary["connection_setup"]["bench_setup"]["ground_required"] is True
     assert summary["connection_setup"]["bench_setup"]["ground_confirmed"] is True
+    assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in summary["connection_digest"])
 
     assert lkg["board"] == "ESP32-C6 DevKit"
     assert lkg["port"] == "/dev/ttyACM0"
@@ -178,6 +179,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
     assert "GND -> GND" in lkg["wiring_assumptions"]
+    assert any(item.startswith("ground required confirmed=True") for item in lkg["connection_digest"])
 
     assert current_setup["serial_or_flash_port"] == "/dev/ttyACM0"
     assert current_setup["instrument_profile"] == "esp32s3_dev_c_meter"
@@ -190,6 +192,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
     assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True
+    assert any(item.startswith("ground required confirmed=True") for item in current_setup["connection_digest"])
 
 
 def test_print_success_summary_includes_capability_surface_lines(capsys):
@@ -206,6 +209,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "probe_type": "esp32jtag",
         "probe_endpoint": "192.168.2.98:4242",
         "probe_capability_surfaces": {"swd": "gdb_remote"},
+        "connection_digest": ["wiring: verify=P0.0"],
         "key_artifact_paths": {"result": "/tmp/result.json", "run_plan": "/tmp/run_plan.json"},
         "key_evidence_paths": {"evidence": "/tmp/evidence.json", "verify_result": "/tmp/verify.json"},
     }
@@ -221,6 +225,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "probe_type": "esp32jtag",
         "probe_endpoint": "192.168.2.98:4242",
         "probe_capability_surfaces": {"swd": "gdb_remote"},
+        "connection_digest": ["wiring: verify=P0.0"],
         "artifact_or_evidence_location": "/tmp/evidence.json",
     }
     current_setup = {
@@ -228,6 +233,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "instrument_profile": "esp32s3_dev_c_meter",
         "probe_instance": "esp32jtag_stm32_golden",
         "probe_endpoint": {"host": "192.168.2.98", "port": 4242},
+        "connection_digest": ["wiring: verify=P0.0"],
     }
 
     pipeline._print_success_summary(summary, last_known_good, current_setup)
@@ -235,5 +241,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
 
     assert "Summary: instrument_surfaces=measure.digital->primary" in out
     assert "Summary: probe_surfaces=swd->gdb_remote" in out
+    assert "Summary: connection_digest=" in out
     assert "LKG: instrument_surfaces=measure.digital->primary" in out
     assert "LKG: probe_surfaces=swd->gdb_remote" in out
+    assert "LKG: connection_digest=" in out

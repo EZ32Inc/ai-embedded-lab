@@ -57,6 +57,7 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     assert finished["probe"]["capability_surfaces"]["swd"] == "gdb_remote"
     assert finished["instrument"]["communication"]["protocol"] == "gpio_meter_v1"
     assert finished["instrument"]["capability_surfaces"]["measure.digital"] == "primary"
+    assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in finished["connection_digest"])
     assert finished["stage"] == "plan"
     assert finished["status"] == "completed"
     assert finished["stage_execution"]["executed"] == ["plan", "report"]

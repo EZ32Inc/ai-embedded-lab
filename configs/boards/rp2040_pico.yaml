@@ -6,7 +6,27 @@ board:
     description: Blink GPIO25 ~1Hz
   observe_map:
     sig: P0.0
+    gpio16: P0.0
+    gpio17: P0.1
+    gpio18: P0.2
+    gpio19: P0.3
   default_wiring:
     swd: "P3"
     reset: "P2.0"
     verify: "PA0"
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Generic GPIO signature capture on GPIO16
+  bench_connections:
+    - from: GPIO16
+      to: P0.0
+    - from: GPIO17
+      to: P0.1
+    - from: GPIO18
+      to: P0.2
+    - from: GPIO19
+      to: P0.3
+    - from: GND
+      to: probe GND
