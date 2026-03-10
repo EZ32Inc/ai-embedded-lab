@@ -20,3 +20,5 @@ assets_golden/duts/esp32s3_devkit/gpio_signature/firmware/sdkconfig.old
 reports/nightly_*.md
 docs/night_tasks_agent_v0_2.md
 workflow_archive/*.jsonl
+third_party/cache/
+firmware/targets/stm32f411ceu6/build/

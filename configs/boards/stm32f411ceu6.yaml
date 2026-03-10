@@ -8,7 +8,7 @@ board:
     project_dir: firmware/targets/stm32f411ceu6
     artifact_stem: stm32f411_app
   firmware:
-    description: Toggle PA2-PA4 fast, blink PC13 at 0.5 s intervals (provisional bring-up pattern)
+    description: Toggle PA2-PA4 fast and blink PC13 using an ST-backed STM32F411xE CMSIS target
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
