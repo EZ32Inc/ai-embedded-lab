@@ -70,3 +70,12 @@ def test_normalize_connection_context_warns_when_ground_required_but_not_confirm
         {"bench_setup": {"ground_required": True}},
     )
     assert "bench_setup requires ground, but ground_confirmed is not true" in ctx.warnings
+
+
+def test_normalize_connection_context_surfaces_validation_errors():
+    ctx = normalize_connection_context(
+        {"default_wiring": {"verify": ""}},
+        {"bench_setup": {"ground_required": "yes"}},
+    )
+    assert "default_wiring[verify] must be a non-empty string" in ctx.validation_errors
+    assert "bench_setup.ground_required must be a boolean" in ctx.validation_errors

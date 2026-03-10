@@ -4,6 +4,8 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional
 
+from ael.connection_metadata import validate_connection_metadata
+
 
 @dataclass(frozen=True)
 class NormalizedConnectionContext:
@@ -14,6 +16,7 @@ class NormalizedConnectionContext:
     observe_map: Dict[str, Any]
     verification_views: Dict[str, Any]
     warnings: List[str]
+    validation_errors: List[str]
     source_summary: Dict[str, Any]
 
 
@@ -126,6 +129,7 @@ def normalize_connection_context(
     observe_map = _normalize_mapping(board.get("observe_map"))
     verification_views = _normalize_mapping(board.get("verification_views"))
     warnings = connection_warnings(board, test_raw, resolved_wiring)
+    validation_errors = validate_connection_metadata(board, test_raw)
     return NormalizedConnectionContext(
         default_wiring=defaults,
         resolved_wiring=resolved_wiring,
@@ -134,6 +138,7 @@ def normalize_connection_context(
         observe_map=observe_map,
         verification_views=verification_views,
         warnings=warnings,
+        validation_errors=validation_errors,
         source_summary={
             "default_wiring": "board.default_wiring" if defaults else None,
             "bench_connections": "board.bench_connections" if bench_connections else None,
@@ -232,6 +237,7 @@ def build_connection_setup(ctx: NormalizedConnectionContext) -> Dict[str, Any]:
         "observe_map": dict(ctx.observe_map),
         "verification_views": dict(ctx.verification_views),
         "warnings": list(ctx.warnings),
+        "validation_errors": list(ctx.validation_errors),
         "source_summary": dict(ctx.source_summary),
     }
 
@@ -309,6 +315,12 @@ def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, inde
     if isinstance(warnings, list) and warnings:
         lines.append(f"{indent}warnings:")
         for item in warnings:
+            lines.append(f"{indent}  - {item}")
+
+    validation_errors = setup.get("validation_errors")
+    if isinstance(validation_errors, list) and validation_errors:
+        lines.append(f"{indent}validation_errors:")
+        for item in validation_errors:
             lines.append(f"{indent}  - {item}")
 
     return lines

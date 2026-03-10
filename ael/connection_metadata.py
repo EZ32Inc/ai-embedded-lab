@@ -1,0 +1,134 @@
+from __future__ import annotations
+
+from typing import Any, Dict, List
+
+
+def _is_bool_like(value: Any) -> bool:
+    return isinstance(value, bool)
+
+
+def validate_default_wiring(raw: Dict[str, Any] | Any) -> List[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        return ["default_wiring must be a mapping"]
+    errors: List[str] = []
+    for key, value in raw.items():
+        name = str(key or "").strip()
+        if not name:
+            errors.append("default_wiring contains an empty key")
+            continue
+        if not str(value or "").strip():
+            errors.append(f"default_wiring[{name}] must be a non-empty string")
+    return errors
+
+
+def validate_bench_connections(raw: Any) -> List[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        return ["bench_connections must be a list"]
+    errors: List[str] = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            errors.append(f"bench_connections[{index}] must be a mapping")
+            continue
+        if not str(item.get("from") or "").strip():
+            errors.append(f"bench_connections[{index}].from is required")
+        if not str(item.get("to") or "").strip():
+            errors.append(f"bench_connections[{index}].to is required")
+    return errors
+
+
+def validate_observe_map(raw: Dict[str, Any] | Any) -> List[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        return ["observe_map must be a mapping"]
+    errors: List[str] = []
+    for key, value in raw.items():
+        name = str(key or "").strip()
+        if not name:
+            errors.append("observe_map contains an empty key")
+            continue
+        if not str(value or "").strip():
+            errors.append(f"observe_map[{name}] must be a non-empty string")
+    return errors
+
+
+def validate_verification_views(raw: Dict[str, Any] | Any) -> List[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        return ["verification_views must be a mapping"]
+    errors: List[str] = []
+    for name, item in raw.items():
+        view = str(name or "").strip()
+        if not view:
+            errors.append("verification_views contains an empty key")
+            continue
+        if not isinstance(item, dict):
+            errors.append(f"verification_views[{view}] must be a mapping")
+            continue
+        if not str(item.get("pin") or "").strip():
+            errors.append(f"verification_views[{view}].pin is required")
+        if not str(item.get("resolved_to") or "").strip():
+            errors.append(f"verification_views[{view}].resolved_to is required")
+    return errors
+
+
+def validate_bench_setup(raw: Dict[str, Any] | Any, *, source_name: str = "bench_setup") -> List[str]:
+    if raw is None:
+        return []
+    if not isinstance(raw, dict):
+        return [f"{source_name} must be a mapping"]
+    errors: List[str] = []
+    digital = raw.get("dut_to_instrument")
+    if digital is not None:
+        if not isinstance(digital, list):
+            errors.append(f"{source_name}.dut_to_instrument must be a list")
+        else:
+            for index, item in enumerate(digital):
+                if not isinstance(item, dict):
+                    errors.append(f"{source_name}.dut_to_instrument[{index}] must be a mapping")
+                    continue
+                if not str(item.get("dut_gpio") or "").strip():
+                    errors.append(f"{source_name}.dut_to_instrument[{index}].dut_gpio is required")
+                if item.get("inst_gpio") is None or not str(item.get("inst_gpio")).strip():
+                    errors.append(f"{source_name}.dut_to_instrument[{index}].inst_gpio is required")
+    analog = raw.get("dut_to_instrument_analog")
+    if analog is not None:
+        if not isinstance(analog, list):
+            errors.append(f"{source_name}.dut_to_instrument_analog must be a list")
+        else:
+            for index, item in enumerate(analog):
+                if not isinstance(item, dict):
+                    errors.append(f"{source_name}.dut_to_instrument_analog[{index}] must be a mapping")
+                    continue
+                if not str(item.get("dut_signal") or "").strip():
+                    errors.append(f"{source_name}.dut_to_instrument_analog[{index}].dut_signal is required")
+                if item.get("inst_adc_gpio") is None or not str(item.get("inst_adc_gpio")).strip():
+                    errors.append(f"{source_name}.dut_to_instrument_analog[{index}].inst_adc_gpio is required")
+    if "ground_required" in raw and not _is_bool_like(raw.get("ground_required")):
+        errors.append(f"{source_name}.ground_required must be a boolean")
+    if "ground_confirmed" in raw and not _is_bool_like(raw.get("ground_confirmed")):
+        errors.append(f"{source_name}.ground_confirmed must be a boolean")
+    return errors
+
+
+def validate_connection_metadata(
+    board_cfg: Dict[str, Any] | Any,
+    test_raw: Dict[str, Any] | Any,
+) -> List[str]:
+    board = board_cfg if isinstance(board_cfg, dict) else {}
+    test = test_raw if isinstance(test_raw, dict) else {}
+    errors: List[str] = []
+    errors.extend(validate_default_wiring(board.get("default_wiring")))
+    errors.extend(validate_bench_connections(board.get("bench_connections")))
+    errors.extend(validate_observe_map(board.get("observe_map")))
+    errors.extend(validate_verification_views(board.get("verification_views")))
+    if "bench_setup" in test:
+        errors.extend(validate_bench_setup(test.get("bench_setup"), source_name="bench_setup"))
+    if "connections" in test:
+        errors.extend(validate_bench_setup(test.get("connections"), source_name="connections"))
+    return errors

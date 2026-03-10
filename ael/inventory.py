@@ -462,6 +462,11 @@ def describe_connection(board_id: str, test_path: str, repo_root: Path | None = 
         "connection_setup": payload.get("connection_setup"),
         "connections": payload.get("connections"),
         "warnings": payload.get("warnings"),
+        "validation_errors": (
+            payload.get("connection_setup", {}).get("validation_errors")
+            if isinstance(payload.get("connection_setup"), dict)
+            else []
+        ),
         "source_summary": (
             payload.get("connection_setup", {}).get("source_summary")
             if isinstance(payload.get("connection_setup"), dict)

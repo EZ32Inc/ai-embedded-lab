@@ -128,6 +128,7 @@ def test_describe_connection_for_meter_path():
     assert payload["ok"] is True
     assert payload["source_summary"]["bench_setup"] == "test.bench_setup"
     assert payload["connection_setup"]["bench_setup"]["ground_confirmed"] is True
+    assert payload["validation_errors"] == []
     text = inventory.render_connection_text(payload)
     assert "connection_setup:" in text
     assert "resolved_wiring:" in text
