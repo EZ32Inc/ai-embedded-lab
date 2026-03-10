@@ -349,6 +349,8 @@ You are free to:
 
 See the [Apache 2.0 LICENSE](https://choosealicense.com/licenses/apache-2.0/) file for details.
 
+Third-party components and vendor code remain under their respective original licenses.
+
 ---
 
 ## Status
