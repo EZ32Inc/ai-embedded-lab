@@ -25,6 +25,7 @@ Supporting guidance:
 - [validation_summary_emission](/nvme1t/work/codex/ai-embedded-lab/docs/skills/validation_summary_emission_skill.md)
 - [last_known_good_extraction](/nvme1t/work/codex/ai-embedded-lab/docs/skills/last_known_good_extraction_skill.md)
 - [default_verification_review](/nvme1t/work/codex/ai-embedded-lab/docs/skills/default_verification_review_skill.md)
+- [ael_repo_answering](/nvme1t/work/codex/ai-embedded-lab/docs/skills/ael_repo_answering_skill.md)
 
 ## One-Line Purpose For Each Skill
 
@@ -34,6 +35,7 @@ Supporting guidance:
 - `validation_summary_emission`: turns a successful run result into a concise explanation of what was validated and what passed.
 - `last_known_good_extraction`: restates the reusable working setup from a successful run.
 - `default_verification_review`: interprets the default verification sequence as a baseline-health and confidence review.
+- `ael_repo_answering`: answers factual and operational AEL questions from the right formal source layer.
 
 ## When To Use Which Skill
 
@@ -60,6 +62,9 @@ Practical situations:
 - When reviewing current baseline confidence:
   use `default_verification_review`
 
+- When answering questions like “What is AEL?”, “What is esp32jtag?”, or “How do you know this?”:
+  use `ael_repo_answering`
+
 ## Relationship Between The Current Skills
 
 The current first batch has a simple structure:
@@ -68,6 +73,7 @@ The current first batch has a simple structure:
 - `plan_stage_readiness_summary` and `user_correction_and_setup_reprint` are key sub-skills inside that bring-up flow.
 - `validation_summary_emission` and `last_known_good_extraction` are key post-success reporting skills.
 - `default_verification_review` is a baseline and system review skill, not part of the bring-up chain.
+- `ael_repo_answering` is a cross-cutting interpretation skill for factual and operational questions.
 
 ## Current Limits
 
