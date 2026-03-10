@@ -1,0 +1,65 @@
+import json
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from ael import instrument_view
+
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_build_resolved_probe_instance_view():
+    payload = instrument_view.build_resolved_instrument_view(REPO_ROOT, "esp32jtag_stm32_golden")
+    assert payload["ok"] is True
+    assert payload["kind"] == "probe_instance"
+    assert payload["id"] == "esp32jtag_stm32_golden"
+    assert payload["type"] == "esp32jtag"
+    assert payload["communication"]["primary"] == "gdb_remote"
+    assert payload["capability_surfaces"]["swd"] == "gdb_remote"
+    assert "stm32f103" in payload["referenced_by"]["boards"]
+
+
+def test_build_resolved_instrument_manifest_view():
+    payload = instrument_view.build_resolved_instrument_view(REPO_ROOT, "esp32s3_dev_c_meter")
+    assert payload["ok"] is True
+    assert payload["kind"] == "instrument"
+    assert payload["id"] == "esp32s3_dev_c_meter"
+    assert payload["communication"]["protocol"] == "gpio_meter_v1"
+    assert payload["capability_surfaces"]["measure.digital"] == "primary"
+    assert payload["metadata_validation_errors"] == []
+
+
+def test_instruments_describe_cli_text_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "instruments", "describe", "--id", "esp32jtag_stm32_golden", "--format", "text"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "id: esp32jtag_stm32_golden" in res.stdout
+    assert "kind: probe_instance" in res.stdout
+    assert "capability_surfaces:" in res.stdout
+    assert "referenced_by:" in res.stdout
+
+
+def test_instruments_describe_cli_json_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "instruments", "describe", "--id", "esp32s3_dev_c_meter", "--format", "json"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    payload = json.loads(res.stdout)
+    assert payload["ok"] is True
+    assert payload["kind"] == "instrument"
+    assert payload["id"] == "esp32s3_dev_c_meter"

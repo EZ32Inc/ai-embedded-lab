@@ -8,7 +8,7 @@ from ael.doctor_checks import la_capture_ok, monitor_version
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import provision as instrument_provision
-from ael.inventory import build_instrument_instance_inventory
+from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
 
 
@@ -122,8 +122,12 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
 
 
 def doctor(repo_root: str | Path, target_id: str) -> Dict[str, Any]:
-    inventory = build_instrument_instance_inventory(Path(repo_root))
-    for item in inventory.get("probe_instances", []):
-        if item.get("id") == target_id:
-            return doctor_probe_instance(repo_root, target_id)
-    return doctor_instrument_manifest(target_id)
+    resolved = build_resolved_instrument_view(Path(repo_root), target_id)
+    if not resolved.get("ok"):
+        return resolved
+    if resolved.get("kind") == "probe_instance":
+        payload = doctor_probe_instance(repo_root, target_id)
+    else:
+        payload = doctor_instrument_manifest(target_id)
+    payload["resolved_view"] = resolved
+    return payload

@@ -23,6 +23,8 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["checks"]["monitor_version"]["ok"] is True
     assert payload["checks"]["logic_analyzer"]["ok"] is True
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
+    assert payload["resolved_view"]["id"] == "esp32jtag_stm32_golden"
+    assert payload["resolved_view"]["kind"] == "probe_instance"
 
 
 def test_doctor_meter_manifest_reports_reachability():
@@ -37,3 +39,5 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["id"] == "esp32s3_dev_c_meter"
     assert payload["checks"]["reachability"]["ok"] is True
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
+    assert payload["resolved_view"]["id"] == "esp32s3_dev_c_meter"
+    assert payload["resolved_view"]["kind"] == "instrument"

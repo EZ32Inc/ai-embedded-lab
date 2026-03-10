@@ -30,6 +30,7 @@ from ael import hw_check
 from ael import la_check
 from ael import inventory
 from ael import instrument_doctor
+from ael import instrument_view
 from ael import connection_doctor
 from ael import stage_explain
 
@@ -74,6 +75,9 @@ def main():
     instr_p = sub.add_parser("instruments")
     instr_sub = instr_p.add_subparsers(dest="instr_cmd", required=True)
     instr_list = instr_sub.add_parser("list")
+    instr_describe = instr_sub.add_parser("describe")
+    instr_describe.add_argument("--id", required=True)
+    instr_describe.add_argument("--format", choices=["json", "text"], default="json")
     instr_show = instr_sub.add_parser("show")
     instr_show.add_argument("id")
     instr_find = instr_sub.add_parser("find")
@@ -297,6 +301,13 @@ def main():
         if args.instr_cmd == "list":
             print(json.dumps(registry.list(), indent=2, sort_keys=True))
             sys.exit(0)
+        if args.instr_cmd == "describe":
+            payload = instrument_view.build_resolved_instrument_view(Path(repo_root), args.id)
+            if args.format == "text":
+                print(instrument_view.render_resolved_instrument_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0 if payload.get("ok") else 1)
         if args.instr_cmd == "show":
             inst = registry.get(args.id)
             if not inst:
