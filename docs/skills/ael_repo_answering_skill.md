@@ -2,26 +2,13 @@
 
 ## Purpose
 
-`ael_repo_answering` is a lightweight skill specification for answering factual and operational questions about AEL formally, consistently, and from the right source layer.
+`ael_repo_answering` is a lightweight skill specification for answering factual and operational questions about AEL from the right source layer.
 
-It is intended for AI agents working in the AEL repo, including Codex and Gemini-style CLI agents.
+It is a workflow skill, not a runtime feature.
 
-## Why This Skill Matters
+Supporting guidance:
 
-AEL now has several source layers:
-
-- architecture and spec documents
-- board and instrument configs
-- resolved CLI views
-- implementation code
-
-Without a formal answering workflow, agents can answer from the wrong layer and produce:
-
-- stale answers
-- implementation-heavy answers when a formal resolved view exists
-- guessed bench facts stated as confirmed truth
-
-This skill exists to prevent that.
+- [AEL Agent Answering Guide](../agent_answering_guide.md)
 
 ## Trigger / When To Use
 
@@ -35,11 +22,6 @@ Use this skill when the user asks questions such as:
 - how do you know this
 - what command shows this formally
 
-Use it for both:
-
-- narrow operational questions
-- broader repo-understanding questions
-
 ## Inputs
 
 Typical inputs:
@@ -49,23 +31,7 @@ Typical inputs:
 - optional test path
 - optional instrument id
 - optional stage name
-
-The question may be direct or vague.
-
-## Source Selection Rule
-
-Always choose the most formal current source available.
-
-Priority order:
-
-1. resolved CLI output
-2. current manifests, configs, and specs
-3. implementation code
-4. older narrative docs only as support
-
-Supporting guidance:
-
-- [AEL Agent Answering Guide](/nvme1t/work/codex/ai-embedded-lab/docs/agent_answering_guide.md)
+- optional historical context if the question is about the past
 
 ## Canonical Commands
 
@@ -90,8 +56,9 @@ Connection consistency:
 
 - `python3 -m ael connection doctor --board <board> --test <test>`
 
-System architecture:
+System overview:
 
+- `docs/what_is_ael.md`
 - `docs/specs/ael_architecture_v0_2.md`
 
 ## Procedure
@@ -104,78 +71,54 @@ System architecture:
 6. Answer directly.
 7. State how the answer is known.
 8. Mention caveats or provisional assumptions explicitly.
+9. If the question is historical, say what source layer provides the historical answer.
 
-## Expected Answer Shape
+## Compact Answer Templates
 
-Preferred shape:
+### What is X?
 
-1. direct answer
-2. how it is known
-3. command or file source
-4. caveat if needed
+- `X is ...`
+- `I know this from <command/file>.`
+- `Current caveat: ...` if needed
 
-Do not force all four every time if the user wants a very short answer, but the answer should still be traceable.
+### How do you know?
 
-## Question-Type Guidance
+- `Formally, this comes from <command/file>.`
+- `That is <resolved/config/runtime/architecture> truth.`
 
-### What is AEL?
+### What command shows this formally?
 
-Use:
+- `Use: <command>`
+- `That shows the resolved current view.`
 
-- `docs/specs/ael_architecture_v0_2.md`
+### How do I use Y?
 
-Support with current CLI examples only if the user asks how it is used in practice.
+- `Use Y through <command/doc>.`
+- `For current operational details, prefer <command>.`
 
-### What is instrument X?
+### What are the caveats?
 
-Use:
+- `Confirmed facts: ...`
+- `Assumptions or provisional items: ...`
 
-- `python3 -m ael instruments describe --id <id>`
-
-Support with:
-
-- instrument manifest
-- backend code only if protocol details are requested
-
-### How do you use AEL?
-
-Use:
-
-- current CLI and workflow docs
-- architecture/spec docs only for conceptual framing
-
-### What is the connection for board/test Y?
-
-Use:
-
-- `python3 -m ael inventory describe-connection --board <board> --test <test>`
-
-### What does stage X do?
-
-Use:
-
-- `python3 -m ael explain-stage --board <board> --test <test> --stage <stage>`
-
-## Common Pitfalls
-
-- quoting raw config without checking the resolved CLI view
-- treating provisional board assumptions as confirmed hardware truth
-- answering operational questions from architecture docs alone
-- using code as the first source when a formal resolved command exists
-
-## Recovery / Fallback
+## Fallback / Recovery
 
 If no resolved CLI path exists:
 
 1. use current config/spec sources
-2. use code as the behavior source
-3. explicitly say the answer is inferred from current implementation/config rather than resolved runtime output
+2. use code for behavior details
+3. explicitly say the answer is inferred from current implementation or config
 
 If sources disagree:
 
-- prefer resolved CLI output for current runtime-facing truth
-- prefer current spec/config for declared structure
+- prefer resolved CLI for current resolved state
+- prefer current specs/configs for declared structure
 - call out the disagreement explicitly
+
+If the question is historical:
+
+- use dated notes, git history, prior run artifacts, or prior docs
+- do not answer only from current config
 
 ## Outputs
 
@@ -183,9 +126,9 @@ This skill should produce answers that are:
 
 - direct
 - source-grounded
-- explicit about how the answer was derived
+- explicit about how they were derived
 - explicit about assumptions and caveats
 
 ## Summary
 
-`ael_repo_answering` is the formal answering workflow skill for AEL. Its main job is to make sure agents answer from the right source layer and can say how they know what they are saying.
+`ael_repo_answering` is the answering workflow skill for AEL. Its job is to make sure agents answer from the right source layer and can explain how they know.

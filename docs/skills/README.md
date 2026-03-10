@@ -16,6 +16,7 @@ These documents are lightweight skill specs, not a runtime system.
 Supporting guidance:
 
 - [Skill Usage Guidance](/nvme1t/work/codex/ai-embedded-lab/docs/skills/USAGE.md)
+- [AEL Agent Answering Guide](/nvme1t/work/codex/ai-embedded-lab/docs/agent_answering_guide.md)
 
 ## Current Available Skill Specs
 
@@ -64,6 +65,9 @@ Practical situations:
 
 - When answering questions like “What is AEL?”, “What is esp32jtag?”, or “How do you know this?”:
   use `ael_repo_answering`
+
+- When a short operator-facing AEL overview is needed before deeper specs:
+  start with `docs/what_is_ael.md`
 
 ## Relationship Between The Current Skills
 
