@@ -2,6 +2,8 @@ import json
 from pathlib import Path
 from typing import Dict, Optional
 
+from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
+
 
 SCHEMA_ID = "ael.instrument.manifest.v0.1"
 
@@ -24,6 +26,14 @@ def _validate_manifest(data: dict) -> bool:
     if not isinstance(transports, list) or not transports:
         return False
     if not isinstance(capabilities, list) or not capabilities:
+        return False
+    if validate_communication(data.get("communication")):
+        return False
+    if validate_capability_surfaces(
+        data.get("capability_surfaces"),
+        capabilities=capability_names(data),
+        communication=data.get("communication"),
+    ):
         return False
     return True
 

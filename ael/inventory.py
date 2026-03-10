@@ -7,6 +7,7 @@ from collections import Counter
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
+from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
@@ -110,6 +111,14 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
             } if tcp else None,
             "communication": communication,
             "capability_surfaces": manifest.get("capability_surfaces", {}) if isinstance(manifest.get("capability_surfaces"), dict) else {},
+            "metadata_validation_errors": (
+                validate_communication(communication)
+                + validate_capability_surfaces(
+                    manifest.get("capability_surfaces"),
+                    capabilities=capability_names(manifest),
+                    communication=communication,
+                )
+            ),
         }
     board_cfg = _load_board_cfg(root, board_id)
     instance_id = str(board_cfg.get("instrument_instance") or "").strip() or None
@@ -125,6 +134,7 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
         } if (binding.endpoint_host or binding.endpoint_port is not None) else None,
         "communication": binding.communication,
         "capability_surfaces": binding.capability_surfaces,
+        "metadata_validation_errors": list(binding.metadata_validation_errors),
     }
 
 
@@ -340,6 +350,7 @@ def build_instrument_instance_inventory(repo_root: Path | None = None) -> Dict[s
                     } if (binding.endpoint_host or binding.endpoint_port is not None) else None,
                     "communication": dict(binding.communication or {}),
                     "capability_surfaces": dict(binding.capability_surfaces or {}),
+                    "metadata_validation_errors": list(binding.metadata_validation_errors),
                     "referenced_by": {
                         "boards": sorted(probe_board_refs.get(str(binding.instance_id), [])),
                     },
@@ -362,6 +373,14 @@ def build_instrument_instance_inventory(repo_root: Path | None = None) -> Dict[s
                 ),
                 "communication": dict(manifest.get("communication") or {}),
                 "capability_surfaces": dict(manifest.get("capability_surfaces") or {}),
+                "metadata_validation_errors": (
+                    validate_communication(manifest.get("communication"))
+                    + validate_capability_surfaces(
+                        manifest.get("capability_surfaces"),
+                        capabilities=capability_names(manifest),
+                        communication=manifest.get("communication"),
+                    )
+                ),
                 "referenced_by": {
                     "boards": sorted(instrument_board_refs.get(instrument_id, [])),
                     "plans": sorted(instrument_plan_refs.get(instrument_id, [])),
@@ -526,6 +545,10 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append("capability_surfaces:")
         for key, value in (poi.get("capability_surfaces") or {}).items():
             lines.append(f"  - {key}: {value}")
+    if poi.get("metadata_validation_errors"):
+        lines.append("metadata_validation_errors:")
+        for item in poi.get("metadata_validation_errors") or []:
+            lines.append(f"  - {item}")
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []
@@ -596,6 +619,8 @@ def render_instance_text(payload: Dict[str, Any]) -> str:
         refs = (item.get("referenced_by") or {}).get("boards") or []
         if refs:
             lines.append(f"  boards: {', '.join(refs)}")
+        if item.get("metadata_validation_errors"):
+            lines.append(f"  metadata_errors: {len(item.get('metadata_validation_errors') or [])}")
     if payload.get("probe_instances"):
         lines.append("")
     for item in payload.get("instruments") or []:
@@ -607,4 +632,6 @@ def render_instance_text(payload: Dict[str, Any]) -> str:
             lines.append(f"  boards: {', '.join(boards)}")
         if plans:
             lines.append(f"  plans: {', '.join(plans)}")
+        if item.get("metadata_validation_errors"):
+            lines.append(f"  metadata_errors: {len(item.get('metadata_validation_errors') or [])}")
     return "\n".join(lines).rstrip() + "\n"

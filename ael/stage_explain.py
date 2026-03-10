@@ -6,6 +6,7 @@ from typing import Any, Dict, List
 
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import resolve_probe_config, resolve_probe_instance
+from ael.instrument_metadata import resolve_capability_surface
 from ael.probe_binding import load_probe_binding
 from ael.strategy_resolver import (
     build_preflight_step,
@@ -90,6 +91,49 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         flash_log_path="<flash_log>",
     )
     check_model = "instrument_signature" if isinstance(test_raw.get("instrument"), dict) else "signal_verify"
+    capability_surface_plan: List[Dict[str, Any]] = []
+    probe_surfaces = ctx.get("probe_capability_surfaces") or {}
+    probe_comm = ctx.get("probe_communication") or {}
+    if flash_cfg.get("method") in ("gdbmi", "flash_bmda_gdbmi", "bmda_gdbmi") or ctx.get("probe_instance_id"):
+        capability_surface_plan.append(
+            {
+                "owner": "probe",
+                "capability": "swd",
+                "surface": resolve_capability_surface("swd", probe_surfaces, probe_comm),
+                "reason": "flash/debug path",
+            }
+        )
+    if check_model == "signal_verify":
+        capability_surface_plan.append(
+            {
+                "owner": "probe",
+                "capability": "gpio_in",
+                "surface": resolve_capability_surface("gpio_in", probe_surfaces, probe_comm),
+                "reason": "signal verification capture",
+            }
+        )
+    if check_model == "instrument_signature":
+        inst_comm = resolved.instrument_communication
+        inst_surfaces = resolved.instrument_capability_surfaces
+        bench_setup = test_raw.get("bench_setup", {}) if isinstance(test_raw.get("bench_setup"), dict) else {}
+        if isinstance(bench_setup.get("dut_to_instrument"), list) and bench_setup.get("dut_to_instrument"):
+            capability_surface_plan.append(
+                {
+                    "owner": "instrument",
+                    "capability": "measure.digital",
+                    "surface": resolve_capability_surface("measure.digital", inst_surfaces, inst_comm),
+                    "reason": "digital signature verification",
+                }
+            )
+        if isinstance(bench_setup.get("dut_to_instrument_analog"), list) and bench_setup.get("dut_to_instrument_analog"):
+            capability_surface_plan.append(
+                {
+                    "owner": "instrument",
+                    "capability": "measure.voltage",
+                    "surface": resolve_capability_surface("measure.voltage", inst_surfaces, inst_comm),
+                    "reason": "analog verification",
+                }
+            )
     return {
         "ok": True,
         "stage": "plan",
@@ -110,6 +154,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "wiring": resolved.wiring_cfg,
             "verification_views": (board_cfg.get("verification_views", {}) if isinstance(board_cfg.get("verification_views"), dict) else {}),
             "check_model": check_model,
+            "capability_surface_plan": capability_surface_plan,
         },
         "includes": [
             "board and test selection",
@@ -257,6 +302,11 @@ def render_text(payload: Dict[str, Any]) -> str:
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")
+                continue
+            if k == "capability_surface_plan" and isinstance(v, list):
+                lines.append(f"  - {k}:")
+                for item in v:
+                    lines.append(f"    {json.dumps(item, sort_keys=True)}")
                 continue
             lines.append(f"  - {k}: {v}")
     if payload.get("checks") is not None:

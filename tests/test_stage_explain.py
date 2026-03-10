@@ -20,6 +20,8 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['probe_type'] == 'esp32jtag'
     assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['probe_capability_surfaces']['swd'] == 'gdb_remote'
+    assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
+    assert any(item['capability'] == 'gpio_in' and item['surface'] == 'web_api' for item in payload['selected']['capability_surface_plan'])
 
 
 def test_explain_plan_for_rp2040_uses_board_probe_config():
@@ -46,6 +48,13 @@ def test_explain_check_for_meter_path_includes_uart_and_instrument():
     assert any(item['type'] == 'check.instrument_signature' for item in payload['checks'])
 
 
+def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
+    payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
+    assert payload['ok'] is True
+    assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
+    assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
+
+
 def test_render_text_includes_communication_blocks_readably():
     text = stage_explain.render_text(
         {
@@ -59,6 +68,7 @@ def test_render_text_includes_communication_blocks_readably():
                 "probe_capability_surfaces": {"swd": "gdb_remote"},
                 "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
                 "instrument_capability_surfaces": {"measure.digital": "primary"},
+                "capability_surface_plan": [{"capability": "swd", "surface": "gdb_remote"}],
             },
         }
     )
@@ -67,3 +77,4 @@ def test_render_text_includes_communication_blocks_readably():
     assert "probe_capability_surfaces:" in text
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
+    assert "capability_surface_plan:" in text

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ael.doctor_checks import la_capture_ok, monitor_version
+from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import provision as instrument_provision
 from ael.inventory import build_instrument_instance_inventory
@@ -72,6 +73,7 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "endpoint": {"host": binding.endpoint_host, "port": binding.endpoint_port},
         "communication": dict(binding.communication or {}),
         "capability_surfaces": dict(binding.capability_surfaces or {}),
+        "metadata_validation_errors": list(binding.metadata_validation_errors),
         "checks": checks,
     }
 
@@ -107,6 +109,14 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
         "endpoint": endpoint,
         "communication": dict(communication or {}),
         "capability_surfaces": dict(manifest.get("capability_surfaces") or {}),
+        "metadata_validation_errors": (
+            validate_communication(communication)
+            + validate_capability_surfaces(
+                manifest.get("capability_surfaces"),
+                capabilities=capability_names(manifest),
+                communication=communication,
+            )
+        ),
         "checks": checks,
     }
 

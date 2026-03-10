@@ -4,6 +4,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+from ael.instrument_metadata import validate_capability_surfaces, validate_communication
+
 
 @dataclass(frozen=True)
 class ProbeBinding:
@@ -17,6 +19,7 @@ class ProbeBinding:
     endpoint_port: Optional[int]
     communication: Dict[str, Any]
     capability_surfaces: Dict[str, str]
+    metadata_validation_errors: tuple[str, ...]
     legacy_warning: Optional[str]
 
 
@@ -72,6 +75,15 @@ def _normalize_capability_surfaces(raw: Dict[str, Any]) -> Dict[str, str]:
     return out
 
 
+def _metadata_validation_errors(raw: Dict[str, Any]) -> tuple[str, ...]:
+    communication = _normalize_communication(raw)
+    capability_surfaces = _normalize_capability_surfaces(raw)
+    errors = []
+    errors.extend(validate_communication(communication))
+    errors.extend(validate_capability_surfaces(capability_surfaces, communication=communication))
+    return tuple(errors)
+
+
 def load_probe_binding(
     repo_root: str | Path,
     *,
@@ -113,6 +125,7 @@ def load_probe_binding(
             endpoint_port=_int_or_none(connection.get("gdb_port")),
             communication=_normalize_communication(merged),
             capability_surfaces=_normalize_capability_surfaces(merged),
+            metadata_validation_errors=_metadata_validation_errors(merged),
             legacy_warning=None,
         )
 
@@ -131,5 +144,6 @@ def load_probe_binding(
         endpoint_port=_int_or_none(connection.get("gdb_port")),
         communication=_normalize_communication(raw),
         capability_surfaces=_normalize_capability_surfaces(raw),
+        metadata_validation_errors=_metadata_validation_errors(raw),
         legacy_warning=legacy_warning,
     )
