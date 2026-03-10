@@ -28,6 +28,7 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(resolved.wiring_cfg.get("reset"), "UNKNOWN")
         self.assertEqual(resolved.board_cfg.get("build", {}).get("type"), "idf")
         self.assertEqual(resolved.instrument_communication, {})
+        self.assertEqual(resolved.instrument_capability_surfaces, {})
 
     def test_resolve_run_strategy_uses_resolved_instrument_communication(self):
         test_raw = {"instrument": {"id": "meter1"}}
@@ -38,7 +39,10 @@ class TestStrategyResolver(unittest.TestCase):
             return_value=(
                 "meter1",
                 {"host": "192.168.4.1", "port": 9000},
-                {"communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"}},
+                {
+                    "communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"},
+                    "capability_surfaces": {"measure.digital": "primary"},
+                },
             ),
         ):
             resolved = strategy_resolver.resolve_run_strategy(
@@ -57,6 +61,7 @@ class TestStrategyResolver(unittest.TestCase):
             resolved.instrument_communication,
             {"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"},
         )
+        self.assertEqual(resolved.instrument_capability_surfaces, {"measure.digital": "primary"})
 
     def test_build_verify_step_uses_meter_path_when_capability_present(self):
         test_raw = {

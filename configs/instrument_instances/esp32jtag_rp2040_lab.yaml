@@ -24,3 +24,10 @@ communication:
         type: basic
       options:
         tls_verify: false
+
+capability_surfaces:
+  swd: gdb_remote
+  gpio_in: web_api
+  gpio_out: web_api
+  adc_in: web_api
+  reset_out: web_api

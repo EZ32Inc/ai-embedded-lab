@@ -19,6 +19,7 @@ class ResolvedRunStrategy:
     instrument_host: Optional[str]
     instrument_port: Optional[int]
     instrument_communication: Dict[str, Any]
+    instrument_capability_surfaces: Dict[str, str]
 
 
 def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
@@ -86,6 +87,21 @@ def _normalize_communication_metadata(payload: Dict[str, Any] | Any) -> Dict[str
     if isinstance(payload, dict) and isinstance(payload.get("communication"), dict):
         return dict(payload.get("communication") or {})
     return {}
+
+
+def _normalize_capability_surfaces(payload: Dict[str, Any] | Any) -> Dict[str, str]:
+    if not isinstance(payload, dict):
+        return {}
+    raw = payload.get("capability_surfaces")
+    if not isinstance(raw, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key, value in raw.items():
+        cap = str(key).strip()
+        surface = str(value).strip() if value is not None else ""
+        if cap and surface:
+            out[cap] = surface
+    return out
 
 
 def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any):
@@ -244,6 +260,7 @@ def resolve_run_strategy(
         instrument_host=instrument_host,
         instrument_port=instrument_port,
         instrument_communication=_normalize_communication_metadata(instrument_manifest),
+        instrument_capability_surfaces=_normalize_capability_surfaces(instrument_manifest),
     )
 
 

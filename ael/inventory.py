@@ -109,6 +109,7 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
                 "port": tcp.get("port"),
             } if tcp else None,
             "communication": communication,
+            "capability_surfaces": manifest.get("capability_surfaces", {}) if isinstance(manifest.get("capability_surfaces"), dict) else {},
         }
     board_cfg = _load_board_cfg(root, board_id)
     instance_id = str(board_cfg.get("instrument_instance") or "").strip() or None
@@ -123,6 +124,7 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
             "port": binding.endpoint_port,
         } if (binding.endpoint_host or binding.endpoint_port is not None) else None,
         "communication": binding.communication,
+        "capability_surfaces": binding.capability_surfaces,
     }
 
 
@@ -419,6 +421,10 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     if isinstance(poi.get("communication"), dict) and poi.get("communication"):
         lines.append("communication:")
         for key, value in (poi.get("communication") or {}).items():
+            lines.append(f"  - {key}: {value}")
+    if isinstance(poi.get("capability_surfaces"), dict) and poi.get("capability_surfaces"):
+        lines.append("capability_surfaces:")
+        for key, value in (poi.get("capability_surfaces") or {}).items():
             lines.append(f"  - {key}: {value}")
     lines.append("connections:")
     for conn in payload.get("connections", []):

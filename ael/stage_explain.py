@@ -57,6 +57,7 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
         "probe_instance_id": binding.instance_id,
         "probe_type": binding.type_id,
         "probe_communication": binding.communication,
+        "probe_capability_surfaces": binding.capability_surfaces,
         "board_raw": board_raw,
         "test_raw": test_raw,
         "probe_raw": probe_raw,
@@ -99,7 +100,9 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "probe_instance": ctx.get("probe_instance_id"),
             "probe_type": ctx.get("probe_type"),
             "probe_communication": ctx.get("probe_communication"),
+            "probe_capability_surfaces": ctx.get("probe_capability_surfaces"),
             "instrument_communication": resolved.instrument_communication,
+            "instrument_capability_surfaces": resolved.instrument_capability_surfaces,
             "builder_kind": build_kind,
             "firmware_project": (board_cfg.get("build") or {}).get("project_dir"),
             "board_clock_hz": board_cfg.get("clock_hz"),
@@ -250,7 +253,7 @@ def render_text(payload: Dict[str, Any]) -> str:
     if payload.get("selected"):
         lines.append("selected:")
         for k, v in (payload.get("selected") or {}).items():
-            if k in ("probe_communication", "instrument_communication") and isinstance(v, dict):
+            if k in ("probe_communication", "instrument_communication", "probe_capability_surfaces", "instrument_capability_surfaces") and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")

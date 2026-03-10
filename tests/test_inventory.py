@@ -52,6 +52,7 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["probe_or_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["probe_or_instrument"]["type"] == "esp32jtag"
     assert payload["probe_or_instrument"]["communication"]["primary"] == "gdb_remote"
+    assert payload["probe_or_instrument"]["capability_surfaces"]["swd"] == "gdb_remote"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
@@ -86,6 +87,7 @@ def test_describe_test_for_meter_path():
     assert payload["probe_or_instrument"]["kind"] == "instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["probe_or_instrument"]["communication"]["protocol"] == "gpio_meter_v1"
+    assert payload["probe_or_instrument"]["capability_surfaces"]["measure.digital"] == "primary"
     assert any(conn["from"] == "X1(GPIO4)" and conn["to"] == "inst GPIO11" for conn in payload["connections"])
     assert any(check["type"] == "instrument_measure" for check in payload["expected_checks"])
 

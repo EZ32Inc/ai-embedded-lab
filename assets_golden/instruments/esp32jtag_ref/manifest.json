@@ -46,6 +46,12 @@
       }
     ]
   },
+  "capability_surfaces": {
+    "debug.swd": "gdb_remote",
+    "observe.logic": "gdb_remote",
+    "observe.uart": "serial_control",
+    "power.switch": "serial_control"
+  },
 
   "capabilities": [
     {

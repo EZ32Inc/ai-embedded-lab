@@ -16,6 +16,7 @@ class ProbeBinding:
     endpoint_host: Optional[str]
     endpoint_port: Optional[int]
     communication: Dict[str, Any]
+    capability_surfaces: Dict[str, str]
     legacy_warning: Optional[str]
 
 
@@ -58,6 +59,19 @@ def _normalize_communication(raw: Dict[str, Any]) -> Dict[str, Any]:
     return {}
 
 
+def _normalize_capability_surfaces(raw: Dict[str, Any]) -> Dict[str, str]:
+    capability_surfaces = raw.get("capability_surfaces")
+    if not isinstance(capability_surfaces, dict):
+        return {}
+    out: Dict[str, str] = {}
+    for key, value in capability_surfaces.items():
+        cap = str(key).strip()
+        surface = str(value).strip() if value is not None else ""
+        if cap and surface:
+            out[cap] = surface
+    return out
+
+
 def load_probe_binding(
     repo_root: str | Path,
     *,
@@ -98,6 +112,7 @@ def load_probe_binding(
             endpoint_host=str(connection.get("ip") or "") or None,
             endpoint_port=_int_or_none(connection.get("gdb_port")),
             communication=_normalize_communication(merged),
+            capability_surfaces=_normalize_capability_surfaces(merged),
             legacy_warning=None,
         )
 
@@ -115,5 +130,6 @@ def load_probe_binding(
         endpoint_host=str(connection.get("ip") or "") or None,
         endpoint_port=_int_or_none(connection.get("gdb_port")),
         communication=_normalize_communication(raw),
+        capability_surfaces=_normalize_capability_surfaces(raw),
         legacy_warning=legacy_warning,
     )

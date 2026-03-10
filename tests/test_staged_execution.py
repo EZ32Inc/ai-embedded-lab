@@ -98,11 +98,13 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_host="192.168.4.1",
         instrument_port=9000,
         instrument_communication={"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"},
+        instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
         probe_host="192.168.2.98",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
+        probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
     )
     lkg = pipeline._build_last_known_good_setup(
@@ -114,11 +116,13 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_host="192.168.4.1",
         instrument_port=9000,
         instrument_communication={"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"},
+        instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
         probe_host="192.168.2.98",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
+        probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
         test_raw=test_raw,
         result=result,
@@ -129,11 +133,13 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_host="192.168.4.1",
         instrument_port=9000,
         instrument_communication={"transport": "wifi", "endpoint": "192.168.4.1:9000", "protocol": "gpio_meter_v1"},
+        instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
         probe_host="192.168.2.98",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
+        probe_capability_surfaces={"swd": "gdb_remote"},
         selected_ssid="ESP32_GPIO_METER_E7F1",
     )
 
@@ -142,10 +148,12 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["serial_or_flash_port"] == "/dev/ttyACM0"
     assert summary["instrument_profile"] == "esp32s3_dev_c_meter"
     assert summary["instrument_communication"]["protocol"] == "gpio_meter_v1"
+    assert summary["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert summary["probe_instance"] == "esp32jtag_stm32_golden"
     assert summary["probe_type"] == "esp32jtag"
     assert summary["probe_endpoint"] == "192.168.2.98:4242"
     assert summary["probe_communication"]["primary"] == "gdb_remote"
+    assert summary["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
@@ -153,9 +161,11 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert lkg["board"] == "ESP32-C6 DevKit"
     assert lkg["port"] == "/dev/ttyACM0"
     assert lkg["instrument_communication"]["protocol"] == "gpio_meter_v1"
+    assert lkg["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert lkg["probe_instance"] == "esp32jtag_stm32_golden"
     assert lkg["probe_endpoint"] == "192.168.2.98:4242"
     assert lkg["probe_communication"]["primary"] == "gdb_remote"
+    assert lkg["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert lkg["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
@@ -164,8 +174,10 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["serial_or_flash_port"] == "/dev/ttyACM0"
     assert current_setup["instrument_profile"] == "esp32s3_dev_c_meter"
     assert current_setup["instrument_communication"]["protocol"] == "gpio_meter_v1"
+    assert current_setup["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert current_setup["probe_instance"] == "esp32jtag_stm32_golden"
     assert current_setup["probe_endpoint"] == {"host": "192.168.2.98", "port": 4242}
     assert current_setup["probe_communication"]["primary"] == "gdb_remote"
+    assert current_setup["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}

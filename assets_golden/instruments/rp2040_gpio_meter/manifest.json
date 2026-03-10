@@ -20,6 +20,9 @@
     "protocol": "line-json-v0.1",
     "invocation_style": "request_response"
   },
+  "capability_surfaces": {
+    "measure.freq": "primary"
+  },
 
   "capabilities": [
     {

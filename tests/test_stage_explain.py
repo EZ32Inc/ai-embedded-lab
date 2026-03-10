@@ -19,6 +19,7 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['probe_instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['probe_type'] == 'esp32jtag'
     assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['probe_capability_surfaces']['swd'] == 'gdb_remote'
 
 
 def test_explain_plan_for_rp2040_uses_board_probe_config():
@@ -27,6 +28,7 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['probe_capability_surfaces']['gpio_in'] == 'web_api'
 
 
 def test_explain_preflight_for_meter_disabled_path():
@@ -54,10 +56,14 @@ def test_render_text_includes_communication_blocks_readably():
             "selected": {
                 "probe": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
                 "probe_communication": {"primary": "gdb_remote"},
+                "probe_capability_surfaces": {"swd": "gdb_remote"},
                 "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
+                "instrument_capability_surfaces": {"measure.digital": "primary"},
             },
         }
     )
     assert "probe_communication:" in text
     assert "primary: gdb_remote" in text
+    assert "probe_capability_surfaces:" in text
     assert "instrument_communication:" in text
+    assert "instrument_capability_surfaces:" in text

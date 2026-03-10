@@ -61,3 +61,10 @@ defaults:
   swd_port: P3
   reset_line: P2.0
   verify_gpio: P0.1
+
+capability_surfaces:
+  swd: gdb_remote
+  gpio_in: web_api
+  gpio_out: web_api
+  adc_in: web_api
+  reset_out: web_api

@@ -17,6 +17,8 @@ def test_load_probe_binding_merges_type_and_instance_manifest():
     assert binding.raw["connection"]["ip"] == "192.168.2.63"
     assert binding.communication["primary"] == "gdb_remote"
     assert len(binding.communication["surfaces"]) == 2
+    assert binding.capability_surfaces["swd"] == "gdb_remote"
+    assert binding.capability_surfaces["gpio_in"] == "web_api"
     assert binding.instance_path and binding.instance_path.endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
     assert binding.type_path and binding.type_path.endswith("configs/instrument_types/esp32jtag.yaml")
 
@@ -28,4 +30,5 @@ def test_load_probe_binding_keeps_legacy_probe_config_with_warning():
     assert binding.endpoint_host == "192.168.2.98"
     assert binding.endpoint_port == 4242
     assert binding.communication["primary"] == "gdb_remote"
+    assert binding.capability_surfaces["reset_out"] == "web_api"
     assert binding.legacy_warning == "Using legacy shared probe config; explicit instrument instance is recommended."

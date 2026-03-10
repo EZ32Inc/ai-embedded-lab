@@ -25,6 +25,11 @@
       }
     ]
   },
+  "capability_surfaces": {
+    "debug.swd": "gdb_remote",
+    "observe.logic": "web_api",
+    "observe.uart": "web_api"
+  },
   "capabilities": [
     { "name": "debug.swd" },
     { "name": "observe.logic", "channels": 8 },

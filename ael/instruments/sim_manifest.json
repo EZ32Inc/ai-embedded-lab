@@ -16,6 +16,11 @@
     "protocol": "instrument.sim_http",
     "invocation_style": "request_response"
   },
+  "capability_surfaces": {
+    "measure.digital": "primary",
+    "measure.voltage": "primary",
+    "uart_log": "primary"
+  },
   "capabilities": [
     {
       "name": "measure.digital",

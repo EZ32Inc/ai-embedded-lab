@@ -22,6 +22,10 @@
     "protocol": "gpio_meter_v1",
     "invocation_style": "request_response"
   },
+  "capability_surfaces": {
+    "measure.digital": "primary",
+    "measure.voltage": "primary"
+  },
   "channels": {
     "digital_inputs": [11, 12, 13, 14],
     "analog_inputs": [4],
