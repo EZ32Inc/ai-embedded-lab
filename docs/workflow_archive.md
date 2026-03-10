@@ -50,6 +50,13 @@ Each line is one JSON object with schema:
 
 Unknown fields are omitted or null instead of guessed.
 
+Current probe/instrument metadata may include:
+
+- resolved communication metadata
+- capability-to-surface metadata
+
+These are archived as run-context facts only. They are not yet interpreted as runtime routing policy by the archive layer.
+
 ## Current Capture Points
 
 The run pipeline currently appends:

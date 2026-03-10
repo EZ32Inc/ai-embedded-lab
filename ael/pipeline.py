@@ -478,6 +478,19 @@ def _build_last_known_good_setup(
     return setup
 
 
+def _format_capability_surfaces(mapping: dict | None) -> str | None:
+    if not isinstance(mapping, dict) or not mapping:
+        return None
+    parts = []
+    for key in sorted(mapping):
+        value = mapping.get(key)
+        cap = str(key).strip()
+        surface = str(value).strip() if value is not None else ""
+        if cap and surface:
+            parts.append(f"{cap}->{surface}")
+    return ", ".join(parts) if parts else None
+
+
 def _print_success_summary(summary, last_known_good, current_setup):
     print(
         "Summary: validation "
@@ -496,6 +509,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if summary.get("endpoint"):
             line += f" endpoint={summary.get('endpoint')}"
         print(line)
+        surfaces = _format_capability_surfaces(summary.get("instrument_capability_surfaces"))
+        if surfaces:
+            print(f"Summary: instrument_surfaces={surfaces}")
     if summary.get("probe_instance"):
         line = f"Summary: probe_instance={summary.get('probe_instance')}"
         if summary.get("probe_type"):
@@ -503,6 +519,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if summary.get("probe_endpoint"):
             line += f" endpoint={summary.get('probe_endpoint')}"
         print(line)
+        surfaces = _format_capability_surfaces(summary.get("probe_capability_surfaces"))
+        if surfaces:
+            print(f"Summary: probe_surfaces={surfaces}")
     print(
         "Summary: artifacts "
         f"result={summary.get('key_artifact_paths', {}).get('result')} "
@@ -543,6 +562,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if last_known_good.get("endpoint"):
             line += f" endpoint={last_known_good.get('endpoint')}"
         print(line)
+        surfaces = _format_capability_surfaces(last_known_good.get("instrument_capability_surfaces"))
+        if surfaces:
+            print(f"LKG: instrument_surfaces={surfaces}")
     if last_known_good.get("probe_instance"):
         line = f"LKG: probe_instance={last_known_good.get('probe_instance')}"
         if last_known_good.get("probe_type"):
@@ -550,6 +572,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if last_known_good.get("probe_endpoint"):
             line += f" endpoint={last_known_good.get('probe_endpoint')}"
         print(line)
+        surfaces = _format_capability_surfaces(last_known_good.get("probe_capability_surfaces"))
+        if surfaces:
+            print(f"LKG: probe_surfaces={surfaces}")
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
     print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")

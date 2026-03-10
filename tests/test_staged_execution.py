@@ -181,3 +181,50 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
+
+
+def test_print_success_summary_includes_capability_surface_lines(capsys):
+    summary = {
+        "board": "ESP32-C6 DevKit",
+        "test": "esp32c6_gpio_signature_with_meter",
+        "run_id": "run1",
+        "overall_result": "pass",
+        "executed_stages": ["plan", "run", "check", "report"],
+        "instrument_profile": "esp32s3_dev_c_meter",
+        "endpoint": "192.168.4.1:9000",
+        "instrument_capability_surfaces": {"measure.digital": "primary"},
+        "probe_instance": "esp32jtag_stm32_golden",
+        "probe_type": "esp32jtag",
+        "probe_endpoint": "192.168.2.98:4242",
+        "probe_capability_surfaces": {"swd": "gdb_remote"},
+        "key_artifact_paths": {"result": "/tmp/result.json", "run_plan": "/tmp/run_plan.json"},
+        "key_evidence_paths": {"evidence": "/tmp/evidence.json", "verify_result": "/tmp/verify.json"},
+    }
+    last_known_good = {
+        "board": "ESP32-C6 DevKit",
+        "test": "esp32c6_gpio_signature_with_meter",
+        "port": "/dev/ttyACM0",
+        "run_id": "run1",
+        "instrument_profile": "esp32s3_dev_c_meter",
+        "endpoint": "192.168.4.1:9000",
+        "instrument_capability_surfaces": {"measure.digital": "primary"},
+        "probe_instance": "esp32jtag_stm32_golden",
+        "probe_type": "esp32jtag",
+        "probe_endpoint": "192.168.2.98:4242",
+        "probe_capability_surfaces": {"swd": "gdb_remote"},
+        "artifact_or_evidence_location": "/tmp/evidence.json",
+    }
+    current_setup = {
+        "selected_endpoint": {"host": "192.168.4.1", "port": 9000},
+        "instrument_profile": "esp32s3_dev_c_meter",
+        "probe_instance": "esp32jtag_stm32_golden",
+        "probe_endpoint": {"host": "192.168.2.98", "port": 4242},
+    }
+
+    pipeline._print_success_summary(summary, last_known_good, current_setup)
+    out = capsys.readouterr().out
+
+    assert "Summary: instrument_surfaces=measure.digital->primary" in out
+    assert "Summary: probe_surfaces=swd->gdb_remote" in out
+    assert "LKG: instrument_surfaces=measure.digital->primary" in out
+    assert "LKG: probe_surfaces=swd->gdb_remote" in out

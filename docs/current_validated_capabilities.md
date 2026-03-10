@@ -50,12 +50,28 @@ Known nuance:
 
 - RP2040 flash may emit BMDA/GDB remote failure warnings after load, but the path is currently treated as healthy when downstream verify passes
 
+### 3. STM32F103 / Bluepill Verification Path
+
+- board family: `stm32f103`
+- validation style: probe-based pre-flight + build + BMDA/GDB flash + logic-analyzer verify
+- main probe path: `esp32jtag_stm32_golden` at `192.168.2.98:4242` with LA verify via `https://192.168.2.98:443`
+- current status: validated on real hardware and stable in current default verification
+
+What is currently solid in this path:
+
+- pre-flight probe/network/LA checks are working
+- build and flash are working
+- logic-analyzer verification is working
+- the STM32 BMDA post-load reattach sequence is stable in repeated golden runs
+- standardized validation summary and last-known-good setup output are present
+
 ## Current Default Verification Set
 
 Current default verification sequence:
 
 1. `esp32c6_golden_gpio`
 2. `rp2040_golden_gpio_signature`
+3. `stm32f103_golden_gpio_signature`
 
 Source:
 
@@ -63,7 +79,7 @@ Source:
 
 Current status:
 
-- default verification is passing across both paths on real hardware
+- default verification is passing across all three paths on real hardware
 
 ## Current Workflow Maturity
 
@@ -94,12 +110,14 @@ What has been clarified:
 - the ESP32-S3 meter path is now understood as a concrete instrument-capability example
 - meter DUT-to-instrument mapping is now represented as `bench_setup` in active meter-based test plans
 - current selected setup facts are beginning to be grouped as run-time setup facts
+- communication metadata is now carried through configs, summaries, archive output, and inventory views
+- capability-to-surface metadata is now available as metadata for instrument and probe paths
 
 What is still only partially formed:
 
-- probe/JTAG paths do not yet expose setup/session facts as explicitly as the meter path
 - instrument backend dispatch is still partly concrete-backend-oriented
 - broader instrument abstraction is clarified architecturally, but only partially aligned in code
+- capability-to-surface metadata is informational only and is not yet used for runtime routing
 
 ## Current Stable Strengths
 
@@ -120,7 +138,6 @@ Important incomplete areas remain.
 
 Most relevant current gaps:
 
-- probe/JTAG path still lacks richer `current_setup` style grouping
 - not all paths expose the same level of setup clarity
 - instrument abstraction is improved, but not yet fully unified in implementation
 - some intermittent meter-side timeout behavior has been observed in reruns
