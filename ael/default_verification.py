@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import os
 import subprocess
+import threading
+import time
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -83,6 +86,7 @@ def preset_payload(name: str) -> Dict[str, Any]:
         return {
             "version": 1,
             "mode": "sequence",
+            "execution_policy": {"kind": "serial"},
             "stop_on_fail": True,
             "steps": [
                 {
@@ -200,6 +204,213 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     return int(code), {"ok": int(code) == 0}
 
 
+def _normalized_step(setting: Dict[str, Any], raw_step: Dict[str, Any], idx: int) -> Dict[str, Any]:
+    step = dict(raw_step) if isinstance(raw_step, dict) else {}
+    if not step.get("probe") and setting.get("probe"):
+        step["probe"] = setting.get("probe")
+    if not step.get("instrument_instance") and setting.get("instrument_instance"):
+        step["instrument_instance"] = setting.get("instrument_instance")
+    step["name"] = str(step.get("name") or f"step_{idx:02d}")
+    step["action"] = str(step.get("action") or "single_run").strip().lower()
+    return step
+
+
+def _execution_policy(setting: Dict[str, Any]) -> Dict[str, Any]:
+    raw = setting.get("execution_policy", {}) if isinstance(setting.get("execution_policy"), dict) else {}
+    kind = str(raw.get("kind") or "parallel").strip().lower()
+    if kind not in ("parallel", "serial"):
+        kind = "parallel"
+    return {"kind": kind}
+
+
+def _log_line(lock: threading.Lock, message: str) -> None:
+    with lock:
+        print(message, flush=True)
+
+
+def _run_step_action(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tuple[int, Dict[str, Any]]:
+    if str(step.get("action") or "single_run").strip().lower() == "preflight_only":
+        return _run_preflight_only(repo_root, step)
+    return _run_single(repo_root, step, output_mode)
+
+
+def _run_worker_iterations(
+    repo_root: Path,
+    step: Dict[str, Any],
+    output_mode: str,
+    max_iterations: int,
+    stop_after_failure: bool,
+    log_lock: threading.Lock,
+) -> Dict[str, Any]:
+    worker_name = str(step.get("name") or "worker")
+    board = str(step.get("board") or "").strip()
+    action = str(step.get("action") or "single_run").strip().lower()
+    iterations: List[Dict[str, Any]] = []
+
+    for iteration in range(1, max_iterations + 1):
+        label = f"{worker_name} iteration {iteration}" if max_iterations > 1 else worker_name
+        _log_line(log_lock, f"[START] {label}")
+        started = time.monotonic()
+        try:
+            code, result = _run_step_action(repo_root, step, output_mode)
+        except Exception as exc:
+            code, result = 1, {"ok": False, "error": str(exc)}
+        elapsed = round(time.monotonic() - started, 3)
+        ok = code == 0
+        record = {
+            "name": worker_name,
+            "board": board,
+            "action": action,
+            "iteration": iteration,
+            "code": int(code),
+            "ok": ok,
+            "elapsed_s": elapsed,
+            "result": result,
+        }
+        iterations.append(record)
+        status = "PASS" if ok else "FAIL"
+        _log_line(log_lock, f"[DONE] {label} {status} ({elapsed:.3f}s)")
+        if not ok:
+            reason = ""
+            if isinstance(result, dict):
+                reason = str(result.get("error") or result.get("error_summary") or "").strip()
+            if reason:
+                _log_line(log_lock, f"[FAIL] {label} {reason}")
+            if stop_after_failure:
+                break
+
+    pass_count = sum(1 for item in iterations if item["ok"])
+    fail_count = len(iterations) - pass_count
+    return {
+        "name": worker_name,
+        "board": board,
+        "requested_iterations": max_iterations,
+        "completed_iterations": len(iterations),
+        "pass_count": pass_count,
+        "fail_count": fail_count,
+        "ok": fail_count == 0 and len(iterations) == max_iterations,
+        "results": iterations,
+    }
+
+
+def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) -> None:
+    _log_line(lock, "[SUMMARY]")
+    for worker in workers:
+        _log_line(
+            lock,
+            f"{worker.get('name')}: {worker.get('pass_count', 0)}/{worker.get('completed_iterations', 0)} PASS",
+        )
+
+
+def _run_parallel_suite_once(
+    repo_root: Path,
+    steps: List[Dict[str, Any]],
+    output_mode: str,
+) -> Tuple[int, Dict[str, Any]]:
+    log_lock = threading.Lock()
+    workers: List[Dict[str, Any]] = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(steps))) as executor:
+        futures = [
+            executor.submit(_run_worker_iterations, repo_root, step, output_mode, 1, False, log_lock)
+            for step in steps
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            workers.append(future.result())
+
+    _print_worker_totals(log_lock, workers)
+    results = [item for worker in workers for item in worker.get("results", [])]
+    failed = next((item for item in results if not bool(item.get("ok", False))), None)
+    code = int(failed.get("code", 0)) if isinstance(failed, dict) else 0
+    ok = failed is None
+    return code, {
+        "ok": ok,
+        "mode": "sequence",
+        "suite": {"steps": [step.get("name") for step in steps]},
+        "execution_policy": {"kind": "parallel", "iterations_per_worker": 1},
+        "workers": workers,
+        "results": results,
+    }
+
+
+def _run_serial_suite_once(
+    repo_root: Path,
+    setting: Dict[str, Any],
+    steps: List[Dict[str, Any]],
+    output_mode: str,
+) -> Tuple[int, Dict[str, Any]]:
+    stop_on_fail = bool(setting.get("stop_on_fail", True))
+    overall_ok = True
+    last_code = 0
+    results: List[Dict[str, Any]] = []
+
+    for step in steps:
+        code, result = _run_step_action(repo_root, step, output_mode)
+        ok = code == 0
+        results.append({"name": step["name"], "code": code, "ok": ok, "result": result})
+        if not ok:
+            overall_ok = False
+            last_code = code
+            if stop_on_fail:
+                break
+
+    return (0 if overall_ok else last_code or 1), {
+        "ok": overall_ok,
+        "mode": "sequence",
+        "suite": {"steps": [step.get("name") for step in steps]},
+        "execution_policy": {"kind": "serial", "iterations_per_worker": 1},
+        "results": results,
+    }
+
+
+def _run_parallel_repeat_until_fail(
+    repo_root: Path,
+    steps: List[Dict[str, Any]],
+    output_mode: str,
+    limit: int,
+) -> Tuple[int, Dict[str, Any]]:
+    log_lock = threading.Lock()
+    workers: List[Dict[str, Any]] = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(steps))) as executor:
+        futures = [
+            executor.submit(_run_worker_iterations, repo_root, step, output_mode, limit, True, log_lock)
+            for step in steps
+        ]
+        for future in concurrent.futures.as_completed(futures):
+            workers.append(future.result())
+
+    _print_worker_totals(log_lock, workers)
+    results = [item for worker in workers for item in worker.get("results", [])]
+    failures = [item for item in results if not bool(item.get("ok", False))]
+    first_failure = failures[0] if failures else None
+    code = int(first_failure.get("code", 0)) if isinstance(first_failure, dict) else 0
+    ok = first_failure is None
+    payload: Dict[str, Any] = {
+        "ok": ok,
+        "mode": "repeat_until_fail",
+        "suite": {"steps": [step.get("name") for step in steps]},
+        "execution_policy": {"kind": "parallel", "iterations_per_worker": limit, "stop_each_worker_on_failure": True},
+        "requested_iterations_per_worker": limit,
+        "workers": workers,
+        "results": results,
+    }
+    if first_failure is not None:
+        payload["failure"] = {
+            "step_name": first_failure.get("name"),
+            "board": first_failure.get("board"),
+            "iteration": first_failure.get("iteration"),
+            "step_code": first_failure.get("code"),
+            "reason": (
+                first_failure.get("result", {}).get("error")
+                if isinstance(first_failure.get("result"), dict)
+                else "step failed"
+            )
+            or "step failed",
+        }
+    return code, payload
+
+
 def _detect_docs_only_changes(mode: str = "changed") -> bool:
     if mode not in ("changed", "staged"):
         return False
@@ -249,36 +460,13 @@ def run_default_setting(
 
     if mode == "sequence":
         steps = setting.get("steps", [])
-        stop_on_fail = bool(setting.get("stop_on_fail", True))
         if not isinstance(steps, list) or not steps:
             return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
-        overall_ok = True
-        last_code = 0
-        for idx, raw_step in enumerate(steps, start=1):
-            step = dict(raw_step) if isinstance(raw_step, dict) else {}
-            step_name = str(step.get("name") or f"step_{idx:02d}")
-            action = str(step.get("action") or "single_run").strip().lower()
-            if action == "preflight_only":
-                if not step.get("probe") and setting.get("probe"):
-                    step["probe"] = setting.get("probe")
-                if not step.get("instrument_instance") and setting.get("instrument_instance"):
-                    step["instrument_instance"] = setting.get("instrument_instance")
-                code, result = _run_preflight_only(repo_root, step)
-            else:
-                # default action is run test step
-                if not step.get("probe") and setting.get("probe"):
-                    step["probe"] = setting.get("probe")
-                if not step.get("instrument_instance") and setting.get("instrument_instance"):
-                    step["instrument_instance"] = setting.get("instrument_instance")
-                code, result = _run_single(repo_root, step, output_mode)
-            ok = code == 0
-            results.append({"name": step_name, "code": code, "ok": ok, "result": result})
-            if not ok:
-                overall_ok = False
-                last_code = code
-                if stop_on_fail:
-                    break
-        return (0 if overall_ok else last_code or 1), {"ok": overall_ok, "mode": mode, "results": results}
+        normalized_steps = [_normalized_step(setting, raw_step, idx) for idx, raw_step in enumerate(steps, start=1)]
+        policy = _execution_policy(setting)
+        if policy["kind"] == "serial":
+            return _run_serial_suite_once(repo_root, setting, normalized_steps, output_mode)
+        return _run_parallel_suite_once(repo_root, normalized_steps, output_mode)
 
     return 2, {"ok": False, "mode": mode, "error": f"unsupported mode: {mode}"}
 
@@ -316,6 +504,23 @@ def run_until_fail(
     skip_if_docs_only: bool = False,
     docs_check_mode: str = "changed",
 ) -> Tuple[int, Dict[str, Any]]:
+    setting = load_setting(path)
+    mode = str(setting.get("mode", "none")).strip().lower()
+    if mode == "sequence":
+        steps = setting.get("steps", [])
+        if not isinstance(steps, list) or not steps:
+            return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
+        policy = _execution_policy(setting)
+        if policy["kind"] != "serial":
+            repo_root = ael_paths.repo_root()
+            normalized_steps = [_normalized_step(setting, raw_step, idx) for idx, raw_step in enumerate(steps, start=1)]
+            return _run_parallel_repeat_until_fail(
+                repo_root=repo_root,
+                steps=normalized_steps,
+                output_mode=output_mode,
+                limit=max(1, int(limit)),
+            )
+
     max_runs = max(1, int(limit))
     runs: List[Dict[str, Any]] = []
     for idx in range(1, max_runs + 1):

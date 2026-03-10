@@ -1,4 +1,7 @@
 {
+  "execution_policy": {
+    "kind": "parallel"
+  },
   "mode": "sequence",
   "steps": [
     {
@@ -20,6 +23,6 @@
       "test": "tests/plans/gpio_signature.json"
     }
   ],
-  "stop_on_fail": true,
+  "stop_on_fail": false,
   "version": 1
 }

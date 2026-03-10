@@ -12,6 +12,15 @@ Stress it with:
 python3 -m ael verify-default repeat-until-fail --limit 20
 ```
 
+Current execution model:
+
+- the default verification baseline is treated as a suite of independent board
+  verification workers
+- the current default execution policy is `parallel`
+- `verify-default run` starts all three workers immediately
+- `repeat-until-fail` repeats independently per worker rather than waiting for
+  synchronized suite rounds
+
 Current default sequence:
 
 1. `esp32c6_golden_gpio`

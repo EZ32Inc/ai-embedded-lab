@@ -8,7 +8,7 @@
 - `ael/pipeline.py:main`
   - Secondary CLI entry for direct pipeline run (`python3 -m ael.pipeline run ...`).
 - `ael/default_verification.py:run_default_setting`
-  - Called by `ael verify-default run`; supports `none`, `preflight_only`, `single_run`, `sequence`.
+  - Called by `ael verify-default run`; supports `none`, `preflight_only`, `single_run`, and step-set `sequence` mode with serial or parallel execution policy.
 - `ael_controlplane/*` (optional package, not part of default `ael` CLI)
   - `agent.py`, `task_api.py`, `bridge_server.py`, `submit.py`
 - `ael/cli.py:main`
