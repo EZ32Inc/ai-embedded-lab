@@ -1,0 +1,119 @@
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Tuple
+import time
+
+
+VerificationRunner = Callable[[Path, Dict[str, Any], str], Tuple[int, Dict[str, Any]]]
+VerificationLogger = Callable[[str], None]
+
+
+@dataclass(frozen=True)
+class VerificationTask:
+    name: str
+    board: str
+    action: str = "single_run"
+    config: Dict[str, Any] = field(default_factory=dict)
+
+    def step(self) -> Dict[str, Any]:
+        return {
+            **dict(self.config),
+            "name": self.name,
+            "board": self.board,
+            "action": self.action,
+        }
+
+
+@dataclass(frozen=True)
+class VerificationSuite:
+    name: str
+    tasks: List[VerificationTask]
+    execution_policy: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class VerificationWorkerResult:
+    name: str
+    board: str
+    requested_iterations: int
+    completed_iterations: int
+    pass_count: int
+    fail_count: int
+    ok: bool
+    results: List[Dict[str, Any]]
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "board": self.board,
+            "requested_iterations": self.requested_iterations,
+            "completed_iterations": self.completed_iterations,
+            "pass_count": self.pass_count,
+            "fail_count": self.fail_count,
+            "ok": self.ok,
+            "results": list(self.results),
+        }
+
+
+@dataclass
+class VerificationWorker:
+    task: VerificationTask
+    repo_root: Path
+    output_mode: str
+    runner: VerificationRunner
+    iteration_limit: int = 1
+    stop_after_failure: bool = False
+    log_fn: VerificationLogger | None = None
+
+    def run(self) -> VerificationWorkerResult:
+        iterations: List[Dict[str, Any]] = []
+
+        for iteration in range(1, self.iteration_limit + 1):
+            label = self.task.name if self.iteration_limit == 1 else f"{self.task.name} iteration {iteration}"
+            self._log(f"[START] {label}")
+            started = time.monotonic()
+            try:
+                code, result = self.runner(self.repo_root, self.task.step(), self.output_mode)
+            except Exception as exc:
+                code, result = 1, {"ok": False, "error": str(exc)}
+            elapsed = round(time.monotonic() - started, 3)
+            ok = code == 0
+            record = {
+                "name": self.task.name,
+                "board": self.task.board,
+                "action": self.task.action,
+                "iteration": iteration,
+                "code": int(code),
+                "ok": ok,
+                "elapsed_s": elapsed,
+                "result": result,
+            }
+            iterations.append(record)
+            self._log(f"[DONE] {label} {'PASS' if ok else 'FAIL'} ({elapsed:.3f}s)")
+            if not ok:
+                reason = ""
+                if isinstance(result, dict):
+                    reason = str(result.get("error") or result.get("error_summary") or "").strip()
+                if reason:
+                    self._log(f"[FAIL] {label} {reason}")
+                if self.stop_after_failure:
+                    break
+
+        pass_count = sum(1 for item in iterations if item["ok"])
+        fail_count = len(iterations) - pass_count
+        return VerificationWorkerResult(
+            name=self.task.name,
+            board=self.task.board,
+            requested_iterations=self.iteration_limit,
+            completed_iterations=len(iterations),
+            pass_count=pass_count,
+            fail_count=fail_count,
+            ok=fail_count == 0 and len(iterations) == self.iteration_limit,
+            results=iterations,
+        )
+
+    def _log(self, message: str) -> None:
+        if self.log_fn is not None:
+            self.log_fn(message)

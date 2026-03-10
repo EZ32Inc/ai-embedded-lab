@@ -16,6 +16,7 @@ from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 from ael.probe_binding import load_probe_binding
+from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
 
 
 DEFAULT_CONFIG_PATH = ael_paths.repo_root() / "configs" / "default_verification_setting.yaml"
@@ -223,6 +224,27 @@ def _execution_policy(setting: Dict[str, Any]) -> Dict[str, Any]:
     return {"kind": kind}
 
 
+def _suite_from_setting(setting: Dict[str, Any]) -> VerificationSuite:
+    steps = setting.get("steps", [])
+    tasks: List[VerificationTask] = []
+    if isinstance(steps, list):
+        for idx, raw_step in enumerate(steps, start=1):
+            step = _normalized_step(setting, raw_step, idx)
+            tasks.append(
+                VerificationTask(
+                    name=str(step.get("name") or f"step_{idx:02d}"),
+                    board=str(step.get("board") or ""),
+                    action=str(step.get("action") or "single_run"),
+                    config={k: v for k, v in step.items() if k not in ("name", "board", "action")},
+                )
+            )
+    return VerificationSuite(
+        name=str(setting.get("suite_name") or "default_verification"),
+        tasks=tasks,
+        execution_policy=_execution_policy(setting),
+    )
+
+
 def _log_line(lock: threading.Lock, message: str) -> None:
     with lock:
         print(message, flush=True)
@@ -234,63 +256,23 @@ def _run_step_action(repo_root: Path, step: Dict[str, Any], output_mode: str) ->
     return _run_single(repo_root, step, output_mode)
 
 
-def _run_worker_iterations(
+def _worker_for_task(
     repo_root: Path,
-    step: Dict[str, Any],
+    task: VerificationTask,
     output_mode: str,
     max_iterations: int,
     stop_after_failure: bool,
     log_lock: threading.Lock,
-) -> Dict[str, Any]:
-    worker_name = str(step.get("name") or "worker")
-    board = str(step.get("board") or "").strip()
-    action = str(step.get("action") or "single_run").strip().lower()
-    iterations: List[Dict[str, Any]] = []
-
-    for iteration in range(1, max_iterations + 1):
-        label = f"{worker_name} iteration {iteration}" if max_iterations > 1 else worker_name
-        _log_line(log_lock, f"[START] {label}")
-        started = time.monotonic()
-        try:
-            code, result = _run_step_action(repo_root, step, output_mode)
-        except Exception as exc:
-            code, result = 1, {"ok": False, "error": str(exc)}
-        elapsed = round(time.monotonic() - started, 3)
-        ok = code == 0
-        record = {
-            "name": worker_name,
-            "board": board,
-            "action": action,
-            "iteration": iteration,
-            "code": int(code),
-            "ok": ok,
-            "elapsed_s": elapsed,
-            "result": result,
-        }
-        iterations.append(record)
-        status = "PASS" if ok else "FAIL"
-        _log_line(log_lock, f"[DONE] {label} {status} ({elapsed:.3f}s)")
-        if not ok:
-            reason = ""
-            if isinstance(result, dict):
-                reason = str(result.get("error") or result.get("error_summary") or "").strip()
-            if reason:
-                _log_line(log_lock, f"[FAIL] {label} {reason}")
-            if stop_after_failure:
-                break
-
-    pass_count = sum(1 for item in iterations if item["ok"])
-    fail_count = len(iterations) - pass_count
-    return {
-        "name": worker_name,
-        "board": board,
-        "requested_iterations": max_iterations,
-        "completed_iterations": len(iterations),
-        "pass_count": pass_count,
-        "fail_count": fail_count,
-        "ok": fail_count == 0 and len(iterations) == max_iterations,
-        "results": iterations,
-    }
+) -> VerificationWorker:
+    return VerificationWorker(
+        task=task,
+        repo_root=repo_root,
+        output_mode=output_mode,
+        runner=_run_step_action,
+        iteration_limit=max_iterations,
+        stop_after_failure=stop_after_failure,
+        log_fn=lambda message: _log_line(log_lock, message),
+    )
 
 
 def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) -> None:
@@ -304,19 +286,19 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
 
 def _run_parallel_suite_once(
     repo_root: Path,
-    steps: List[Dict[str, Any]],
+    suite: VerificationSuite,
     output_mode: str,
 ) -> Tuple[int, Dict[str, Any]]:
     log_lock = threading.Lock()
     workers: List[Dict[str, Any]] = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(steps))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(suite.tasks))) as executor:
         futures = [
-            executor.submit(_run_worker_iterations, repo_root, step, output_mode, 1, False, log_lock)
-            for step in steps
+            executor.submit(_worker_for_task(repo_root, task, output_mode, 1, False, log_lock).run)
+            for task in suite.tasks
         ]
         for future in concurrent.futures.as_completed(futures):
-            workers.append(future.result())
+            workers.append(future.result().to_dict())
 
     _print_worker_totals(log_lock, workers)
     results = [item for worker in workers for item in worker.get("results", [])]
@@ -326,8 +308,8 @@ def _run_parallel_suite_once(
     return code, {
         "ok": ok,
         "mode": "sequence",
-        "suite": {"steps": [step.get("name") for step in steps]},
-        "execution_policy": {"kind": "parallel", "iterations_per_worker": 1},
+        "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
+        "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": 1},
         "workers": workers,
         "results": results,
     }
@@ -336,7 +318,7 @@ def _run_parallel_suite_once(
 def _run_serial_suite_once(
     repo_root: Path,
     setting: Dict[str, Any],
-    steps: List[Dict[str, Any]],
+    suite: VerificationSuite,
     output_mode: str,
 ) -> Tuple[int, Dict[str, Any]]:
     stop_on_fail = bool(setting.get("stop_on_fail", True))
@@ -344,10 +326,10 @@ def _run_serial_suite_once(
     last_code = 0
     results: List[Dict[str, Any]] = []
 
-    for step in steps:
-        code, result = _run_step_action(repo_root, step, output_mode)
+    for task in suite.tasks:
+        code, result = _run_step_action(repo_root, task.step(), output_mode)
         ok = code == 0
-        results.append({"name": step["name"], "code": code, "ok": ok, "result": result})
+        results.append({"name": task.name, "board": task.board, "code": code, "ok": ok, "result": result})
         if not ok:
             overall_ok = False
             last_code = code
@@ -357,28 +339,28 @@ def _run_serial_suite_once(
     return (0 if overall_ok else last_code or 1), {
         "ok": overall_ok,
         "mode": "sequence",
-        "suite": {"steps": [step.get("name") for step in steps]},
-        "execution_policy": {"kind": "serial", "iterations_per_worker": 1},
+        "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
+        "execution_policy": {"kind": suite.execution_policy.get("kind", "serial"), "iterations_per_worker": 1},
         "results": results,
     }
 
 
 def _run_parallel_repeat_until_fail(
     repo_root: Path,
-    steps: List[Dict[str, Any]],
+    suite: VerificationSuite,
     output_mode: str,
     limit: int,
 ) -> Tuple[int, Dict[str, Any]]:
     log_lock = threading.Lock()
     workers: List[Dict[str, Any]] = []
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(steps))) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(suite.tasks))) as executor:
         futures = [
-            executor.submit(_run_worker_iterations, repo_root, step, output_mode, limit, True, log_lock)
-            for step in steps
+            executor.submit(_worker_for_task(repo_root, task, output_mode, limit, True, log_lock).run)
+            for task in suite.tasks
         ]
         for future in concurrent.futures.as_completed(futures):
-            workers.append(future.result())
+            workers.append(future.result().to_dict())
 
     _print_worker_totals(log_lock, workers)
     results = [item for worker in workers for item in worker.get("results", [])]
@@ -389,8 +371,8 @@ def _run_parallel_repeat_until_fail(
     payload: Dict[str, Any] = {
         "ok": ok,
         "mode": "repeat_until_fail",
-        "suite": {"steps": [step.get("name") for step in steps]},
-        "execution_policy": {"kind": "parallel", "iterations_per_worker": limit, "stop_each_worker_on_failure": True},
+        "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
+        "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": limit, "stop_each_worker_on_failure": True},
         "requested_iterations_per_worker": limit,
         "workers": workers,
         "results": results,
@@ -459,14 +441,12 @@ def run_default_setting(
         return code, {"ok": code == 0, "mode": mode, "results": results}
 
     if mode == "sequence":
-        steps = setting.get("steps", [])
-        if not isinstance(steps, list) or not steps:
+        suite = _suite_from_setting(setting)
+        if not suite.tasks:
             return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
-        normalized_steps = [_normalized_step(setting, raw_step, idx) for idx, raw_step in enumerate(steps, start=1)]
-        policy = _execution_policy(setting)
-        if policy["kind"] == "serial":
-            return _run_serial_suite_once(repo_root, setting, normalized_steps, output_mode)
-        return _run_parallel_suite_once(repo_root, normalized_steps, output_mode)
+        if suite.execution_policy.get("kind") == "serial":
+            return _run_serial_suite_once(repo_root, setting, suite, output_mode)
+        return _run_parallel_suite_once(repo_root, suite, output_mode)
 
     return 2, {"ok": False, "mode": mode, "error": f"unsupported mode: {mode}"}
 
@@ -507,16 +487,14 @@ def run_until_fail(
     setting = load_setting(path)
     mode = str(setting.get("mode", "none")).strip().lower()
     if mode == "sequence":
-        steps = setting.get("steps", [])
-        if not isinstance(steps, list) or not steps:
+        suite = _suite_from_setting(setting)
+        if not suite.tasks:
             return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
-        policy = _execution_policy(setting)
-        if policy["kind"] != "serial":
+        if suite.execution_policy.get("kind") != "serial":
             repo_root = ael_paths.repo_root()
-            normalized_steps = [_normalized_step(setting, raw_step, idx) for idx, raw_step in enumerate(steps, start=1)]
             return _run_parallel_repeat_until_fail(
                 repo_root=repo_root,
-                steps=normalized_steps,
+                suite=suite,
                 output_mode=output_mode,
                 limit=max(1, int(limit)),
             )

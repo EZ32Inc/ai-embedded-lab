@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from ael import default_verification
@@ -190,6 +191,25 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
     assert any(not item["ok"] for item in payload["results"])
 
 
+def test_sequence_setting_materializes_suite_and_tasks():
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "parallel"},
+        "steps": [
+            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
+            {"name": "stm32", "board": "stm32f103", "test": "tests/plans/gpio_signature.json"},
+        ],
+    }
+
+    suite = default_verification._suite_from_setting(setting)
+
+    assert suite.name == "default_verification"
+    assert suite.execution_policy["kind"] == "parallel"
+    assert [task.name for task in suite.tasks] == ["rp2040", "stm32"]
+    assert [task.board for task in suite.tasks] == ["rp2040_pico", "stm32f103"]
+
+
 def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
     setting = {
         "version": 1,
@@ -202,9 +222,9 @@ def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
     }
     cfg_path = _write_setting(tmp_path, setting)
 
-    def fake_worker(repo_root, step, output_mode, max_iterations, stop_after_failure, log_lock):
-        if step["name"] == "rp2040":
-            return {
+    def fake_worker(repo_root, task, output_mode, max_iterations, stop_after_failure, log_lock):
+        if task.name == "rp2040":
+            payload = {
                 "name": "rp2040",
                 "board": "rp2040_pico",
                 "requested_iterations": max_iterations,
@@ -218,21 +238,23 @@ def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
                     {"name": "rp2040", "board": "rp2040_pico", "iteration": 3, "code": 9, "ok": False, "result": {"error": "rp2040 fail"}},
                 ],
             }
-        return {
-            "name": "esp32",
-            "board": "esp32c6_devkit",
-            "requested_iterations": max_iterations,
-            "completed_iterations": 5,
-            "pass_count": 5,
-            "fail_count": 0,
-            "ok": True,
-            "results": [
-                {"name": "esp32", "board": "esp32c6_devkit", "iteration": i, "code": 0, "ok": True, "result": {"ok": True}}
-                for i in range(1, 6)
-            ],
-        }
+        else:
+            payload = {
+                "name": "esp32",
+                "board": "esp32c6_devkit",
+                "requested_iterations": max_iterations,
+                "completed_iterations": 5,
+                "pass_count": 5,
+                "fail_count": 0,
+                "ok": True,
+                "results": [
+                    {"name": "esp32", "board": "esp32c6_devkit", "iteration": i, "code": 0, "ok": True, "result": {"ok": True}}
+                    for i in range(1, 6)
+                ],
+            }
+        return SimpleNamespace(run=lambda: SimpleNamespace(to_dict=lambda: payload))
 
-    with patch("ael.default_verification._run_worker_iterations", side_effect=fake_worker):
+    with patch("ael.default_verification._worker_for_task", side_effect=fake_worker):
         code, payload = default_verification.run_until_fail(limit=5, path=cfg_path)
 
     assert code == 9
