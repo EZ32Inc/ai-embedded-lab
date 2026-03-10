@@ -241,8 +241,7 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
     communication = payload.get("communication")
     if isinstance(communication, dict) and communication:
         lines.append("communication:")
-        for key, value in communication.items():
-            lines.append(f"  - {key}: {value}")
+        lines.extend(_render_communication_text(communication, indent="  "))
     capability_surfaces = payload.get("capability_surfaces")
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         lines.append("capability_surfaces:")
@@ -262,6 +261,42 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         lines.append("metadata_validation_errors:")
         for item in metadata_errors:
             lines.append(f"  - {item}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
+    if not payload.get("ok"):
+        return f"error: {payload.get('error')}\n"
+    lines: List[str] = []
+    lines.append(f"{payload.get('id')} [{payload.get('kind')}]")
+    if payload.get("type"):
+        lines.append(f"type: {payload.get('type')}")
+    if payload.get("origin"):
+        lines.append(f"origin: {payload.get('origin')}")
+    endpoint = payload.get("endpoint")
+    if isinstance(endpoint, dict) and (endpoint.get("host") or endpoint.get("port") is not None):
+        lines.append(f"endpoint: {endpoint.get('host')}:{endpoint.get('port')}")
+    communication = payload.get("communication") or {}
+    if isinstance(communication, dict):
+        if not endpoint and communication.get("endpoint"):
+            lines.append(f"endpoint: {communication.get('endpoint')}")
+        primary = communication.get("primary")
+        if primary:
+            lines.append(f"primary_surface: {primary}")
+        elif communication.get("protocol"):
+            lines.append(f"protocol: {communication.get('protocol')}")
+    capability_surfaces = payload.get("capability_surfaces") or {}
+    if isinstance(capability_surfaces, dict) and capability_surfaces:
+        parts = [f"{key}->{value}" for key, value in capability_surfaces.items()]
+        lines.append(f"capability_surfaces: {', '.join(parts)}")
+    refs = payload.get("referenced_by") or {}
+    if isinstance(refs, dict):
+        boards = refs.get("boards") or []
+        plans = refs.get("plans") or []
+        if boards:
+            lines.append(f"used_by_boards: {', '.join(boards)}")
+        if plans:
+            lines.append(f"used_by_plans: {', '.join(plans)}")
     return "\n".join(lines).rstrip() + "\n"
 
 
@@ -298,3 +333,69 @@ def render_resolved_instrument_inventory_text(payload: Dict[str, Any]) -> str:
         if item.get("metadata_validation_errors"):
             lines.append(f"  metadata_errors: {len(item.get('metadata_validation_errors') or [])}")
     return "\n".join(lines).rstrip() + "\n"
+
+
+def render_doctor_text(payload: Dict[str, Any]) -> str:
+    if not payload.get("ok") and not payload.get("resolved_view"):
+        return f"error: {payload.get('error')}\n"
+    lines: List[str] = []
+    resolved = payload.get("resolved_view")
+    if isinstance(resolved, dict) and resolved:
+        lines.append("resolved_instrument:")
+        for line in render_resolved_instrument_text(resolved).rstrip().splitlines():
+            lines.append(f"  {line}")
+    if "ok" in payload:
+        lines.append(f"doctor_ok: {payload.get('ok')}")
+    checks = payload.get("checks") or {}
+    if isinstance(checks, dict) and checks:
+        lines.append("checks:")
+        for name, detail in checks.items():
+            if isinstance(detail, dict):
+                status = detail.get("ok")
+                lines.append(f"  - {name}: ok={status}")
+                for key, value in detail.items():
+                    if key == "ok":
+                        continue
+                    lines.append(f"    {key}: {value}")
+            else:
+                lines.append(f"  - {name}: {detail}")
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _render_communication_text(communication: Dict[str, Any], *, indent: str) -> List[str]:
+    lines: List[str] = []
+    primary = communication.get("primary")
+    if primary:
+        lines.append(f"{indent}primary: {primary}")
+    endpoint = communication.get("endpoint")
+    if endpoint:
+        lines.append(f"{indent}endpoint: {endpoint}")
+    transport = communication.get("transport")
+    if transport:
+        lines.append(f"{indent}transport: {transport}")
+    protocol = communication.get("protocol")
+    if protocol:
+        lines.append(f"{indent}protocol: {protocol}")
+    invocation_style = communication.get("invocation_style")
+    if invocation_style:
+        lines.append(f"{indent}invocation_style: {invocation_style}")
+    surfaces = communication.get("surfaces")
+    if isinstance(surfaces, list) and surfaces:
+        lines.append(f"{indent}surfaces:")
+        for surface in surfaces:
+            if not isinstance(surface, dict):
+                lines.append(f"{indent}  - {surface}")
+                continue
+            name = surface.get("name") or "unnamed"
+            lines.append(f"{indent}  - {name}")
+            for key in ("transport", "endpoint", "protocol", "invocation_style"):
+                value = surface.get(key)
+                if value is not None:
+                    lines.append(f"{indent}    {key}: {value}")
+            auth = surface.get("auth")
+            if auth is not None:
+                lines.append(f"{indent}    auth: {auth}")
+            options = surface.get("options")
+            if options is not None:
+                lines.append(f"{indent}    options: {options}")
+    return lines

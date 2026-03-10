@@ -2,6 +2,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ael import instrument_doctor
+from ael import instrument_view
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -25,6 +26,10 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
     assert payload["resolved_view"]["id"] == "esp32jtag_stm32_golden"
     assert payload["resolved_view"]["kind"] == "probe_instance"
+    rendered = instrument_view.render_doctor_text(payload)
+    assert "resolved_instrument:" in rendered
+    assert "checks:" in rendered
+    assert "monitor_version: ok=True" in rendered
 
 
 def test_doctor_meter_manifest_reports_reachability():
@@ -41,3 +46,6 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
     assert payload["resolved_view"]["id"] == "esp32s3_dev_c_meter"
     assert payload["resolved_view"]["kind"] == "instrument"
+    rendered = instrument_view.render_doctor_text(payload)
+    assert "esp32s3_dev_c_meter" in rendered
+    assert "reachability: ok=True" in rendered

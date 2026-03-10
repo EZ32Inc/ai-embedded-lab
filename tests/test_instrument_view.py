@@ -44,6 +44,9 @@ def test_instruments_describe_cli_text_output():
     )
     assert "id: esp32jtag_stm32_golden" in res.stdout
     assert "kind: probe_instance" in res.stdout
+    assert "surfaces:" in res.stdout
+    assert "gdb_remote" in res.stdout
+    assert "web_api" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "referenced_by:" in res.stdout
 
@@ -63,3 +66,19 @@ def test_instruments_describe_cli_json_output():
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "esp32s3_dev_c_meter"
+
+
+def test_instruments_describe_cli_summary_output():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "instruments", "describe", "--id", "esp32s3_dev_c_meter", "--format", "summary"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "esp32s3_dev_c_meter [instrument]" in res.stdout
+    assert "endpoint: 192.168.4.1:9000" in res.stdout
+    assert "capability_surfaces:" in res.stdout

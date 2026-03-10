@@ -77,13 +77,14 @@ def main():
     instr_list = instr_sub.add_parser("list")
     instr_describe = instr_sub.add_parser("describe")
     instr_describe.add_argument("--id", required=True)
-    instr_describe.add_argument("--format", choices=["json", "text"], default="json")
+    instr_describe.add_argument("--format", choices=["json", "text", "summary"], default="json")
     instr_show = instr_sub.add_parser("show")
     instr_show.add_argument("id")
     instr_find = instr_sub.add_parser("find")
     instr_find.add_argument("--cap", required=True)
     instr_doctor = instr_sub.add_parser("doctor")
     instr_doctor.add_argument("--id", required=True)
+    instr_doctor.add_argument("--format", choices=["json", "text"], default="json")
     instr_wifi_scan = instr_sub.add_parser("wifi-scan")
     instr_wifi_scan.add_argument("--id", required=True)
     instr_wifi_scan.add_argument("--ifname", required=True)
@@ -305,6 +306,8 @@ def main():
             payload = instrument_view.build_resolved_instrument_view(Path(repo_root), args.id)
             if args.format == "text":
                 print(instrument_view.render_resolved_instrument_text(payload), end="")
+            elif args.format == "summary":
+                print(instrument_view.render_resolved_instrument_summary_text(payload), end="")
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)
@@ -321,7 +324,10 @@ def main():
             sys.exit(0)
         if args.instr_cmd == "doctor":
             payload = instrument_doctor.doctor(repo_root, args.id)
-            print(json.dumps(payload, indent=2, sort_keys=True))
+            if args.format == "text":
+                print(instrument_view.render_doctor_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)
         if args.instr_cmd == "wifi-scan":
             inst = registry.get(args.id)
