@@ -51,6 +51,9 @@ def test_explain_check_for_meter_path_includes_uart_and_instrument():
 def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
+    assert payload['selected']['probe'] is None
+    assert payload['selected']['probe_instance'] is None
+    assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
 

@@ -1,6 +1,8 @@
 board:
   name: ESP32-C6 DevKit
   target: esp32c6
+  probe_required: true
+  allow_legacy_probe_fallback: false
   build:
     type: idf
     project_dir: firmware/targets/esp32c6

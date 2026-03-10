@@ -15,7 +15,7 @@ from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
-from ael.probe_binding import load_probe_binding
+from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
 
 
@@ -129,6 +129,9 @@ def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[
         step.get("probe"),
         resolve_probe_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
     )
+    if not instance_id and not probe_path:
+        binding = empty_probe_binding()
+        return binding.raw, binding.config_path
     binding = load_probe_binding(
         config_root,
         probe_path=None if instance_id else probe_path,

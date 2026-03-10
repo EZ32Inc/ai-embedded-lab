@@ -8,7 +8,7 @@ from ael.connection_model import build_connection_setup, render_connection_setup
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import resolve_probe_config, resolve_probe_instance
 from ael.instrument_metadata import resolve_capability_surface
-from ael.probe_binding import load_probe_binding
+from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.strategy_resolver import (
     build_preflight_step,
     build_uart_step,
@@ -42,12 +42,17 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
         raise FileNotFoundError(f"test not found: {test_file}")
     probe_rel = resolve_probe_config(str(repo_root), args=None, board_id=board_id)
     instance_id = resolve_probe_instance(str(repo_root), args=None, board_id=board_id)
-    binding = load_probe_binding(
-        repo_root,
-        probe_path=None if instance_id else probe_rel,
-        instance_id=instance_id,
-    )
-    probe_path = Path(str(binding.config_path))
+    if probe_rel or instance_id:
+        binding = load_probe_binding(
+            repo_root,
+            probe_path=None if instance_id else probe_rel,
+            instance_id=instance_id,
+        )
+        probe_path = Path(str(binding.config_path))
+        probe_path_rel = probe_path.relative_to(repo_root).as_posix()
+    else:
+        binding = empty_probe_binding()
+        probe_path_rel = None
     board_raw = _simple_yaml_load(str(board_path))
     test_raw = _load_json(test_file)
     probe_raw = binding.raw
@@ -55,7 +60,7 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     return {
         "board_path": board_path.relative_to(repo_root).as_posix(),
         "test_path": test_file.relative_to(repo_root).as_posix(),
-        "probe_path": probe_path.relative_to(repo_root).as_posix(),
+        "probe_path": probe_path_rel,
         "probe_instance_id": binding.instance_id,
         "probe_type": binding.type_id,
         "probe_communication": binding.communication,
@@ -160,7 +165,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         },
         "includes": [
             "board and test selection",
-            "probe selection",
+            "probe selection when required",
             "builder and flash strategy resolution",
             "wiring assumptions",
             "check model selection",

@@ -96,6 +96,83 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
     assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
 
 
+def test_run_single_uses_no_probe_for_esp32c6_meter_path(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        """{
+  "name": "esp32c6_gpio_signature_with_meter",
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    }
+  },
+  "bench_setup": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle"
+      }
+    ]
+  }
+}""",
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ) as run_mock:
+        code, result = default_verification._run_single(REPO_ROOT, step, "normal")
+
+    assert code == 0
+    assert result == {"ok": True}
+    guard_mock.assert_called_once()
+    assert run_mock.call_args.kwargs["probe_path"] is None
+
+
+def test_run_single_keeps_meter_instrument_path_for_esp32c6(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        """{
+  "name": "esp32c6_gpio_signature_with_meter",
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    }
+  },
+  "bench_setup": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle"
+      }
+    ]
+  }
+}""",
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ):
+        code, result = default_verification._run_single(REPO_ROOT, step, "normal")
+
+    assert code == 0
+    assert result == {"ok": True}
+    guard_mock.assert_called_once()
+    assert guard_mock.call_args.kwargs["host"] == "192.168.4.1"
+    assert guard_mock.call_args.kwargs["manifest"]["id"] == "esp32s3_dev_c_meter"
+
+
 def test_run_until_fail_stops_on_first_failure(tmp_path):
     cfg_path = _write_setting(
         tmp_path,
@@ -269,7 +346,7 @@ def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
     assert payload["failure"]["iteration"] == 3
 
 
-def test_task_resource_keys_include_probe_and_instrument(tmp_path):
+def test_task_resource_keys_include_explicit_probe_and_instrument(tmp_path):
     test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
     test_path.write_text(
         json.dumps(
@@ -297,8 +374,40 @@ def test_task_resource_keys_include_probe_and_instrument(tmp_path):
     keys = default_verification._task_resource_keys(REPO_ROOT, task)
 
     assert "dut:esp32c6_devkit" in keys
-    assert any(key.endswith("/configs/instrument_instances/esp32jtag_stm32_golden.yaml") for key in keys)
+    assert any(key.endswith("/configs/esp32jtag.yaml") for key in keys)
     assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in keys
+
+
+def test_task_resource_keys_for_esp32c6_default_do_not_include_probe(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        json.dumps(
+            {
+                "name": "esp32c6_gpio_signature_with_meter",
+                "instrument": {
+                    "id": "esp32s3_dev_c_meter",
+                    "tcp": {"host": "192.168.4.1", "port": 9000},
+                },
+                "bench_setup": {
+                    "dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}],
+                    "ground_required": True,
+                    "ground_confirmed": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    task = VerificationTask(
+        name="esp32c6",
+        board="esp32c6_devkit",
+        config={"test": str(test_path)},
+    )
+
+    keys = default_verification._task_resource_keys(REPO_ROOT, task)
+
+    assert "dut:esp32c6_devkit" in keys
+    assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in keys
+    assert not any(key.startswith("probe:") or key.startswith("probe_path:") for key in keys)
 
 
 def test_worker_claims_shared_resources_serially():

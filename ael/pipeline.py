@@ -20,7 +20,7 @@ from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
 from ael.config_resolver import resolve_probe_instance
 from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines
-from ael.probe_binding import load_probe_binding
+from ael.probe_binding import empty_probe_binding, load_probe_binding
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -674,11 +674,14 @@ def run_pipeline(
 
     board_raw = _simple_yaml_load(board_path) if board_path else {}
     board_probe_instance = resolve_probe_instance(repo_root, args=None, board_id=board_id)
-    binding = load_probe_binding(
-        repo_root,
-        probe_path=probe_path,
-        instance_id=board_probe_instance if not probe_path else None,
-    )
+    if probe_path or board_probe_instance:
+        binding = load_probe_binding(
+            repo_root,
+            probe_path=probe_path,
+            instance_id=board_probe_instance if not probe_path else None,
+        )
+    else:
+        binding = empty_probe_binding()
     probe_path = binding.config_path
     probe_raw = binding.raw
     effective = _deep_merge(_deep_merge(probe_raw, board_raw), test_raw)

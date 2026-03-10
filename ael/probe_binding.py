@@ -23,6 +23,23 @@ class ProbeBinding:
     legacy_warning: Optional[str]
 
 
+def empty_probe_binding() -> ProbeBinding:
+    return ProbeBinding(
+        raw={},
+        config_path=None,
+        instance_id=None,
+        type_id=None,
+        instance_path=None,
+        type_path=None,
+        endpoint_host=None,
+        endpoint_port=None,
+        communication={},
+        capability_surfaces={},
+        metadata_validation_errors=(),
+        legacy_warning=None,
+    )
+
+
 def _load_yaml(path: Path) -> Dict[str, Any]:
     try:
         import yaml  # type: ignore

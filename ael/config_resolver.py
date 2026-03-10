@@ -63,6 +63,50 @@ def _board_probe_instance(repo_root: str, board_id: Optional[str]) -> Optional[s
     return instance_id or None
 
 
+def _board_requires_probe(repo_root: str, board_id: Optional[str]) -> bool:
+    if not board_id:
+        return True
+    board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
+    if not board_path.exists():
+        return True
+    try:
+        import yaml  # type: ignore
+
+        payload = yaml.safe_load(board_path.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    if not isinstance(payload, dict):
+        return True
+    board = payload.get("board")
+    if not isinstance(board, dict):
+        return True
+    if board.get("probe_required") is False:
+        return False
+    return True
+
+
+def _board_allows_legacy_probe_fallback(repo_root: str, board_id: Optional[str]) -> bool:
+    if not board_id:
+        return True
+    board_path = Path(repo_root) / "configs" / "boards" / f"{board_id}.yaml"
+    if not board_path.exists():
+        return True
+    try:
+        import yaml  # type: ignore
+
+        payload = yaml.safe_load(board_path.read_text(encoding="utf-8"))
+    except Exception:
+        return True
+    if not isinstance(payload, dict):
+        return True
+    board = payload.get("board")
+    if not isinstance(board, dict):
+        return True
+    if board.get("allow_legacy_probe_fallback") is False:
+        return False
+    return True
+
+
 def _arg(args: Any, name: str, default: Any = None) -> Any:
     if args is None:
         return default
@@ -133,7 +177,7 @@ def resolve_probe_config(
     args: Any,
     board_id: Optional[str] = None,
     pack_meta: Optional[dict] = None,
-) -> str:
+) -> Optional[str]:
     """Resolve probe config path with user override + policy defaults."""
     user_probe = _arg(args, "probe")
     if user_probe:
@@ -144,6 +188,8 @@ def resolve_probe_config(
         return notify
 
     policy_board = _board_for_policy(board_id, args, pack_meta)
+    if not _board_requires_probe(repo_root, policy_board):
+        return None
     board_instance = _board_probe_instance(repo_root, policy_board)
     if board_instance:
         instance_rel = os.path.join("configs", "instrument_instances", f"{board_instance}.yaml")
@@ -154,6 +200,9 @@ def resolve_probe_config(
     if board_probe:
         absolute = _use_absolute_paths(repo_root, pack_meta)
         return _normalize_path(repo_root, board_probe, absolute)
+
+    if not _board_allows_legacy_probe_fallback(repo_root, policy_board):
+        return None
 
     absolute = _use_absolute_paths(repo_root, pack_meta)
     return _normalize_path(repo_root, _DEFAULTS["probe_config"], absolute)
@@ -178,12 +227,17 @@ def resolve_probe_instance(
         return None
 
     policy_board = _board_for_policy(board_id, args, pack_meta)
+    if not _board_requires_probe(repo_root, policy_board):
+        return None
     board_instance = _board_probe_instance(repo_root, policy_board)
     if board_instance:
         return board_instance
 
     board_probe = _board_probe_config(repo_root, policy_board)
     if board_probe:
+        return None
+
+    if not _board_allows_legacy_probe_fallback(repo_root, policy_board):
         return None
 
     return _DEFAULTS["probe_instance"]
