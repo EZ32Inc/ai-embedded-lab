@@ -8,7 +8,13 @@ from ael import strategy_resolver
 class TestStrategyResolver(unittest.TestCase):
     def test_resolve_run_strategy_applies_overrides_and_defaults(self):
         probe_raw = {"probe": {"name": "p1"}, "connection": {"ip": "1.2.3.4", "gdb_port": 4242}}
-        board_raw = {"board": {"name": "b1", "default_wiring": {"swd": "P3"}}}
+        board_raw = {
+            "board": {
+                "name": "b1",
+                "default_wiring": {"swd": "P3"},
+                "flash": {"method": "idf_esptool"},
+            }
+        }
         test_raw = {"build": {"project_dir": "assets_golden/duts/esp32s3_devkit/gpio_signature/firmware"}}
 
         resolved = strategy_resolver.resolve_run_strategy(
@@ -28,9 +34,44 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(resolved.wiring_cfg.get("reset"), "UNKNOWN")
         self.assertEqual(resolved.connection_ctx.resolved_wiring.get("verify"), "P0.0")
         self.assertIn("missing coarse wiring: reset", resolved.connection_ctx.warnings)
-        self.assertEqual(resolved.board_cfg.get("build", {}).get("type"), "idf")
+        self.assertEqual(
+            resolved.board_cfg.get("build", {}).get("project_dir"),
+            "assets_golden/duts/esp32s3_devkit/gpio_signature/firmware",
+        )
+        self.assertEqual(strategy_resolver.resolve_builder_kind(resolved.board_cfg), "idf")
         self.assertEqual(resolved.instrument_communication, {})
         self.assertEqual(resolved.instrument_capability_surfaces, {})
+
+    def test_resolve_run_strategy_preserves_non_idf_build_type_on_override(self):
+        board_raw = {
+            "board": {
+                "name": "rp2040",
+                "build": {
+                    "type": "cmake",
+                    "project_dir": "firmware/targets/rp2040_pico",
+                    "artifact_stem": "pico_blink",
+                },
+            }
+        }
+        test_raw = {
+            "build": {
+                "project_dir": "firmware/targets/rp2040_pico_uart",
+                "artifact_stem": "pico_uart_banner",
+            }
+        }
+
+        resolved = strategy_resolver.resolve_run_strategy(
+            probe_raw={},
+            board_raw=board_raw,
+            test_raw=test_raw,
+            wiring=None,
+            request_timeout_s=None,
+            repo_root=Path("."),
+        )
+
+        self.assertEqual(resolved.board_cfg.get("build", {}).get("type"), "cmake")
+        self.assertEqual(resolved.board_cfg.get("build", {}).get("project_dir"), "firmware/targets/rp2040_pico_uart")
+        self.assertEqual(resolved.board_cfg.get("build", {}).get("artifact_stem"), "pico_uart_banner")
 
     def test_resolve_run_strategy_uses_resolved_instrument_communication(self):
         test_raw = {"instrument": {"id": "meter1"}}

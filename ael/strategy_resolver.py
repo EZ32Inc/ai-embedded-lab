@@ -193,11 +193,15 @@ def resolve_run_strategy(
     test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
     firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None
     project_override = test_build.get("project_dir") or firmware_override
-    if project_override:
+    if project_override or test_build:
         build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}
         build_cfg = dict(build_cfg)
-        build_cfg["type"] = "idf"
-        build_cfg["project_dir"] = str(project_override)
+        if project_override:
+            build_cfg["project_dir"] = str(project_override)
+        for key in ("type", "artifact_stem", "build_dir", "target"):
+            value = test_build.get(key)
+            if value not in (None, ""):
+                build_cfg[key] = value
         board_cfg["build"] = build_cfg
 
     connection_ctx = normalize_connection_context(
