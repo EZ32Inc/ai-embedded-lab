@@ -131,6 +131,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
 
     summary = pipeline._build_validation_summary(
         run_id="run1",
+        board_id="esp32c6_devkit",
         board_cfg={"name": "ESP32-C6 DevKit"},
         test_path="tests/plans/esp32c6_gpio_signature_with_meter.json",
         run_result_path="/tmp/result.json",
@@ -153,6 +154,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     )
     lkg = pipeline._build_last_known_good_setup(
         run_id="run1",
+        board_id="esp32c6_devkit",
         board_cfg={"name": "ESP32-C6 DevKit"},
         test_path="tests/plans/esp32c6_gpio_signature_with_meter.json",
         flash_info=flash_info,
@@ -172,6 +174,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         result=result,
     )
     current_setup = pipeline._build_current_setup(
+        board_id="esp32c6_devkit",
+        board_cfg={"name": "ESP32-C6 DevKit"},
         flash_info=flash_info,
         instrument_id="esp32s3_dev_c_meter",
         instrument_host="192.168.4.1",
@@ -189,6 +193,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     )
 
     assert summary["board"] == "ESP32-C6 DevKit"
+    assert summary["selected_dut"]["id"] == "esp32c6_devkit"
+    assert summary["selected_dut"]["name"] == "ESP32-C6 DevKit"
     assert summary["test"] == "esp32c6_gpio_signature_with_meter"
     assert summary["serial_or_flash_port"] == "/dev/ttyACM0"
     assert summary["instrument_profile"] == "esp32s3_dev_c_meter"
@@ -206,6 +212,9 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["control_instrument_endpoint"] == "192.168.2.98:4242"
     assert summary["control_instrument_communication"]["primary"] == "gdb_remote"
     assert summary["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
+    assert summary["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
+    assert summary["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert summary["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
@@ -214,6 +223,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in summary["connection_digest"])
 
     assert lkg["board"] == "ESP32-C6 DevKit"
+    assert lkg["selected_dut"]["id"] == "esp32c6_devkit"
     assert lkg["port"] == "/dev/ttyACM0"
     assert lkg["instrument_communication"]["protocol"] == "gpio_meter_v1"
     assert lkg["instrument_capability_surfaces"]["measure.digital"] == "primary"
@@ -228,6 +238,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert lkg["control_instrument_endpoint"] == "192.168.2.98:4242"
     assert lkg["control_instrument_communication"]["primary"] == "gdb_remote"
     assert lkg["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
+    assert lkg["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert lkg["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
     assert lkg["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
@@ -235,6 +247,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert any(item.startswith("ground required confirmed=True") for item in lkg["connection_digest"])
 
     assert current_setup["serial_or_flash_port"] == "/dev/ttyACM0"
+    assert current_setup["selected_dut"]["id"] == "esp32c6_devkit"
     assert current_setup["instrument_profile"] == "esp32s3_dev_c_meter"
     assert current_setup["instrument_communication"]["protocol"] == "gpio_meter_v1"
     assert current_setup["instrument_capability_surfaces"]["measure.digital"] == "primary"
@@ -249,6 +262,9 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["control_instrument_endpoint"] == {"host": "192.168.2.98", "port": 4242}
     assert current_setup["control_instrument_communication"]["primary"] == "gdb_remote"
     assert current_setup["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
+    assert current_setup["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
+    assert current_setup["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert current_setup["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
     assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True

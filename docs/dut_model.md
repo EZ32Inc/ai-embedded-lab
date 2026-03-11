@@ -159,6 +159,7 @@ The next steps should be incremental.
 
 - surface selected DUT identity more consistently in results and explanation paths
 - make it easier to tell whether a run is board-selected, DUT-selected, or both
+- prefer a canonical `selected_dut` object in structured outputs, with older flat board fields kept only for compatibility where necessary
 
 ### Phase 3: Tighten resolver policy
 

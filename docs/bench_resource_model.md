@@ -170,6 +170,7 @@ This sequence is important:
 
 - expose relevant lock keys or resource summaries more directly in runtime/debug output
 - make it easier to see why a worker is waiting
+- prefer a canonical `selected_bench_resources` object in structured outputs so selected endpoints, control instruments, and connection digests are grouped together
 
 ### Phase 3: Tighten model alignment
 

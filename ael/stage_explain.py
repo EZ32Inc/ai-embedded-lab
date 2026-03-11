@@ -43,6 +43,31 @@ def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
     }
 
 
+def _selected_dut_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    resolved = ctx.get("resolved")
+    board_cfg = resolved.board_cfg if resolved is not None else {}
+    return {
+        "id": board_id,
+        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
+        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "board_config": ctx.get("board_path"),
+    }
+
+
+def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
+    resolved = ctx["resolved"]
+    connection_setup = build_connection_setup(resolved.connection_ctx)
+    return {
+        "control_instrument": _control_instrument_selection(ctx),
+        "instrument": {
+            "id": resolved.instrument_id,
+            "communication": dict(resolved.instrument_communication or {}),
+            "capability_surfaces": dict(resolved.instrument_capability_surfaces or {}),
+        } if any([resolved.instrument_id, resolved.instrument_communication, resolved.instrument_capability_surfaces]) else None,
+        "connection_setup": connection_setup,
+    }
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -168,6 +193,8 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "board": board_id,
         "test": {"name": test_raw.get("name"), "path": ctx["test_path"]},
         "selected": {
+            "selected_dut": _selected_dut_payload(board_id, ctx),
+            "selected_bench_resources": _selected_bench_resources_payload(ctx),
             "control_instrument_selection": _control_instrument_selection(ctx),
             "probe": ctx["probe_path"],
             "probe_instance": ctx.get("probe_instance_id"),
@@ -367,6 +394,15 @@ def render_text(payload: Dict[str, Any]) -> str:
             if k == "control_instrument_selection" and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
+                    lines.append(f"    {inner_k}: {inner_v}")
+                continue
+            if k in ("selected_dut", "selected_bench_resources") and isinstance(v, dict):
+                lines.append(f"  - {k}:")
+                for inner_k, inner_v in v.items():
+                    if inner_k == "connection_setup" and isinstance(inner_v, dict):
+                        lines.append(f"    {inner_k}:")
+                        lines.extend(render_connection_setup_text(inner_v, indent="      "))
+                        continue
                     lines.append(f"    {inner_k}: {inner_v}")
                 continue
             if k == "connection_setup" and isinstance(v, dict):

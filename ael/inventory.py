@@ -7,6 +7,7 @@ from typing import Any, Dict, List, Tuple
 
 from ael import assets
 from ael.connection_model import (
+    build_connection_digest,
     build_connection_rows,
     build_connection_setup,
     diff_connection_setups,
@@ -172,6 +173,28 @@ def _primary_selected_instrument(poi: Dict[str, Any]) -> Dict[str, Any]:
             "metadata_validation_errors": list(poi.get("metadata_validation_errors") or []),
         }
     return dict(poi)
+
+
+def _selected_dut_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    dut = assets.load_dut_prefer_user(board_id)
+    manifest = dut.get("manifest") if isinstance(dut, dict) and isinstance(dut.get("manifest"), dict) else {}
+    return {
+        "id": board_id,
+        "name": manifest.get("description") or board_cfg.get("name"),
+        "target": board_cfg.get("target"),
+        "mcu": manifest.get("mcu") or board_cfg.get("target"),
+        "family": manifest.get("family"),
+        "source": "user" if isinstance(dut, dict) and "/assets_user/" in str(dut.get("path") or "") else ("golden" if dut else None),
+        "board_config": f"configs/boards/{board_id}.yaml" if (root / "configs" / "boards" / f"{board_id}.yaml").exists() else None,
+    }
+
+
+def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], connection_setup: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "selected_instrument": dict(selected_instrument or {}),
+        "connection_setup": dict(connection_setup or {}),
+        "connection_digest": build_connection_digest(connection_setup),
+    }
 
 
 def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -352,6 +375,8 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         payload,
         required_wiring=["swd", "reset", "verify"],
     )
+    selected_instrument = _primary_selected_instrument(_resolve_probe_or_instrument(root, board_id, payload))
+    connection_setup = build_connection_setup(connection_ctx)
     result = {
         "ok": True,
         "board": board_id,
@@ -360,7 +385,9 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "path": path.relative_to(root).as_posix(),
             "validation_style": _infer_validation_style(payload),
         },
-        "selected_instrument": _primary_selected_instrument(_resolve_probe_or_instrument(root, board_id, payload)),
+        "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
+        "selected_instrument": selected_instrument,
+        "selected_bench_resources": _selected_bench_resources_payload(selected_instrument, connection_setup),
         "connections": build_connection_rows(connection_ctx, payload),
         "expected_checks": _build_expected_checks(board_cfg, payload),
         "board_context": {
@@ -370,7 +397,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "verification_views": dict(connection_ctx.verification_views),
             "default_wiring": dict(connection_ctx.default_wiring),
         },
-        "connection_setup": build_connection_setup(connection_ctx),
+        "connection_setup": connection_setup,
         "notes": payload.get("notes"),
         "warnings": [f"warning: {item}" for item in connection_ctx.warnings],
     }
@@ -439,6 +466,13 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"board: {payload.get('board')}")
     test = payload.get("test", {})
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
+    dut = payload.get("selected_dut", {})
+    if isinstance(dut, dict) and dut:
+        lines.append(f"selected_dut: {dut.get('id')}")
+        if dut.get("name"):
+            lines.append(f"dut_name: {dut.get('name')}")
+        if dut.get("target"):
+            lines.append(f"dut_target: {dut.get('target')}")
     poi = payload.get("selected_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
     if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):
@@ -464,6 +498,9 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     if isinstance(conn_setup, dict) and conn_setup:
         lines.append("connection_setup:")
         lines.extend(render_connection_setup_text(conn_setup, indent="  "))
+    bench = payload.get("selected_bench_resources", {})
+    if isinstance(bench, dict) and bench.get("connection_digest"):
+        lines.append(f"connection_digest: {'; '.join(bench.get('connection_digest', []))}")
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []

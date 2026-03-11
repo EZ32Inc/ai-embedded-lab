@@ -365,9 +365,64 @@ def _control_instrument_payload(
     }
 
 
+def _selected_dut_payload(*, board_id, board_cfg):
+    if not board_id and not isinstance(board_cfg, dict):
+        return None
+    return {
+        "id": board_id or None,
+        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
+        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+    }
+
+
+def _selected_bench_resources_payload(
+    *,
+    flash_port,
+    selected_ssid,
+    instrument_id,
+    instrument_host,
+    instrument_port,
+    instrument_communication,
+    instrument_capability_surfaces,
+    probe_instance_id,
+    probe_type,
+    probe_host,
+    probe_port,
+    probe_communication,
+    probe_capability_surfaces,
+    connection_setup,
+):
+    return {
+        "serial_port": flash_port or None,
+        "selected_ap_ssid": selected_ssid or None,
+        "instrument": {
+            "id": instrument_id or None,
+            "endpoint": {
+                "host": instrument_host or None,
+                "port": instrument_port if instrument_port is not None else None,
+            },
+            "communication": dict(instrument_communication or {}),
+            "capability_surfaces": dict(instrument_capability_surfaces or {}),
+        } if any([instrument_id, instrument_host, instrument_port, instrument_communication, instrument_capability_surfaces]) else None,
+        "control_instrument": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint={
+                "host": probe_host or None,
+                "port": probe_port if probe_port is not None else None,
+            },
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
+        "connection_setup": dict(connection_setup or {}),
+        "connection_digest": build_connection_digest(connection_setup),
+    }
+
+
 def _build_validation_summary(
     *,
     run_id,
+    board_id,
     board_cfg,
     test_path,
     run_result_path,
@@ -389,6 +444,23 @@ def _build_validation_summary(
     connection_setup,
 ):
     summary = {
+        "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_bench_resources": _selected_bench_resources_payload(
+            flash_port=flash_info.get("port"),
+            selected_ssid=selected_ssid,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            instrument_communication=instrument_communication,
+            instrument_capability_surfaces=instrument_capability_surfaces,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
+            probe_communication=probe_communication,
+            probe_capability_surfaces=probe_capability_surfaces,
+            connection_setup=connection_setup,
+        ),
         "board": board_cfg.get("name"),
         "test": Path(test_path).stem,
         "run_id": run_id,
@@ -441,6 +513,8 @@ def _build_validation_summary(
 
 def _build_current_setup(
     *,
+    board_id,
+    board_cfg,
     flash_info,
     instrument_id,
     instrument_host,
@@ -457,6 +531,23 @@ def _build_current_setup(
     connection_setup,
 ):
     setup = {
+        "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_bench_resources": _selected_bench_resources_payload(
+            flash_port=flash_info.get("port"),
+            selected_ssid=selected_ssid,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            instrument_communication=instrument_communication,
+            instrument_capability_surfaces=instrument_capability_surfaces,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
+            probe_communication=probe_communication,
+            probe_capability_surfaces=probe_capability_surfaces,
+            connection_setup=connection_setup,
+        ),
         "serial_or_flash_port": flash_info.get("port") or None,
         "instrument_profile": instrument_id or None,
         "instrument_communication": dict(instrument_communication or {}),
@@ -502,6 +593,7 @@ def _build_current_setup(
 def _build_last_known_good_setup(
     *,
     run_id,
+    board_id,
     board_cfg,
     test_path,
     flash_info,
@@ -521,6 +613,23 @@ def _build_last_known_good_setup(
     result,
 ):
     setup = {
+        "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_bench_resources": _selected_bench_resources_payload(
+            flash_port=flash_info.get("port"),
+            selected_ssid=selected_ssid,
+            instrument_id=instrument_id,
+            instrument_host=instrument_host,
+            instrument_port=instrument_port,
+            instrument_communication=instrument_communication,
+            instrument_capability_surfaces=instrument_capability_surfaces,
+            probe_instance_id=probe_instance_id,
+            probe_type=probe_type,
+            probe_host=probe_host,
+            probe_port=probe_port,
+            probe_communication=probe_communication,
+            probe_capability_surfaces=probe_capability_surfaces,
+            connection_setup=connection_setup,
+        ),
         "board": board_cfg.get("name"),
         "test": Path(test_path).stem,
         "port": flash_info.get("port") or None,
@@ -1412,6 +1521,7 @@ def run_pipeline(
             selected_ssid = verify_result.get("ssid") or verify_result.get("ap_ssid")
         validation_summary = _build_validation_summary(
             run_id=run_paths.run_id,
+            board_id=board_id,
             board_cfg=board_cfg,
             test_path=test_path,
             run_result_path=str(run_paths.result),
@@ -1434,6 +1544,7 @@ def run_pipeline(
         )
         last_known_good_setup = _build_last_known_good_setup(
             run_id=run_paths.run_id,
+            board_id=board_id,
             board_cfg=board_cfg,
             test_path=test_path,
             flash_info=flash_info,
@@ -1453,6 +1564,8 @@ def run_pipeline(
             result=result,
         )
         current_setup = _build_current_setup(
+            board_id=board_id,
+            board_cfg=board_cfg,
             flash_info=flash_info,
             instrument_id=instrument_id,
             instrument_host=instrument_host,

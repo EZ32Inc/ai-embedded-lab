@@ -10,6 +10,7 @@ def test_explain_plan_for_stm32f401():
     payload = stage_explain.explain_stage('stm32f401rct6', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload['stage'] == 'plan'
+    assert payload["selected"]["selected_dut"]["id"] == "stm32f401rct6"
     assert payload['selected']['builder_kind'] == 'arm_debug'
     assert payload['selected']['board_clock_hz'] == 16000000
     assert payload['selected']['check_model'] == 'signal_verify'
@@ -27,6 +28,7 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['probe_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload['selected']['control_instrument_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['control_instrument_capability_surfaces']['swd'] == 'gdb_remote'
+    assert payload["selected"]["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'gpio_in' and item['surface'] == 'web_api' for item in payload['selected']['capability_surface_plan'])
 
@@ -34,6 +36,7 @@ def test_explain_plan_for_stm32f401():
 def test_explain_plan_for_rp2040_uses_board_probe_config():
     payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
+    assert payload["selected"]["selected_dut"]["id"] == "rp2040_pico"
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['control_instrument_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
@@ -60,11 +63,13 @@ def test_explain_check_for_meter_path_includes_uart_and_instrument():
 def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
+    assert payload["selected"]["selected_dut"]["id"] == "esp32c6_devkit"
     assert payload['selected']['probe'] is None
     assert payload['selected']['probe_instance'] is None
     assert payload['selected']['control_instrument_selection'] is None
     assert payload['selected']['control_instrument'] is None
     assert payload['selected']['control_instrument_instance'] is None
+    assert payload["selected"]["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
@@ -78,6 +83,14 @@ def test_render_text_includes_communication_blocks_readably():
             "board": "stm32f401rct6",
             "test": {"name": "gpio_signature", "path": "tests/plans/gpio_signature.json"},
             "selected": {
+                "selected_dut": {"id": "stm32f401rct6", "name": "STM32F401"},
+                "selected_bench_resources": {
+                    "control_instrument": {"instance": "esp32jtag_stm32_golden"},
+                    "connection_setup": {
+                        "source_summary": {"bench_setup": "test.bench_setup"},
+                        "resolved_wiring": {"verify": "P0.0"},
+                    },
+                },
                 "probe": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
                 "probe_communication": {"primary": "gdb_remote"},
                 "probe_capability_surfaces": {"swd": "gdb_remote"},
@@ -98,6 +111,8 @@ def test_render_text_includes_communication_blocks_readably():
     assert "probe_capability_surfaces:" in text
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
+    assert "selected_dut:" in text
+    assert "selected_bench_resources:" in text
     assert "connection_setup:" in text
     assert "ground_confirmed: True" in text
     assert "capability_surface_plan:" in text
