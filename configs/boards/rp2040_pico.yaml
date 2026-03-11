@@ -2,6 +2,10 @@ board:
   name: RP2040 Pico
   target: rp2040
   instrument_instance: esp32jtag_rp2040_lab
+  build:
+    project_dir: firmware/targets/rp2040_pico
+    artifact_stem: pico_blink
+    build_dir: artifacts/build_rp2040_pico
   firmware:
     description: Blink GPIO25 ~1Hz
   observe_map:
