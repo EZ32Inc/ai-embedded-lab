@@ -409,7 +409,7 @@ def render_text(payload: Dict[str, Any]) -> str:
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")
                 continue
-            if k in ("selected_dut", "selected_bench_resources") and isinstance(v, dict):
+            if k in ("selected_dut", "selected_board_profile", "selected_bench_resources") and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
                     if inner_k == "connection_setup" and isinstance(inner_v, dict):

@@ -17,6 +17,10 @@ Primary current structures:
 - `stage_explain.selected.control_instrument_selection`
 - pipeline summary/current-setup/LKG `control_instrument`
 - inventory `selected_instrument` with `kind: control_instrument`
+- runtime and inventory boundary objects:
+  - `selected_dut`
+  - `selected_board_profile`
+  - `selected_bench_resources`
 - instrument doctor and instrument view canonical kinds:
   - `control_instrument`
   - `control_instrument_instance`
@@ -48,6 +52,7 @@ Why they still remain:
 - older tests and callers still reference them
 - older archived result payloads use them
 - removing them immediately would create unnecessary churn while the model migration is still settling
+- in active runtime/report outputs, these legacy fields should live under explicit `compatibility` objects rather than as co-equal primary fields
 
 ## Intended Interpretation
 

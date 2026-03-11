@@ -171,6 +171,9 @@ This sequence is important:
 - expose relevant lock keys or resource summaries more directly in runtime/debug output
 - make it easier to see why a worker is waiting
 - prefer a canonical `selected_bench_resources` object in structured outputs so selected endpoints, control instruments, and connection digests are grouped together
+- keep that object parallel to, not mixed with:
+  - `selected_dut`
+  - `selected_board_profile`
 - expose `resource_keys` and a grouped `resource_summary` in worker-oriented result payloads so tools do not need to parse lock strings ad hoc
 
 ### Phase 3: Tighten model alignment

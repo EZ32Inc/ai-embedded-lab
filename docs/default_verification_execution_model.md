@@ -320,6 +320,10 @@ Architectural consequence:
 Current preferred wording:
 - user-facing and architecture-facing output should prefer `control_instrument`
 - legacy `probe*` fields may still remain as compatibility aliases in some payloads
+- runtime and explanation payloads should prefer the canonical split:
+  - `selected_dut`
+  - `selected_board_profile`
+  - `selected_bench_resources`
 
 ## 9. Operational Guidance
 
@@ -365,6 +369,10 @@ Recent live and code-level validation support these statements:
 - RP2040 and STM32F103 appeared stable in observed repeated runs
 - probe/resource locking is active and influences execution where resources are actually shared
 - worker-safe logging and serialized archive behavior were needed and materially improved correctness
+- runtime/report payloads now separate:
+  - DUT identity via `selected_dut`
+  - board policy via `selected_board_profile`
+  - bound bench resources via `selected_bench_resources`
 
 ### Current working interpretation of bench-side instability
 

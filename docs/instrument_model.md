@@ -142,6 +142,13 @@ Recommended conceptual layers:
 5. Resource ownership
 - which physical or endpoint-level resources must be locked
 
+When these bindings are exposed in runtime/reporting payloads, the preferred surrounding structure is:
+- `selected_dut`
+- `selected_board_profile`
+- `selected_bench_resources`
+
+This keeps instrument binding inside bench/resource selection rather than mixing board-policy identity into DUT identity.
+
 ## 7. Policy Implications
 
 If AEL adopts `instrument` as the only canonical concept, several policy decisions follow.
