@@ -46,18 +46,26 @@ def test_run_single_blocks_unreachable_esp32_meter(tmp_path):
 
     with patch(
         "ael.default_verification.instrument_provision.ensure_meter_reachable",
-        side_effect=RuntimeError(
+        side_effect=default_verification.instrument_provision.MeterReachabilityError(
             "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. "
-            "Suggestion: add a meter reset feature."
+            "Suggestion: add a meter reset feature.",
+            details={
+                "failure_class": "network_meter_reachability",
+                "host": "192.168.4.1",
+                "port": 9000,
+                "ping": {"ok": False},
+            },
         ),
     ) as guard_mock, patch("ael.default_verification.run_pipeline") as run_mock:
         code, result = default_verification._run_single(tmp_path, step, "normal")
 
     assert code == 2
-    assert result == {
-        "ok": False,
-        "error": "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. Suggestion: add a meter reset feature.",
-    }
+    assert result["ok"] is False
+    assert result["error"] == (
+        "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. Suggestion: add a meter reset feature."
+    )
+    assert result["observations"]["failure_class"] == "network_meter_reachability"
+    assert result["observations"]["host"] == "192.168.4.1"
     guard_mock.assert_called_once()
     run_mock.assert_not_called()
 

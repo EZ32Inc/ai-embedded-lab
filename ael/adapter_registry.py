@@ -316,9 +316,23 @@ class _UartCheckAdapter:
             "ok": bool(uart_result.get("ok", False)),
             "bytes": int(uart_result.get("bytes") or 0),
             "lines": int(uart_result.get("lines") or 0),
+            "port": uart_result.get("port"),
+            "baud": uart_result.get("baud"),
             "crash_detected": bool(uart_result.get("crash_detected", False)),
+            "reboot_loop_suspected": bool(uart_result.get("reboot_loop_suspected", False)),
             "missing_expect": uart_result.get("missing_expect", []),
             "forbid_matched": uart_result.get("forbid_matched", []),
+            "matched_expect": (
+                ((uart_result.get("matched") or {}).get("expect"))
+                if isinstance(uart_result.get("matched"), dict)
+                else {}
+            ),
+            "matched_boot": (
+                ((uart_result.get("matched") or {}).get("boot"))
+                if isinstance(uart_result.get("matched"), dict)
+                else {}
+            ),
+            "firmware_ready_seen": not bool(uart_result.get("missing_expect", [])),
             "download_mode_detected": bool(uart_result.get("download_mode_detected", False)),
             "error_summary": uart_result.get("error_summary") or "uart observe failed",
         }
@@ -519,6 +533,9 @@ class _InstrumentSignatureAdapter:
             "mismatch_count": len(mismatches),
             "digital_check_count": len(checks),
             "analog_check_count": len(analog_checks),
+            "digital_mismatch_count": sum(1 for item in mismatches if isinstance(item, dict) and item.get("inst_gpio") is not None),
+            "analog_mismatch_count": sum(1 for item in mismatches if isinstance(item, dict) and item.get("inst_adc_gpio") is not None),
+            "mismatch_reasons": [item.get("reason") for item in mismatches if isinstance(item, dict) and item.get("reason")],
         }
         verdict = check_eval.evaluate_instrument_signature_facts(sig_facts)
         ok = bool(verdict.get("ok", False))
@@ -545,6 +562,9 @@ class _InstrumentSignatureAdapter:
                 "digital_checks": len(checks),
                 "analog_checks": len(analog_checks),
                 "mismatch_count": len(mismatches),
+                "digital_mismatch_count": sig_facts.get("digital_mismatch_count"),
+                "analog_mismatch_count": sig_facts.get("analog_mismatch_count"),
+                "mismatch_reasons": sig_facts.get("mismatch_reasons", []),
                 "failure_kind": (verdict.get("failure_kind", "") if not ok else ""),
             },
             artifacts={

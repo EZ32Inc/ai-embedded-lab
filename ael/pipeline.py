@@ -906,6 +906,20 @@ def run_pipeline(
         except Exception as exc:
             error_summary = str(exc)
             print(error_summary)
+            details = getattr(exc, "details", {}) if isinstance(getattr(exc, "details", {}), dict) else {}
+            early_evidence_item = ael_evidence.make_item(
+                kind="instrument.reachability",
+                source="check.meter_reachability",
+                ok=False,
+                summary=error_summary,
+                facts=details,
+                artifacts={},
+            )
+            evidence_path = ael_evidence.write_evidence(
+                Path(run_paths.root),
+                "evidence.json",
+                {"version": ael_evidence.EVIDENCE_VERSION, "items": [early_evidence_item]},
+            )
             ended_at = datetime.now().isoformat()
             result = {
                 "run_id": run_paths.run_id,
@@ -914,6 +928,8 @@ def run_pipeline(
                 "success": False,
                 "failed_step": "check_meter_reachability",
                 "error_summary": error_summary,
+                "failure_class": details.get("failure_class"),
+                "observations": details,
                 "started_at": run_started.isoformat(),
                 "ended_at": ended_at,
                 "timeout_s": timeout_s,
@@ -940,7 +956,7 @@ def run_pipeline(
                     "verify_result": str(Path(run_paths.artifacts_dir) / "verify_result.json"),
                     "evidence": str(evidence_path),
                 },
-                "evidence": {"version": ael_evidence.EVIDENCE_VERSION, "count": 0, "status_counts": {"pass": 0, "fail": 0, "info": 0}},
+                "evidence": {"version": ael_evidence.EVIDENCE_VERSION, "count": 1, "status_counts": {"pass": 0, "fail": 1, "info": 0}},
                 "stage_execution": _stage_execution_summary(until_stage, preflight_enabled=False),
             }
             _write_json(run_paths.result, result)

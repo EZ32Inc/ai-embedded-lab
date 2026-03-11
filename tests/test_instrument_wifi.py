@@ -154,12 +154,89 @@ class TestInstrumentWifi(unittest.TestCase):
         with patch(
             "ael.instruments.provision.ping_ip",
             return_value={"ok": False, "host": "192.168.4.1", "returncode": 1},
+        ), patch(
+            "ael.instruments.provision.route_summary",
+            return_value={"ok": False, "stdout": "", "stderr": ""},
+        ), patch(
+            "ael.instruments.provision.wifi_interface_state",
+            return_value={"ok": False, "reason": "ifname_unknown"},
+        ), patch(
+            "ael.instruments.provision.tcp_probe",
+            return_value={"ok": False, "host": "192.168.4.1", "port": 9000, "error_summary": "not reached"},
         ):
             with self.assertRaisesRegex(
-                RuntimeError,
+                provision.MeterReachabilityError,
                 "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking",
-            ):
+            ) as ctx:
                 provision.ensure_meter_reachable(MANIFEST)
+        self.assertEqual("network_meter_reachability", ctx.exception.details["failure_class"])
+        self.assertFalse(ctx.exception.details["ping"]["ok"])
+
+    def test_ensure_meter_reachable_distinguishes_tcp_failure(self):
+        with patch(
+            "ael.instruments.provision.ping_ip",
+            return_value={"ok": True, "host": "192.168.4.1", "returncode": 0},
+        ), patch(
+            "ael.instruments.provision.route_summary",
+            return_value={"ok": True, "stdout": "192.168.4.1 dev wlan1", "stderr": ""},
+        ), patch(
+            "ael.instruments.provision.wifi_interface_state",
+            return_value={"ok": True, "ifname": "wlan1"},
+        ), patch(
+            "ael.instruments.provision.tcp_probe",
+            return_value={"ok": False, "host": "192.168.4.1", "port": 9000, "error_summary": "connection refused"},
+        ):
+            with self.assertRaisesRegex(
+                provision.MeterReachabilityError,
+                "tcp connect failed",
+            ) as ctx:
+                provision.ensure_meter_reachable(MANIFEST)
+        self.assertEqual("network_meter_tcp", ctx.exception.details["failure_class"])
+
+    def test_ensure_meter_reachable_distinguishes_api_failure(self):
+        with patch(
+            "ael.instruments.provision.ping_ip",
+            return_value={"ok": True, "host": "192.168.4.1", "returncode": 0},
+        ), patch(
+            "ael.instruments.provision.route_summary",
+            return_value={"ok": True, "stdout": "192.168.4.1 dev wlan1", "stderr": ""},
+        ), patch(
+            "ael.instruments.provision.wifi_interface_state",
+            return_value={"ok": True, "ifname": "wlan1"},
+        ), patch(
+            "ael.instruments.provision.tcp_probe",
+            return_value={"ok": True, "host": "192.168.4.1", "port": 9000},
+        ), patch(
+            "ael.instruments.provision.meter_api_probe",
+            return_value={"ok": False, "host": "192.168.4.1", "port": 9000, "error_summary": "no response", "response": {}},
+        ):
+            with self.assertRaisesRegex(
+                provision.MeterReachabilityError,
+                "api ping failed",
+            ) as ctx:
+                provision.ensure_meter_reachable(MANIFEST)
+        self.assertEqual("network_meter_api", ctx.exception.details["failure_class"])
+
+    def test_ensure_meter_reachable_accepts_icmp_failure_when_tcp_and_api_work(self):
+        with patch(
+            "ael.instruments.provision.ping_ip",
+            return_value={"ok": False, "host": "192.168.4.1", "returncode": 1},
+        ), patch(
+            "ael.instruments.provision.route_summary",
+            return_value={"ok": True, "stdout": "192.168.4.1 dev wlan1", "stderr": ""},
+        ), patch(
+            "ael.instruments.provision.wifi_interface_state",
+            return_value={"ok": True, "ifname": "wlan1"},
+        ), patch(
+            "ael.instruments.provision.tcp_probe",
+            return_value={"ok": True, "host": "192.168.4.1", "port": 9000},
+        ), patch(
+            "ael.instruments.provision.meter_api_probe",
+            return_value={"ok": True, "host": "192.168.4.1", "port": 9000, "response": {"ok": True}, "error_summary": ""},
+        ):
+            out = provision.ensure_meter_reachable(MANIFEST)
+        self.assertTrue(out["ok"])
+        self.assertEqual(["icmp_ping_failed_but_tcp_api_succeeded"], out["warnings"])
 
     def test_ready_meter_scans_connects_and_pings(self):
         with patch(

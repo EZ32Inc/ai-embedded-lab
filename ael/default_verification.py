@@ -197,7 +197,11 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         _ensure_step_meter_reachable(repo_root, str(board), test)
     except Exception as exc:
         print(f"default_verification: {exc}")
-        return 2, {"ok": False, "error": str(exc)}
+        details = getattr(exc, "details", {})
+        out = {"ok": False, "error": str(exc)}
+        if isinstance(details, dict) and details:
+            out["observations"] = details
+        return 2, out
     code = run_pipeline(
         probe_path=probe,
         board_arg=str(board),
