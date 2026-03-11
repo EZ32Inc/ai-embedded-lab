@@ -104,6 +104,44 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
     assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
 
 
+def test_run_single_uses_control_instrument_alias_when_present(tmp_path):
+    boards = tmp_path / "configs" / "boards"
+    boards.mkdir(parents=True)
+    (boards / "alias_board.yaml").write_text(
+        """board:
+  control_instrument_instance: esp32jtag_rp2040_lab
+  control_instrument_required: true
+""",
+        encoding="utf-8",
+    )
+    inst_dir = tmp_path / "configs" / "instrument_instances"
+    inst_dir.mkdir(parents=True)
+    (inst_dir / "esp32jtag_rp2040_lab.yaml").write_text(
+        """instance:
+  id: esp32jtag_rp2040_lab
+  type: esp32jtag
+connection:
+  ip: 192.168.2.63
+  gdb_port: 4242
+""",
+        encoding="utf-8",
+    )
+    test_path = tmp_path / "gpio_signature.json"
+    test_path.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")
+    step = {"board": "alias_board", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    assert code == 0
+    assert result == {"ok": True}
+    guard_mock.assert_not_called()
+    assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
+
+
 def test_run_single_uses_no_probe_for_esp32c6_meter_path(tmp_path):
     test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
     test_path.write_text(

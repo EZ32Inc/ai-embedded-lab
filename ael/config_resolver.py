@@ -38,7 +38,7 @@ def _board_probe_config(repo_root: str, board_id: Optional[str]) -> Optional[str
     board = payload.get("board")
     if not isinstance(board, dict):
         return None
-    probe_cfg = str(board.get("probe_config") or "").strip()
+    probe_cfg = str(board.get("control_instrument_config") or board.get("probe_config") or "").strip()
     return probe_cfg or None
 
 
@@ -59,7 +59,7 @@ def _board_probe_instance(repo_root: str, board_id: Optional[str]) -> Optional[s
     board = payload.get("board")
     if not isinstance(board, dict):
         return None
-    instance_id = str(board.get("instrument_instance") or "").strip()
+    instance_id = str(board.get("control_instrument_instance") or board.get("instrument_instance") or "").strip()
     return instance_id or None
 
 
@@ -79,6 +79,10 @@ def _board_requires_probe(repo_root: str, board_id: Optional[str]) -> bool:
         return True
     board = payload.get("board")
     if not isinstance(board, dict):
+        return True
+    if board.get("control_instrument_required") is False:
+        return False
+    if board.get("control_instrument_required") is True:
         return True
     if board.get("probe_required") is False:
         return False
@@ -101,6 +105,10 @@ def _board_allows_legacy_probe_fallback(repo_root: str, board_id: Optional[str])
         return True
     board = payload.get("board")
     if not isinstance(board, dict):
+        return True
+    if board.get("allow_legacy_control_instrument_fallback") is False:
+        return False
+    if board.get("allow_legacy_control_instrument_fallback") is True:
         return True
     if board.get("allow_legacy_probe_fallback") is False:
         return False

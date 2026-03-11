@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from ael.probe_binding import load_probe_binding
+from ael import config_resolver
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -42,3 +43,40 @@ def test_load_probe_binding_notify_config_has_normalized_metadata():
     assert binding.communication["primary"] == "gdb_remote"
     assert binding.capability_surfaces["swd"] == "gdb_remote"
     assert binding.metadata_validation_errors == ()
+
+
+def test_control_instrument_aliases_match_legacy_board_policy(tmp_path):
+    boards = tmp_path / "configs" / "boards"
+    boards.mkdir(parents=True)
+    (boards / "alias_board.yaml").write_text(
+        """board:
+  control_instrument_instance: esp32jtag_rp2040_lab
+  control_instrument_required: false
+  allow_legacy_control_instrument_fallback: false
+  control_instrument_config: configs/instrument_instances/esp32jtag_rp2040_lab.yaml
+""",
+        encoding="utf-8",
+    )
+
+    assert config_resolver.resolve_control_instrument_instance(str(tmp_path), args=None, board_id="alias_board") is None
+    assert config_resolver.resolve_control_instrument_config(str(tmp_path), args=None, board_id="alias_board") is None
+
+
+def test_control_instrument_aliases_use_explicit_instance_when_required(tmp_path):
+    boards = tmp_path / "configs" / "boards"
+    boards.mkdir(parents=True)
+    (boards / "alias_board.yaml").write_text(
+        """board:
+  control_instrument_instance: esp32jtag_rp2040_lab
+  control_instrument_required: true
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        config_resolver.resolve_control_instrument_instance(str(tmp_path), args=None, board_id="alias_board")
+        == "esp32jtag_rp2040_lab"
+    )
+    assert config_resolver.resolve_control_instrument_config(str(tmp_path), args=None, board_id="alias_board").endswith(
+        "configs/instrument_instances/esp32jtag_rp2040_lab.yaml"
+    )

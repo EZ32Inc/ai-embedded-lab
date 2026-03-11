@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
 from ael import strategy_resolver
-from ael.config_resolver import resolve_probe_config, resolve_probe_instance
+from ael.config_resolver import resolve_control_instrument_config, resolve_control_instrument_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
@@ -119,7 +119,7 @@ def _resolve_path(repo_root: Path, value: str | None, default: str | None = None
 
 def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[Dict[str, Any], str | None]:
     config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
-    instance_id = str(step.get("instrument_instance") or "").strip() or resolve_probe_instance(
+    instance_id = str(step.get("instrument_instance") or "").strip() or resolve_control_instrument_instance(
         str(config_root),
         args=None,
         board_id=str(step.get("board") or ""),
@@ -127,7 +127,7 @@ def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[
     probe_path = _resolve_path(
         config_root,
         step.get("probe"),
-        resolve_probe_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
+        resolve_control_instrument_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
     )
     if not instance_id and not probe_path:
         binding = empty_probe_binding()
