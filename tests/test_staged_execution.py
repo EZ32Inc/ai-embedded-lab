@@ -199,6 +199,11 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["probe_endpoint"] == "192.168.2.98:4242"
     assert summary["probe_communication"]["primary"] == "gdb_remote"
     assert summary["probe_capability_surfaces"]["swd"] == "gdb_remote"
+    assert summary["control_instrument_instance"] == "esp32jtag_stm32_golden"
+    assert summary["control_instrument_type"] == "esp32jtag"
+    assert summary["control_instrument_endpoint"] == "192.168.2.98:4242"
+    assert summary["control_instrument_communication"]["primary"] == "gdb_remote"
+    assert summary["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
@@ -214,6 +219,11 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert lkg["probe_endpoint"] == "192.168.2.98:4242"
     assert lkg["probe_communication"]["primary"] == "gdb_remote"
     assert lkg["probe_capability_surfaces"]["swd"] == "gdb_remote"
+    assert lkg["control_instrument_instance"] == "esp32jtag_stm32_golden"
+    assert lkg["control_instrument_type"] == "esp32jtag"
+    assert lkg["control_instrument_endpoint"] == "192.168.2.98:4242"
+    assert lkg["control_instrument_communication"]["primary"] == "gdb_remote"
+    assert lkg["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert lkg["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
@@ -228,6 +238,11 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["probe_endpoint"] == {"host": "192.168.2.98", "port": 4242}
     assert current_setup["probe_communication"]["primary"] == "gdb_remote"
     assert current_setup["probe_capability_surfaces"]["swd"] == "gdb_remote"
+    assert current_setup["control_instrument_instance"] == "esp32jtag_stm32_golden"
+    assert current_setup["control_instrument_type"] == "esp32jtag"
+    assert current_setup["control_instrument_endpoint"] == {"host": "192.168.2.98", "port": 4242}
+    assert current_setup["control_instrument_communication"]["primary"] == "gdb_remote"
+    assert current_setup["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
     assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True

@@ -6,7 +6,10 @@ from typing import Any, Dict, List
 
 from ael.connection_model import build_connection_setup, render_connection_setup_text
 from ael.pipeline import _simple_yaml_load
-from ael.config_resolver import resolve_probe_config, resolve_probe_instance
+from ael.config_resolver import (
+    resolve_control_instrument_config,
+    resolve_control_instrument_instance,
+)
 from ael.instrument_metadata import resolve_capability_surface
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.strategy_resolver import (
@@ -40,8 +43,8 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     test_file = _abs(repo_root, test_path)
     if not test_file.exists():
         raise FileNotFoundError(f"test not found: {test_file}")
-    probe_rel = resolve_probe_config(str(repo_root), args=None, board_id=board_id)
-    instance_id = resolve_probe_instance(str(repo_root), args=None, board_id=board_id)
+    probe_rel = resolve_control_instrument_config(str(repo_root), args=None, board_id=board_id)
+    instance_id = resolve_control_instrument_instance(str(repo_root), args=None, board_id=board_id)
     if probe_rel or instance_id:
         binding = load_probe_binding(
             repo_root,
@@ -149,8 +152,13 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "probe": ctx["probe_path"],
             "probe_instance": ctx.get("probe_instance_id"),
             "probe_type": ctx.get("probe_type"),
+            "control_instrument": ctx["probe_path"],
+            "control_instrument_instance": ctx.get("probe_instance_id"),
+            "control_instrument_type": ctx.get("probe_type"),
             "probe_communication": ctx.get("probe_communication"),
             "probe_capability_surfaces": ctx.get("probe_capability_surfaces"),
+            "control_instrument_communication": ctx.get("probe_communication"),
+            "control_instrument_capability_surfaces": ctx.get("probe_capability_surfaces"),
             "instrument_communication": resolved.instrument_communication,
             "instrument_capability_surfaces": resolved.instrument_capability_surfaces,
             "builder_kind": build_kind,

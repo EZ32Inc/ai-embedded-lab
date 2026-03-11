@@ -18,8 +18,13 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['probe_type'] == 'esp32jtag'
+    assert payload['selected']['control_instrument'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
+    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_golden'
+    assert payload['selected']['control_instrument_type'] == 'esp32jtag'
     assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['probe_capability_surfaces']['swd'] == 'gdb_remote'
+    assert payload['selected']['control_instrument_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['control_instrument_capability_surfaces']['swd'] == 'gdb_remote'
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'gpio_in' and item['surface'] == 'web_api' for item in payload['selected']['capability_surface_plan'])
 
@@ -29,6 +34,7 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     assert payload['ok'] is True
     assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['probe_instance'] == 'esp32jtag_rp2040_lab'
+    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['probe_capability_surfaces']['gpio_in'] == 'web_api'
 
@@ -53,6 +59,8 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     assert payload['ok'] is True
     assert payload['selected']['probe'] is None
     assert payload['selected']['probe_instance'] is None
+    assert payload['selected']['control_instrument'] is None
+    assert payload['selected']['control_instrument_instance'] is None
     assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])

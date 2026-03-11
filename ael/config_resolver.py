@@ -208,6 +208,19 @@ def resolve_probe_config(
     return _normalize_path(repo_root, _DEFAULTS["probe_config"], absolute)
 
 
+def resolve_control_instrument_config(
+    repo_root: str,
+    args: Any,
+    board_id: Optional[str] = None,
+    pack_meta: Optional[dict] = None,
+) -> Optional[str]:
+    """Resolve the config path for the control instrument used by build/flash/debug flows.
+
+    This is the instrument-first alias for the legacy probe-config policy path.
+    """
+    return resolve_probe_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)
+
+
 def resolve_probe_instance(
     repo_root: str,
     args: Any,
@@ -241,6 +254,19 @@ def resolve_probe_instance(
         return None
 
     return _DEFAULTS["probe_instance"]
+
+
+def resolve_control_instrument_instance(
+    repo_root: str,
+    args: Any,
+    board_id: Optional[str] = None,
+    pack_meta: Optional[dict] = None,
+) -> Optional[str]:
+    """Resolve the instrument instance used for control/probe-style operations.
+
+    This is the instrument-first alias for the legacy probe-instance policy path.
+    """
+    return resolve_probe_instance(repo_root, args, board_id=board_id, pack_meta=pack_meta)
 
 
 def resolve_board_config(repo_root: str, args: Any, pack_meta: Optional[dict] = None) -> Optional[str]:
