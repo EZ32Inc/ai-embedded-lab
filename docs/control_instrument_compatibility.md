@@ -20,6 +20,18 @@ Primary current structures:
 - instrument doctor and instrument view canonical kinds:
   - `control_instrument`
   - `control_instrument_instance`
+- LA check output `control_instrument`
+
+New code should prefer:
+- `selected_instrument`
+- `control_instrument`
+- `control_instrument_selection`
+
+New code should not introduce fresh primary dependencies on:
+- `probe_or_instrument`
+- `probe_instance`
+- `probe_endpoint`
+- `probe_communication`
 
 ## Remaining Compatibility Fields
 

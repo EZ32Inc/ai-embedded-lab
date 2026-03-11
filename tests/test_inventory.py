@@ -82,6 +82,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["ok"] is True
     assert payload["selected_instrument"]["kind"] == "control_instrument"
     assert payload["selected_instrument"]["legacy_kind"] == "probe"
+    assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
+    assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["probe_or_instrument"]["kind"] == "probe"
     assert payload["probe_or_instrument"]["canonical_kind"] == "control_instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32jtag_stm32_golden"
@@ -122,6 +124,7 @@ def test_describe_test_for_meter_path():
     payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_instrument"]["kind"] == "instrument"
+    assert payload["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["probe_or_instrument"]["kind"] == "instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["probe_or_instrument"]["communication"]["protocol"] == "gpio_meter_v1"

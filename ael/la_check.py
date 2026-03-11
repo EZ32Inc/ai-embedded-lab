@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Any
 
 from ael.adapters import observe_gpio_pin
-from ael.config_resolver import resolve_probe_config, resolve_probe_instance
+from ael.config_resolver import resolve_control_instrument_config, resolve_control_instrument_instance
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load
 from ael.probe_binding import load_probe_binding
 
@@ -15,8 +15,8 @@ def _repo_root() -> Path:
 
 def resolve_probe_cfg(*, board: str | None = None, probe: str | None = None) -> tuple[str, dict[str, Any]]:
     repo_root = str(_repo_root())
-    instance_id = resolve_probe_instance(repo_root, args=None, board_id=board)
-    probe_path = str(probe or resolve_probe_config(repo_root, args=None, board_id=board))
+    instance_id = resolve_control_instrument_instance(repo_root, args=None, board_id=board)
+    probe_path = str(probe or resolve_control_instrument_config(repo_root, args=None, board_id=board))
     binding = load_probe_binding(
         repo_root,
         probe_path=None if instance_id and not probe else probe_path,
@@ -52,6 +52,14 @@ def run(
         "ok": bool(observed),
         "toggling": bool(observed and edges >= max(1, int(min_edges))),
         "pin": str(pin),
+        "control_instrument": {
+            "config": probe_path,
+            "name": str(probe_cfg.get("name") or ""),
+            "host": str(probe_cfg.get("ip") or ""),
+        },
+        "control_instrument_config": probe_path,
+        "control_instrument_name": str(probe_cfg.get("name") or ""),
+        "control_instrument_host": str(probe_cfg.get("ip") or ""),
         "probe_path": probe_path,
         "probe_name": str(probe_cfg.get("name") or ""),
         "probe_host": str(probe_cfg.get("ip") or ""),
