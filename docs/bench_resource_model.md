@@ -115,10 +115,13 @@ Confirmed resource classes already represented in the current execution model:
 Confirmed visibility model:
 - `selected_bench_resources.resource_keys`
 - `selected_bench_resources.resource_summary`
+- `selected_bench_resources.selection_digest`
+- `selected_bench_resources.contract_version`
 - `bench_resource_drift_from_lkg` in successful validation output when current bound resources differ from last-known-good
 
 These fields make the lock-relevant resource projection visible without forcing tools or users to parse ad hoc strings from unrelated payload sections.
 They also make resource drift easier to spot when the same test is rerun against a different bench endpoint or serial path.
+`selection_digest` is the preferred compact comparison surface for operators and tooling.
 
 Reasonable interpretation:
 - these cover the most important current contention cases for default verification
@@ -181,6 +184,7 @@ This sequence is important:
 - expose relevant lock keys or resource summaries more directly in runtime/debug output
 - make it easier to see why a worker is waiting
 - prefer a canonical `selected_bench_resources` object in structured outputs so selected endpoints, control instruments, and connection digests are grouped together
+- prefer stable comparison using `contract_version` plus `selection_digest`, with `resource_keys` and `connection_digest` as supporting detail
 - keep that object parallel to, not mixed with:
   - `selected_dut`
   - `selected_board_profile`

@@ -103,6 +103,11 @@ In runtime and explanation outputs, AEL should prefer:
 This boundary is important because board profile is not DUT identity.
 Board profile explains how AEL will build/flash/observe by default.
 DUT explains what target is being verified.
+In practice, read the runtime objects as:
+
+- `selected_dut`: the target being verified
+- `selected_board_profile`: the runtime/build/flash policy that currently drives execution
+- `selected_bench_resources`: the external bench resources bound to this run
 
 ## 6. Current Operational Reality
 

@@ -665,6 +665,8 @@ def _bench_resource_signature(payload):
     if not isinstance(payload, dict):
         return {}
     out = {
+        "contract_version": payload.get("contract_version"),
+        "selection_digest": list(payload.get("selection_digest") or []),
         "resource_keys": list(payload.get("resource_keys") or []),
         "connection_digest": list(payload.get("connection_digest") or []),
         "selected_ap_ssid": payload.get("selected_ap_ssid"),
@@ -694,6 +696,8 @@ def _bench_resource_drift(current_setup, last_known_good):
     )
     drift = {}
     for key in (
+        "contract_version",
+        "selection_digest",
         "resource_keys",
         "connection_digest",
         "selected_ap_ssid",
@@ -711,6 +715,8 @@ def _format_bench_drift(drift):
         return None
     parts = []
     for key in (
+        "contract_version",
+        "selection_digest",
         "resource_keys",
         "connection_digest",
         "selected_ap_ssid",
@@ -722,6 +728,18 @@ def _format_bench_drift(drift):
             continue
         parts.append(f"{key}={drift[key].get('current')!r} vs {drift[key].get('last_known_good')!r}")
     return "; ".join(parts) if parts else None
+
+
+def _format_bench_resources_snapshot(payload):
+    if not isinstance(payload, dict) or not payload:
+        return None
+    parts = []
+    contract_version = payload.get("contract_version")
+    if contract_version is not None:
+        parts.append(f"contract_v{contract_version}")
+    for item in payload.get("selection_digest") or []:
+        parts.append(str(item))
+    return " ".join(parts) if parts else None
 
 
 def _extract_verify_result_details(result_payload):
@@ -934,6 +952,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(f"Summary: connection_warnings={'; '.join(conn.get('warnings', []))}")
     if current_setup.get("connection_digest"):
         print(f"Summary: connection_digest={'; '.join(current_setup.get('connection_digest', []))}")
+    bench_snapshot = _format_bench_resources_snapshot(current_setup.get("selected_bench_resources"))
+    if bench_snapshot:
+        print(f"Summary: bench_resources={bench_snapshot}")
     drift_text = _format_bench_drift(summary.get("bench_resource_drift_from_lkg"))
     if drift_text:
         print(f"Summary: bench_resource_drift={drift_text}")
@@ -975,6 +996,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(f"LKG: connection_warnings={'; '.join(conn.get('warnings', []))}")
     if last_known_good.get("connection_digest"):
         print(f"LKG: connection_digest={'; '.join(last_known_good.get('connection_digest', []))}")
+    bench_snapshot = _format_bench_resources_snapshot(last_known_good.get("selected_bench_resources"))
+    if bench_snapshot:
+        print(f"LKG: bench_resources={bench_snapshot}")
     print(f"LKG: evidence={last_known_good.get('artifact_or_evidence_location')}")
 
 

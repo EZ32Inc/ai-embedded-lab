@@ -131,6 +131,14 @@ Possible future work:
 - explicit “bench degraded” termination category
 - optional meter reset or recovery actions when hardware supports it
 
+## Current Recovery Boundary
+
+Current bounded position:
+
+- classification/reporting policy is already operational
+- retry/backoff/fail-fast behavior remains intentionally minimal
+- no broader automatic recovery should be added unless a real bench need and a reliable recovery mechanism are both confirmed
+
 ## Related Files
 
 - [default_verification.py](/nvme1t/work/codex/ai-embedded-lab/ael/default_verification.py)

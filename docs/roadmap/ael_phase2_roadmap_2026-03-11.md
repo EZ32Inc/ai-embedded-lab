@@ -189,6 +189,7 @@ The main expected deliverables are:
 - tighter bench/resource contracts
 - stronger workflow/skills coverage for operators and Codex
 - updated durable architecture docs as the canonical repo references
+- a clearer deprecation boundary for remaining visible legacy control-instrument compatibility
 
 ## Phase 2 Exit Criteria
 
@@ -198,6 +199,7 @@ Phase 2 should be considered substantially complete when:
 - degraded-instrument classification/reporting is stable and deeper recovery policy is clearly bounded and documented
 - DUT / board-profile / bench-resource runtime boundaries are clearer and less ambiguous than today
 - bench/resource contracts are easier to compare, reason about, and explain
+- bench/resource comparison is operator-friendly, with stable compact digests and clear LKG drift reporting
 - workflow/skills coverage is strong enough to support repeated AI/human work without relying mainly on session memory
 
 ## What Phase 2 Should Avoid

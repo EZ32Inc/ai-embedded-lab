@@ -517,11 +517,15 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
             lines.append(f"dut_name: {dut.get('name')}")
         if dut.get("target"):
             lines.append(f"dut_target: {dut.get('target')}")
+        if dut.get("runtime_binding"):
+            lines.append(f"dut_runtime_binding: {dut.get('runtime_binding')}")
     board_profile = payload.get("selected_board_profile", {})
     if isinstance(board_profile, dict) and board_profile:
         lines.append(f"selected_board_profile: {board_profile.get('id')}")
         if board_profile.get("config"):
             lines.append(f"board_profile_config: {board_profile.get('config')}")
+        if board_profile.get("role"):
+            lines.append(f"board_profile_role: {board_profile.get('role')}")
     poi = payload.get("selected_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
     if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):
@@ -548,8 +552,13 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append("connection_setup:")
         lines.extend(render_connection_setup_text(conn_setup, indent="  "))
     bench = payload.get("selected_bench_resources", {})
-    if isinstance(bench, dict) and bench.get("connection_digest"):
-        lines.append(f"connection_digest: {'; '.join(bench.get('connection_digest', []))}")
+    if isinstance(bench, dict) and bench:
+        if bench.get("contract_version") is not None:
+            lines.append(f"bench_resource_contract_version: {bench.get('contract_version')}")
+        if bench.get("selection_digest"):
+            lines.append(f"bench_resource_selection_digest: {'; '.join(bench.get('selection_digest', []))}")
+        if bench.get("connection_digest"):
+            lines.append(f"connection_digest: {'; '.join(bench.get('connection_digest', []))}")
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []

@@ -320,6 +320,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
 def test_bench_resource_drift_detects_endpoint_change():
     current = {
         "selected_bench_resources": {
+            "contract_version": 1,
+            "selection_digest": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.1:9000"],
             "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"],
             "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
             "instrument": {"endpoint": {"host": "192.168.4.1", "port": 9000}},
@@ -329,6 +331,8 @@ def test_bench_resource_drift_detects_endpoint_change():
     }
     lkg = {
         "selected_bench_resources": {
+            "contract_version": 1,
+            "selection_digest": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.9:9000"],
             "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.9:9000"],
             "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
             "instrument": {"endpoint": {"host": "192.168.4.9", "port": 9000}},
@@ -339,6 +343,7 @@ def test_bench_resource_drift_detects_endpoint_change():
 
     drift = pipeline._bench_resource_drift(current, lkg)
 
+    assert drift["selection_digest"]["current"] == ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.1:9000"]
     assert drift["resource_keys"]["current"] == ["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"]
     assert drift["instrument_endpoint"]["last_known_good"] == "192.168.4.9:9000"
 
@@ -346,11 +351,16 @@ def test_bench_resource_drift_detects_endpoint_change():
 def test_format_bench_drift_renders_compact_summary():
     text = pipeline._format_bench_drift(
         {
+            "selection_digest": {
+                "current": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.1:9000"],
+                "last_known_good": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.9:9000"],
+            },
             "instrument_endpoint": {"current": "192.168.4.1:9000", "last_known_good": "192.168.4.9:9000"},
             "selected_ap_ssid": {"current": "ESP32_GPIO_METER_E7F1", "last_known_good": "ESP32_GPIO_METER_OLD"},
         }
     )
 
+    assert "selection_digest=['instrument_id:esp32s3_dev_c_meter', 'instrument_endpoint:192.168.4.1:9000']" in text
     assert "instrument_endpoint='192.168.4.1:9000' vs '192.168.4.9:9000'" in text
     assert "selected_ap_ssid='ESP32_GPIO_METER_E7F1' vs 'ESP32_GPIO_METER_OLD'" in text
 
@@ -394,6 +404,14 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "control_instrument_instance": "esp32jtag_stm32_golden",
         "control_instrument_endpoint": {"host": "192.168.2.98", "port": 4242},
         "connection_digest": ["wiring: verify=P0.0"],
+        "selected_bench_resources": {
+            "contract_version": 1,
+            "selection_digest": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.1:9000"],
+        },
+    }
+    last_known_good["selected_bench_resources"] = {
+        "contract_version": 1,
+        "selection_digest": ["instrument_id:esp32s3_dev_c_meter", "instrument_endpoint:192.168.4.1:9000"],
     }
 
     pipeline._print_success_summary(summary, last_known_good, current_setup)
@@ -402,6 +420,8 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
     assert "Summary: instrument_surfaces=measure.digital->primary" in out
     assert "Summary: control_instrument_surfaces=swd->gdb_remote" in out
     assert "Summary: connection_digest=" in out
+    assert "Summary: bench_resources=contract_v1 instrument_id:esp32s3_dev_c_meter instrument_endpoint:192.168.4.1:9000" in out
     assert "LKG: instrument_surfaces=measure.digital->primary" in out
     assert "LKG: control_instrument_surfaces=swd->gdb_remote" in out
     assert "LKG: connection_digest=" in out
+    assert "LKG: bench_resources=contract_v1 instrument_id:esp32s3_dev_c_meter instrument_endpoint:192.168.4.1:9000" in out

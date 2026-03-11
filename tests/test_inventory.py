@@ -113,6 +113,10 @@ def test_describe_test_for_stm32f401_gpio_signature():
     rendered = inventory.render_describe_text(payload)
     assert "selected_dut: stm32f401rct6" in rendered
     assert "selected_board_profile: stm32f401rct6" in rendered
+    assert "dut_runtime_binding: board_profile_driven" in rendered
+    assert "board_profile_role: runtime_policy" in rendered
+    assert "bench_resource_contract_version: 1" in rendered
+    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.98:4242" in rendered
     assert "board_profile_config: configs/boards/stm32f401rct6.yaml" in rendered
     assert "control_instrument: esp32jtag_stm32_golden" in rendered
     assert "legacy_kind: probe" in rendered
