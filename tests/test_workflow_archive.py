@@ -51,6 +51,9 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     finished = records[-1]
     assert finished["run_id"] == run_paths.run_id
     assert finished["session_id"] == "sess-123"
+    assert finished["selected_dut"]["id"] == "esp32c3_devkit"
+    assert finished["selected_board_profile"]["config"].endswith("configs/boards/esp32c3_devkit.yaml")
+    assert finished["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert finished["board"]["id"] == "esp32c3_devkit"
     assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
     assert finished["probe"]["communication"]["primary"] == "gdb_remote"
