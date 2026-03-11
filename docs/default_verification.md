@@ -18,6 +18,9 @@ Preferred repeated-run mode:
 - this repeats independently per worker
 - do not use a shell loop around `verify-default run` when you want each board to
   keep progressing on its own
+- when a user asks to run default verification `N` times, interpret that request
+  as `verify-default repeat --limit N` unless they explicitly ask for
+  suite-round serialization
 
 Current execution model:
 

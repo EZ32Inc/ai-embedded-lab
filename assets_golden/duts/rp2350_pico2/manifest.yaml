@@ -1,0 +1,15 @@
+id: rp2350_pico2
+mcu: rp2350
+family: rp2
+description: Raspberry Pi Pico 2 (RP2350) GPIO signature + ESP32JTAG SWD verify
+build:
+  type: pico
+  project_dir: firmware
+flash:
+  method: gdb_swd
+tags:
+  - pico2
+  - rp2350
+verified:
+  status: false
+  note: Generated from official Pico SDK pico2 support plus local rp2040_pico AEL target shape. Runtime validation not yet claimed.

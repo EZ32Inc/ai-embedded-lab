@@ -125,3 +125,12 @@ For questions about what `plan`, `pre-flight`, `run`, or `check` include, prefer
 - `python3 -m ael explain-stage --board <board_id> --test <test_path> --stage <stage> --format text`
 
 Use manual code inspection only as fallback when the stage explanation command is missing or insufficient.
+
+## Default Verification Repeat Requests
+
+When interpreting repeated default-verification requests, use worker-level repeat as the default operational meaning.
+
+- If the user asks to run default verification `N` times, use:
+  - `python3 -m ael verify-default repeat --limit N`
+- Do not use an outer shell loop around `python3 -m ael verify-default run` unless the user explicitly asks for suite-round serialization.
+- Treat outer shell loops as a special case for round-by-round suite pacing, not the normal repeated baseline behavior.

@@ -1,0 +1,36 @@
+board:
+  name: Raspberry Pi Pico 2
+  target: rp2350
+  instrument_instance: esp32jtag_rp2040_lab
+  build:
+    type: cmake
+    project_dir: firmware/targets/rp2350_pico2
+    artifact_stem: pico2_gpio_signature
+  firmware:
+    description: Pico 2 RP2350 GPIO signature via Pico SDK and ESP32JTAG SWD
+  observe_map:
+    sig: P0.0
+    gpio16: P0.0
+    gpio17: P0.1
+    gpio18: P0.2
+    gpio19: P0.3
+  default_wiring:
+    swd: "P3"
+    reset: "P2.0"
+    verify: "P0.0"
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Generic GPIO signature capture on GPIO16
+  bench_connections:
+    - from: GPIO16
+      to: P0.0
+    - from: GPIO17
+      to: P0.1
+    - from: GPIO18
+      to: P0.2
+    - from: GPIO19
+      to: P0.3
+    - from: GND
+      to: probe GND

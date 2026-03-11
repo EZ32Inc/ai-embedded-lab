@@ -15,9 +15,11 @@ def test_build_inventory_includes_key_duts_and_mcus():
     assert payload["ok"] is True
     assert "esp32c6_devkit" in payload["summary"]["duts_with_tests"]
     assert "rp2040_pico" in payload["summary"]["duts_with_tests"]
+    assert "rp2350_pico2" in payload["summary"]["duts_with_tests"]
     assert "stm32f401rct6" in payload["summary"]["duts_with_tests"]
     assert "esp32c6" in payload["summary"]["mcus_with_tests"]
     assert "rp2040" in payload["summary"]["mcus_with_tests"]
+    assert "rp2350" in payload["summary"]["mcus_with_tests"]
     assert "stm32f401rct6" in payload["summary"]["mcus_with_tests"]
 
 
@@ -151,6 +153,22 @@ def test_describe_test_for_meter_path():
     rendered = inventory.render_describe_text(payload)
     assert "ground_required: True" in rendered
     assert "ground_confirmed: True" in rendered
+
+
+def test_describe_test_for_rp2350_gpio_signature():
+    payload = inventory.describe_test("rp2350_pico2", "tests/plans/rp2350_gpio_signature.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["selected_dut"]["id"] == "rp2350_pico2"
+    assert payload["selected_dut"]["runtime_binding"] == "board_profile_driven"
+    assert payload["selected_board_profile"]["id"] == "rp2350_pico2"
+    assert payload["selected_board_profile"]["config"] == "configs/boards/rp2350_pico2.yaml"
+    assert payload["selected_board_profile"]["role"] == "runtime_policy"
+    assert payload["selected_instrument"]["kind"] == "control_instrument"
+    assert payload["selected_instrument"]["id"] == "esp32jtag_rp2040_lab"
+    assert any(conn["from"] == "GPIO16" and conn["to"] == "P0.0" for conn in payload["connections"])
+    rendered = inventory.render_describe_text(payload)
+    assert "selected_dut: rp2350_pico2" in rendered
+    assert "selected_board_profile: rp2350_pico2" in rendered
 
 
 def test_describe_connection_for_meter_path():
