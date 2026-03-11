@@ -461,7 +461,6 @@ def _build_validation_summary(
             probe_capability_surfaces=probe_capability_surfaces,
             connection_setup=connection_setup,
         ),
-        "board": board_cfg.get("name"),
         "test": Path(test_path).stem,
         "run_id": run_id,
         "overall_result": "pass" if result.get("ok") else "fail",
@@ -499,6 +498,7 @@ def _build_validation_summary(
         "connection_digest": build_connection_digest(connection_setup),
     }
     summary["compatibility"] = {
+        "board": board_cfg.get("name"),
         "probe_instance": probe_instance_id or None,
         "probe_type": probe_type or None,
         "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
@@ -634,7 +634,6 @@ def _build_last_known_good_setup(
             probe_capability_surfaces=probe_capability_surfaces,
             connection_setup=connection_setup,
         ),
-        "board": board_cfg.get("name"),
         "test": Path(test_path).stem,
         "port": flash_info.get("port") or None,
         "instrument_profile": instrument_id or None,
@@ -659,6 +658,7 @@ def _build_last_known_good_setup(
         "connection_digest": build_connection_digest(connection_setup),
     }
     setup["compatibility"] = {
+        "board": board_cfg.get("name"),
         "probe_instance": probe_instance_id or None,
         "probe_type": probe_type or None,
         "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
@@ -687,13 +687,15 @@ def _format_capability_surfaces(mapping: dict | None) -> str | None:
 
 
 def _print_success_summary(summary, last_known_good, current_setup):
+    summary_dut = summary.get("selected_dut") if isinstance(summary.get("selected_dut"), dict) else {}
+    summary_board_name = summary_dut.get("name") or (summary.get("compatibility") or {}).get("board")
     summary_control_instance = summary.get("control_instrument_instance") or summary.get("probe_instance")
     summary_control_type = summary.get("control_instrument_type") or summary.get("probe_type")
     summary_control_endpoint = summary.get("control_instrument_endpoint") or summary.get("probe_endpoint")
     summary_control_surfaces = summary.get("control_instrument_capability_surfaces") or summary.get("probe_capability_surfaces")
     print(
         "Summary: validation "
-        f"board={summary.get('board')} test={summary.get('test')} run_id={summary.get('run_id')} "
+        f"board={summary_board_name} test={summary.get('test')} run_id={summary.get('run_id')} "
         f"result={summary.get('overall_result')}"
     )
     print(f"Summary: executed_stages={','.join(summary.get('executed_stages', []))}")
@@ -756,9 +758,11 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(f"Summary: connection_warnings={'; '.join(conn.get('warnings', []))}")
     if current_setup.get("connection_digest"):
         print(f"Summary: connection_digest={'; '.join(current_setup.get('connection_digest', []))}")
+    lkg_dut = last_known_good.get("selected_dut") if isinstance(last_known_good.get("selected_dut"), dict) else {}
+    lkg_board_name = lkg_dut.get("name") or (last_known_good.get("compatibility") or {}).get("board")
     print(
         "LKG: "
-        f"board={last_known_good.get('board')} test={last_known_good.get('test')} "
+        f"board={lkg_board_name} test={last_known_good.get('test')} "
         f"port={last_known_good.get('port')} run_id={last_known_good.get('run_id')}"
     )
     if last_known_good.get("instrument_profile"):

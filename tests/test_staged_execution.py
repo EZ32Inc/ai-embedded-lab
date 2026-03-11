@@ -215,9 +215,9 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         connection_setup=conn_setup,
     )
 
-    assert summary["board"] == "ESP32-C6 DevKit"
     assert summary["selected_dut"]["id"] == "esp32c6_devkit"
     assert summary["selected_dut"]["name"] == "ESP32-C6 DevKit"
+    assert summary["compatibility"]["board"] == "ESP32-C6 DevKit"
     assert summary["test"] == "esp32c6_gpio_signature_with_meter"
     assert summary["serial_or_flash_port"] == "/dev/ttyACM0"
     assert summary["instrument_profile"] == "esp32s3_dev_c_meter"
@@ -245,8 +245,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["connection_setup"]["bench_setup"]["ground_confirmed"] is True
     assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in summary["connection_digest"])
 
-    assert lkg["board"] == "ESP32-C6 DevKit"
     assert lkg["selected_dut"]["id"] == "esp32c6_devkit"
+    assert lkg["compatibility"]["board"] == "ESP32-C6 DevKit"
     assert lkg["port"] == "/dev/ttyACM0"
     assert lkg["instrument_communication"]["protocol"] == "gpio_meter_v1"
     assert lkg["instrument_capability_surfaces"]["measure.digital"] == "primary"
@@ -296,7 +296,8 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
 
 def test_print_success_summary_includes_capability_surface_lines(capsys):
     summary = {
-        "board": "ESP32-C6 DevKit",
+        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
+        "compatibility": {"board": "ESP32-C6 DevKit"},
         "test": "esp32c6_gpio_signature_with_meter",
         "run_id": "run1",
         "overall_result": "pass",
@@ -313,7 +314,8 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "key_evidence_paths": {"evidence": "/tmp/evidence.json", "verify_result": "/tmp/verify.json"},
     }
     last_known_good = {
-        "board": "ESP32-C6 DevKit",
+        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
+        "compatibility": {"board": "ESP32-C6 DevKit"},
         "test": "esp32c6_gpio_signature_with_meter",
         "port": "/dev/ttyACM0",
         "run_id": "run1",
