@@ -9,8 +9,15 @@ python3 -m ael verify-default run
 Stress it with:
 
 ```bash
-python3 -m ael verify-default repeat-until-fail --limit 20
+python3 -m ael verify-default repeat --limit 20
 ```
+
+Preferred repeated-run mode:
+
+- use `verify-default repeat --limit N` for repeated baseline checks
+- this repeats independently per worker
+- do not use a shell loop around `verify-default run` when you want each board to
+  keep progressing on its own
 
 Current execution model:
 
@@ -18,8 +25,10 @@ Current execution model:
   verification workers
 - the current default execution policy is `parallel`
 - `verify-default run` starts all three workers immediately
-- `repeat-until-fail` repeats independently per worker rather than waiting for
-  synchronized suite rounds
+- `verify-default repeat` repeats independently per worker rather than waiting
+  for synchronized suite rounds
+- `verify-default repeat-until-fail` remains supported as a compatibility alias
+  for the same behavior
 
 Current default sequence:
 

@@ -156,6 +156,12 @@ def main():
     verify_default_repeat.add_argument("--skip-if-docs-only", action="store_true")
     verify_default_repeat.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
 
+    verify_default_repeat_preferred = verify_default_sub.add_parser("repeat")
+    verify_default_repeat_preferred.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+    verify_default_repeat_preferred.add_argument("--limit", type=int, default=10)
+    verify_default_repeat_preferred.add_argument("--skip-if-docs-only", action="store_true")
+    verify_default_repeat_preferred.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
+
     inventory_p = sub.add_parser("inventory")
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
     inventory_list = inventory_sub.add_parser("list")
@@ -612,7 +618,7 @@ def main():
             )
             print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(int(code))
-        if args.verify_default_cmd == "repeat-until-fail":
+        if args.verify_default_cmd in ("repeat-until-fail", "repeat"):
             code, payload = run_default_until_fail(
                 limit=int(args.limit),
                 path=args.file,
