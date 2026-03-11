@@ -472,11 +472,6 @@ def _build_validation_summary(
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
-        "probe_instance": probe_instance_id or None,
-        "probe_type": probe_type or None,
-        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
-        "probe_communication": dict(probe_communication or {}),
-        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -502,6 +497,13 @@ def _build_validation_summary(
         "cleanup_items": [],
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
+    }
+    summary["compatibility"] = {
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
+        "probe_communication": dict(probe_communication or {}),
+        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
     }
     if selected_ssid:
         summary["selected_ap_ssid"] = selected_ssid
@@ -552,14 +554,6 @@ def _build_current_setup(
         "instrument_profile": instrument_id or None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
-        "probe_instance": probe_instance_id or None,
-        "probe_type": probe_type or None,
-        "probe_endpoint": {
-            "host": probe_host or None,
-            "port": probe_port if probe_port is not None else None,
-        },
-        "probe_communication": dict(probe_communication or {}),
-        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -584,6 +578,16 @@ def _build_current_setup(
         },
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
+    }
+    setup["compatibility"] = {
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": {
+            "host": probe_host or None,
+            "port": probe_port if probe_port is not None else None,
+        },
+        "probe_communication": dict(probe_communication or {}),
+        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
     }
     if selected_ssid:
         setup["selected_ap_ssid"] = selected_ssid
@@ -637,11 +641,6 @@ def _build_last_known_good_setup(
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
-        "probe_instance": probe_instance_id or None,
-        "probe_type": probe_type or None,
-        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
-        "probe_communication": dict(probe_communication or {}),
-        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -658,6 +657,13 @@ def _build_last_known_good_setup(
         "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
+    }
+    setup["compatibility"] = {
+        "probe_instance": probe_instance_id or None,
+        "probe_type": probe_type or None,
+        "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
+        "probe_communication": dict(probe_communication or {}),
+        "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
     }
     wiring = (connection_setup or {}).get("wiring_assumptions") if isinstance(connection_setup, dict) else None
     if wiring:

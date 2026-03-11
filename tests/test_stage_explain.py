@@ -16,18 +16,18 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['check_model'] == 'signal_verify'
     assert payload['selected']['verification_views']['signal']['resolved_to'] == 'P0.0'
     assert payload['selected']['verification_views']['led']['resolved_to'] == 'P0.3'
-    assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
-    assert payload['selected']['probe_instance'] == 'esp32jtag_stm32_golden'
-    assert payload['selected']['probe_type'] == 'esp32jtag'
     assert payload['selected']['control_instrument_selection']['instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['control_instrument_selection']['type'] == 'esp32jtag'
     assert payload['selected']['control_instrument'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
     assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['control_instrument_type'] == 'esp32jtag'
-    assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
-    assert payload['selected']['probe_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload['selected']['control_instrument_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['control_instrument_capability_surfaces']['swd'] == 'gdb_remote'
+    assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
+    assert payload['selected']['compatibility']['probe_instance'] == 'esp32jtag_stm32_golden'
+    assert payload['selected']['compatibility']['probe_type'] == 'esp32jtag'
+    assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['compatibility']['probe_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload["selected"]["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'gpio_in' and item['surface'] == 'web_api' for item in payload['selected']['capability_surface_plan'])
@@ -37,12 +37,12 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "rp2040_pico"
-    assert payload['selected']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
-    assert payload['selected']['probe_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['control_instrument_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['control_instrument_instance'] == 'esp32jtag_rp2040_lab'
-    assert payload['selected']['probe_communication']['primary'] == 'gdb_remote'
-    assert payload['selected']['probe_capability_surfaces']['gpio_in'] == 'web_api'
+    assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
+    assert payload['selected']['compatibility']['probe_instance'] == 'esp32jtag_rp2040_lab'
+    assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['compatibility']['probe_capability_surfaces']['gpio_in'] == 'web_api'
 
 
 def test_explain_preflight_for_meter_disabled_path():
@@ -64,11 +64,11 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "esp32c6_devkit"
-    assert payload['selected']['probe'] is None
-    assert payload['selected']['probe_instance'] is None
     assert payload['selected']['control_instrument_selection'] is None
     assert payload['selected']['control_instrument'] is None
     assert payload['selected']['control_instrument_instance'] is None
+    assert payload['selected']['compatibility']['probe'] is None
+    assert payload['selected']['compatibility']['probe_instance'] is None
     assert payload["selected"]["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
@@ -91,9 +91,9 @@ def test_render_text_includes_communication_blocks_readably():
                         "resolved_wiring": {"verify": "P0.0"},
                     },
                 },
-                "probe": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
-                "probe_communication": {"primary": "gdb_remote"},
-                "probe_capability_surfaces": {"swd": "gdb_remote"},
+                "control_instrument": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
+                "control_instrument_communication": {"primary": "gdb_remote"},
+                "control_instrument_capability_surfaces": {"swd": "gdb_remote"},
                 "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
                 "instrument_capability_surfaces": {"measure.digital": "primary"},
                 "connection_setup": {
@@ -106,9 +106,9 @@ def test_render_text_includes_communication_blocks_readably():
             },
         }
     )
-    assert "probe_communication:" in text
+    assert "control_instrument_communication:" in text
     assert "primary: gdb_remote" in text
-    assert "probe_capability_surfaces:" in text
+    assert "control_instrument_capability_surfaces:" in text
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
     assert "selected_dut:" in text
