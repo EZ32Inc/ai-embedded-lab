@@ -54,3 +54,20 @@ def test_doctor_meter_manifest_reports_reachability():
     rendered = instrument_view.render_doctor_text(payload)
     assert "esp32s3_dev_c_meter" in rendered
     assert "reachability: ok=True" in rendered
+
+
+def test_doctor_usb_uart_bridge_manifest_reports_tcp_health():
+    with patch(
+        "ael.instrument_doctor._tcp_check",
+        return_value={"ok": True, "host": "127.0.0.1", "port": 8767},
+    ):
+        payload = instrument_doctor.doctor(REPO_ROOT, "usb_uart_bridge_daemon")
+
+    assert payload["ok"] is True
+    assert payload["kind"] == "instrument"
+    assert payload["id"] == "usb_uart_bridge_daemon"
+    assert payload["checks"]["tcp"]["ok"] is True
+    assert payload["resolved_view"]["id"] == "usb_uart_bridge_daemon"
+    rendered = instrument_view.render_doctor_text(payload)
+    assert "usb_uart_bridge_daemon" in rendered
+    assert "tcp: ok=True" in rendered

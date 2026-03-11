@@ -1,0 +1,61 @@
+{
+  "schema": "ael.instrument.manifest.v0.1",
+  "id": "usb_uart_bridge_daemon",
+  "kind": "instrument",
+  "vendor": "AEL",
+  "model": "USB UART Bridge Daemon",
+  "transports": [
+    {
+      "type": "tcp",
+      "endpoint_hint": "127.0.0.1:8767",
+      "protocol": "ael-usb-uart-bridge-v0.1"
+    }
+  ],
+  "communication": {
+    "transport": "tcp",
+    "endpoint": "127.0.0.1:8767",
+    "protocol": "ael-usb-uart-bridge-v0.1",
+    "invocation_style": "request_response"
+  },
+  "capability_surfaces": {
+    "observe.uart": "primary",
+    "bridge.serial": "primary"
+  },
+  "capabilities": [
+    {
+      "name": "observe.uart",
+      "version": "v0.1",
+      "exclusive": false,
+      "params": {
+        "baud": { "min": 1200, "max": 3000000, "default": 115200 },
+        "bytesize": [5, 6, 7, 8],
+        "parity": ["N", "E", "O"],
+        "stopbits": [1, 2],
+        "timeout_s": { "min": 0.0, "max": 30.0, "default": 1.0 }
+      }
+    },
+    {
+      "name": "bridge.serial",
+      "version": "v0.1",
+      "exclusive": true,
+      "params": {
+        "supports_open_close": true,
+        "supports_read_write": true
+      }
+    }
+  ],
+  "docs": {
+    "human": [
+      {
+        "title": "USB-UART Bridge Daemon v0.1",
+        "path": "docs/instruments/usb_uart_bridge_daemon_v0_1.md"
+      }
+    ]
+  },
+  "safety": {
+    "notes": [
+      "Stable identity is the USB serial number, not the tty path.",
+      "Devices without a unique USB serial number are out of scope."
+    ]
+  }
+}

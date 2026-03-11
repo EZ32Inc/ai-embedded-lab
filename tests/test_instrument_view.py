@@ -33,6 +33,17 @@ def test_build_resolved_instrument_manifest_view():
     assert payload["metadata_validation_errors"] == []
 
 
+def test_build_resolved_usb_uart_bridge_manifest_view():
+    payload = instrument_view.build_resolved_instrument_view(REPO_ROOT, "usb_uart_bridge_daemon")
+    assert payload["ok"] is True
+    assert payload["kind"] == "instrument"
+    assert payload["id"] == "usb_uart_bridge_daemon"
+    assert payload["communication"]["protocol"] == "ael-usb-uart-bridge-v0.1"
+    assert payload["capability_surfaces"]["observe.uart"] == "primary"
+    assert payload["capability_surfaces"]["bridge.serial"] == "primary"
+    assert payload["metadata_validation_errors"] == []
+
+
 def test_instruments_describe_cli_text_output():
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
