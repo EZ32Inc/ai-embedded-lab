@@ -65,15 +65,25 @@ Purpose: record **what was requested** (by CLI or pack), at an ID level.
 
 ### `selected` object
 
-Purpose: record the **exact configs** resolved by Plan.
+Purpose: record the canonical **selection boundary** resolved by Plan.
+
+Primary current fields:
 
 | Field | Type | Required | Description |
 |------|------|----------|-------------|
-| `board_config` | string | yes | Path to resolved board config |
-| `probe_config` | string | no | Path to resolved probe config |
-| `instrument_config` | string | no | Path to resolved instrument config |
+| `selected_dut` | object | yes | Canonical DUT identity |
+| `selected_board_profile` | object | yes | Canonical board-policy identity |
+| `selected_bench_resources` | object | no | Canonical bound bench resources |
+| `control_instrument_selection` | object | no | Canonical control-instrument selection when applicable |
+| `board_profile_config` | string | yes | Path to resolved board profile config |
+| `control_instrument_config` | string | no | Path to resolved control-instrument config |
 | `test_config` | string | yes | Path to resolved test config |
 | `pack_config` | string | no | Path to resolved pack config |
+
+Compatibility note:
+
+- older payloads may still carry `board_config` and `probe_config`
+- when present, treat them as compatibility aliases rather than the primary contract
 
 ---
 
@@ -180,18 +190,40 @@ Your run will have different IDs/paths/steps depending on board/probe/test.
 
   "inputs": {
     "board_id": "esp32s3_devkit",
-    "probe_id": "esp32jtag",
+    "control_instrument_id": "esp32jtag",
     "instrument_id": "esp32s3_dev_c_meter",
     "test_id": "esp32s3_gpio_signature_with_meter",
     "pack_id": "esp32meter1"
   },
 
   "selected": {
-    "board_config": "configs/boards/esp32s3_devkit.yaml",
-    "probe_config": "configs/esp32jtag.yaml",
-    "instrument_config": "configs/instruments/esp32s3_dev_c_meter.yaml",
+    "selected_dut": {
+      "id": "esp32s3_devkit",
+      "name": "ESP32-S3 DevKit",
+      "target": "esp32s3"
+    },
+    "selected_board_profile": {
+      "id": "esp32s3_devkit",
+      "name": "ESP32-S3 DevKit",
+      "target": "esp32s3",
+      "config": "configs/boards/esp32s3_devkit.yaml"
+    },
+    "selected_bench_resources": {
+      "control_instrument": {
+        "config": "configs/esp32jtag.yaml"
+      },
+      "instrument": {
+        "id": "esp32s3_dev_c_meter"
+      }
+    },
+    "board_profile_config": "configs/boards/esp32s3_devkit.yaml",
+    "control_instrument_config": "configs/esp32jtag.yaml",
     "test_config": "tests/plans/esp32s3_gpio_signature_with_meter.json",
-    "pack_config": "packs/esp32meter1.json"
+    "pack_config": "packs/esp32meter1.json",
+    "compatibility": {
+      "board_config": "configs/boards/esp32s3_devkit.yaml",
+      "probe_config": "configs/esp32jtag.yaml"
+    }
   },
 
   "context": {

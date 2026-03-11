@@ -741,11 +741,11 @@ def _format_capability_surfaces(mapping: dict | None) -> str | None:
 
 def _print_success_summary(summary, last_known_good, current_setup):
     summary_dut = summary.get("selected_dut") if isinstance(summary.get("selected_dut"), dict) else {}
-    summary_board_name = summary_dut.get("name") or (summary.get("compatibility") or {}).get("board")
-    summary_control_instance = summary.get("control_instrument_instance") or summary.get("probe_instance")
-    summary_control_type = summary.get("control_instrument_type") or summary.get("probe_type")
-    summary_control_endpoint = summary.get("control_instrument_endpoint") or summary.get("probe_endpoint")
-    summary_control_surfaces = summary.get("control_instrument_capability_surfaces") or summary.get("probe_capability_surfaces")
+    summary_board_name = summary_dut.get("name") or summary_dut.get("id")
+    summary_control_instance = summary.get("control_instrument_instance")
+    summary_control_type = summary.get("control_instrument_type")
+    summary_control_endpoint = summary.get("control_instrument_endpoint")
+    summary_control_surfaces = summary.get("control_instrument_capability_surfaces")
     print(
         "Summary: validation "
         f"board={summary_board_name} test={summary.get('test')} run_id={summary.get('run_id')} "
@@ -789,7 +789,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if summary.get("cleanup_items"):
         print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
     endpoint = current_setup.get("selected_endpoint", {}) if isinstance(current_setup.get("selected_endpoint"), dict) else {}
-    raw_control_endpoint = current_setup.get("control_instrument_endpoint") or current_setup.get("probe_endpoint")
+    raw_control_endpoint = current_setup.get("control_instrument_endpoint")
     control_endpoint = raw_control_endpoint if isinstance(raw_control_endpoint, dict) else {}
     setup_line = "Summary: setup"
     if current_setup.get("serial_or_flash_port"):
@@ -800,7 +800,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         setup_line += f" endpoint={endpoint.get('host')}:{endpoint.get('port')}"
     if current_setup.get("instrument_profile"):
         setup_line += f" instrument={current_setup.get('instrument_profile')}"
-    control_instance = current_setup.get("control_instrument_instance") or current_setup.get("probe_instance")
+    control_instance = current_setup.get("control_instrument_instance")
     if control_instance:
         setup_line += f" control_instrument_instance={control_instance}"
     if control_endpoint.get("host") and control_endpoint.get("port") is not None:
@@ -812,7 +812,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if current_setup.get("connection_digest"):
         print(f"Summary: connection_digest={'; '.join(current_setup.get('connection_digest', []))}")
     lkg_dut = last_known_good.get("selected_dut") if isinstance(last_known_good.get("selected_dut"), dict) else {}
-    lkg_board_name = lkg_dut.get("name") or (last_known_good.get("compatibility") or {}).get("board")
+    lkg_board_name = lkg_dut.get("name") or lkg_dut.get("id")
     print(
         "LKG: "
         f"board={lkg_board_name} test={last_known_good.get('test')} "
@@ -828,10 +828,10 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(last_known_good.get("instrument_capability_surfaces"))
         if surfaces:
             print(f"LKG: instrument_surfaces={surfaces}")
-    lkg_control_instance = last_known_good.get("control_instrument_instance") or last_known_good.get("probe_instance")
-    lkg_control_type = last_known_good.get("control_instrument_type") or last_known_good.get("probe_type")
-    lkg_control_endpoint = last_known_good.get("control_instrument_endpoint") or last_known_good.get("probe_endpoint")
-    lkg_control_surfaces = last_known_good.get("control_instrument_capability_surfaces") or last_known_good.get("probe_capability_surfaces")
+    lkg_control_instance = last_known_good.get("control_instrument_instance")
+    lkg_control_type = last_known_good.get("control_instrument_type")
+    lkg_control_endpoint = last_known_good.get("control_instrument_endpoint")
+    lkg_control_surfaces = last_known_good.get("control_instrument_capability_surfaces")
     if lkg_control_instance:
         line = f"LKG: control_instrument_instance={lkg_control_instance}"
         if lkg_control_type:

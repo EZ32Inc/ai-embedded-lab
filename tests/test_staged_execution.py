@@ -303,7 +303,6 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
 def test_print_success_summary_includes_capability_surface_lines(capsys):
     summary = {
         "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
-        "compatibility": {"board": "ESP32-C6 DevKit"},
         "test": "esp32c6_gpio_signature_with_meter",
         "run_id": "run1",
         "overall_result": "pass",
@@ -321,7 +320,6 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
     }
     last_known_good = {
         "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
-        "compatibility": {"board": "ESP32-C6 DevKit"},
         "test": "esp32c6_gpio_signature_with_meter",
         "port": "/dev/ttyACM0",
         "run_id": "run1",
