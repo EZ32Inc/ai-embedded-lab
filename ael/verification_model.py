@@ -84,6 +84,24 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
     if failure_scope:
         parts.append(f"failure_scope={failure_scope}")
 
+    policy = result.get("degraded_instrument_policy")
+    policy_class = str(policy.get("policy_class") or "").strip() if isinstance(policy, dict) else ""
+    if not policy_class:
+        if instrument_condition == "instrument_unreachable":
+            policy_class = "bench_degraded_fail_fast"
+        elif instrument_condition in ("instrument_transport_unavailable", "instrument_api_unavailable"):
+            policy_class = "bench_degraded_retry_once"
+        elif instrument_condition == "instrument_verify_failed":
+            policy_class = "verify_no_retry"
+    if policy_class:
+        parts.append(f"policy_class={policy_class}")
+
+    retry_summary = result.get("retry_summary")
+    if isinstance(retry_summary, dict):
+        meter_guard_attempts = retry_summary.get("meter_guard_attempts")
+        if isinstance(meter_guard_attempts, int) and meter_guard_attempts > 0:
+            parts.append(f"meter_guard_attempts={meter_guard_attempts}")
+
     error = str(result.get("error") or result.get("error_summary") or "").strip()
     if error:
         parts.append(f"error={error}")
@@ -107,6 +125,7 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
 
 def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, Any]:
     condition_counts: Dict[str, int] = {}
+    policy_counts: Dict[str, int] = {}
     degraded_workers: List[Dict[str, Any]] = []
     for worker in list(workers or []):
         if not isinstance(worker, dict):
@@ -121,17 +140,30 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
         if not condition:
             continue
         condition_counts[condition] = condition_counts.get(condition, 0) + 1
+        policy = result.get("degraded_instrument_policy") if isinstance(result.get("degraded_instrument_policy"), dict) else {}
+        policy_class = str(policy.get("policy_class") or "").strip()
+        if not policy_class:
+            if condition == "instrument_unreachable":
+                policy_class = "bench_degraded_fail_fast"
+            elif condition in ("instrument_transport_unavailable", "instrument_api_unavailable"):
+                policy_class = "bench_degraded_retry_once"
+            elif condition == "instrument_verify_failed":
+                policy_class = "verify_no_retry"
+        if policy_class:
+            policy_counts[policy_class] = policy_counts.get(policy_class, 0) + 1
         degraded_workers.append(
             {
                 "name": worker.get("name"),
                 "board": worker.get("board"),
                 "instrument_condition": condition,
+                "policy_class": policy_class or None,
                 "completed_iterations": worker.get("completed_iterations"),
                 "requested_iterations": worker.get("requested_iterations"),
             }
         )
     return {
         "instrument_condition_counts": condition_counts,
+        "policy_class_counts": policy_counts,
         "degraded_workers": degraded_workers,
     }
 

@@ -120,6 +120,7 @@ This is intentionally bounded:
 - no broad recovery workflow is attached yet
 - no long backoff ladder is defined yet
 - this policy is currently biased toward preserving signal rather than maximizing automatic recovery
+- worker and suite summaries should surface the chosen policy via `policy_class`
 
 ## Future Extension Points
 

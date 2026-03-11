@@ -95,7 +95,9 @@ This separation matters because the same DUT may:
 In runtime and explanation outputs, AEL should prefer:
 
 - `selected_dut` for target identity
+- `selected_dut.runtime_binding` should remain explicit about the current execution reality: runtime is still board-profile-driven today
 - `selected_board_profile` for board-policy identity
+- `selected_board_profile.role` should remain the clearest runtime-policy marker
 - `selected_bench_resources` for bound external resources
 
 This boundary is important because board profile is not DUT identity.

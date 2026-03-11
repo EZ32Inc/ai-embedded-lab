@@ -40,6 +40,7 @@ Also confirmed:
 - resource locking is intentionally simple and in-memory for the current process model
 - some explanation paths still speak in probe-oriented terms because of legacy model seams
 - current runtime, explain, inventory, and archive payloads now carry canonical `selected_bench_resources` objects with grouped lock-relevant ownership
+- `selected_bench_resources.contract_version` and `selected_bench_resources.selection_digest` are the preferred bounded contract surface for stable comparison across runs
 
 ## 4. Bench Model Layers
 

@@ -186,6 +186,7 @@ def _selected_dut_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) 
         "mcu": manifest.get("mcu") or board_cfg.get("target"),
         "family": manifest.get("family"),
         "source": "user" if isinstance(dut, dict) and "/assets_user/" in str(dut.get("path") or "") else ("golden" if dut else None),
+        "runtime_binding": "board_profile_driven",
     }
 
 
@@ -196,7 +197,22 @@ def _selected_board_profile_payload(root: Path, board_id: str, board_cfg: Dict[s
         "name": board_cfg.get("name"),
         "target": board_cfg.get("target"),
         "config": board_path.relative_to(root).as_posix() if board_path.exists() else None,
+        "role": "runtime_policy",
     }
+
+
+def _bench_selection_digest(payload: Dict[str, Any]) -> List[str]:
+    items: List[str] = []
+    instrument = payload.get("selected_instrument")
+    if isinstance(instrument, dict):
+        kind = str(instrument.get("kind") or "").strip()
+        instrument_id = instrument.get("id")
+        if instrument_id:
+            items.append(f"{kind}_id:{instrument_id}")
+        endpoint = instrument.get("endpoint")
+        if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
+            items.append(f"{kind}_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
+    return items
 
 
 def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], connection_setup: Dict[str, Any]) -> Dict[str, Any]:
@@ -212,13 +228,16 @@ def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], conne
         inst_id = selected_instrument.get("id")
         if inst_id and endpoint.get("host") and endpoint.get("port") is not None:
             resource_keys.append(f"instrument:{inst_id}:{endpoint.get('host')}:{endpoint.get('port')}")
-    return {
+    payload = {
+        "contract_version": 1,
         "selected_instrument": dict(selected_instrument or {}),
         "resource_keys": resource_keys,
         "resource_summary": summarize_resource_keys(resource_keys),
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
     }
+    payload["selection_digest"] = _bench_selection_digest(payload)
+    return payload
 
 
 def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:

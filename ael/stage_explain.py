@@ -51,6 +51,7 @@ def _selected_dut_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "id": board_id,
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "runtime_binding": "board_profile_driven",
     }
 
 
@@ -62,7 +63,36 @@ def _selected_board_profile_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
         "config": ctx.get("board_path"),
+        "role": "runtime_policy",
     }
+
+
+def _bench_selection_digest(payload: Dict[str, Any]) -> List[str]:
+    items: List[str] = []
+    serial_port = payload.get("serial_port")
+    if serial_port:
+        items.append(f"serial:{serial_port}")
+    selected_ap_ssid = payload.get("selected_ap_ssid")
+    if selected_ap_ssid:
+        items.append(f"ssid:{selected_ap_ssid}")
+    instrument = payload.get("instrument")
+    if isinstance(instrument, dict):
+        inst_id = instrument.get("id")
+        if inst_id:
+            items.append(f"instrument_id:{inst_id}")
+        communication = instrument.get("communication")
+        endpoint = communication.get("endpoint") if isinstance(communication, dict) else None
+        if endpoint:
+            items.append(f"instrument_endpoint:{endpoint}")
+    control = payload.get("control_instrument")
+    if isinstance(control, dict):
+        instance = control.get("instance")
+        if instance:
+            items.append(f"control_instrument_instance:{instance}")
+        config_path = control.get("config")
+        if config_path:
+            items.append(f"control_instrument_config:{config_path}")
+    return items
 
 
 def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
@@ -79,7 +109,8 @@ def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
             resource_keys.append(f"probe_path:{config_path}")
     if resolved.instrument_id and resolved.instrument_host and resolved.instrument_port is not None:
         resource_keys.append(f"instrument:{resolved.instrument_id}:{resolved.instrument_host}:{resolved.instrument_port}")
-    return {
+    payload = {
+        "contract_version": 1,
         "control_instrument": control,
         "instrument": {
             "id": resolved.instrument_id,
@@ -90,6 +121,8 @@ def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
         "resource_summary": summarize_resource_keys(resource_keys),
         "connection_setup": connection_setup,
     }
+    payload["selection_digest"] = _bench_selection_digest(payload)
+    return payload
 
 
 def _load_json(path: Path) -> Dict[str, Any]:

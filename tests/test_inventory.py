@@ -81,14 +81,18 @@ def test_describe_test_for_stm32f401_gpio_signature():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_dut"]["id"] == "stm32f401rct6"
+    assert payload["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected_board_profile"]["id"] == "stm32f401rct6"
     assert payload["selected_board_profile"]["config"] == "configs/boards/stm32f401rct6.yaml"
+    assert payload["selected_board_profile"]["role"] == "runtime_policy"
     assert payload["selected_instrument"]["kind"] == "control_instrument"
     assert payload["selected_instrument"]["legacy_kind"] == "probe"
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
     assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.98:4242"]
+    assert payload["selected_bench_resources"]["contract_version"] == 1
+    assert "control_instrument_id:esp32jtag_stm32_golden" in payload["selected_bench_resources"]["selection_digest"]
     assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
     assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
@@ -129,10 +133,14 @@ def test_describe_test_for_meter_path():
     payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_dut"]["id"] == "esp32c6_devkit"
+    assert payload["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected_board_profile"]["config"] == "configs/boards/esp32c6_devkit.yaml"
+    assert payload["selected_board_profile"]["role"] == "runtime_policy"
     assert payload["selected_instrument"]["kind"] == "instrument"
     assert payload["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["selected_bench_resources"]["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert payload["selected_bench_resources"]["contract_version"] == 1
+    assert "instrument_id:esp32s3_dev_c_meter" in payload["selected_bench_resources"]["selection_digest"]
     assert "compatibility" not in payload or "probe_or_instrument" not in payload.get("compatibility", {})
     assert any(conn["from"] == "X1(GPIO4)" and conn["to"] == "inst GPIO11" for conn in payload["connections"])
     assert any(check["type"] == "instrument_measure" for check in payload["expected_checks"])

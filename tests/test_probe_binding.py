@@ -80,3 +80,16 @@ def test_control_instrument_aliases_use_explicit_instance_when_required(tmp_path
     assert config_resolver.resolve_control_instrument_config(str(tmp_path), args=None, board_id="alias_board").endswith(
         "configs/instrument_instances/esp32jtag_rp2040_lab.yaml"
     )
+
+
+def test_control_instrument_arg_overrides_legacy_probe_arg(tmp_path):
+    class _Args:
+        control_instrument = "configs/instrument_instances/esp32jtag_rp2040_lab.yaml"
+        probe = "configs/esp32jtag.yaml"
+        board = None
+        dut = None
+
+    assert (
+        config_resolver.resolve_control_instrument_config(str(tmp_path), args=_Args(), board_id=None)
+        == "configs/instrument_instances/esp32jtag_rp2040_lab.yaml"
+    )

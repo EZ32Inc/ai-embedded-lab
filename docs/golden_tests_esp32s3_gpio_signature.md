@@ -29,7 +29,7 @@ Connect the PC Wi-Fi interface to:
 python3 -m ael run \
   --board esp32s3_devkit \
   --test tests/plans/esp32s3_gpio_signature_with_meter.json \
-  --probe configs/esp32jtag.yaml
+  --control-instrument configs/esp32jtag.yaml
 ```
 
 Notes:

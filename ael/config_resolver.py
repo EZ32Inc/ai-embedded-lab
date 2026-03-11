@@ -163,7 +163,8 @@ def resolve_notify_probe_config(
         return str(user_notify)
 
     explicit_probe = _arg(args, "probe")
-    if explicit_probe:
+    explicit_control = _arg(args, "control_instrument")
+    if explicit_probe or explicit_control:
         return None
 
     policy_board = _board_for_policy(board_id, args, pack_meta)
@@ -187,6 +188,10 @@ def resolve_probe_config(
     pack_meta: Optional[dict] = None,
 ) -> Optional[str]:
     """Resolve probe config path with user override + policy defaults."""
+    user_control = _arg(args, "control_instrument")
+    if user_control:
+        return str(user_control)
+
     user_probe = _arg(args, "probe")
     if user_probe:
         return str(user_probe)
@@ -240,7 +245,8 @@ def resolve_probe_instance(
         return str(user_instance)
 
     explicit_probe = _arg(args, "probe")
-    if explicit_probe:
+    explicit_control = _arg(args, "control_instrument")
+    if explicit_probe or explicit_control:
         return None
 
     notify = resolve_notify_probe_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)

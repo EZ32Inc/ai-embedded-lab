@@ -14,6 +14,6 @@ This removes board/probe/tool-specific policy from CLI orchestration code and ke
 Behavior remains compatible with existing flows by preserving prior defaults and routing policy inside resolver.
 
 ## Behavior compatibility
-- `ael run` still works without explicit `--probe`.
-- `ael doctor` still resolves default probe/board if not provided.
+- `ael run` still works without explicit `--control-instrument`.
+- `ael doctor` still resolves default control-instrument/board if not provided.
 - `ael pack` still applies board-based notify-probe policy as before.

@@ -11,8 +11,10 @@ def test_explain_plan_for_stm32f401():
     assert payload['ok'] is True
     assert payload['stage'] == 'plan'
     assert payload["selected"]["selected_dut"]["id"] == "stm32f401rct6"
+    assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected"]["selected_board_profile"]["id"] == "stm32f401rct6"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/stm32f401rct6.yaml"
+    assert payload["selected"]["selected_board_profile"]["role"] == "runtime_policy"
     assert payload['selected']['builder_kind'] == 'arm_debug'
     assert payload['selected']['board_clock_hz'] == 16000000
     assert payload['selected']['check_model'] == 'signal_verify'
@@ -31,6 +33,8 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['compatibility']['probe_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload["selected"]["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert payload["selected"]["selected_bench_resources"]["contract_version"] == 1
+    assert "control_instrument_instance:esp32jtag_stm32_golden" in payload["selected"]["selected_bench_resources"]["selection_digest"]
     assert "probe_path:configs/instrument_instances/esp32jtag_stm32_golden.yaml" in payload["selected"]["selected_bench_resources"]["resource_keys"]
     assert payload["selected"]["selected_bench_resources"]["resource_summary"]["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
@@ -41,7 +45,9 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "rp2040_pico"
+    assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/rp2040_pico.yaml"
+    assert payload["selected"]["selected_board_profile"]["role"] == "runtime_policy"
     assert payload['selected']['control_instrument_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['control_instrument_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
@@ -69,13 +75,17 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "esp32c6_devkit"
+    assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/esp32c6_devkit.yaml"
+    assert payload["selected"]["selected_board_profile"]["role"] == "runtime_policy"
     assert payload['selected']['control_instrument_selection'] is None
     assert payload['selected']['control_instrument'] is None
     assert payload['selected']['control_instrument_instance'] is None
     assert payload['selected']['compatibility']['probe'] is None
     assert payload['selected']['compatibility']['probe_instance'] is None
     assert payload["selected"]["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert payload["selected"]["selected_bench_resources"]["contract_version"] == 1
+    assert "instrument_id:esp32s3_dev_c_meter" in payload["selected"]["selected_bench_resources"]["selection_digest"]
     assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in payload["selected"]["selected_bench_resources"]["resource_keys"]
     assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])

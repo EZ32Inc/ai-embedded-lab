@@ -39,6 +39,7 @@ def test_worker_logs_failure_summary_details():
     assert "failure_class=network_meter_api" in fail_line
     assert "instrument_condition=instrument_api_unavailable" in fail_line
     assert "failure_scope=bench" in fail_line
+    assert "policy_class=bench_degraded_retry_once" in fail_line
     assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in fail_line
     assert "observations=ping=ok,tcp=ok,api=fail" in fail_line
 
@@ -1004,6 +1005,7 @@ def test_print_worker_totals_includes_failure_details(capsys):
     assert "failure_class=network_meter_api" in out
     assert "instrument_condition=instrument_api_unavailable" in out
     assert "failure_scope=bench" in out
+    assert "policy_class=bench_degraded_retry_once" in out
     assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in out
     assert "observations=ping=ok,tcp=ok,api=fail" in out
 
@@ -1036,6 +1038,7 @@ def test_print_worker_totals_includes_verify_failure_details(capsys):
     assert "failure_class=instrument_digital_mismatch" in out
     assert "instrument_condition=instrument_verify_failed" in out
     assert "failure_scope=verify" in out
+    assert "policy_class=verify_no_retry" in out
     assert "error=instrument digital verification failed" in out
 
 
@@ -1104,4 +1107,5 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert payload["failure"]["failure_scope"] == "bench"
     assert payload["failure"]["instrument_condition"] == "instrument_api_unavailable"
     assert payload["health_summary"]["instrument_condition_counts"] == {"instrument_api_unavailable": 1}
+    assert payload["health_summary"]["policy_class_counts"] == {"bench_degraded_retry_once": 1}
     assert payload["health_summary"]["degraded_workers"][0]["name"] == "unstable_meter"

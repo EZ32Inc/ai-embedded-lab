@@ -381,6 +381,7 @@ def _selected_dut_payload(*, board_id, board_cfg):
         "id": board_id or None,
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "runtime_binding": "board_profile_driven",
     }
 
 
@@ -392,7 +393,39 @@ def _selected_board_profile_payload(*, board_id, board_cfg):
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
         "config": (f"configs/boards/{board_id}.yaml" if board_id else None),
+        "role": "runtime_policy",
     }
+
+
+def _bench_selection_digest(payload):
+    if not isinstance(payload, dict):
+        return []
+    items = []
+    serial_port = payload.get("serial_port")
+    if serial_port:
+        items.append(f"serial:{serial_port}")
+    selected_ap_ssid = payload.get("selected_ap_ssid")
+    if selected_ap_ssid:
+        items.append(f"ssid:{selected_ap_ssid}")
+    instrument = payload.get("instrument")
+    if isinstance(instrument, dict):
+        instrument_id = instrument.get("id")
+        endpoint = instrument.get("endpoint") if isinstance(instrument.get("endpoint"), dict) else {}
+        if instrument_id:
+            items.append(f"instrument_id:{instrument_id}")
+        if endpoint.get("host") and endpoint.get("port") is not None:
+            items.append(f"instrument_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
+    control = payload.get("control_instrument")
+    if isinstance(control, dict):
+        instance = control.get("instance")
+        if instance:
+            items.append(f"control_instrument_instance:{instance}")
+        endpoint = control.get("endpoint")
+        if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
+            items.append(f"control_instrument_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
+        elif isinstance(endpoint, str) and endpoint:
+            items.append(f"control_instrument_endpoint:{endpoint}")
+    return items
 
 
 def _selected_bench_resources_payload(
@@ -419,7 +452,8 @@ def _selected_bench_resources_payload(
         resource_keys.append(f"instrument:{instrument_id}:{instrument_host}:{instrument_port}")
     if probe_host and probe_port is not None:
         resource_keys.append(f"probe:{probe_host}:{probe_port}")
-    return {
+    payload = {
+        "contract_version": 1,
         "serial_port": flash_port or None,
         "selected_ap_ssid": selected_ssid or None,
         "instrument": {
@@ -446,6 +480,8 @@ def _selected_bench_resources_payload(
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
     }
+    payload["selection_digest"] = _bench_selection_digest(payload)
+    return payload
 
 
 def _build_validation_summary(
