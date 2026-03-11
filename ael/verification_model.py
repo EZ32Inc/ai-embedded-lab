@@ -73,6 +73,17 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
     if instrument_condition:
         parts.append(f"instrument_condition={instrument_condition}")
 
+    failure_scope = str(result.get("failure_scope") or "").strip()
+    if not failure_scope and isinstance(observations, dict):
+        failure_scope = str(observations.get("failure_scope") or "").strip()
+    if not failure_scope:
+        if instrument_condition in ("instrument_unreachable", "instrument_transport_unavailable", "instrument_api_unavailable"):
+            failure_scope = "bench"
+        elif instrument_condition == "instrument_verify_failed":
+            failure_scope = "verify"
+    if failure_scope:
+        parts.append(f"failure_scope={failure_scope}")
+
     error = str(result.get("error") or result.get("error_summary") or "").strip()
     if error:
         parts.append(f"error={error}")

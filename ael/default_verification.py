@@ -48,6 +48,45 @@ def _infer_instrument_condition(result: Dict[str, Any]) -> str:
     return ""
 
 
+def _infer_failure_scope(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+    scope = str(result.get("failure_scope") or observations.get("failure_scope") or "").strip()
+    if scope:
+        return scope
+    condition = _infer_instrument_condition(result)
+    failure_class = str(result.get("failure_class") or observations.get("failure_class") or "").strip()
+    verify_substage = str(result.get("verify_substage") or observations.get("verify_substage") or "").strip()
+    if condition in ("instrument_unreachable", "instrument_transport_unavailable", "instrument_api_unavailable"):
+        return "bench"
+    if condition == "instrument_verify_failed" or verify_substage == "instrument.signature" or failure_class.startswith("instrument_"):
+        return "verify"
+    return ""
+
+
+def _degraded_instrument_policy(result: Dict[str, Any]) -> Dict[str, Any]:
+    condition = _infer_instrument_condition(result)
+    scope = _infer_failure_scope(result)
+    policy = {
+        "policy_class": "",
+        "retryable": False,
+        "max_attempts": 1,
+        "backoff_s": 0.0,
+        "failure_scope": scope,
+    }
+    if condition == "instrument_unreachable":
+        policy["policy_class"] = "bench_degraded_fail_fast"
+    elif condition in ("instrument_transport_unavailable", "instrument_api_unavailable"):
+        policy["policy_class"] = "bench_degraded_retry_once"
+        policy["retryable"] = True
+        policy["max_attempts"] = 2
+        policy["backoff_s"] = 1.0
+    elif condition == "instrument_verify_failed":
+        policy["policy_class"] = "verify_no_retry"
+    return policy
+
+
 def _load_text_payload(path: Path) -> Dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     # JSON is a YAML subset and keeps parsing deterministic without extra deps.
@@ -215,21 +254,47 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
     _probe_raw, probe = _resolve_step_probe_binding(repo_root, step)
-    try:
-        _ensure_step_meter_reachable(repo_root, str(board), test)
-    except Exception as exc:
-        print(f"default_verification: {exc}")
-        details = getattr(exc, "details", {})
-        out = {"ok": False, "error": str(exc), "error_summary": str(exc)}
-        if isinstance(details, dict) and details:
-            out["observations"] = dict(details)
-            if details.get("failure_class"):
-                out["failure_class"] = details.get("failure_class")
-            instrument_condition = _infer_instrument_condition({"observations": details})
+    meter_attempts = 0
+    while True:
+        try:
+            meter_attempts += 1
+            _ensure_step_meter_reachable(repo_root, str(board), test)
+            break
+        except Exception as exc:
+            print(f"default_verification: {exc}")
+            details = getattr(exc, "details", {})
+            out = {"ok": False, "error": str(exc), "error_summary": str(exc)}
+            if isinstance(details, dict) and details:
+                out["observations"] = dict(details)
+                if details.get("failure_class"):
+                    out["failure_class"] = details.get("failure_class")
+            instrument_condition = _infer_instrument_condition(out)
             if instrument_condition:
                 out["instrument_condition"] = instrument_condition
-                out["observations"].setdefault("instrument_condition", instrument_condition)
-        return 2, out
+                if isinstance(out.get("observations"), dict):
+                    out["observations"].setdefault("instrument_condition", instrument_condition)
+            failure_scope = _infer_failure_scope(out)
+            if failure_scope:
+                out["failure_scope"] = failure_scope
+                if isinstance(out.get("observations"), dict):
+                    out["observations"].setdefault("failure_scope", failure_scope)
+            policy = _degraded_instrument_policy(out)
+            out["degraded_instrument_policy"] = policy
+            out["retry_summary"] = {
+                "meter_guard_attempts": meter_attempts,
+                "meter_guard_retries_used": max(0, meter_attempts - 1),
+            }
+            if policy.get("retryable") and meter_attempts < int(policy.get("max_attempts") or 1):
+                backoff_s = float(policy.get("backoff_s") or 0.0)
+                print(
+                    "default_verification: degraded instrument retry "
+                    f"{meter_attempts}/{int(policy.get('max_attempts') or 1) - 1} "
+                    f"after {backoff_s:.1f}s"
+                )
+                if backoff_s > 0:
+                    time.sleep(backoff_s)
+                continue
+            return 2, out
     code = run_pipeline(
         probe_path=probe,
         board_arg=str(board),
@@ -254,6 +319,14 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                     out["instrument_condition"] = instrument_condition
                 if instrument_condition and isinstance(out.get("observations"), dict):
                     out["observations"].setdefault("instrument_condition", instrument_condition)
+                failure_scope = _infer_failure_scope(out)
+                if failure_scope:
+                    out["failure_scope"] = failure_scope
+                    if isinstance(out.get("observations"), dict):
+                        out["observations"].setdefault("failure_scope", failure_scope)
+                policy = _degraded_instrument_policy(out)
+                if policy.get("policy_class"):
+                    out["degraded_instrument_policy"] = policy
             return int(exit_code), out
         return int(exit_code), {"ok": int(exit_code) == 0}
     return int(code), {"ok": int(code) == 0}
@@ -486,14 +559,20 @@ def _run_parallel_repeat_until_fail(
         "health_summary": summarize_worker_health(workers),
     }
     if first_failure is not None:
+        first_result = first_failure.get("result") if isinstance(first_failure.get("result"), dict) else {}
+        failure_scope = first_result.get("failure_scope") or _infer_failure_scope(first_result)
+        instrument_condition = first_result.get("instrument_condition") or _infer_instrument_condition(first_result)
         payload["failure"] = {
             "step_name": first_failure.get("name"),
             "board": first_failure.get("board"),
             "iteration": first_failure.get("iteration"),
             "step_code": first_failure.get("code"),
+            "failure_scope": failure_scope or None,
+            "instrument_condition": instrument_condition or None,
             "reason": (
-                first_failure.get("result", {}).get("error")
-                if isinstance(first_failure.get("result"), dict)
+                first_result.get("error")
+                or first_result.get("error_summary")
+                if isinstance(first_result, dict)
                 else "step failed"
             )
             or "step failed",

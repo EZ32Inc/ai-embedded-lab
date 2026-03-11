@@ -163,6 +163,7 @@ Current repo state:
 - early meter failures can emit structured observations into results/evidence
 - verify-stage evidence is richer than before, but still not yet a full failure taxonomy
 - degraded external instrument conditions are now promoted more explicitly in suite-level results and repeat-mode summaries
+- default verification now applies a bounded degraded-instrument policy: fail fast for unreachable instruments, retry once for transient transport/API degradation, and preserve verify-stage failures without automatic retry
 
 ### Immediate goals
 - improve failure classification further

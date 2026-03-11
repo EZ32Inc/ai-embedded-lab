@@ -38,6 +38,7 @@ def test_worker_logs_failure_summary_details():
     fail_line = next(item for item in lines if item.startswith("[FAIL]"))
     assert "failure_class=network_meter_api" in fail_line
     assert "instrument_condition=instrument_api_unavailable" in fail_line
+    assert "failure_scope=bench" in fail_line
     assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in fail_line
     assert "observations=ping=ok,tcp=ok,api=fail" in fail_line
 
@@ -170,9 +171,13 @@ def test_run_single_blocks_unreachable_esp32_meter(tmp_path):
     )
     assert result["error_summary"] == result["error"]
     assert result["failure_class"] == "network_meter_reachability"
+    assert result["failure_scope"] == "bench"
+    assert result["degraded_instrument_policy"]["policy_class"] == "bench_degraded_fail_fast"
     assert result["observations"]["failure_class"] == "network_meter_reachability"
     assert result["observations"]["instrument_condition"] == "instrument_unreachable"
+    assert result["observations"]["failure_scope"] == "bench"
     assert result["observations"]["host"] == "192.168.4.1"
+    assert result["retry_summary"]["meter_guard_attempts"] == 1
     guard_mock.assert_called_once()
     run_mock.assert_not_called()
 
@@ -220,6 +225,8 @@ def test_run_single_promotes_verify_failure_details_from_pipeline(tmp_path):
     assert result["verify_substage"] == "instrument.signature"
     assert result["failure_class"] == "instrument_digital_mismatch"
     assert result["instrument_condition"] == "instrument_verify_failed"
+    assert result["failure_scope"] == "verify"
+    assert result["degraded_instrument_policy"]["policy_class"] == "verify_no_retry"
     assert result["observations"]["missing_expected_channels"] == ["GPIO11"]
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
@@ -261,10 +268,116 @@ def test_run_single_reads_verify_result_details_when_pipeline_payload_is_sparse(
     assert result["verify_substage"] == "instrument.signature"
     assert result["failure_class"] == "instrument_digital_mismatch"
     assert result["instrument_condition"] == "instrument_verify_failed"
+    assert result["failure_scope"] == "verify"
+    assert result["degraded_instrument_policy"]["policy_class"] == "verify_no_retry"
     assert result["observations"]["missing_expected_channels"] == ["GPIO11"]
     assert result["observations"]["mismatch_reasons"] == ["state_mismatch"]
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
+
+
+def test_run_single_retries_transient_meter_api_failure_once(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        """{
+  "name": "esp32c6_gpio_signature_with_meter",
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    }
+  },
+  "bench_setup": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle"
+      }
+    ]
+  }
+}""",
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+    first_error = default_verification.instrument_provision.MeterReachabilityError(
+        "meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed.",
+        details={
+            "failure_class": "network_meter_api",
+            "host": "192.168.4.1",
+            "port": 9000,
+            "ping": {"ok": True},
+            "tcp": {"ok": True},
+            "api": {"ok": False},
+        },
+    )
+
+    with patch(
+        "ael.default_verification.instrument_provision.ensure_meter_reachable",
+        side_effect=[first_error, None],
+    ) as guard_mock, patch("ael.default_verification.time.sleep") as sleep_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    assert code == 0
+    assert result == {"ok": True}
+    assert guard_mock.call_count == 2
+    sleep_mock.assert_called_once_with(1.0)
+    run_mock.assert_called_once()
+
+
+def test_run_single_does_not_retry_unreachable_meter(tmp_path):
+    test_path = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    test_path.write_text(
+        """{
+  "name": "esp32c6_gpio_signature_with_meter",
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    }
+  },
+  "bench_setup": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle"
+      }
+    ]
+  }
+}""",
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+    error = default_verification.instrument_provision.MeterReachabilityError(
+        "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. Suggestion: add a meter reset feature.",
+        details={
+            "failure_class": "network_meter_reachability",
+            "host": "192.168.4.1",
+            "port": 9000,
+            "ping": {"ok": False},
+        },
+    )
+
+    with patch(
+        "ael.default_verification.instrument_provision.ensure_meter_reachable",
+        side_effect=error,
+    ) as guard_mock, patch("ael.default_verification.time.sleep") as sleep_mock, patch(
+        "ael.default_verification.run_pipeline"
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    assert code == 2
+    assert result["degraded_instrument_policy"]["retryable"] is False
+    assert result["degraded_instrument_policy"]["policy_class"] == "bench_degraded_fail_fast"
+    guard_mock.assert_called_once()
+    sleep_mock.assert_not_called()
+    run_mock.assert_not_called()
 
 
 def test_print_worker_totals_reports_degraded_instrument_summary(capsys):
@@ -890,6 +1003,7 @@ def test_print_worker_totals_includes_failure_details(capsys):
     assert "esp32c6_golden_gpio: 0/1 PASS" in out
     assert "failure_class=network_meter_api" in out
     assert "instrument_condition=instrument_api_unavailable" in out
+    assert "failure_scope=bench" in out
     assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in out
     assert "observations=ping=ok,tcp=ok,api=fail" in out
 
@@ -921,6 +1035,7 @@ def test_print_worker_totals_includes_verify_failure_details(capsys):
     assert "verify_substage=instrument.signature" in out
     assert "failure_class=instrument_digital_mismatch" in out
     assert "instrument_condition=instrument_verify_failed" in out
+    assert "failure_scope=verify" in out
     assert "error=instrument digital verification failed" in out
 
 
@@ -986,5 +1101,7 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert by_name["unstable_meter"]["completed_iterations"] == 2
     assert by_name["stable_probe"]["completed_iterations"] == 5
     assert payload["failure"]["step_name"] == "unstable_meter"
+    assert payload["failure"]["failure_scope"] == "bench"
+    assert payload["failure"]["instrument_condition"] == "instrument_api_unavailable"
     assert payload["health_summary"]["instrument_condition_counts"] == {"instrument_api_unavailable": 1}
     assert payload["health_summary"]["degraded_workers"][0]["name"] == "unstable_meter"

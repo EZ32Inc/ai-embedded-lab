@@ -32,6 +32,9 @@ Current execution model:
 - when a worker fails because an external instrument is unstable, unrelated
   workers should keep progressing and the failure summary should classify the
   degraded instrument condition explicitly
+- default verification currently retries transient instrument transport/API
+  failures once, but fails fast for clearly unreachable instruments and does
+  not auto-retry verify-stage instrument mismatches
 
 Current default sequence:
 

@@ -117,3 +117,7 @@ Keep for now:
 Prefer to retire next:
 - older user-visible doc/examples that still present `probe` as a current primary term
 - remaining machine-readable payload examples that still show `probe_id` without a compatibility note
+
+Deferred while degraded-instrument policy settles:
+- low-level helper and adapter parameter names that still use `probe_cfg`
+- compatibility wrappers whose removal would mix naming churn with runtime policy work

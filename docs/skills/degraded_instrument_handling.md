@@ -107,10 +107,25 @@ When explaining a degraded instrument failure, report:
 - Worker independence is an important validation signal in these cases.
 - The instrument condition should be visible directly in results and summaries, not only buried in raw evidence.
 
+## Current Policy
+
+Default verification currently treats degraded instrument states as:
+
+- `instrument_unreachable`
+  - fail fast
+- `instrument_transport_unavailable`
+  - retry once with short backoff
+- `instrument_api_unavailable`
+  - retry once with short backoff
+- `instrument_verify_failed`
+  - do not auto-retry in the default worker path
+
+This policy is meant to preserve useful signal while still tolerating short-lived transport/API instability.
+
 ## Unresolved Questions
 
 - whether future instruments need a broader condition taxonomy than the current meter-focused cases
-- how much automatic retry or recovery policy should be attached to degraded instrument states
+- whether degraded-instrument policy should eventually become configurable per instrument type
 - whether additional timing/history context is needed for intermittent API failures
 
 ## Related Files
