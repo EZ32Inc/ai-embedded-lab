@@ -23,6 +23,25 @@
       "hardware_verified_single",
       "build_and_plan_verified",
       "plan_verified_only"
+    ],
+    "contract_completeness": [
+      "formal_contract_complete",
+      "formal_contract_complete_with_unbound_external_inputs"
+    ],
+    "build_status": [
+      "build_smoke_passed",
+      "build_not_run"
+    ],
+    "runtime_validation_status": [
+      "not_run",
+      "hardware_verified_single",
+      "hardware_verified_repeated"
+    ],
+    "family_method": [
+      "rp2_local_reference_first",
+      "rp2350_hybrid_first_baseline",
+      "stm32_local_reference_first",
+      "esp32_idf_example_first"
     ]
   },
   "examples": [
@@ -33,7 +52,11 @@
       "plan": "tests/plans/rp2350_gpio_signature.json",
       "target": "firmware/targets/rp2350_pico2",
       "source_basis": "hybrid_official_plus_local_shape",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2350_hybrid_first_baseline"
     },
     {
       "board_id": "rp2350_pico2",
@@ -42,7 +65,11 @@
       "plan": "tests/plans/rp2350_uart_banner.json",
       "target": "firmware/targets/rp2350_pico2_uart",
       "source_basis": "hybrid_official_plus_local_shape",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2350_hybrid_first_baseline"
     },
     {
       "board_id": "rp2040_pico",
@@ -51,7 +78,11 @@
       "plan": "tests/plans/rp2040_uart_banner.json",
       "target": "firmware/targets/rp2040_pico_uart",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2_local_reference_first"
     },
     {
       "board_id": "rp2040_pico",
@@ -60,7 +91,11 @@
       "plan": "tests/plans/rp2040_adc_banner.json",
       "target": "firmware/targets/rp2040_pico_adc",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete_with_unbound_external_inputs",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2_local_reference_first"
     },
     {
       "board_id": "rp2040_pico",
@@ -69,7 +104,11 @@
       "plan": "tests/plans/rp2040_spi_banner.json",
       "target": "firmware/targets/rp2040_pico_spi",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2_local_reference_first"
     },
     {
       "board_id": "rp2040_pico",
@@ -78,7 +117,11 @@
       "plan": "tests/plans/rp2040_i2c_banner.json",
       "target": "firmware/targets/rp2040_pico_i2c",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "rp2_local_reference_first"
     },
     {
       "board_id": "stm32f103",
@@ -87,7 +130,11 @@
       "plan": "tests/plans/stm32f103_uart_banner.json",
       "target": "firmware/targets/stm32f103_uart",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "stm32_local_reference_first"
     },
     {
       "board_id": "stm32f103",
@@ -96,7 +143,11 @@
       "plan": "tests/plans/stm32f103_adc_banner.json",
       "target": "firmware/targets/stm32f103_adc",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete_with_unbound_external_inputs",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "stm32_local_reference_first"
     },
     {
       "board_id": "stm32f103",
@@ -105,7 +156,11 @@
       "plan": "tests/plans/stm32f103_spi_banner.json",
       "target": "firmware/targets/stm32f103_spi",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "stm32_local_reference_first"
     },
     {
       "board_id": "stm32f103",
@@ -114,7 +169,11 @@
       "plan": "tests/plans/stm32f103_i2c_banner.json",
       "target": "firmware/targets/stm32f103_i2c",
       "source_basis": "verified_local_example_first",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "stm32_local_reference_first"
     },
     {
       "board_id": "esp32c6_devkit",
@@ -123,7 +182,11 @@
       "plan": "tests/plans/esp32c6_uart_banner.json",
       "target": "firmware/targets/esp32c6_uart_banner",
       "source_basis": "official_example_or_support_second",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "esp32_idf_example_first"
     },
     {
       "board_id": "esp32c6_devkit",
@@ -132,7 +195,11 @@
       "plan": "tests/plans/esp32c6_adc_meter.json",
       "target": "firmware/targets/esp32c6_adc_meter",
       "source_basis": "official_example_or_support_second",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete_with_unbound_external_inputs",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "esp32_idf_example_first"
     },
     {
       "board_id": "esp32c6_devkit",
@@ -141,7 +208,11 @@
       "plan": "tests/plans/esp32c6_spi_banner.json",
       "target": "firmware/targets/esp32c6_spi_banner",
       "source_basis": "official_example_or_support_second",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "esp32_idf_example_first"
     },
     {
       "board_id": "esp32c6_devkit",
@@ -150,7 +221,11 @@
       "plan": "tests/plans/esp32c6_i2c_banner.json",
       "target": "firmware/targets/esp32c6_i2c_banner",
       "source_basis": "official_example_or_support_second",
-      "validation_status": "build_and_plan_verified"
+      "validation_status": "build_and_plan_verified",
+      "contract_completeness": "formal_contract_complete",
+      "build_status": "build_smoke_passed",
+      "runtime_validation_status": "not_run",
+      "family_method": "esp32_idf_example_first"
     }
   ]
 }

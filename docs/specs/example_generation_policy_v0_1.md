@@ -122,6 +122,15 @@ Generated examples should also expose enough formal connection metadata that a
 connection question can be answered from `describe-test`, the plan, and the
 board profile without needing firmware inspection for the normal case.
 
+For repo tracking, generated examples should also record:
+
+- connection-contract completeness
+- build-smoke status
+- runtime validation status
+
+When an example leaves an external stimulus intentionally undefined, that should
+be recorded explicitly rather than treated as an implicit gap.
+
 ## Provenance requirements
 
 Generated examples should record:
