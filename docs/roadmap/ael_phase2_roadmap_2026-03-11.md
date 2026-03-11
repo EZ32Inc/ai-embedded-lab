@@ -249,3 +249,8 @@ Current practical emphasis:
 - doc/example cleanup first
 - contract churn only when it buys real operator clarity
 - let real bench failures drive any further observability expansion
+
+Current practical checkpoint:
+- most remaining compatibility debt is now internal or explicitly compatibility-scoped
+- Phase 2 should avoid turning that into a broad rename campaign
+- the next useful work should continue to be checkpoint-driven rather than migration-for-its-own-sake

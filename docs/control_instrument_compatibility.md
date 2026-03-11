@@ -134,18 +134,31 @@ Deferred while degraded-instrument policy settles:
 - explicit `compatibility.probe*` objects in runtime/archive payloads
 - legacy raw config keys such as `probe_config`
 - low-level internal helper names whose cleanup would create broad adapter churn
+- internal step/adaptor parameters such as `probe_cfg` and `probe_path` where the current naming is still mostly an implementation seam, not a user-facing contract
 
 ### Retire next
 
 - active docs/examples that still say `board/probe/test`
 - active docs that still say `probe or instrument` where the current intended distinction is `control instrument or instrument`
 - visible CLI/help/example text that mentions `--probe` without immediately calling it legacy
+- compatibility-heavy payload examples that still show top-level `probe*` forms without an explicit compatibility note
 
 ### Defer
 
 - broad internal helper renames
 - compatibility removal from archived payload readers
 - adapter parameter renames that do not affect current user-facing clarity
+
+## Current Practical Conclusion
+
+The remaining compatibility surface is now mostly:
+
+- internal implementation seams
+- explicit compatibility payload objects
+- older examples/specs
+
+This means Phase 2 should not chase broad internal renames unless they unlock real clarity or reduce real maintenance cost.
+The higher-value remaining work is selective user-facing cleanup and careful policy/contract review.
 
 ## Current Working Boundary
 
