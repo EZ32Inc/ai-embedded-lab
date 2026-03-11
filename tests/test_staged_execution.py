@@ -56,6 +56,29 @@ def test_stage_execution_summary_with_skipped_preflight():
     assert full["deferred"] == []
 
 
+def test_run_prefers_control_instrument_arg(monkeypatch):
+    captured = {}
+
+    def _fake_run_pipeline(**kwargs):
+        captured.update(kwargs)
+        return 0
+
+    monkeypatch.setattr(pipeline, "run_pipeline", _fake_run_pipeline)
+
+    class _Args:
+        control_instrument = "configs/instrument_instances/esp32jtag_stm32_golden.yaml"
+        probe = "configs/esp32jtag.yaml"
+        board = "stm32f103"
+        test = "tests/plans/gpio_signature.json"
+        wiring = None
+        output_mode = "normal"
+        skip_flash = False
+        until_stage = "report"
+
+    assert pipeline.run(_Args()) == 0
+    assert captured["run_request"].probe_path == "configs/instrument_instances/esp32jtag_stm32_golden.yaml"
+
+
 def test_verify_failure_observations_are_promoted_from_runner_result():
     runner_result = {
         "ok": False,

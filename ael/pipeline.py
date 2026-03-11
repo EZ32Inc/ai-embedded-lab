@@ -18,7 +18,7 @@ from ael.adapter_registry import AdapterRegistry
 from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
-from ael.config_resolver import resolve_probe_instance
+from ael.config_resolver import resolve_control_instrument_instance
 from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 
@@ -893,12 +893,12 @@ def run_pipeline(
     )
 
     board_raw = _simple_yaml_load(board_path) if board_path else {}
-    board_probe_instance = resolve_probe_instance(repo_root, args=None, board_id=board_id)
-    if probe_path or board_probe_instance:
+    board_control_instrument_instance = resolve_control_instrument_instance(repo_root, args=None, board_id=board_id)
+    if probe_path or board_control_instrument_instance:
         binding = load_probe_binding(
             repo_root,
             probe_path=probe_path,
-            instance_id=board_probe_instance if not probe_path else None,
+            instance_id=board_control_instrument_instance if not probe_path else None,
         )
     else:
         binding = empty_probe_binding()
@@ -960,10 +960,11 @@ def run_pipeline(
         banner_port = instrument_port if instrument_port is not None else "unknown"
         print(f"Using instrument: {banner_name} ({instrument_id}) @ {banner_host}:{banner_port}")
     else:
+        control_name = probe_type or probe_cfg.get("name", "unknown")
         if probe_instance_id:
-            print(f"Using control instrument instance: {probe_instance_id} ({probe_type or probe_cfg.get('name', 'unknown')}) @ {probe_host or 'unknown'}:{probe_port or 'unknown'}")
+            print(f"Using control instrument instance: {probe_instance_id} ({control_name}) @ {probe_host or 'unknown'}:{probe_port or 'unknown'}")
         else:
-            print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
+            print(f"Using control instrument config: {control_name} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
     if binding.legacy_warning:
         print(f"Warning: {binding.legacy_warning}")
     print(f"Using board: {board_cfg.get('name', 'unknown')} target={board_cfg.get('target', 'unknown')}")
@@ -1002,6 +1003,7 @@ def run_pipeline(
         },
         "selected": {
             "board_config": str(board_path) if board_path else None,
+            "control_instrument_config": str(probe_path) if probe_path else None,
             "probe_config": str(probe_path) if probe_path else None,
             "test_config": str(test_path),
         },
@@ -1732,12 +1734,13 @@ def run_pipeline(
 
 
 def run(args):
+    control_instrument_path = getattr(args, "control_instrument", None) or getattr(args, "probe", None)
     return run_pipeline(
         probe_path=None,
         board_arg=None,
         test_path=None,
         run_request=RunRequest(
-            probe_path=args.probe,
+            probe_path=control_instrument_path,
             board_id=args.board,
             test_path=args.test,
             wiring=args.wiring,
@@ -1768,7 +1771,8 @@ def main():
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="cmd", required=True)
     run_p = sub.add_parser("run")
-    run_p.add_argument("--probe", required=True)
+    run_p.add_argument("--control-instrument", required=False, default=None)
+    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
     run_p.add_argument("--board", required=True)
     run_p.add_argument("--test", required=False, default=os.path.join("tests", "blink_gpio.json"))
     run_p.add_argument("--wiring", required=False)
@@ -1785,6 +1789,8 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "run":
+        if not getattr(args, "control_instrument", None) and not getattr(args, "probe", None):
+            parser.error("one of --control-instrument or --probe is required")
         if args.verbose:
             args.output_mode = "verbose"
         elif args.quiet:

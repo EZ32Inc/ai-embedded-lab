@@ -55,6 +55,8 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
     assert finished["probe"]["communication"]["primary"] == "gdb_remote"
     assert finished["probe"]["capability_surfaces"]["swd"] == "gdb_remote"
+    assert finished["selected"]["control_instrument_config"].endswith("configs/esp32jtag.yaml")
+    assert finished["selected"]["probe_config"].endswith("configs/esp32jtag.yaml")
     assert finished["instrument"]["communication"]["protocol"] == "gpio_meter_v1"
     assert finished["instrument"]["capability_surfaces"]["measure.digital"] == "primary"
     assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in finished["connection_digest"])
