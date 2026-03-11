@@ -16,13 +16,19 @@ def _render_text_list(payload):
     lines = []
     for item in payload.get("devices", []):
         lines.append(
-            f"{item.get('serial_number')} {item.get('device_path')} "
+            f"{item.get('identity_kind')}={item.get('identity_value')} {item.get('device_path')} "
             f"vid=0x{(item.get('vid') or 0):04x} pid=0x{(item.get('pid') or 0):04x}"
         )
+        if item.get("serial_number"):
+            lines.append(f"  serial_number: {item.get('serial_number')}")
         if item.get("manufacturer") or item.get("product"):
             lines.append(f"  {item.get('manufacturer') or ''} {item.get('product') or ''}".strip())
         if item.get("by_id_path"):
             lines.append(f"  by-id: {item.get('by_id_path')}")
+        if item.get("by_path_path"):
+            lines.append(f"  by-path: {item.get('by_path_path')}")
+        if item.get("usb_location"):
+            lines.append(f"  usb_location: {item.get('usb_location')}")
     if payload.get("rejected"):
         lines.append("rejected:")
         for item in payload["rejected"]:
@@ -32,6 +38,8 @@ def _render_text_list(payload):
 
 def _render_text_show(payload):
     lines = []
+    if payload.get("selected_identity_kind") and payload.get("selected_identity_value"):
+        lines.append(f"selected_identity: {payload.get('selected_identity_kind')}={payload.get('selected_identity_value')}")
     if payload.get("selected_serial_number"):
         lines.append(f"selected_serial_number: {payload.get('selected_serial_number')}")
     if payload.get("device"):
@@ -39,6 +47,8 @@ def _render_text_show(payload):
         lines.append(f"resolved_tty_path: {device.get('device_path')}")
         if device.get("by_id_path"):
             lines.append(f"by_id_path: {device.get('by_id_path')}")
+        if device.get("by_path_path"):
+            lines.append(f"by_path_path: {device.get('by_path_path')}")
     if payload.get("error"):
         lines.append(f"error: {payload.get('error')}")
     return "\n".join(lines) + ("\n" if lines else "")
@@ -46,6 +56,8 @@ def _render_text_show(payload):
 
 def _render_text_doctor(payload):
     lines = [
+        f"selected_identity_kind: {payload.get('selected_identity_kind')}",
+        f"selected_identity_value: {payload.get('selected_identity_value')}",
         f"selected_serial_number: {payload.get('selected_serial_number')}",
         f"present: {payload.get('present')}",
         f"openable: {payload.get('openable')}",
@@ -66,7 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("list")
 
     select_p = sub.add_parser("select")
-    select_p.add_argument("--serial", required=True)
+    select_p.add_argument("--serial", required=False)
+    select_p.add_argument("--device-id", required=False, dest="device_id")
 
     sub.add_parser("show")
     sub.add_parser("doctor")
@@ -96,10 +109,12 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.cmd == "select":
         try:
-            payload = bridge.select_bridge_device(config_path, args.serial)
+            payload = bridge.select_bridge_device(config_path, args.serial, identity_value=args.device_id)
             out = {
                 "ok": True,
                 "config_path": str(config_path),
+                "selected_identity_kind": payload["usb_uart_bridge"].get("selected_identity_kind"),
+                "selected_identity_value": payload["usb_uart_bridge"].get("selected_identity_value"),
                 "selected_serial_number": payload["usb_uart_bridge"]["selected_serial_number"],
             }
             sys.stdout.write(json.dumps(out, indent=2, sort_keys=True) + "\n")
@@ -130,4 +145,3 @@ def main(argv: Optional[list[str]] = None) -> int:
 
 if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
-

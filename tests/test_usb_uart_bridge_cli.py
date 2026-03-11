@@ -10,9 +10,9 @@ def test_cli_list_json(monkeypatch, capsys):
         "ael.instruments.usb_uart_bridge_daemon.discover_usb_uart_devices",
         lambda **_: {
             "ok": True,
-            "devices": [{"serial_number": "ABC123", "device_path": "/dev/ttyUSB0", "vid": 0x10C4, "pid": 0xEA60}],
+            "devices": [{"identity_kind": "usb_serial", "identity_value": "ABC123", "serial_number": "ABC123", "device_path": "/dev/ttyUSB0", "vid": 0x10C4, "pid": 0xEA60}],
             "rejected": [],
-            "duplicate_serial_numbers": [],
+            "duplicate_device_identities": [],
         },
     )
     rc = cli.main(["list"])
@@ -27,9 +27,9 @@ def test_cli_select_show_doctor(tmp_path, monkeypatch, capsys):
         "ael.instruments.usb_uart_bridge_daemon.discover_usb_uart_devices",
         lambda **_: {
             "ok": True,
-            "devices": [{"serial_number": "ABC123", "device_path": "/dev/ttyUSB0"}],
+            "devices": [{"identity_kind": "usb_serial", "identity_value": "ABC123", "serial_number": "ABC123", "device_path": "/dev/ttyUSB0"}],
             "rejected": [],
-            "duplicate_serial_numbers": [],
+            "duplicate_device_identities": [],
         },
     )
 
@@ -37,6 +37,7 @@ def test_cli_select_show_doctor(tmp_path, monkeypatch, capsys):
     assert rc == 0
     selected = json.loads(capsys.readouterr().out)
     assert selected["selected_serial_number"] == "ABC123"
+    assert selected["selected_identity_kind"] == "usb_serial"
 
     rc = cli.main(["--config", str(config_path), "show"])
     assert rc == 0
@@ -59,6 +60,34 @@ def test_cli_select_show_doctor(tmp_path, monkeypatch, capsys):
     assert doctor["openable"] is True
 
 
+def test_cli_select_by_device_id(tmp_path, monkeypatch, capsys):
+    config_path = tmp_path / "bridge.yaml"
+    monkeypatch.setattr(
+        "ael.instruments.usb_uart_bridge_daemon.discover_usb_uart_devices",
+        lambda **_: {
+            "ok": True,
+            "devices": [{
+                "identity_kind": "usb_path",
+                "identity_value": "/dev/serial/by-path/pci-0000:00:14.0-usb-0:14.4:1.0-port0",
+                "serial_number": None,
+                "device_path": "/dev/ttyUSB0",
+            }],
+            "rejected": [],
+            "duplicate_device_identities": [],
+        },
+    )
+    rc = cli.main([
+        "--config",
+        str(config_path),
+        "select",
+        "--device-id",
+        "/dev/serial/by-path/pci-0000:00:14.0-usb-0:14.4:1.0-port0",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["selected_identity_kind"] == "usb_path"
+
+
 def test_cli_show_failure(tmp_path, monkeypatch, capsys):
     config_path = tmp_path / "bridge.yaml"
     monkeypatch.setattr(
@@ -69,4 +98,3 @@ def test_cli_show_failure(tmp_path, monkeypatch, capsys):
     assert rc == 1
     payload = json.loads(capsys.readouterr().out)
     assert payload["error"] == "not configured"
-

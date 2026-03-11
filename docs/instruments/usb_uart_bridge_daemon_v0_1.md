@@ -14,9 +14,9 @@ The practical model is:
 
 This is intentionally a first working bridge, not a broad final framework.
 
-## Why USB serial number is required
+## Why stable identity is required
 
-This daemon uses the USB serial number as the stable device identity.
+This daemon prefers the USB serial number as the stable device identity.
 
 It does not use:
 
@@ -25,13 +25,21 @@ It does not use:
 
 as identity, because those can change across boots and reattachment.
 
-Out of scope for this version:
+For Linux/Ubuntu-only first support, identity selection uses this order:
 
-- devices with no serial number
-- devices with an empty serial number
-- devices where the current scan contains duplicate serial numbers
+1. valid USB serial number
+2. `/dev/serial/by-path/...` path when the serial is missing or a placeholder
+3. USB topology location from the current scan when a by-path link is not available
 
-Those are rejected rather than handled heuristically.
+This keeps identity stable without treating `/dev/ttyUSBx` or `/dev/ttyACMx`
+as the identity.
+
+Still out of scope:
+
+- devices whose stable identity is duplicated in the current scan
+- devices with neither a usable serial number nor a stable Linux path/location
+
+Those are still rejected rather than handled heuristically.
 
 ## Discovery and selection
 
@@ -40,6 +48,7 @@ Discovery uses:
 - `pyserial`
 - `serial.tools.list_ports`
 - `/dev/serial/by-id` when available
+- `/dev/serial/by-path` when available
 
 `list` shows structured metadata:
 
@@ -50,13 +59,15 @@ Discovery uses:
 - manufacturer
 - product
 - `/dev/serial/by-id` path if present
+- `/dev/serial/by-path` path if present
+- USB topology location if present
 
-`select` stores only the USB serial number as the stable identity.
+`select` stores the stable device identity.
 
 At runtime, the daemon:
 
 1. scans current USB serial devices
-2. finds the configured serial number
+2. finds the configured stable identity
 3. resolves the current tty path
 4. opens that path using configured serial settings
 
@@ -68,6 +79,8 @@ Example config:
 
 Main fields:
 
+- `selected_identity_kind`
+- `selected_identity_value`
 - `selected_serial_number`
 - `listen.host`
 - `listen.port`
@@ -87,6 +100,7 @@ Commands:
 
 - `list`
 - `select --serial <USB_SERIAL_NUMBER>`
+- `select --device-id <STABLE_DEVICE_ID>`
 - `show`
 - `doctor`
 - `serve`
@@ -96,6 +110,7 @@ Example usage:
 ```bash
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml list --format text
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --serial ABC123456
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --device-id /dev/serial/by-path/pci-0000:00:14.0-usb-0:14.4:1.0-port0
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml show --format text
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml doctor --format text
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml serve
@@ -146,6 +161,7 @@ It is a clean standalone bridge with a clear later integration path.
 
 `doctor` reports:
 
+- configured identity kind/value
 - configured serial number
 - whether the device is present
 - current resolved tty path
@@ -157,8 +173,8 @@ It is a clean standalone bridge with a clear later integration path.
 Not included in v0.1:
 
 - Windows/macOS support
-- heuristic matching without serial number
-- support for duplicate serial numbers
+- unstable tty-path identity
+- support for duplicate stable identities
 - full integration into `ael instruments ...`
 - broad multi-client concurrency policy
 - authentication or production-grade service hardening

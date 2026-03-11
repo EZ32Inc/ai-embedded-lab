@@ -29,30 +29,38 @@ def _import_serial():
 @dataclass(frozen=True)
 class USBUARTDevice:
     device_path: str
-    serial_number: str
+    identity_kind: str
+    identity_value: str
+    serial_number: Optional[str]
     vid: Optional[int]
     pid: Optional[int]
     manufacturer: Optional[str]
     product: Optional[str]
     by_id_path: Optional[str]
+    by_path_path: Optional[str]
+    usb_location: Optional[str]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
             "device_path": self.device_path,
+            "identity_kind": self.identity_kind,
+            "identity_value": self.identity_value,
             "serial_number": self.serial_number,
             "vid": self.vid,
             "pid": self.pid,
             "manufacturer": self.manufacturer,
             "product": self.product,
             "by_id_path": self.by_id_path,
+            "by_path_path": self.by_path_path,
+            "usb_location": self.usb_location,
         }
 
 
-def _resolve_by_id_links(by_id_dir: Path) -> Dict[str, str]:
+def _resolve_symlink_links(base_dir: Path) -> Dict[str, str]:
     links: Dict[str, str] = {}
-    if not by_id_dir.exists():
+    if not base_dir.exists():
         return links
-    for entry in sorted(by_id_dir.iterdir()):
+    for entry in sorted(base_dir.iterdir()):
         try:
             resolved = str(entry.resolve())
         except Exception:
@@ -61,47 +69,96 @@ def _resolve_by_id_links(by_id_dir: Path) -> Dict[str, str]:
     return links
 
 
+def _valid_usb_serial(serial_number: Any) -> Optional[str]:
+    text = str(serial_number or "").strip()
+    if not text:
+        return None
+    if text == "0":
+        return None
+    return text
+
+
+def _device_identity(
+    *,
+    serial_number: Optional[str],
+    by_path_path: Optional[str],
+    usb_location: Optional[str],
+) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    valid_serial = _valid_usb_serial(serial_number)
+    if valid_serial:
+        return "usb_serial", valid_serial, None
+    if by_path_path:
+        return "usb_path", by_path_path, "missing_or_placeholder_serial_number"
+    if usb_location:
+        return "usb_location", usb_location, "missing_or_placeholder_serial_number"
+    return None, None, "missing_stable_identity"
+
+
 def discover_usb_uart_devices(
     *,
     list_ports_fn: Optional[Callable[[], Iterable[Any]]] = None,
     by_id_dir: str | Path = "/dev/serial/by-id",
+    by_path_dir: str | Path = "/dev/serial/by-path",
 ) -> Dict[str, Any]:
     serial_mod = _import_serial()
     ports = list_ports_fn or serial_mod.tools.list_ports.comports
-    by_id_links = _resolve_by_id_links(Path(by_id_dir))
+    by_id_links = _resolve_symlink_links(Path(by_id_dir))
+    by_path_links = _resolve_symlink_links(Path(by_path_dir))
 
     candidates: List[Dict[str, Any]] = []
     rejected: List[Dict[str, Any]] = []
-    serial_counts: Dict[str, int] = {}
+    identity_counts: Dict[tuple[str, str], int] = {}
 
     for port in ports():
-        serial_number = str(getattr(port, "serial_number", "") or "").strip()
+        raw_serial_number = str(getattr(port, "serial_number", "") or "").strip()
         device_path = str(getattr(port, "device", "") or "").strip()
+        usb_location = str(getattr(port, "location", "") or "").strip() or None
+        by_path_path = by_path_links.get(device_path)
+        identity_kind, identity_value, identity_warning = _device_identity(
+            serial_number=raw_serial_number,
+            by_path_path=by_path_path,
+            usb_location=usb_location,
+        )
         item = {
             "device_path": device_path,
-            "serial_number": serial_number or None,
+            "identity_kind": identity_kind,
+            "identity_value": identity_value,
+            "serial_number": _valid_usb_serial(raw_serial_number),
+            "raw_serial_number": raw_serial_number or None,
             "vid": getattr(port, "vid", None),
             "pid": getattr(port, "pid", None),
             "manufacturer": getattr(port, "manufacturer", None),
             "product": getattr(port, "product", None),
             "by_id_path": by_id_links.get(device_path),
+            "by_path_path": by_path_path,
+            "usb_location": usb_location,
         }
-        if not serial_number:
-            item["reason"] = "missing_serial_number"
+        if identity_warning:
+            item["identity_warning"] = identity_warning
+        if not identity_kind or not identity_value:
+            item["reason"] = "missing_stable_identity"
             rejected.append(item)
             continue
-        serial_counts[serial_number] = serial_counts.get(serial_number, 0) + 1
+        identity_key = (identity_kind, identity_value)
+        identity_counts[identity_key] = identity_counts.get(identity_key, 0) + 1
         candidates.append(item)
 
     devices: List[Dict[str, Any]] = []
-    duplicate_serials = sorted(serial for serial, count in serial_counts.items() if count > 1)
-    duplicate_set = set(duplicate_serials)
+    duplicate_ids = sorted(
+        (
+            {"kind": kind, "value": value}
+            for (kind, value), count in identity_counts.items()
+            if count > 1
+        ),
+        key=lambda item: (item["kind"], item["value"]),
+    )
+    duplicate_set = {(item["kind"], item["value"]) for item in duplicate_ids}
 
     for item in candidates:
-        serial_number = str(item.get("serial_number") or "")
-        if serial_number in duplicate_set:
+        identity_key = (str(item.get("identity_kind") or ""), str(item.get("identity_value") or ""))
+        if identity_key in duplicate_set:
             dup = dict(item)
-            dup["reason"] = "duplicate_serial_number"
+            dup["reason"] = "duplicate_stable_identity"
             rejected.append(dup)
             continue
         devices.append(item)
@@ -110,13 +167,15 @@ def discover_usb_uart_devices(
         "ok": True,
         "devices": devices,
         "rejected": rejected,
-        "duplicate_serial_numbers": duplicate_serials,
+        "duplicate_device_identities": duplicate_ids,
     }
 
 
 def _default_config() -> Dict[str, Any]:
     return {
         "usb_uart_bridge": {
+            "selected_identity_kind": None,
+            "selected_identity_value": None,
             "selected_serial_number": None,
             "listen": {
                 "host": DEFAULT_LISTEN_HOST,
@@ -182,17 +241,33 @@ def save_bridge_config(path: str | Path, payload: Dict[str, Any]) -> None:
     cfg_path.write_text(_yaml_dump(payload), encoding="utf-8")
 
 
-def select_bridge_device(config_path: str | Path, serial_number: str) -> Dict[str, Any]:
+def select_bridge_device(
+    config_path: str | Path,
+    serial_number: Optional[str] = None,
+    *,
+    identity_value: Optional[str] = None,
+) -> Dict[str, Any]:
     serial_text = str(serial_number or "").strip()
-    if not serial_text:
-        raise ValueError("serial number is required")
+    identity_text = str(identity_value or "").strip()
+    if not serial_text and not identity_text:
+        raise ValueError("serial number or device identity is required")
     discovery = discover_usb_uart_devices()
-    valid_serials = {entry["serial_number"] for entry in discovery["devices"]}
-    if serial_text not in valid_serials:
-        raise ValueError(f"device serial not found in current scan: {serial_text}")
+    selected = None
+    for entry in discovery["devices"]:
+        if serial_text and str(entry.get("serial_number") or "") == serial_text:
+            selected = entry
+            break
+        if identity_text and str(entry.get("identity_value") or "") == identity_text:
+            selected = entry
+            break
+    if not selected:
+        target = serial_text or identity_text
+        raise ValueError(f"device identity not found in current scan: {target}")
     payload = load_bridge_config(config_path)
     bridge_cfg = payload.setdefault("usb_uart_bridge", {})
-    bridge_cfg["selected_serial_number"] = serial_text
+    bridge_cfg["selected_identity_kind"] = selected.get("identity_kind")
+    bridge_cfg["selected_identity_value"] = selected.get("identity_value")
+    bridge_cfg["selected_serial_number"] = selected.get("serial_number")
     save_bridge_config(config_path, payload)
     return payload
 
@@ -204,19 +279,38 @@ def resolve_selected_device(
 ) -> Dict[str, Any]:
     payload = load_bridge_config(config_path)
     bridge_cfg = payload.get("usb_uart_bridge", {}) if isinstance(payload.get("usb_uart_bridge"), dict) else {}
+    selected_kind = str(bridge_cfg.get("selected_identity_kind") or "").strip()
+    selected_value = str(bridge_cfg.get("selected_identity_value") or "").strip()
     selected_serial = str(bridge_cfg.get("selected_serial_number") or "").strip()
-    if not selected_serial:
-        return {"ok": False, "error": "no selected serial number configured"}
+    if not selected_kind or not selected_value:
+        if selected_serial:
+            selected_kind = "usb_serial"
+            selected_value = selected_serial
+        else:
+            return {"ok": False, "error": "no selected device identity configured"}
     current = discovery or discover_usb_uart_devices()
-    if selected_serial in set(current.get("duplicate_serial_numbers") or []):
-        return {"ok": False, "error": f"configured serial number is duplicated in current scan: {selected_serial}"}
+    duplicate_set = {
+        (str(item.get("kind") or ""), str(item.get("value") or ""))
+        for item in (current.get("duplicate_device_identities") or [])
+        if isinstance(item, dict)
+    }
+    if (selected_kind, selected_value) in duplicate_set:
+        return {"ok": False, "error": f"configured device identity is duplicated in current scan: {selected_kind}:{selected_value}"}
     for item in current.get("devices", []):
-        if str(item.get("serial_number") or "") == selected_serial:
-            return {"ok": True, "selected_serial_number": selected_serial, "device": item}
+        if str(item.get("identity_kind") or "") == selected_kind and str(item.get("identity_value") or "") == selected_value:
+            return {
+                "ok": True,
+                "selected_identity_kind": selected_kind,
+                "selected_identity_value": selected_value,
+                "selected_serial_number": selected_serial or item.get("serial_number"),
+                "device": item,
+            }
     return {
         "ok": False,
+        "selected_identity_kind": selected_kind,
+        "selected_identity_value": selected_value,
         "selected_serial_number": selected_serial,
-        "error": f"configured serial number not present: {selected_serial}",
+        "error": f"configured device identity not present: {selected_kind}:{selected_value}",
     }
 
 
@@ -232,6 +326,8 @@ def doctor_selected_device(
         "ok": False,
         "present": False,
         "openable": False,
+        "selected_identity_kind": resolved.get("selected_identity_kind"),
+        "selected_identity_value": resolved.get("selected_identity_value"),
         "selected_serial_number": resolved.get("selected_serial_number"),
         "resolved_tty_path": None,
         "device": resolved.get("device"),
@@ -313,6 +409,8 @@ class USBUARTBridgeService:
         return {
             "ok": True,
             "config_path": self.config_path,
+            "selected_identity_kind": cfg.get("usb_uart_bridge", {}).get("selected_identity_kind"),
+            "selected_identity_value": cfg.get("usb_uart_bridge", {}).get("selected_identity_value"),
             "selected_serial_number": cfg.get("usb_uart_bridge", {}).get("selected_serial_number"),
             "selected_device": selected.get("device"),
             "serial_open": self._serial_handle is not None,
@@ -482,4 +580,3 @@ def run_bridge_daemon(
             service.close()
         finally:
             server.server_close()
-

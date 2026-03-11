@@ -1,4 +1,6 @@
 usb_uart_bridge:
+  selected_identity_kind: null
+  selected_identity_value: null
   selected_serial_number: null
   listen:
     host: "127.0.0.1"
@@ -9,4 +11,3 @@ usb_uart_bridge:
     parity: "N"
     stopbits: 1
     timeout: 1.0
-
