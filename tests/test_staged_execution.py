@@ -56,6 +56,45 @@ def test_stage_execution_summary_with_skipped_preflight():
     assert full["deferred"] == []
 
 
+def test_verify_failure_observations_are_promoted_from_runner_result():
+    runner_result = {
+        "ok": False,
+        "error_summary": "expected UART readiness patterns missing",
+        "steps": [
+            {
+                "name": "check_uart",
+                "ok": False,
+                "result": {
+                    "ok": False,
+                    "failure_kind": "verification_miss",
+                    "failure_class": "uart_expected_patterns_missing",
+                    "verify_substage": "uart.verify",
+                    "evidence": [
+                        {
+                            "kind": "uart.verify",
+                            "source": "check.uart_log",
+                            "status": "fail",
+                            "summary": "expected UART readiness patterns missing",
+                            "facts": {
+                                "verify_substage": "uart.verify",
+                                "failure_kind": "verification_miss",
+                                "failure_class": "uart_expected_patterns_missing",
+                                "missing_expected_patterns": ["READY"],
+                            },
+                        }
+                    ],
+                },
+            }
+        ],
+    }
+
+    details = pipeline._verify_failure_observations(runner_result)
+
+    assert details["verify_substage"] == "uart.verify"
+    assert details["failure_class"] == "uart_expected_patterns_missing"
+    assert details["observations"]["missing_expected_patterns"] == ["READY"]
+
+
 def test_success_summary_contains_validation_and_last_known_good_fields():
     result = {
         "ok": True,

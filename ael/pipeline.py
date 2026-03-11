@@ -124,6 +124,46 @@ def _read_json(path):
         return {}
 
 
+def _verify_failure_observations(runner_result):
+    if not isinstance(runner_result, dict):
+        return {}
+    steps = runner_result.get("steps", [])
+    if not isinstance(steps, list):
+        return {}
+    failed = None
+    for entry in reversed(steps):
+        if isinstance(entry, dict) and not bool(entry.get("ok", False)):
+            failed = entry
+            break
+    if not isinstance(failed, dict):
+        return {}
+    out = failed.get("result", {})
+    if not isinstance(out, dict):
+        return {}
+    evidence = out.get("evidence")
+    items = evidence if isinstance(evidence, list) else ([evidence] if isinstance(evidence, dict) else [])
+    primary = items[0] if items and isinstance(items[0], dict) else {}
+    facts = primary.get("facts") if isinstance(primary.get("facts"), dict) else {}
+    verify_substage = str(
+        out.get("verify_substage")
+        or facts.get("verify_substage")
+        or primary.get("kind")
+        or ""
+    ).strip()
+    failure_class = str(
+        out.get("failure_class")
+        or facts.get("failure_class")
+        or out.get("failure_kind")
+        or facts.get("failure_kind")
+        or ""
+    ).strip()
+    return {
+        "verify_substage": verify_substage,
+        "failure_class": failure_class,
+        "observations": dict(facts) if isinstance(facts, dict) else {},
+    }
+
+
 def _copy_artifacts(firmware_path, artifacts_dir):
     if not firmware_path:
         return []
@@ -1285,6 +1325,14 @@ def run_pipeline(
         },
         "stage_execution": _stage_execution_summary(until_stage, preflight_enabled=preflight_enabled),
     }
+    if not result["ok"]:
+        verify_failure = _verify_failure_observations(runner_result)
+        if verify_failure.get("verify_substage"):
+            result["verify_substage"] = verify_failure.get("verify_substage")
+        if verify_failure.get("failure_class"):
+            result["failure_class"] = verify_failure.get("failure_class")
+        if isinstance(verify_failure.get("observations"), dict) and verify_failure.get("observations"):
+            result["observations"] = verify_failure.get("observations")
     if result["ok"]:
         flash_info = _read_json(run_paths.flash_json)
         verify_result = _read_json((result.get("json") or {}).get("verify_result"))

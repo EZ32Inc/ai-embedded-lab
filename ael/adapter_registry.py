@@ -347,7 +347,10 @@ class _UartCheckAdapter:
             summary=(uart_result.get("error_summary") or "uart capture validated"),
             facts={
                 **uart_facts,
+                "verify_substage": verdict.get("verify_substage", "uart.verify"),
                 "failure_kind": failure_kind if not bool(verdict.get("ok", False)) else "",
+                "failure_class": verdict.get("failure_class", "") if not bool(verdict.get("ok", False)) else "",
+                "missing_expected_patterns": list(uart_facts.get("missing_expect", []) or []),
                 "recovery_hint": recovery_hint if isinstance(recovery_hint, dict) else {},
             },
             artifacts={
@@ -360,6 +363,8 @@ class _UartCheckAdapter:
                 "ok": False,
                 "error_summary": error_summary,
                 "failure_kind": failure_kind,
+                "failure_class": verdict.get("failure_class", ""),
+                "verify_substage": verdict.get("verify_substage", "uart.verify"),
                 "result": uart_result,
                 "facts": uart_facts,
                 "evidence": [evidence_item],
@@ -413,6 +418,57 @@ class _InstrumentSignatureAdapter:
     def __init__(self, backend_registry: _InstrumentBackendRegistry):
         self._backend_registry = backend_registry
 
+    def _backend_exception_result(self, instrument_id, cfg, verify_out, digital_out, analog_out, exc):
+        text = str(exc or "").strip()
+        lowered = text.lower()
+        if "timed out" in lowered or "timeout" in lowered:
+            failure_class = "instrument_backend_timeout"
+        else:
+            failure_class = "instrument_backend_error"
+        verify_payload = {
+            "ok": False,
+            "type": "instrument_digital_verify",
+            "instrument_id": instrument_id,
+            "host": cfg.get("host"),
+            "port": cfg.get("port"),
+            "checks": [],
+            "analog_checks": [],
+            "mismatches": [],
+            "error_summary": text or "instrument backend error",
+        }
+        if verify_out:
+            _write_json(verify_out, verify_payload)
+        evidence_item = ael_evidence.make_item(
+            kind="instrument.signature",
+            source="check.instrument_signature",
+            ok=False,
+            summary=text or "instrument backend error",
+            facts={
+                "instrument_id": instrument_id,
+                "verify_substage": "instrument.signature",
+                "failure_kind": failure_recovery.FAILURE_TRANSPORT_ERROR,
+                "failure_class": failure_class,
+                "backend_ready": False,
+                "mismatch_count": 0,
+                "mismatch_reasons": [],
+            },
+            artifacts={
+                "verify_result_json": verify_out,
+                "instrument_digital_json": digital_out,
+                "instrument_voltage_json": analog_out,
+            },
+        )
+        return {
+            "ok": False,
+            "error_summary": text or "instrument backend error",
+            "failure_kind": failure_recovery.FAILURE_TRANSPORT_ERROR,
+            "failure_class": failure_class,
+            "verify_substage": "instrument.signature",
+            "result": verify_payload,
+            "facts": {"backend_ready": False, "mismatch_count": 0},
+            "evidence": [evidence_item],
+        }
+
     def execute(self, step, plan, ctx):
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
         instrument_id = inputs.get("instrument_id")
@@ -453,7 +509,10 @@ class _InstrumentSignatureAdapter:
                 "failure_kind": verdict.get("failure_kind", failure_recovery.FAILURE_INSTRUMENT_NOT_READY),
                 "facts": sig_facts,
             }
-        meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
+        try:
+            meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
+        except Exception as exc:
+            return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
         pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
         actual_by_gpio = {}
         for row in pin_rows:
@@ -505,7 +564,10 @@ class _InstrumentSignatureAdapter:
                 analog_backend = self._backend_registry.resolve(instrument_id, "measure.voltage")
             except KeyError as exc:
                 return {"ok": False, "error_summary": str(exc)}
-            meas_v = analog_backend.measure_voltage(cfg=cfg, gpio=adc_gpio, avg=avg, out_path=None)
+            try:
+                meas_v = analog_backend.measure_voltage(cfg=cfg, gpio=adc_gpio, avg=avg, out_path=None)
+            except Exception as exc:
+                return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
             analog_measurements.append({"inst_adc_gpio": adc_gpio, "avg": avg, "response": meas_v})
             measured_v = _extract_voltage_v(meas_v)
             check = {
@@ -536,6 +598,16 @@ class _InstrumentSignatureAdapter:
             "digital_mismatch_count": sum(1 for item in mismatches if isinstance(item, dict) and item.get("inst_gpio") is not None),
             "analog_mismatch_count": sum(1 for item in mismatches if isinstance(item, dict) and item.get("inst_adc_gpio") is not None),
             "mismatch_reasons": [item.get("reason") for item in mismatches if isinstance(item, dict) and item.get("reason")],
+            "missing_expected_channels": [
+                item.get("inst_gpio")
+                for item in mismatches
+                if isinstance(item, dict) and item.get("reason") == "missing_measurement" and item.get("inst_gpio") is not None
+            ],
+            "analog_range_failures": [
+                item.get("inst_adc_gpio")
+                for item in mismatches
+                if isinstance(item, dict) and str(item.get("reason") or "").startswith("voltage_") and item.get("inst_adc_gpio") is not None
+            ],
         }
         verdict = check_eval.evaluate_instrument_signature_facts(sig_facts)
         ok = bool(verdict.get("ok", False))
@@ -558,6 +630,7 @@ class _InstrumentSignatureAdapter:
             summary=("instrument signature matched" if ok else "instrument signature mismatch"),
             facts={
                 "instrument_id": inputs.get("instrument_id"),
+                "verify_substage": verdict.get("verify_substage", "instrument.signature"),
                 "duration_ms": duration_ms,
                 "digital_checks": len(checks),
                 "analog_checks": len(analog_checks),
@@ -565,6 +638,9 @@ class _InstrumentSignatureAdapter:
                 "digital_mismatch_count": sig_facts.get("digital_mismatch_count"),
                 "analog_mismatch_count": sig_facts.get("analog_mismatch_count"),
                 "mismatch_reasons": sig_facts.get("mismatch_reasons", []),
+                "missing_expected_channels": sig_facts.get("missing_expected_channels", []),
+                "analog_range_failures": sig_facts.get("analog_range_failures", []),
+                "failure_class": (verdict.get("failure_class", "") if not ok else ""),
                 "failure_kind": (verdict.get("failure_kind", "") if not ok else ""),
             },
             artifacts={
@@ -578,6 +654,8 @@ class _InstrumentSignatureAdapter:
                 "ok": False,
                 "error_summary": verdict.get("error_summary") or "instrument digital verification failed",
                 "failure_kind": verdict.get("failure_kind", failure_recovery.FAILURE_VERIFICATION_MISMATCH),
+                "failure_class": verdict.get("failure_class", ""),
+                "verify_substage": verdict.get("verify_substage", "instrument.signature"),
                 "result": verify_payload,
                 "facts": sig_facts,
                 "evidence": [evidence_item],

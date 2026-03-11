@@ -26,6 +26,11 @@ class _FakeBackend:
         return {"voltage_v": 1.2}
 
 
+class _TimeoutBackend(_FakeBackend):
+    def measure_digital(self, cfg, pins, duration_ms, out_path):
+        raise TimeoutError("timed out")
+
+
 class _FakeBackendRegistry:
     def __init__(self, backend):
         self.backend = backend
@@ -125,6 +130,67 @@ class TestInstrumentBackendRouting(unittest.TestCase):
             )
         self.assertFalse(result.get("ok"))
         self.assertIn("instrument backend not found for id", str(result.get("error_summary")))
+
+    def test_signature_mismatch_reports_verify_substage_and_observations(self):
+        registry = AdapterRegistry()
+        adapter = registry.get("check.instrument_signature")
+        fake_backend = _FakeBackend()
+        fake_registry = _FakeBackendRegistry(fake_backend)
+        adapter._backend_registry = fake_registry
+
+        with tempfile.TemporaryDirectory() as td:
+            digital_out = str(Path(td) / "instrument_digital.json")
+            verify_out = str(Path(td) / "verify_result.json")
+            result = adapter.execute(
+                {
+                    "type": "check.instrument_signature",
+                    "inputs": {
+                        "instrument_id": "esp32s3_dev_c_meter",
+                        "cfg": {"host": "127.0.0.1", "port": 9000},
+                        "links": [{"inst_gpio": 11, "expect": "toggle", "dut_gpio": "GPIO2"}],
+                        "digital_out": digital_out,
+                        "verify_out": verify_out,
+                        "duration_ms": 500,
+                    },
+                },
+                None,
+                None,
+            )
+        self.assertFalse(result.get("ok"))
+        self.assertEqual(result.get("verify_substage"), "instrument.signature")
+        self.assertEqual(result.get("failure_class"), "instrument_digital_mismatch")
+        self.assertEqual(result["evidence"][0]["facts"]["verify_substage"], "instrument.signature")
+        self.assertIn("state_mismatch", result["evidence"][0]["facts"]["mismatch_reasons"])
+
+    def test_signature_backend_timeout_reports_structured_failure(self):
+        registry = AdapterRegistry()
+        adapter = registry.get("check.instrument_signature")
+        fake_registry = _FakeBackendRegistry(_TimeoutBackend())
+        adapter._backend_registry = fake_registry
+
+        with tempfile.TemporaryDirectory() as td:
+            digital_out = str(Path(td) / "instrument_digital.json")
+            verify_out = str(Path(td) / "verify_result.json")
+            result = adapter.execute(
+                {
+                    "type": "check.instrument_signature",
+                    "inputs": {
+                        "instrument_id": "esp32s3_dev_c_meter",
+                        "cfg": {"host": "127.0.0.1", "port": 9000},
+                        "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
+                        "digital_out": digital_out,
+                        "verify_out": verify_out,
+                        "duration_ms": 500,
+                    },
+                },
+                None,
+                None,
+            )
+        self.assertFalse(result.get("ok"))
+        self.assertEqual(result.get("verify_substage"), "instrument.signature")
+        self.assertEqual(result.get("failure_class"), "instrument_backend_timeout")
+        self.assertEqual(result.get("failure_kind"), "transport_error")
+        self.assertEqual(result["evidence"][0]["facts"]["failure_class"], "instrument_backend_timeout")
 
 
 if __name__ == "__main__":
