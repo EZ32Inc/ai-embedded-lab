@@ -20,12 +20,15 @@ def test_doctor_probe_instance_reports_probe_health():
 
     assert payload["ok"] is True
     assert payload["kind"] == "probe_instance"
+    assert payload["canonical_kind"] == "control_instrument_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
+    assert payload["instrument_role"] == "control"
     assert payload["checks"]["monitor_version"]["ok"] is True
     assert payload["checks"]["logic_analyzer"]["ok"] is True
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
     assert payload["resolved_view"]["id"] == "esp32jtag_stm32_golden"
     assert payload["resolved_view"]["kind"] == "probe_instance"
+    assert payload["resolved_view"]["canonical_kind"] == "control_instrument_instance"
     rendered = instrument_view.render_doctor_text(payload)
     assert "resolved_instrument:" in rendered
     assert "checks:" in rendered

@@ -86,8 +86,10 @@ def build_probe_instance_view(
     refs = referenced_by or {}
     return {
         "kind": "probe_instance",
+        "canonical_kind": "control_instrument_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
+        "instrument_role": "control",
         "config_path": _relpath(root, binding.config_path),
         "instance_path": _relpath(root, binding.instance_path),
         "type_path": _relpath(root, binding.type_path),
@@ -208,8 +210,10 @@ def build_resolved_instrument_inventory(repo_root: Path | str | None = None) -> 
         "repo_root": str(root),
         "summary": {
             "probe_instance_count": len(probe_instances),
+            "control_instrument_instance_count": len(probe_instances),
             "instrument_count": len(instruments),
         },
+        "control_instrument_instances": probe_instances,
         "probe_instances": probe_instances,
         "instruments": instruments,
     }
@@ -221,8 +225,12 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
     lines: List[str] = []
     lines.append(f"id: {payload.get('id')}")
     lines.append(f"kind: {payload.get('kind')}")
+    if payload.get("canonical_kind"):
+        lines.append(f"canonical_kind: {payload.get('canonical_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
+    if payload.get("instrument_role"):
+        lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
         lines.append(f"origin: {payload.get('origin')}")
     if payload.get("config_path"):
@@ -269,8 +277,12 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
         return f"error: {payload.get('error')}\n"
     lines: List[str] = []
     lines.append(f"{payload.get('id')} [{payload.get('kind')}]")
+    if payload.get("canonical_kind"):
+        lines.append(f"canonical_kind: {payload.get('canonical_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
+    if payload.get("instrument_role"):
+        lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
         lines.append(f"origin: {payload.get('origin')}")
     endpoint = payload.get("endpoint")
@@ -307,6 +319,7 @@ def render_resolved_instrument_inventory_text(payload: Dict[str, Any]) -> str:
     summary = payload.get("summary") or {}
     lines.append("Instrument instances")
     lines.append(f"probe_instance_count: {summary.get('probe_instance_count', 0)}")
+    lines.append(f"control_instrument_instance_count: {summary.get('control_instrument_instance_count', 0)}")
     lines.append(f"instrument_count: {summary.get('instrument_count', 0)}")
     lines.append("")
     for item in payload.get("probe_instances") or []:

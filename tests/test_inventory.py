@@ -59,6 +59,7 @@ def test_inventory_instances_cli_json_output():
     payload = json.loads(res.stdout)
     assert payload["ok"] is True
     assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["probe_instances"])
+    assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["control_instrument_instances"])
     assert any(item["id"] == "esp32s3_dev_c_meter" for item in payload["instruments"])
     assert all(not item["metadata_validation_errors"] for item in payload["probe_instances"])
 
@@ -67,6 +68,8 @@ def test_build_instrument_instance_inventory_includes_references():
     payload = inventory.build_instrument_instance_inventory(REPO_ROOT)
     probe = next(item for item in payload["probe_instances"] if item["id"] == "esp32jtag_stm32_golden")
     meter = next(item for item in payload["instruments"] if item["id"] == "esp32s3_dev_c_meter")
+    assert payload["summary"]["control_instrument_instance_count"] >= 1
+    assert probe["canonical_kind"] == "control_instrument_instance"
     assert "stm32f103" in probe["referenced_by"]["boards"]
     assert "stm32f401rct6" in probe["referenced_by"]["boards"]
     assert "esp32c6_gpio_signature_with_meter.json" in " ".join(meter["referenced_by"]["plans"])
@@ -78,8 +81,10 @@ def test_describe_test_for_stm32f401_gpio_signature():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["probe_or_instrument"]["kind"] == "probe"
+    assert payload["probe_or_instrument"]["canonical_kind"] == "control_instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["probe_or_instrument"]["type"] == "esp32jtag"
+    assert payload["probe_or_instrument"]["instrument_role"] == "control"
     assert payload["probe_or_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["probe_or_instrument"]["capability_surfaces"]["swd"] == "gdb_remote"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])

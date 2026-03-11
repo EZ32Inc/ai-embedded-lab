@@ -133,8 +133,10 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
     return {
         "kind": "probe",
+        "canonical_kind": "control_instrument",
         "id": binding.instance_id or binding.raw.get("probe", {}).get("name") or "ESP32JTAG",
         "type": binding.type_id,
+        "instrument_role": "control",
         "endpoint": {
             "host": binding.endpoint_host,
             "port": binding.endpoint_port,

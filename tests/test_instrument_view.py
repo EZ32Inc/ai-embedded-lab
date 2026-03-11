@@ -14,8 +14,10 @@ def test_build_resolved_probe_instance_view():
     payload = instrument_view.build_resolved_instrument_view(REPO_ROOT, "esp32jtag_stm32_golden")
     assert payload["ok"] is True
     assert payload["kind"] == "probe_instance"
+    assert payload["canonical_kind"] == "control_instrument_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
     assert payload["type"] == "esp32jtag"
+    assert payload["instrument_role"] == "control"
     assert payload["communication"]["primary"] == "gdb_remote"
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
     assert "stm32f103" in payload["referenced_by"]["boards"]
@@ -44,6 +46,7 @@ def test_instruments_describe_cli_text_output():
     )
     assert "id: esp32jtag_stm32_golden" in res.stdout
     assert "kind: probe_instance" in res.stdout
+    assert "canonical_kind: control_instrument_instance" in res.stdout
     assert "surfaces:" in res.stdout
     assert "gdb_remote" in res.stdout
     assert "web_api" in res.stdout
