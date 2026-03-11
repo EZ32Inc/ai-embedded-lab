@@ -447,3 +447,136 @@ def test_worker_claims_shared_resources_serially():
     starts = {name: ts for kind, name, ts in events if kind == "start"}
     ends = {name: ts for kind, name, ts in events if kind == "end"}
     assert ends["a"] <= starts["b"] or ends["b"] <= starts["a"]
+
+
+def test_worker_with_distinct_resources_can_overlap():
+    events = []
+    lock = threading.Lock()
+
+    def runner(repo_root, step, output_mode):
+        with lock:
+            events.append(("start", step["name"], time.monotonic()))
+        time.sleep(0.05)
+        with lock:
+            events.append(("end", step["name"], time.monotonic()))
+        return 0, {"ok": True}
+
+    task_a = VerificationTask(name="a", board="board_a")
+    task_b = VerificationTask(name="b", board="board_b")
+    worker_a = VerificationWorker(task=task_a, repo_root=REPO_ROOT, output_mode="normal", runner=runner, resource_keys=["probe:a"])
+    worker_b = VerificationWorker(task=task_b, repo_root=REPO_ROOT, output_mode="normal", runner=runner, resource_keys=["probe:b"])
+
+    t1 = threading.Thread(target=worker_a.run)
+    t2 = threading.Thread(target=worker_b.run)
+    t1.start()
+    t2.start()
+    t1.join(timeout=2)
+    t2.join(timeout=2)
+
+    assert not t1.is_alive()
+    assert not t2.is_alive()
+    starts = {name: ts for kind, name, ts in events if kind == "start"}
+    ends = {name: ts for kind, name, ts in events if kind == "end"}
+    assert starts["a"] < ends["b"]
+    assert starts["b"] < ends["a"]
+
+
+def test_worker_holds_shared_lock_for_full_repeat_window():
+    events = []
+    lock = threading.Lock()
+
+    def runner(repo_root, step, output_mode):
+        iteration = sum(1 for kind, name, *_rest in events if kind == "start" and name == step["name"]) + 1
+        with lock:
+            events.append(("start", step["name"], iteration, time.monotonic()))
+        time.sleep(0.03)
+        with lock:
+            events.append(("end", step["name"], iteration, time.monotonic()))
+        return 0, {"ok": True}
+
+    worker_a = VerificationWorker(
+        task=VerificationTask(name="a", board="board_a"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=runner,
+        iteration_limit=2,
+        resource_keys=["probe:shared"],
+    )
+    worker_b = VerificationWorker(
+        task=VerificationTask(name="b", board="board_b"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=runner,
+        iteration_limit=1,
+        resource_keys=["probe:shared"],
+    )
+
+    t1 = threading.Thread(target=worker_a.run)
+    t2 = threading.Thread(target=worker_b.run)
+    t1.start()
+    t2.start()
+    t1.join(timeout=2)
+    t2.join(timeout=2)
+
+    assert not t1.is_alive()
+    assert not t2.is_alive()
+    a_end_second = next(ts for kind, name, iteration, ts in events if kind == "end" and name == "a" and iteration == 2)
+    b_start = next(ts for kind, name, iteration, ts in events if kind == "start" and name == "b")
+    assert a_end_second <= b_start
+
+
+def test_parallel_suite_waits_for_other_workers_after_one_failure(tmp_path):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "parallel"},
+        "steps": [
+            {"name": "fast_fail", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
+            {"name": "slow_pass", "board": "stm32f103", "test": "tests/plans/gpio_signature.json"},
+        ],
+    }
+
+    def fake_worker(repo_root, task, output_mode, max_iterations, stop_after_failure, log_lock):
+        def _run():
+            if task.name == "fast_fail":
+                time.sleep(0.01)
+                payload = {
+                    "name": task.name,
+                    "board": task.board,
+                    "requested_iterations": 1,
+                    "completed_iterations": 1,
+                    "pass_count": 0,
+                    "fail_count": 1,
+                    "ok": False,
+                    "results": [
+                        {"name": task.name, "board": task.board, "iteration": 1, "code": 7, "ok": False, "result": {"error": "failed early"}}
+                    ],
+                }
+            else:
+                time.sleep(0.05)
+                payload = {
+                    "name": task.name,
+                    "board": task.board,
+                    "requested_iterations": 1,
+                    "completed_iterations": 1,
+                    "pass_count": 1,
+                    "fail_count": 0,
+                    "ok": True,
+                    "results": [
+                        {"name": task.name, "board": task.board, "iteration": 1, "code": 0, "ok": True, "result": {"ok": True}}
+                    ],
+                }
+            return SimpleNamespace(to_dict=lambda: payload)
+
+        return SimpleNamespace(run=_run)
+
+    with patch("ael.default_verification._worker_for_task", side_effect=fake_worker):
+        code, payload = default_verification.run_default_setting(path=_write_setting(tmp_path, setting))
+
+    assert code == 7
+    assert payload["ok"] is False
+    by_name = {worker["name"]: worker for worker in payload["workers"]}
+    assert by_name["fast_fail"]["fail_count"] == 1
+    assert by_name["slow_pass"]["pass_count"] == 1
+    assert len(payload["results"]) == 2
+    assert any(item["name"] == "slow_pass" and item["ok"] for item in payload["results"])

@@ -78,7 +78,7 @@ Confirmed in the current repository:
 - preferred `verify-default repeat --limit N` CLI for worker-level repetition
 
 Still needing consolidation or expansion:
-- stronger automated coverage for contention and partial-failure cases
+- stronger automated coverage for more contention and partial-failure cases
 - clearer evidence around some intermittent bench failures
 - more explicit documentation of lock coverage and limits
 
@@ -97,6 +97,10 @@ Still needing consolidation or expansion:
 ### Suggested outputs
 - extend tests for worker, repeat, locking, and failure behavior
 - add focused skill/workflow notes for repeat mode, probe fallback, and worker resource locking
+
+Current repo state:
+- targeted tests now cover distinct-resource overlap, shared-lock serialization, lock hold across worker repeat windows, and parallel partial-failure completion
+- the main remaining gap is broader edge-case coverage rather than the absence of any concurrency-focused tests
 
 ---
 
@@ -128,7 +132,9 @@ The goal is to capture useful engineering knowledge first and formalize it later
 Current repo state:
 - `docs/skills/README.md` exists
 - `docs/skills/esp32c6_intermittent_bench_failure.md` exists
-- the other three suggested documents are still pending
+- `docs/skills/default_verification_repeat_mode.md` exists
+- `docs/skills/probe_fallback_policy.md` exists
+- `docs/skills/worker_resource_locking.md` exists
 
 ### Key questions
 - What knowledge is reused often enough to deserve a skill document?
@@ -367,7 +373,8 @@ Recent live runs were useful, but future confidence should not depend only on ad
 Current repo state:
 - unit tests already cover important pieces of default verification, probe binding, stage explanation, connection modeling, and instrument Wi-Fi flows
 - recent live validation also exercised parallel suite behavior and worker-level repeat behavior
-- contention and unstable-bench behavior still need stronger intentional test coverage
+- additional targeted tests now cover key worker contention and partial-failure execution-model cases
+- unstable-bench behavior still needs some live validation and possibly more simulated edge-case coverage
 
 ### Topics to address
 - repeated suite-level vs worker-level semantics
@@ -386,15 +393,11 @@ Current repo state:
 ## Recommended Near-Term Sequence
 
 ### Recommended next steps
-1. Finish the next observability pass for ESP32-C6 failure modes, especially verify-stage breakdown and better reachability classification
-2. Create the next concrete skill documents:
-   - `docs/skills/default_verification_repeat_mode.md`
-   - `docs/skills/probe_fallback_policy.md`
-   - `docs/skills/worker_resource_locking.md`
-3. Expand automated coverage for worker/task/parallel contention and partial-failure behavior
-4. Continue consolidating the instrument model around current manifest/registry/capability mechanisms
-5. Continue consolidating the DUT model around current asset and board-profile mechanisms
-6. Continue clarifying the bench/resource/connection model and its operational consequences
+1. Continue the next observability pass for ESP32-C6 failure modes, especially finer verify-stage breakdown
+2. Extend automated coverage further for additional contention and failure edge cases where useful
+3. Continue consolidating the instrument model around current manifest/registry/capability mechanisms
+4. Continue consolidating the DUT model around current asset and board-profile mechanisms
+5. Continue clarifying the bench/resource/connection model and its operational consequences
 
 ---
 
