@@ -245,6 +245,7 @@ def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: 
     instrument_provision.ensure_meter_reachable(
         manifest=manifest_payload,
         host=tcp_cfg.get("host"),
+        timeout_s=instrument_provision.RUN_METER_GUARD_TIMEOUT_S,
     )
 
 

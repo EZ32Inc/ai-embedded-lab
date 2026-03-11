@@ -106,7 +106,10 @@ def test_pipeline_blocks_unreachable_meter_before_run(monkeypatch, tmp_path):
     monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
     monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
 
+    captured = {}
+
     def _fail_meter(*args, **kwargs):
+        captured["kwargs"] = dict(kwargs)
         raise RuntimeError(
             "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. "
             "Suggestion: add a meter reset feature."
@@ -127,6 +130,7 @@ def test_pipeline_blocks_unreachable_meter_before_run(monkeypatch, tmp_path):
     assert result["ok"] is False
     assert result["failed_step"] == "check_meter_reachability"
     assert "manual checking" in result["error_summary"]
+    assert captured["kwargs"]["timeout_s"] == pipeline.instrument_provision.RUN_METER_GUARD_TIMEOUT_S
 
     records = _read_jsonl(run_paths.root / "workflow_events.jsonl")
     assert records[-1]["action"] == "run_finished"

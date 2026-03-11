@@ -1039,6 +1039,7 @@ def _ensure_meter_reachable_for_run(test_raw, board_cfg):
     return instrument_provision.ensure_meter_reachable(
         manifest=manifest_payload,
         host=tcp_cfg.get("host"),
+        timeout_s=instrument_provision.RUN_METER_GUARD_TIMEOUT_S,
     )
 
 

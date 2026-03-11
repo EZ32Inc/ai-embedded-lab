@@ -10,6 +10,8 @@ from typing import Any
 from . import wifi
 from ael.adapters import esp32s3_dev_c_meter_tcp
 
+RUN_METER_GUARD_TIMEOUT_S = 3.0
+
 
 class MeterReachabilityError(RuntimeError):
     def __init__(self, summary: str, details: dict[str, Any] | None = None):

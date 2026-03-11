@@ -180,6 +180,7 @@ def test_run_single_blocks_unreachable_esp32_meter(tmp_path):
     assert result["observations"]["host"] == "192.168.4.1"
     assert result["retry_summary"]["meter_guard_attempts"] == 1
     guard_mock.assert_called_once()
+    assert guard_mock.call_args.kwargs["timeout_s"] == default_verification.instrument_provision.RUN_METER_GUARD_TIMEOUT_S
     run_mock.assert_not_called()
 
 
