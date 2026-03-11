@@ -301,6 +301,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         test_path=str(test),
         wiring=None,
         output_mode=output_mode,
+        return_paths=True,
     )
     if isinstance(code, tuple) and len(code) == 2:
         exit_code, payload = code
@@ -328,7 +329,32 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 if policy.get("policy_class"):
                     out["degraded_instrument_policy"] = policy
             return int(exit_code), out
-        return int(exit_code), {"ok": int(exit_code) == 0}
+        out = {"ok": int(exit_code) == 0}
+        if not bool(out["ok"]) and hasattr(payload, "artifacts_dir"):
+            details = _extract_verify_result_details(
+                {
+                    "json": {
+                        "verify_result": str(Path(payload.artifacts_dir) / "verify_result.json"),
+                    }
+                }
+            )
+            for key, value in details.items():
+                if value not in (None, "", {}, []):
+                    out[key] = value
+            instrument_condition = _infer_instrument_condition(out)
+            if instrument_condition and "instrument_condition" not in out:
+                out["instrument_condition"] = instrument_condition
+            if instrument_condition and isinstance(out.get("observations"), dict):
+                out["observations"].setdefault("instrument_condition", instrument_condition)
+            failure_scope = _infer_failure_scope(out)
+            if failure_scope:
+                out["failure_scope"] = failure_scope
+                if isinstance(out.get("observations"), dict):
+                    out["observations"].setdefault("failure_scope", failure_scope)
+            policy = _degraded_instrument_policy(out)
+            if policy.get("policy_class"):
+                out["degraded_instrument_policy"] = policy
+        return int(exit_code), out
     return int(code), {"ok": int(code) == 0}
 
 

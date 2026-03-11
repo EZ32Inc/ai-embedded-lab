@@ -6,7 +6,7 @@
 - Relevant spec/config files:
   - `tests/plans/gpio_signature.json`
   - `configs/boards/rp2040_pico.yaml`
-  - `configs/esp32jtag.yaml`
+  - `configs/instrument_instances/esp32jtag_rp2040_lab.yaml`
 - Run instance traced: `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature` (successful, `ok: true`)
 - Why chosen:
   - Has complete artifacts (`run_plan.json`, runner result, logs, meta, final result).
@@ -20,8 +20,8 @@
 python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
 ```
 
-- Probe selection:
-  - No explicit probe flag is required because `ael/config_resolver.py` default probe is `configs/esp32jtag.yaml`.
+- Control-instrument selection:
+  - No explicit `--control-instrument` flag is required because board policy resolves the RP2040 lab control-instrument instance.
 - Test intent from spec:
   - Verify a signal pin (`sig`) with freq/duty constraints over ~1s window.
 - Environment assumptions:
@@ -31,9 +31,9 @@ python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
 ## 3) End-to-end call chain
 
 1. Entry point invoked: `ael/__main__.py:main`
-   - Parses `run` args; resolves probe path; calls `ael.pipeline.run_cli`.
+   - Parses `run` args; resolves control-instrument config; calls `ael.pipeline.run_cli`.
 2. Runtime pipeline started: `ael/pipeline.py:run_pipeline`
-   - Loads/merges probe+board+test config; creates run directory and initial artifact files via `ael/run_manager.py:create_run`.
+   - Loads/merges control-instrument+board+test config; creates run directory and initial artifact files via `ael/run_manager.py:create_run`.
 3. Run plan assembled: `ael/pipeline.py:run_pipeline`
    - Constructs plan steps: `preflight.probe`, `build.cmake`, `load.gdbmi`, `check.signal_verify`.
 4. Plan execution invoked: `ael/runner.py:run_plan`

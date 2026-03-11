@@ -75,6 +75,9 @@ Legacy readers may still encounter:
 - `selected.compatibility.board_config`
 - `selected.compatibility.probe_config`
 
+These legacy fields should be read only as compatibility material.
+New archive consumers should not treat them as the primary contract.
+
 ## Current Capture Points
 
 The run pipeline currently appends:

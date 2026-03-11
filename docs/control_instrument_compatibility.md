@@ -122,3 +122,17 @@ Prefer to retire next:
 Deferred while degraded-instrument policy settles:
 - low-level helper and adapter parameter names that still use `probe_cfg`
 - compatibility wrappers whose removal would mix naming churn with runtime policy work
+
+## Current Working Boundary
+
+Active user-facing/runtime-facing surfaces should now read as:
+
+- control-instrument-first
+- DUT and board-profile separated
+- bench resources compared through `selected_bench_resources`
+
+Legacy `probe*` remains acceptable only when:
+
+- reading historical archived payloads
+- supporting older callers
+- discussing legacy fallback policy explicitly

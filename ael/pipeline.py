@@ -882,6 +882,9 @@ def _format_capability_surfaces(mapping: dict | None) -> str | None:
 
 def _print_success_summary(summary, last_known_good, current_setup):
     summary_dut = summary.get("selected_dut") if isinstance(summary.get("selected_dut"), dict) else {}
+    summary_board_profile = (
+        summary.get("selected_board_profile") if isinstance(summary.get("selected_board_profile"), dict) else {}
+    )
     summary_board_name = summary_dut.get("name") or summary_dut.get("id")
     summary_control_instance = summary.get("control_instrument_instance")
     summary_control_type = summary.get("control_instrument_type")
@@ -893,6 +896,10 @@ def _print_success_summary(summary, last_known_good, current_setup):
         f"result={summary.get('overall_result')}"
     )
     print(f"Summary: executed_stages={','.join(summary.get('executed_stages', []))}")
+    if summary_dut.get("runtime_binding"):
+        print(f"Summary: dut_runtime_binding={summary_dut.get('runtime_binding')}")
+    if summary_board_profile.get("role"):
+        print(f"Summary: board_profile_role={summary_board_profile.get('role')}")
     if summary.get("key_checks_passed"):
         print(f"Summary: key_checks_passed={', '.join(summary.get('key_checks_passed', []))}")
     if summary.get("serial_or_flash_port"):
@@ -959,12 +966,19 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if drift_text:
         print(f"Summary: bench_resource_drift={drift_text}")
     lkg_dut = last_known_good.get("selected_dut") if isinstance(last_known_good.get("selected_dut"), dict) else {}
+    lkg_board_profile = (
+        last_known_good.get("selected_board_profile") if isinstance(last_known_good.get("selected_board_profile"), dict) else {}
+    )
     lkg_board_name = lkg_dut.get("name") or lkg_dut.get("id")
     print(
         "LKG: "
         f"board={lkg_board_name} test={last_known_good.get('test')} "
         f"port={last_known_good.get('port')} run_id={last_known_good.get('run_id')}"
     )
+    if lkg_dut.get("runtime_binding"):
+        print(f"LKG: dut_runtime_binding={lkg_dut.get('runtime_binding')}")
+    if lkg_board_profile.get("role"):
+        print(f"LKG: board_profile_role={lkg_board_profile.get('role')}")
     if last_known_good.get("instrument_profile"):
         line = f"LKG: instrument={last_known_good.get('instrument_profile')}"
         if last_known_good.get("selected_ap_ssid"):
@@ -2032,7 +2046,7 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
     run_p = sub.add_parser("run")
     run_p.add_argument("--control-instrument", required=False, default=None)
-    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
+    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for --control-instrument")
     run_p.add_argument("--board", required=True)
     run_p.add_argument("--test", required=False, default=os.path.join("tests", "blink_gpio.json"))
     run_p.add_argument("--wiring", required=False)
@@ -2050,7 +2064,7 @@ def main():
     args = parser.parse_args()
     if args.cmd == "run":
         if not getattr(args, "control_instrument", None) and not getattr(args, "probe", None):
-            parser.error("one of --control-instrument or --probe is required")
+            parser.error("one of --control-instrument or legacy --probe is required")
         if args.verbose:
             args.output_mode = "verbose"
         elif args.quiet:

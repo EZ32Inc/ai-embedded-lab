@@ -45,7 +45,7 @@ def main():
     run_p.add_argument("--board", required=False, help="Board id")
     run_p.add_argument("--dut", required=False, help="DUT id from assets_golden/assets_user")
     run_p.add_argument("--control-instrument", dest="control_instrument", required=False, default=None, help="Control instrument config")
-    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
+    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for --control-instrument")
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
     run_p.add_argument(
@@ -60,7 +60,7 @@ def main():
 
     doc_p = sub.add_parser("doctor")
     doc_p.add_argument("--control-instrument", dest="control_instrument", default=None, help="Control instrument config")
-    doc_p.add_argument("--probe", default=None, help="Legacy compatibility flag for control instrument config")
+    doc_p.add_argument("--probe", default=None, help="Legacy compatibility flag for --control-instrument")
     doc_p.add_argument("--board", default=None)
     doc_p.add_argument("--test", default=os.path.join("tests", "blink_gpio.json"))
 
@@ -217,7 +217,7 @@ def main():
     la_check_p.add_argument("--pin", required=True)
     la_check_p.add_argument("--board", required=False, help="Board id used to resolve default control instrument")
     la_check_p.add_argument("--control-instrument", dest="control_instrument", required=False, default=None, help="Control instrument config")
-    la_check_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
+    la_check_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for --control-instrument")
     la_check_p.add_argument("--duration-s", type=float, default=1.0)
     la_check_p.add_argument("--expected-hz", type=float, default=1.0)
     la_check_p.add_argument("--min-edges", type=int, default=1)

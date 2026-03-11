@@ -367,7 +367,8 @@ def test_format_bench_drift_renders_compact_summary():
 
 def test_print_success_summary_includes_capability_surface_lines(capsys):
     summary = {
-        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
+        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit", "runtime_binding": "board_profile_driven"},
+        "selected_board_profile": {"id": "esp32c6_devkit", "role": "runtime_policy"},
         "test": "esp32c6_gpio_signature_with_meter",
         "run_id": "run1",
         "overall_result": "pass",
@@ -384,7 +385,8 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "key_evidence_paths": {"evidence": "/tmp/evidence.json", "verify_result": "/tmp/verify.json"},
     }
     last_known_good = {
-        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit"},
+        "selected_dut": {"id": "esp32c6_devkit", "name": "ESP32-C6 DevKit", "runtime_binding": "board_profile_driven"},
+        "selected_board_profile": {"id": "esp32c6_devkit", "role": "runtime_policy"},
         "test": "esp32c6_gpio_signature_with_meter",
         "port": "/dev/ttyACM0",
         "run_id": "run1",
@@ -418,10 +420,14 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
     out = capsys.readouterr().out
 
     assert "Summary: instrument_surfaces=measure.digital->primary" in out
+    assert "Summary: dut_runtime_binding=board_profile_driven" in out
+    assert "Summary: board_profile_role=runtime_policy" in out
     assert "Summary: control_instrument_surfaces=swd->gdb_remote" in out
     assert "Summary: connection_digest=" in out
     assert "Summary: bench_resources=contract_v1 instrument_id:esp32s3_dev_c_meter instrument_endpoint:192.168.4.1:9000" in out
     assert "LKG: instrument_surfaces=measure.digital->primary" in out
+    assert "LKG: dut_runtime_binding=board_profile_driven" in out
+    assert "LKG: board_profile_role=runtime_policy" in out
     assert "LKG: control_instrument_surfaces=swd->gdb_remote" in out
     assert "LKG: connection_digest=" in out
     assert "LKG: bench_resources=contract_v1 instrument_id:esp32s3_dev_c_meter instrument_endpoint:192.168.4.1:9000" in out

@@ -69,6 +69,7 @@ Leaving too much legacy surface in place risks future confusion and accidental b
 - narrower visible `probe*` surface
 - clearer compatibility/deprecation boundary
 - updated compatibility note and examples
+- legacy `--probe` and older payload aliases limited to explicit compatibility contexts
 
 ## 2. Degraded Instrument / Degraded Bench Policy
 
@@ -123,6 +124,7 @@ Bench/resource behavior is operationally important now, especially for parallel 
 - tighter resource/connection contracts
 - clearer drift/comparison guidance
 - better operator understanding of shared-resource and degraded-bench behavior
+- clearer operator separation between bench-resource drift and degraded-instrument failure
 
 ## 5. Workflow / Skills / Method Buildup
 
@@ -141,6 +143,10 @@ The repo now contains enough real architecture and operational policy that undoc
 - more durable skill documents
 - stronger operator/developer playbooks
 - clearer architecture-to-method linkage
+- explicit guidance for recurring Phase 2 distinctions such as:
+  - late verify failure interpretation
+  - control-instrument compatibility boundary
+  - bench drift vs degraded instrument
 
 ## Suggested Batch Sequence
 
