@@ -17,6 +17,7 @@ from ael.instruments import provision as instrument_provision
 from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
+from ael.verification_model import _failure_summary as _worker_failure_summary
 
 
 DEFAULT_CONFIG_PATH = ael_paths.repo_root() / "configs" / "default_verification_setting.yaml"
@@ -326,10 +327,14 @@ def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
 def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) -> None:
     _log_line(lock, "[SUMMARY]")
     for worker in workers:
-        _log_line(
-            lock,
-            f"{worker.get('name')}: {worker.get('pass_count', 0)}/{worker.get('completed_iterations', 0)} PASS",
-        )
+        line = f"{worker.get('name')}: {worker.get('pass_count', 0)}/{worker.get('completed_iterations', 0)} PASS"
+        if not bool(worker.get("ok", False)):
+            results = worker.get("results", [])
+            last = results[-1] if isinstance(results, list) and results else {}
+            detail = _worker_failure_summary(last.get("result") if isinstance(last, dict) else {})
+            if detail:
+                line += f" {detail}"
+        _log_line(lock, line)
 
 
 def _run_parallel_suite_once(

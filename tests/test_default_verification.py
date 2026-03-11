@@ -9,6 +9,38 @@ from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker
 
 
+def test_worker_logs_failure_summary_details():
+    lines = []
+
+    worker = VerificationWorker(
+        task=VerificationTask(name="esp32c6_golden_gpio", board="esp32c6_devkit"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=lambda *_args: (
+            2,
+            {
+                "ok": False,
+                "error": "meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed.",
+                "observations": {
+                    "failure_class": "network_meter_api",
+                    "ping": {"ok": True},
+                    "tcp": {"ok": True},
+                    "api": {"ok": False},
+                },
+            },
+        ),
+        log_fn=lines.append,
+    )
+
+    result = worker.run()
+
+    assert result.ok is False
+    fail_line = next(item for item in lines if item.startswith("[FAIL]"))
+    assert "failure_class=network_meter_api" in fail_line
+    assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in fail_line
+    assert "observations=ping=ok,tcp=ok,api=fail" in fail_line
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -618,3 +650,37 @@ def test_parallel_suite_waits_for_other_workers_after_one_failure(tmp_path):
     assert by_name["slow_pass"]["pass_count"] == 1
     assert len(payload["results"]) == 2
     assert any(item["name"] == "slow_pass" and item["ok"] for item in payload["results"])
+
+
+def test_print_worker_totals_includes_failure_details(capsys):
+    lock = threading.Lock()
+    workers = [
+        {
+            "name": "esp32c6_golden_gpio",
+            "completed_iterations": 1,
+            "pass_count": 0,
+            "ok": False,
+            "results": [
+                {
+                    "result": {
+                        "error": "meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed.",
+                        "observations": {
+                            "failure_class": "network_meter_api",
+                            "ping": {"ok": True},
+                            "tcp": {"ok": True},
+                            "api": {"ok": False},
+                        },
+                    }
+                }
+            ],
+        }
+    ]
+
+    default_verification._print_worker_totals(lock, workers)
+    out = capsys.readouterr().out
+
+    assert "[SUMMARY]" in out
+    assert "esp32c6_golden_gpio: 0/1 PASS" in out
+    assert "failure_class=network_meter_api" in out
+    assert "error=meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed." in out
+    assert "observations=ping=ok,tcp=ok,api=fail" in out

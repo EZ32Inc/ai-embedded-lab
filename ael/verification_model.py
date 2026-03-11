@@ -12,6 +12,44 @@ VerificationRunner = Callable[[Path, Dict[str, Any], str], Tuple[int, Dict[str, 
 VerificationLogger = Callable[[str], None]
 
 
+def _failure_summary(result: Dict[str, Any] | Any) -> str:
+    if not isinstance(result, dict):
+        return ""
+    parts: List[str] = []
+    verify_substage = str(result.get("verify_substage") or "").strip()
+    observations = result.get("observations")
+    if not verify_substage and isinstance(observations, dict):
+        verify_substage = str(observations.get("verify_substage") or "").strip()
+    if verify_substage:
+        parts.append(f"verify_substage={verify_substage}")
+
+    failure_class = str(result.get("failure_class") or "").strip()
+    if not failure_class and isinstance(observations, dict):
+        failure_class = str(observations.get("failure_class") or "").strip()
+    if failure_class:
+        parts.append(f"failure_class={failure_class}")
+
+    error = str(result.get("error") or result.get("error_summary") or "").strip()
+    if error:
+        parts.append(f"error={error}")
+
+    if isinstance(observations, dict):
+        ping_ok = observations.get("ping", {}).get("ok") if isinstance(observations.get("ping"), dict) else None
+        tcp_ok = observations.get("tcp", {}).get("ok") if isinstance(observations.get("tcp"), dict) else None
+        api_ok = observations.get("api", {}).get("ok") if isinstance(observations.get("api"), dict) else None
+        bench_bits = []
+        if ping_ok is not None:
+            bench_bits.append(f"ping={'ok' if ping_ok else 'fail'}")
+        if tcp_ok is not None:
+            bench_bits.append(f"tcp={'ok' if tcp_ok else 'fail'}")
+        if api_ok is not None:
+            bench_bits.append(f"api={'ok' if api_ok else 'fail'}")
+        if bench_bits:
+            parts.append("observations=" + ",".join(bench_bits))
+
+    return " ".join(parts).strip()
+
+
 @dataclass(frozen=True)
 class VerificationTask:
     name: str
@@ -97,9 +135,7 @@ class VerificationWorker:
                 iterations.append(record)
                 self._log(f"[DONE] {label} {'PASS' if ok else 'FAIL'} ({elapsed:.3f}s)")
                 if not ok:
-                    reason = ""
-                    if isinstance(result, dict):
-                        reason = str(result.get("error") or result.get("error_summary") or "").strip()
+                    reason = _failure_summary(result)
                     if reason:
                         self._log(f"[FAIL] {label} {reason}")
                     if self.stop_after_failure:
