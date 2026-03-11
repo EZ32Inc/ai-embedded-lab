@@ -315,7 +315,14 @@ def render_text(payload: Dict[str, Any]) -> str:
     if payload.get("selected"):
         lines.append("selected:")
         for k, v in (payload.get("selected") or {}).items():
-            if k in ("probe_communication", "instrument_communication", "probe_capability_surfaces", "instrument_capability_surfaces") and isinstance(v, dict):
+            if k in (
+                "control_instrument_communication",
+                "instrument_communication",
+                "control_instrument_capability_surfaces",
+                "instrument_capability_surfaces",
+                "probe_communication",
+                "probe_capability_surfaces",
+            ) and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")

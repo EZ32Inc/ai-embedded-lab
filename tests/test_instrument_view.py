@@ -45,8 +45,8 @@ def test_instruments_describe_cli_text_output():
         check=True,
     )
     assert "id: esp32jtag_stm32_golden" in res.stdout
-    assert "kind: probe_instance" in res.stdout
-    assert "canonical_kind: control_instrument_instance" in res.stdout
+    assert "kind: control_instrument_instance" in res.stdout
+    assert "legacy_kind: probe_instance" in res.stdout
     assert "surfaces:" in res.stdout
     assert "gdb_remote" in res.stdout
     assert "web_api" in res.stdout

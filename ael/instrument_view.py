@@ -224,9 +224,10 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         return f"error: {payload.get('error')}\n"
     lines: List[str] = []
     lines.append(f"id: {payload.get('id')}")
-    lines.append(f"kind: {payload.get('kind')}")
-    if payload.get("canonical_kind"):
-        lines.append(f"canonical_kind: {payload.get('canonical_kind')}")
+    kind = payload.get("canonical_kind") or payload.get("kind")
+    lines.append(f"kind: {kind}")
+    if payload.get("kind") and payload.get("canonical_kind") and payload.get("kind") != payload.get("canonical_kind"):
+        lines.append(f"legacy_kind: {payload.get('kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_role"):
@@ -276,9 +277,10 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
     if not payload.get("ok"):
         return f"error: {payload.get('error')}\n"
     lines: List[str] = []
-    lines.append(f"{payload.get('id')} [{payload.get('kind')}]")
-    if payload.get("canonical_kind"):
-        lines.append(f"canonical_kind: {payload.get('canonical_kind')}")
+    kind = payload.get("canonical_kind") or payload.get("kind")
+    lines.append(f"{payload.get('id')} [{kind}]")
+    if payload.get("kind") and payload.get("canonical_kind") and payload.get("kind") != payload.get("canonical_kind"):
+        lines.append(f"legacy_kind: {payload.get('kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_role"):
@@ -318,11 +320,11 @@ def render_resolved_instrument_inventory_text(payload: Dict[str, Any]) -> str:
     lines: List[str] = []
     summary = payload.get("summary") or {}
     lines.append("Instrument instances")
-    lines.append(f"probe_instance_count: {summary.get('probe_instance_count', 0)}")
     lines.append(f"control_instrument_instance_count: {summary.get('control_instrument_instance_count', 0)}")
+    lines.append(f"probe_instance_count: {summary.get('probe_instance_count', 0)}")
     lines.append(f"instrument_count: {summary.get('instrument_count', 0)}")
     lines.append("")
-    for item in payload.get("probe_instances") or []:
+    for item in payload.get("control_instrument_instances") or []:
         lines.append(f"{item.get('id')} ({item.get('type')})")
         endpoint = item.get("endpoint")
         if isinstance(endpoint, dict) and (endpoint.get("host") or endpoint.get("port") is not None):
@@ -332,7 +334,7 @@ def render_resolved_instrument_inventory_text(payload: Dict[str, Any]) -> str:
             lines.append(f"  boards: {', '.join(refs)}")
         if item.get("metadata_validation_errors"):
             lines.append(f"  metadata_errors: {len(item.get('metadata_validation_errors') or [])}")
-    if payload.get("probe_instances"):
+    if payload.get("control_instrument_instances"):
         lines.append("")
     for item in payload.get("instruments") or []:
         lines.append(f"{item.get('id')} ({item.get('origin')})")

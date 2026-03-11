@@ -529,6 +529,10 @@ def _format_capability_surfaces(mapping: dict | None) -> str | None:
 
 
 def _print_success_summary(summary, last_known_good, current_setup):
+    summary_control_instance = summary.get("control_instrument_instance") or summary.get("probe_instance")
+    summary_control_type = summary.get("control_instrument_type") or summary.get("probe_type")
+    summary_control_endpoint = summary.get("control_instrument_endpoint") or summary.get("probe_endpoint")
+    summary_control_surfaces = summary.get("control_instrument_capability_surfaces") or summary.get("probe_capability_surfaces")
     print(
         "Summary: validation "
         f"board={summary.get('board')} test={summary.get('test')} run_id={summary.get('run_id')} "
@@ -549,16 +553,16 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(summary.get("instrument_capability_surfaces"))
         if surfaces:
             print(f"Summary: instrument_surfaces={surfaces}")
-    if summary.get("probe_instance"):
-        line = f"Summary: probe_instance={summary.get('probe_instance')}"
-        if summary.get("probe_type"):
-            line += f" type={summary.get('probe_type')}"
-        if summary.get("probe_endpoint"):
-            line += f" endpoint={summary.get('probe_endpoint')}"
+    if summary_control_instance:
+        line = f"Summary: control_instrument_instance={summary_control_instance}"
+        if summary_control_type:
+            line += f" type={summary_control_type}"
+        if summary_control_endpoint:
+            line += f" endpoint={summary_control_endpoint}"
         print(line)
-        surfaces = _format_capability_surfaces(summary.get("probe_capability_surfaces"))
+        surfaces = _format_capability_surfaces(summary_control_surfaces)
         if surfaces:
-            print(f"Summary: probe_surfaces={surfaces}")
+            print(f"Summary: control_instrument_surfaces={surfaces}")
     print(
         "Summary: artifacts "
         f"result={summary.get('key_artifact_paths', {}).get('result')} "
@@ -572,7 +576,8 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if summary.get("cleanup_items"):
         print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
     endpoint = current_setup.get("selected_endpoint", {}) if isinstance(current_setup.get("selected_endpoint"), dict) else {}
-    probe_endpoint = current_setup.get("probe_endpoint", {}) if isinstance(current_setup.get("probe_endpoint"), dict) else {}
+    raw_control_endpoint = current_setup.get("control_instrument_endpoint") or current_setup.get("probe_endpoint")
+    control_endpoint = raw_control_endpoint if isinstance(raw_control_endpoint, dict) else {}
     setup_line = "Summary: setup"
     if current_setup.get("serial_or_flash_port"):
         setup_line += f" port={current_setup.get('serial_or_flash_port')}"
@@ -582,10 +587,11 @@ def _print_success_summary(summary, last_known_good, current_setup):
         setup_line += f" endpoint={endpoint.get('host')}:{endpoint.get('port')}"
     if current_setup.get("instrument_profile"):
         setup_line += f" instrument={current_setup.get('instrument_profile')}"
-    if current_setup.get("probe_instance"):
-        setup_line += f" probe_instance={current_setup.get('probe_instance')}"
-    if probe_endpoint.get("host") and probe_endpoint.get("port") is not None:
-        setup_line += f" probe_endpoint={probe_endpoint.get('host')}:{probe_endpoint.get('port')}"
+    control_instance = current_setup.get("control_instrument_instance") or current_setup.get("probe_instance")
+    if control_instance:
+        setup_line += f" control_instrument_instance={control_instance}"
+    if control_endpoint.get("host") and control_endpoint.get("port") is not None:
+        setup_line += f" control_instrument_endpoint={control_endpoint.get('host')}:{control_endpoint.get('port')}"
     print(setup_line)
     conn = current_setup.get("connection_setup", {}) if isinstance(current_setup.get("connection_setup"), dict) else {}
     if conn.get("warnings"):
@@ -607,16 +613,20 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(last_known_good.get("instrument_capability_surfaces"))
         if surfaces:
             print(f"LKG: instrument_surfaces={surfaces}")
-    if last_known_good.get("probe_instance"):
-        line = f"LKG: probe_instance={last_known_good.get('probe_instance')}"
-        if last_known_good.get("probe_type"):
-            line += f" type={last_known_good.get('probe_type')}"
-        if last_known_good.get("probe_endpoint"):
-            line += f" endpoint={last_known_good.get('probe_endpoint')}"
+    lkg_control_instance = last_known_good.get("control_instrument_instance") or last_known_good.get("probe_instance")
+    lkg_control_type = last_known_good.get("control_instrument_type") or last_known_good.get("probe_type")
+    lkg_control_endpoint = last_known_good.get("control_instrument_endpoint") or last_known_good.get("probe_endpoint")
+    lkg_control_surfaces = last_known_good.get("control_instrument_capability_surfaces") or last_known_good.get("probe_capability_surfaces")
+    if lkg_control_instance:
+        line = f"LKG: control_instrument_instance={lkg_control_instance}"
+        if lkg_control_type:
+            line += f" type={lkg_control_type}"
+        if lkg_control_endpoint:
+            line += f" endpoint={lkg_control_endpoint}"
         print(line)
-        surfaces = _format_capability_surfaces(last_known_good.get("probe_capability_surfaces"))
+        surfaces = _format_capability_surfaces(lkg_control_surfaces)
         if surfaces:
-            print(f"LKG: probe_surfaces={surfaces}")
+            print(f"LKG: control_instrument_surfaces={surfaces}")
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
     conn = last_known_good.get("connection_setup", {}) if isinstance(last_known_good.get("connection_setup"), dict) else {}
@@ -799,7 +809,7 @@ def run_pipeline(
         print(f"Using instrument: {banner_name} ({instrument_id}) @ {banner_host}:{banner_port}")
     else:
         if probe_instance_id:
-            print(f"Using probe instance: {probe_instance_id} ({probe_type or probe_cfg.get('name', 'unknown')}) @ {probe_host or 'unknown'}:{probe_port or 'unknown'}")
+            print(f"Using control instrument instance: {probe_instance_id} ({probe_type or probe_cfg.get('name', 'unknown')}) @ {probe_host or 'unknown'}:{probe_port or 'unknown'}")
         else:
             print(f"Using probe: {probe_cfg.get('name', 'unknown')} @ {probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}")
     if binding.legacy_warning:

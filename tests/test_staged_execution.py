@@ -294,8 +294,8 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
     out = capsys.readouterr().out
 
     assert "Summary: instrument_surfaces=measure.digital->primary" in out
-    assert "Summary: probe_surfaces=swd->gdb_remote" in out
+    assert "Summary: control_instrument_surfaces=swd->gdb_remote" in out
     assert "Summary: connection_digest=" in out
     assert "LKG: instrument_surfaces=measure.digital->primary" in out
-    assert "LKG: probe_surfaces=swd->gdb_remote" in out
+    assert "LKG: control_instrument_surfaces=swd->gdb_remote" in out
     assert "LKG: connection_digest=" in out
