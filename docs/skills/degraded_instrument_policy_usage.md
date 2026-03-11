@@ -41,12 +41,26 @@ Examples:
 2. Read `failure_scope`.
 3. Read `policy_class`.
 4. Read `retry_summary`.
-5. Only then decide whether you are looking at bench degradation, verify-stage mismatch, or something unrelated to instrument state.
+5. Check whether the failure came from a direct live bench run or from a restricted/sandboxed execution context.
+6. Only then decide whether you are looking at bench degradation, verify-stage mismatch, or something unrelated to instrument state.
+
+## Transient Readiness Note
+
+Current practical rule:
+- a slow first reply from a Wi-Fi-backed instrument does not automatically imply a hard unreachable state
+- actual run paths now allow a small readiness window before classifying early meter failure
+
+Use this distinction:
+- direct live run with normal host connectivity:
+  treat early `instrument_unreachable` as bench evidence
+- restricted or sandboxed run:
+  do not treat network-denied failures as bench truth
 
 ## Current Known Conclusions
 
 - classification/reporting policy is already real and should be treated as stable enough for operational use
 - deeper recovery policy is still intentionally bounded
+- transient bench-readiness tolerance is now part of the current bounded policy for run-path meter guards
 
 ## Related Files
 

@@ -156,6 +156,7 @@ The remaining compatibility surface is now mostly:
 - internal implementation seams
 - explicit compatibility payload objects
 - older examples/specs
+- a small number of legacy CLI/help aliases kept only to avoid breaking existing callers
 
 This means Phase 2 should not chase broad internal renames unless they unlock real clarity or reduce real maintenance cost.
 The higher-value remaining work is selective user-facing cleanup and careful policy/contract review.

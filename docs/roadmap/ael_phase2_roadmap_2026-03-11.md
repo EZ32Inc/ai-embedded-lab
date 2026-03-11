@@ -30,6 +30,7 @@ Based on the current repository:
   - `selected_board_profile`
   - `selected_bench_resources`
 - degraded external instrument behavior now has an explicit default policy
+- actual run paths now include a small bounded readiness tolerance for transient meter startup latency
 - visible compatibility retirement has progressed further on active CLI/help/runtime surfaces
 - runtime summaries now expose `dut_runtime_binding` and `board_profile_role` more explicitly
 - workflow/skills documentation is now materially established as an execution-scaling layer for humans and AI agents
@@ -90,6 +91,7 @@ The repo now has strong classification/reporting policy already, but deeper reco
 ### Deliverables
 
 - stable degraded-instrument classification/reporting guidance
+- stable handling of short transient bench-readiness spikes without broad recovery churn
 - any bounded recovery additions justified by real bench need
 - stronger repeat-mode/operator guidance for unstable external instruments
 
@@ -241,6 +243,7 @@ The best next Phase 2 starting sequence is:
 
 1. continue compatibility retirement on remaining active older docs/examples and compatibility-led visible surfaces
 2. observe degraded-instrument policy against real failures before expanding deeper recovery behavior
+   current note: direct live bench evidence matters more than restricted/sandboxed loop output for this review
 3. keep tightening bench/resource comparison and drift semantics where operator value is clear
 4. continue bounded DUT/runtime cleanup only where board-profile-driven behavior is still too ambiguous in active outputs
 5. keep expanding workflow/skills in parallel around recurring Phase 2 review and operations work

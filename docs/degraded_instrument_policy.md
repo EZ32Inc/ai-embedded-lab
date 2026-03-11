@@ -50,6 +50,16 @@ Current default:
 - `max_attempts = 2`
 - `backoff_s = 1.0`
 
+### 4. Transient bench-readiness tolerance
+
+Current bounded rule for meter-backed run paths:
+- actual run-path reachability guards use a slightly relaxed timeout window before classifying the meter as unreachable
+- this is intended to tolerate short Wi-Fi/AP warm-up behavior and first-attempt latency spikes
+- this is not a broad recovery workflow and should not be treated as evidence that the instrument is healthy
+
+Current default for run-path meter guards:
+- `timeout_s = 3.0`
+
 ### 3. `verify_no_retry`
 
 Used for:
@@ -121,6 +131,7 @@ This is intentionally bounded:
 - no long backoff ladder is defined yet
 - this policy is currently biased toward preserving signal rather than maximizing automatic recovery
 - worker and suite summaries should surface the chosen policy via `policy_class`
+- short reachability tolerance is allowed where direct bench evidence shows first-attempt readiness can be slower than one second
 
 ## Future Extension Points
 
@@ -137,6 +148,7 @@ Current bounded position:
 
 - classification/reporting policy is already operational
 - retry/backoff/fail-fast behavior remains intentionally minimal
+- short run-path readiness tolerance is allowed when bench evidence justifies it
 - no broader automatic recovery should be added unless a real bench need and a reliable recovery mechanism are both confirmed
 
 ## Related Files
