@@ -4,7 +4,7 @@
 
 - RunRequest
   - Added thin input object `RunRequest` in `ael/run_contract.py`.
-  - Covers current top-level inputs: probe, board, test, wiring, output mode, skip/build flags, timeout.
+  - Covers current top-level inputs: control instrument, board, test, wiring, output mode, skip/build flags, timeout.
 
 - Termination states
   - Added standardized termination contract in `ael/run_contract.py`:

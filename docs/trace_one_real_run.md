@@ -75,7 +75,7 @@ From `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature/`:
 
 ## E) Control Decision Points
 
-- Board/probe/test resolution:
+- Board/control-instrument/test resolution:
   - `ael/__main__.py:main`, `ael/config_resolver.py`
 - Build/flash/verify step shaping:
   - `ael/pipeline.py:run_pipeline`

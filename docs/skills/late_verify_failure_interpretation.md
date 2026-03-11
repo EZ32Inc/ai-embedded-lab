@@ -50,6 +50,7 @@ Do not interpret a late verify failure as the same class of problem as:
 ## Current Known Conclusions
 
 - late verify failures should preserve structured verify details in suite-level results when possible
+- current AEL now has a fallback path that can promote details from `verify_result.json` when the direct suite-level payload is too thin
 - if they do not, `verify_result.json` remains the authoritative fallback
 
 ## Related Files

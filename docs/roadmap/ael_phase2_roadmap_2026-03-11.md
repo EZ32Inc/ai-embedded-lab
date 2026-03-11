@@ -30,7 +30,9 @@ Based on the current repository:
   - `selected_board_profile`
   - `selected_bench_resources`
 - degraded external instrument behavior now has an explicit default policy
-- workflow/skills documentation has begun and is already useful as an execution-scaling layer for humans and AI agents
+- visible compatibility retirement has progressed further on active CLI/help/runtime surfaces
+- runtime summaries now expose `dut_runtime_binding` and `board_profile_role` more explicitly
+- workflow/skills documentation is now materially established as an execution-scaling layer for humans and AI agents
 
 So Phase 2 should assume:
 
@@ -63,6 +65,7 @@ Leaving too much legacy surface in place risks future confusion and accidental b
 - continue shrinking visible and internal `probe*` compatibility where safe
 - keep compatibility explicit instead of co-equal with canonical structures
 - avoid large breakage-oriented cleanup
+- prefer user-visible cleanup first, then older examples/specs, then deeper internal seams
 
 ### Deliverables
 
@@ -70,6 +73,7 @@ Leaving too much legacy surface in place risks future confusion and accidental b
 - clearer compatibility/deprecation boundary
 - updated compatibility note and examples
 - legacy `--probe` and older payload aliases limited to explicit compatibility contexts
+- remaining `probe*` usage concentrated mostly in compatibility objects, older examples/specs, and internal helper seams
 
 ## 2. Degraded Instrument / Degraded Bench Policy
 
@@ -106,6 +110,7 @@ The repo now reports DUT and board profile separately, but execution is still la
 - clearer DUT selection/runtime rules
 - fewer ambiguous board-vs-DUT semantics
 - updated docs and targeted runtime/output cleanup where needed
+- active summaries and describe/explain paths that make DUT identity and board-policy role easier to distinguish
 
 ## 4. Bench / Resource Contract Tightening
 
@@ -147,6 +152,7 @@ The repo now contains enough real architecture and operational policy that undoc
   - late verify failure interpretation
   - control-instrument compatibility boundary
   - bench drift vs degraded instrument
+  - roadmap-driven AI development
 
 ## Suggested Batch Sequence
 
@@ -231,7 +237,8 @@ Phase 2 is going well if:
 
 The best next Phase 2 starting sequence is:
 
-1. continue compatibility retirement on the remaining visible legacy surfaces
-2. watch degraded-instrument policy against real failures before expanding recovery
-3. tighten DUT runtime boundary rules
-4. keep expanding workflow/skills around the architecture that is now stable enough to teach
+1. continue compatibility retirement on remaining active older docs/examples and compatibility-led visible surfaces
+2. observe degraded-instrument policy against real failures before expanding deeper recovery behavior
+3. keep tightening bench/resource comparison and drift semantics where operator value is clear
+4. continue bounded DUT/runtime cleanup only where board-profile-driven behavior is still too ambiguous in active outputs
+5. keep expanding workflow/skills in parallel around recurring Phase 2 review and operations work

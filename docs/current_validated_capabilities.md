@@ -20,7 +20,7 @@ Its purpose is to record:
 - board family: `esp32c6`
 - validation style: DUT firmware build + flash + UART readiness + external meter-based digital/analog verification
 - main instrument path: `esp32s3_dev_c_meter` over `192.168.4.1:9000`
-- current status: validated on real hardware and used in current default verification
+- current status: validated on real hardware and used in current default verification, but bench-side meter/Wi-Fi instability is still intermittent
 
 What is currently solid in this path:
 
@@ -31,6 +31,14 @@ What is currently solid in this path:
 - analog rail verification is working
 - standardized validation summary and last-known-good setup output are present
 - `current_setup` now captures current bench-side setup facts for this path
+
+Known nuance:
+
+- current failures in this path are best interpreted as degraded instrument / degraded bench behavior unless new evidence points elsewhere
+- recent failures have included:
+  - meter unreachable
+  - meter API/transport timeout
+  - late `instrument.signature` timeout after DUT UART readiness was already confirmed
 
 ### 2. RP2040 / Raspberry Pi Pico Verification Path
 
@@ -79,7 +87,7 @@ Source:
 
 Current status:
 
-- default verification is passing across all three paths on real hardware
+- default verification is functioning correctly across all three configured paths, but the ESP32-C6 worker can still fail intermittently because of bench-side meter instability
 
 ## Current Workflow Maturity
 
@@ -118,6 +126,7 @@ What is still only partially formed:
 - instrument backend dispatch is still partly concrete-backend-oriented
 - broader instrument abstraction is clarified architecturally, but only partially aligned in code
 - capability-to-surface metadata is informational only and is not yet used for runtime routing
+- degraded-instrument recovery remains intentionally bounded; classification/reporting is ahead of recovery automation
 
 ## Current Stable Strengths
 
@@ -141,8 +150,8 @@ Most relevant current gaps:
 - not all paths expose the same level of setup clarity
 - instrument abstraction is improved, but not yet fully unified in implementation
 - some intermittent meter-side timeout behavior has been observed in reruns
-- skills remain important, but they are not yet the main stabilized system layer
-- existing docs such as `docs/default_verification.md` still reflect older ESP32-S3 defaults and need cleanup
+- the workflow/skills layer is growing, but still not broad enough to cover all recurring review patterns
+- some older docs/examples still use legacy probe-first wording
 
 ## Current Product / Engineering Decisions
 
@@ -159,33 +168,33 @@ These decisions appear to be true right now:
 
 These are realistic near-term options, not a large roadmap.
 
-### 1. Continue Small Instrument-Side Cleanup
+### 1. Continue Small Compatibility / Contract Cleanup
 
 Examples:
 
-- improve probe-path current setup grouping
-- clarify selected setup facts in more non-meter paths
+- keep shrinking visible legacy compatibility wording
+- tighten active bench/resource and DUT/runtime output contracts where operator value is clear
 
 ### 2. Stabilize Occasional Meter Timeout Behavior
 
 Examples:
 
-- investigate transient `check_meter` timeout cases
-- improve diagnostics around meter-side timeout failures without redesigning the flow
+- continue observing transient `check_meter` timeout cases
+- improve evidence only if remaining ambiguity still costs time in practice
 
 ### 3. Keep Validating Current Known-Good Paths
 
 Examples:
 
 - continue running default verification regularly
-- treat ESP32-C6 + RP2040 as the current baseline confidence set
+- treat RP2040 and STM32F103 as stable baseline confidence paths, with ESP32-C6 as both a validated path and a useful degraded-instrument stress case
 
 ## Summary
 
 At this stage, AEL is a working real-hardware validation system with:
 
-- at least two validated board families
+- multiple validated board families
 - multiple validated bench interaction styles
-- passing default verification across those validated paths
+- a default verification system whose orchestration is working correctly even when one instrument path is degraded
 - clearer board/test/instrument/bench boundaries than before
 - a workflow that is now structured enough to support careful next-step cleanup without losing the current known-good paths
