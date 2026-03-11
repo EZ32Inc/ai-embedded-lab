@@ -65,13 +65,32 @@ This means:
 - new docs should present control-instrument terminology first
 - compatibility logic should remain explicit rather than accidental
 
-## Removal Boundary
+## Deprecation Plan
 
-Legacy `probe*` fields should only be considered for removal after:
-- the main CLI and docs no longer present them as primary
-- core tests stop depending on them as primary fields
-- archived output consumers are known or migrated
+### Phase 1: Demote in active outputs
 
-Until then, the repo should aim for:
-- canonical control-instrument structures first
-- legacy probe fields clearly secondary
+Status: largely complete.
+
+Meaning:
+- active runtime, summary, explain, inventory, and workflow-archive outputs should present `control_instrument*` as the primary contract
+- legacy `probe*` fields should appear only under explicit `compatibility` objects
+
+### Phase 2: Stop expanding compatibility
+
+Status: active now.
+
+Rules:
+- new code must not introduce fresh primary `probe*` fields
+- new tests should assert canonical `control_instrument*` structures first
+- new docs should describe probe wording as legacy compatibility unless the topic is specifically historical policy
+
+### Phase 3: Remove compatibility where consumers are known
+
+This should happen only after:
+- the main CLI and docs no longer present `probe*` as a current contract
+- core tests treat `probe*` as compatibility-only
+- archive and result consumers are identified or migrated
+
+Near-term target:
+- keep compatibility explicit and narrow
+- shrink it surface by surface instead of attempting a risky repo-wide removal

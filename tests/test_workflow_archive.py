@@ -54,12 +54,14 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     assert finished["selected_dut"]["id"] == "esp32c3_devkit"
     assert finished["selected_board_profile"]["config"].endswith("configs/boards/esp32c3_devkit.yaml")
     assert finished["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
-    assert finished["board"]["id"] == "esp32c3_devkit"
     assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
-    assert finished["probe"]["communication"]["primary"] == "gdb_remote"
-    assert finished["probe"]["capability_surfaces"]["swd"] == "gdb_remote"
+    assert finished["control_instrument"]["communication"]["primary"] == "gdb_remote"
+    assert finished["control_instrument"]["capability_surfaces"]["swd"] == "gdb_remote"
+    assert finished["selected"]["board_profile_config"].endswith("configs/boards/esp32c3_devkit.yaml")
     assert finished["selected"]["control_instrument_config"].endswith("configs/esp32jtag.yaml")
-    assert finished["selected"]["probe_config"].endswith("configs/esp32jtag.yaml")
+    assert finished["selected"]["compatibility"]["probe_config"].endswith("configs/esp32jtag.yaml")
+    assert finished["compatibility"]["board"]["id"] == "esp32c3_devkit"
+    assert finished["compatibility"]["probe"]["communication"]["primary"] == "gdb_remote"
     assert finished["instrument"]["communication"]["protocol"] == "gpio_meter_v1"
     assert finished["instrument"]["capability_surfaces"]["measure.digital"] == "primary"
     assert any(item.startswith("digital X1(GPIO4)->GPIO11") for item in finished["connection_digest"])
@@ -130,3 +132,26 @@ def test_pipeline_blocks_unreachable_meter_before_run(monkeypatch, tmp_path):
     assert records[-1]["action"] == "run_finished"
     assert records[-1]["status"] == "failed"
     assert records[-1]["result"]["failed_step"] == "check_meter_reachability"
+
+
+def test_workflow_archive_demotes_legacy_probe_fields_under_compatibility(monkeypatch, tmp_path):
+    monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
+
+    code, run_paths = pipeline.run_pipeline(
+        probe_path="configs/esp32jtag.yaml",
+        board_arg="esp32c3_devkit",
+        test_path="tests/plans/esp32c3_gpio_signature_with_meter.json",
+        output_mode="quiet",
+        until_stage="plan",
+        return_paths=True,
+    )
+
+    assert code == 0
+
+    records = _read_jsonl(run_paths.root / "workflow_events.jsonl")
+    finished = records[-1]
+    assert "probe" not in finished
+    assert "board" not in finished
+    assert finished["compatibility"]["probe"]["path"].endswith("configs/esp32jtag.yaml")
+    assert finished["compatibility"]["board"]["id"] == "esp32c3_devkit"

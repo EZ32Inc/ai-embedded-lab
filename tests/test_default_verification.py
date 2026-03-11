@@ -220,6 +220,47 @@ def test_run_single_promotes_verify_failure_details_from_pipeline(tmp_path):
     run_mock.assert_called_once()
 
 
+def test_run_single_reads_verify_result_details_when_pipeline_payload_is_sparse(tmp_path):
+    verify_out = tmp_path / "verify_result.json"
+    verify_out.write_text(
+        json.dumps(
+            {
+                "error_summary": "instrument digital verification failed",
+                "verify_substage": "instrument.signature",
+                "failure_class": "instrument_digital_mismatch",
+                "missing_expected_channels": ["GPIO11"],
+                "mismatch_reasons": ["state_mismatch"],
+            }
+        ),
+        encoding="utf-8",
+    )
+    test_path = tmp_path / "gpio_signature.json"
+    test_path.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")
+    step = {"board": "rp2040_pico", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=(
+            6,
+            {
+                "ok": False,
+                "json": {"verify_result": str(verify_out)},
+            },
+        ),
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    assert code == 6
+    assert result["ok"] is False
+    assert result["error_summary"] == "instrument digital verification failed"
+    assert result["verify_substage"] == "instrument.signature"
+    assert result["failure_class"] == "instrument_digital_mismatch"
+    assert result["observations"]["missing_expected_channels"] == ["GPIO11"]
+    assert result["observations"]["mismatch_reasons"] == ["state_mismatch"]
+    guard_mock.assert_not_called()
+    run_mock.assert_called_once()
+
+
 def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
     test_path = tmp_path / "gpio_signature.json"
     test_path.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")

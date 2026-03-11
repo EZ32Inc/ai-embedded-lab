@@ -208,6 +208,7 @@ Current repo state:
 - stage explanation and strategy resolution already surface some instrument communication and capability metadata
 - the implementation is still only partially unified; probe-specific and instrument-specific paths still coexist
 - durable architecture reference now exists in `docs/instrument_model.md`
+- active runtime/report/archive surfaces now prefer `control_instrument*` and keep legacy `probe*` data under explicit `compatibility` objects where still needed
 
 ### Topics to address
 - discovery
@@ -247,6 +248,7 @@ Current repo state:
 - board configs are still the dominant operational representation for live execution
 - a single unified DUT runtime model is not yet clearly established across the codebase
 - durable architecture reference now exists in `docs/dut_model.md`
+- canonical runtime/archive/report objects now include `selected_dut`, `selected_board_profile`, and `selected_bench_resources`
 
 ### Topics to address
 Examples of common DUT actions may include:

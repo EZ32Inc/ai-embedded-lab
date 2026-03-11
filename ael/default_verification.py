@@ -14,7 +14,7 @@ from ael import strategy_resolver
 from ael.config_resolver import resolve_control_instrument_config, resolve_control_instrument_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
-from ael.pipeline import _normalize_probe_cfg, _simple_yaml_load, run_pipeline
+from ael.pipeline import _extract_verify_result_details, _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
 from ael.verification_model import _failure_summary as _worker_failure_summary
@@ -219,6 +219,10 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 for key in ("error", "error_summary", "verify_substage", "failure_class", "observations"):
                     if key in payload and payload.get(key) not in (None, "", {}, []):
                         out[key] = payload.get(key)
+                if not any(key in out for key in ("error_summary", "verify_substage", "failure_class", "observations")):
+                    for key, value in _extract_verify_result_details(payload).items():
+                        if key not in out and value not in (None, "", {}, []):
+                            out[key] = value
             return int(exit_code), out
         return int(exit_code), {"ok": int(exit_code) == 0}
     return int(code), {"ok": int(code) == 0}

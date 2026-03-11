@@ -36,27 +36,44 @@ Each line is one JSON object with schema:
 - `run_id`: AEL run id when available
 - `session_id`: optional external session id
 - `task_id`: optional external task id
-- `board`: optional board metadata
+- `selected_dut`: canonical DUT identity
+- `selected_board_profile`: canonical board-policy identity
+- `selected_bench_resources`: canonical bound bench-resource identity
 - `test`: optional test metadata
-- `probe`: optional probe metadata
+- `control_instrument`: canonical control-instrument metadata when applicable
 - `instrument`: optional instrument metadata
 - `stage`: current workflow stage or requested stage boundary
 - `status`: event status
 - `stage_execution`: executed/deferred stage summary when available
 - `selected`: selected config file references when available
+- `compatibility`: explicit legacy aliases when older readers still need them
 - `artifacts`: references to generated files when available
 - `message`: optional interaction payload
 - `result`: optional run result summary
 
 Unknown fields are omitted or null instead of guessed.
 
-Current probe/instrument metadata may include:
+Current control-instrument / instrument metadata may include:
 
 - resolved communication metadata
 - capability-to-surface metadata
 - compact ConnA connection digests for easier setup diffing across runs
 
 These are archived as run-context facts only. They are not yet interpreted as runtime routing policy by the archive layer.
+
+Canonical archive readers should prefer:
+
+- `selected_dut`
+- `selected_board_profile`
+- `selected_bench_resources`
+- `control_instrument`
+
+Legacy readers may still encounter:
+
+- `compatibility.board`
+- `compatibility.probe`
+- `selected.compatibility.board_config`
+- `selected.compatibility.probe_config`
 
 ## Current Capture Points
 

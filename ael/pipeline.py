@@ -607,6 +607,45 @@ def _build_current_setup(
     return setup
 
 
+def _extract_verify_result_details(result_payload):
+    if not isinstance(result_payload, dict):
+        return {}
+    json_paths = result_payload.get("json")
+    if not isinstance(json_paths, dict):
+        return {}
+    verify_path = json_paths.get("verify_result")
+    if not verify_path:
+        return {}
+    verify_result = _read_json(verify_path)
+    if not isinstance(verify_result, dict) or not verify_result:
+        return {}
+    observations = {}
+    for key in (
+        "missing_expected_channels",
+        "mismatch_reasons",
+        "digital_mismatch_count",
+        "analog_mismatch_count",
+        "mismatch_count",
+        "backend_ready",
+        "firmware_ready_seen",
+        "missing_expect",
+        "download_mode_detected",
+        "reboot_loop_suspected",
+        "crash_detected",
+        "bytes",
+        "lines",
+    ):
+        if key in verify_result and verify_result.get(key) not in (None, "", [], {}):
+            observations[key] = verify_result.get(key)
+    details = {
+        "error_summary": verify_result.get("error_summary") or verify_result.get("error"),
+        "verify_substage": verify_result.get("verify_substage"),
+        "failure_class": verify_result.get("failure_class") or verify_result.get("failure_kind"),
+        "observations": observations,
+    }
+    return {k: v for k, v in details.items() if v not in (None, "", [], {})}
+
+
 def _build_last_known_good_setup(
     *,
     run_id,
@@ -1017,19 +1056,14 @@ def run_pipeline(
             probe_capability_surfaces=probe_capability_surfaces,
             connection_setup=conn_setup,
         ),
-        "board": {
-            "id": board_id or "unknown",
-            "name": board_cfg.get("name"),
-            "target": board_cfg.get("target"),
-        },
         "test": {
             "name": Path(test_path).stem,
             "path": str(test_path),
         },
-        "probe": {
+        "control_instrument": {
             "name": probe_cfg.get("name"),
-            "path": probe_path,
-            "instance_id": probe_instance_id,
+            "config": probe_path,
+            "instance": probe_instance_id,
             "type": probe_type,
             "endpoint": {"host": probe_host, "port": probe_port},
             "communication": dict(probe_communication or {}),
@@ -1044,13 +1078,33 @@ def run_pipeline(
             "capability_surfaces": dict(instrument_capability_surfaces or {}),
         },
         "selected": {
-            "board_config": str(board_path) if board_path else None,
+            "board_profile_config": str(board_path) if board_path else None,
             "control_instrument_config": str(probe_path) if probe_path else None,
-            "probe_config": str(probe_path) if probe_path else None,
             "test_config": str(test_path),
+            "compatibility": {
+                "board_config": str(board_path) if board_path else None,
+                "probe_config": str(probe_path) if probe_path else None,
+            },
         },
         "connection": dict(conn_setup),
         "connection_digest": build_connection_digest(conn_setup),
+        "compatibility": {
+            "board": {
+                "id": board_id or "unknown",
+                "name": board_cfg.get("name"),
+                "target": board_cfg.get("target"),
+            },
+            "probe": {
+                "name": probe_cfg.get("name"),
+                "path": probe_path,
+                "instance_id": probe_instance_id,
+                "type": probe_type,
+                "endpoint": {"host": probe_host, "port": probe_port},
+                "communication": dict(probe_communication or {}),
+                "capability_surfaces": dict(probe_capability_surfaces or {}),
+                "legacy_warning": binding.legacy_warning,
+            },
+        },
     }
 
     workflow_archive.append_event(
