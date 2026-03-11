@@ -90,6 +90,16 @@ Main fields:
 - `serial.stopbits`
 - `serial.timeout`
 
+Default serial settings are:
+
+- baudrate: `115200`
+- bytesize: `8`
+- parity: `N`
+- stopbits: `1`
+
+Those defaults match the current AEL UART example-generation default. Override
+them only when the UART example or DUT requires different settings.
+
 ## CLI
 
 Module:
@@ -101,6 +111,7 @@ Commands:
 - `list`
 - `select --serial <USB_SERIAL_NUMBER>`
 - `select --device-id <STABLE_DEVICE_ID>`
+- `select ... --baudrate <N> --bytesize <N> --parity <P> --stopbits <N> --timeout <SEC>`
 - `show`
 - `doctor`
 - `serve`

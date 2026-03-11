@@ -112,6 +112,42 @@ def test_select_bridge_device_saves_serial(tmp_path, monkeypatch):
     assert resolved["device"]["device_path"] == "/dev/ttyUSB0"
 
 
+def test_select_bridge_device_updates_serial_settings(tmp_path, monkeypatch):
+    config_path = tmp_path / "bridge.yaml"
+    monkeypatch.setattr(
+        bridge,
+        "discover_usb_uart_devices",
+        lambda **_: {
+            "ok": True,
+            "devices": [{
+                "identity_kind": "usb_serial",
+                "identity_value": "ABC123",
+                "serial_number": "ABC123",
+                "device_path": "/dev/ttyUSB0",
+            }],
+            "rejected": [],
+            "duplicate_device_identities": [],
+        },
+    )
+    payload = bridge.select_bridge_device(
+        config_path,
+        "ABC123",
+        serial_settings={
+            "baudrate": 9600,
+            "bytesize": 7,
+            "parity": "E",
+            "stopbits": 2,
+            "timeout": 0.5,
+        },
+    )
+    serial_cfg = payload["usb_uart_bridge"]["serial"]
+    assert serial_cfg["baudrate"] == 9600
+    assert serial_cfg["bytesize"] == 7
+    assert serial_cfg["parity"] == "E"
+    assert serial_cfg["stopbits"] == 2
+    assert serial_cfg["timeout"] == 0.5
+
+
 def test_select_bridge_device_accepts_non_serial_identity(tmp_path, monkeypatch):
     config_path = tmp_path / "bridge.yaml"
     monkeypatch.setattr(

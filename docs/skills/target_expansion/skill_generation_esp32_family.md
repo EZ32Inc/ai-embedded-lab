@@ -48,12 +48,17 @@ For ESP32-family work, prefer:
    - UART ready markers
    - GPIO signature behavior
    - deterministic timing used by verification
-5. Add or update:
+5. If the example uses UART and the user has not specified UART settings, use
+   the default UART configuration on both MCU and PC sides:
+   - `115200`
+   - `8N1`
+   Tell the user that this default is being used and invite an override.
+6. Add or update:
    - board config
    - test plan
    - DUT manifest/docs or provenance notes as needed
-6. Keep validation status conservative.
-7. Validate through:
+7. Keep validation status conservative.
+8. Validate through:
    - `inventory describe-test`
    - `explain-stage --stage plan`
    - build-stage confirmation

@@ -111,6 +111,21 @@ Required staged flow:
 Do not present a generated ESP32-family example as runtime-validated when only
 plan/build checks have completed.
 
+## UART default
+
+For UART-backed ESP32-family examples, if the user does not specify UART
+parameters, use:
+
+- `115200`
+- `8N1`
+
+Apply that default consistently to:
+
+- the generated firmware UART configuration
+- the PC-side bridge or serial-console expectation
+
+Treat any other UART configuration as an explicit override.
+
 ## Example expansion expectations
 
 For AEL, example generation and target generation are related but distinct.

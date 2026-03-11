@@ -38,6 +38,7 @@ def test_cli_select_show_doctor(tmp_path, monkeypatch, capsys):
     selected = json.loads(capsys.readouterr().out)
     assert selected["selected_serial_number"] == "ABC123"
     assert selected["selected_identity_kind"] == "usb_serial"
+    assert selected["serial"]["baudrate"] == 115200
 
     rc = cli.main(["--config", str(config_path), "show"])
     assert rc == 0
@@ -58,6 +59,48 @@ def test_cli_select_show_doctor(tmp_path, monkeypatch, capsys):
     assert rc == 0
     doctor = json.loads(capsys.readouterr().out)
     assert doctor["openable"] is True
+
+
+def test_cli_select_can_override_serial_settings(tmp_path, monkeypatch, capsys):
+    config_path = tmp_path / "bridge.yaml"
+    monkeypatch.setattr(
+        "ael.instruments.usb_uart_bridge_daemon.discover_usb_uart_devices",
+        lambda **_: {
+            "ok": True,
+            "devices": [{
+                "identity_kind": "usb_serial",
+                "identity_value": "ABC123",
+                "serial_number": "ABC123",
+                "device_path": "/dev/ttyUSB0",
+            }],
+            "rejected": [],
+            "duplicate_device_identities": [],
+        },
+    )
+    rc = cli.main([
+        "--config",
+        str(config_path),
+        "select",
+        "--serial",
+        "ABC123",
+        "--baudrate",
+        "9600",
+        "--bytesize",
+        "7",
+        "--parity",
+        "E",
+        "--stopbits",
+        "2",
+        "--timeout",
+        "0.5",
+    ])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["serial"]["baudrate"] == 9600
+    assert payload["serial"]["bytesize"] == 7
+    assert payload["serial"]["parity"] == "E"
+    assert payload["serial"]["stopbits"] == 2
+    assert payload["serial"]["timeout"] == 0.5
 
 
 def test_cli_select_by_device_id(tmp_path, monkeypatch, capsys):

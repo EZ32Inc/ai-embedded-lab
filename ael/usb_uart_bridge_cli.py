@@ -49,6 +49,13 @@ def _render_text_show(payload):
             lines.append(f"by_id_path: {device.get('by_id_path')}")
         if device.get("by_path_path"):
             lines.append(f"by_path_path: {device.get('by_path_path')}")
+    serial_cfg = payload.get("serial")
+    if isinstance(serial_cfg, dict):
+        lines.append(
+            "serial_settings: "
+            f"{serial_cfg.get('baudrate')} {serial_cfg.get('bytesize')}{serial_cfg.get('parity')}{serial_cfg.get('stopbits')}"
+            f" timeout={serial_cfg.get('timeout')}"
+        )
     if payload.get("error"):
         lines.append(f"error: {payload.get('error')}")
     return "\n".join(lines) + ("\n" if lines else "")
@@ -62,6 +69,13 @@ def _render_text_doctor(payload):
         f"present: {payload.get('present')}",
         f"openable: {payload.get('openable')}",
     ]
+    serial_cfg = payload.get("serial")
+    if isinstance(serial_cfg, dict):
+        lines.append(
+            "serial_settings: "
+            f"{serial_cfg.get('baudrate')} {serial_cfg.get('bytesize')}{serial_cfg.get('parity')}{serial_cfg.get('stopbits')}"
+            f" timeout={serial_cfg.get('timeout')}"
+        )
     if payload.get("resolved_tty_path"):
         lines.append(f"resolved_tty_path: {payload.get('resolved_tty_path')}")
     if payload.get("error"):
@@ -80,6 +94,11 @@ def build_parser() -> argparse.ArgumentParser:
     select_p = sub.add_parser("select")
     select_p.add_argument("--serial", required=False)
     select_p.add_argument("--device-id", required=False, dest="device_id")
+    select_p.add_argument("--baudrate", type=int, default=None)
+    select_p.add_argument("--bytesize", type=int, default=None)
+    select_p.add_argument("--parity", default=None)
+    select_p.add_argument("--stopbits", type=float, default=None)
+    select_p.add_argument("--timeout", type=float, default=None)
 
     sub.add_parser("show")
     sub.add_parser("doctor")
@@ -109,13 +128,25 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.cmd == "select":
         try:
-            payload = bridge.select_bridge_device(config_path, args.serial, identity_value=args.device_id)
+            payload = bridge.select_bridge_device(
+                config_path,
+                args.serial,
+                identity_value=args.device_id,
+                serial_settings={
+                    "baudrate": args.baudrate,
+                    "bytesize": args.bytesize,
+                    "parity": args.parity,
+                    "stopbits": args.stopbits,
+                    "timeout": args.timeout,
+                },
+            )
             out = {
                 "ok": True,
                 "config_path": str(config_path),
                 "selected_identity_kind": payload["usb_uart_bridge"].get("selected_identity_kind"),
                 "selected_identity_value": payload["usb_uart_bridge"].get("selected_identity_value"),
                 "selected_serial_number": payload["usb_uart_bridge"]["selected_serial_number"],
+                "serial": payload["usb_uart_bridge"].get("serial"),
             }
             sys.stdout.write(json.dumps(out, indent=2, sort_keys=True) + "\n")
             return 0
@@ -125,6 +156,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.cmd == "show":
         payload = bridge.resolve_selected_device(config_path)
+        cfg = bridge.load_bridge_config(config_path)
+        payload["serial"] = cfg.get("usb_uart_bridge", {}).get("serial")
         if args.format == "text":
             sys.stdout.write(_render_text_show(payload))
         else:
@@ -133,6 +166,8 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     if args.cmd == "doctor":
         payload = bridge.doctor_selected_device(config_path)
+        cfg = bridge.load_bridge_config(config_path)
+        payload["serial"] = cfg.get("usb_uart_bridge", {}).get("serial")
         if args.format == "text":
             sys.stdout.write(_render_text_doctor(payload))
         else:

@@ -246,6 +246,7 @@ def select_bridge_device(
     serial_number: Optional[str] = None,
     *,
     identity_value: Optional[str] = None,
+    serial_settings: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     serial_text = str(serial_number or "").strip()
     identity_text = str(identity_value or "").strip()
@@ -268,6 +269,12 @@ def select_bridge_device(
     bridge_cfg["selected_identity_kind"] = selected.get("identity_kind")
     bridge_cfg["selected_identity_value"] = selected.get("identity_value")
     bridge_cfg["selected_serial_number"] = selected.get("serial_number")
+    if serial_settings:
+        serial_cfg = bridge_cfg.setdefault("serial", {})
+        for key, value in serial_settings.items():
+            if value is None:
+                continue
+            serial_cfg[key] = value
     save_bridge_config(config_path, payload)
     return payload
 

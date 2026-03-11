@@ -131,6 +131,24 @@ For repo tracking, generated examples should also record:
 When an example leaves an external stimulus intentionally undefined, that should
 be recorded explicitly rather than treated as an implicit gap.
 
+## UART default rule
+
+When generating a UART-backed example and the user does not specify UART
+parameters, use the default UART configuration:
+
+- baudrate: `115200`
+- bytesize: `8`
+- parity: `N`
+- stopbits: `1`
+
+This default applies to both sides:
+
+- MCU firmware UART configuration
+- PC-side serial or bridge configuration
+
+If a different UART configuration is desired, that should be treated as an
+explicit user override rather than guessed.
+
 ## Provenance requirements
 
 Generated examples should record:
