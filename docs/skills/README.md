@@ -1,98 +1,139 @@
-# AEL Skills Index
+# AEL Skills and Workflow Notes
 
 ## Purpose
 
-This document is the entry point for the current first batch of AEL skill specifications.
+This directory stores reusable engineering knowledge extracted from real AEL development and bench work.
 
-It is a short internal reference for:
+These documents are intended to capture:
+- troubleshooting workflows
+- recurring diagnostic patterns
+- design and policy clarifications
+- operational guidance that should be reused in future work
 
-- users
-- Codex
-- Gemini or other models
-- future architecture and workflow work
+The goal is to make important experience explicit, reusable, and easier for future AI/Codex/humans to apply.
 
-These documents are lightweight skill specs, not a runtime system.
+## Why We Are Doing This
 
-Supporting guidance:
+AEL development is now producing a growing amount of valuable practical knowledge:
+- how to diagnose intermittent bench failures
+- how to interpret verification behavior
+- how to reason about resource locking and concurrency
+- how to distinguish architecture issues from bench-side issues
+- how to apply repeatable engineering workflows to real hardware problems
 
-- [Skill Usage Guidance](/nvme1t/work/codex/ai-embedded-lab/docs/skills/USAGE.md)
-- [AEL Agent Answering Guide](/nvme1t/work/codex/ai-embedded-lab/docs/agent_answering_guide.md)
+If this knowledge is not written down, it will be repeatedly rediscovered.
+Writing it down now is the fastest and lightest way to preserve and reuse it.
 
-## Current Available Skill Specs
+## Current Approach
 
-- [new_board_bringup](/nvme1t/work/codex/ai-embedded-lab/docs/skills/new_board_bringup_skill.md)
-- [plan_stage_readiness_summary](/nvme1t/work/codex/ai-embedded-lab/docs/skills/plan_stage_readiness_summary_skill.md)
-- [user_correction_and_setup_reprint](/nvme1t/work/codex/ai-embedded-lab/docs/skills/user_correction_and_setup_reprint_skill.md)
-- [validation_summary_emission](/nvme1t/work/codex/ai-embedded-lab/docs/skills/validation_summary_emission_skill.md)
-- [last_known_good_extraction](/nvme1t/work/codex/ai-embedded-lab/docs/skills/last_known_good_extraction_skill.md)
-- [default_verification_review](/nvme1t/work/codex/ai-embedded-lab/docs/skills/default_verification_review_skill.md)
-- [ael_repo_answering](/nvme1t/work/codex/ai-embedded-lab/docs/skills/ael_repo_answering_skill.md)
+For now, AEL skills are stored as simple Markdown documents under `docs/skills/`.
 
-## One-Line Purpose For Each Skill
+This is intentionally lightweight.
 
-- `new_board_bringup`: guides a new DUT board from first introduction through structured bring-up toward first validated execution.
-- `plan_stage_readiness_summary`: turns a successful `plan` stage into a clear readiness summary with assumptions, unknowns, and the next safe step.
-- `user_correction_and_setup_reprint`: absorbs user corrections to setup assumptions and reprints the updated setup clearly before work continues.
-- `validation_summary_emission`: turns a successful run result into a concise explanation of what was validated and what passed.
-- `last_known_good_extraction`: restates the reusable working setup from a successful run.
-- `default_verification_review`: interprets the default verification sequence as a baseline-health and confidence review.
-- `ael_repo_answering`: answers factual and operational AEL questions from the right formal source layer.
+At this stage, the priority is:
+1. capture useful knowledge quickly
+2. make it reusable
+3. keep development moving
 
-## When To Use Which Skill
+We are not yet building a formal skills engine or workflow execution system.
+These Markdown files are the first practical step.
 
-Practical situations:
+## What These Documents Are
 
-- Adding a new board:
-  use `new_board_bringup`
+A skill document should be a reusable engineering note, workflow, or troubleshooting guide.
 
-- After `plan` on a new or uncertain path:
-  use `plan_stage_readiness_summary`
+It should help answer questions like:
+- if this kind of problem happens again, what should we check?
+- what evidence should we collect?
+- how should we classify the problem?
+- what conclusions are already known?
+- what remains unresolved?
 
-- After the user corrects setup assumptions:
-  use `user_correction_and_setup_reprint`
+## What These Documents Are Not
 
-- After a successful run when summarizing what was validated:
-  use `validation_summary_emission`
+These documents are not:
+- raw session logs
+- timeline-style summaries
+- casual notes
+- general brainstorming text
 
-- After a successful run when restating the reusable working setup:
-  use `last_known_good_extraction`
+A session summary records what happened.
+A skill document captures what should be reused next time.
 
-- After `python3 -m ael verify-default run`:
-  use `default_verification_review`
+## Writing Guidelines
 
-- When reviewing current baseline confidence:
-  use `default_verification_review`
+Each skill document should be:
+- practical
+- concise
+- structured
+- reusable
+- grounded in real AEL work
 
-- When answering questions like “What is AEL?”, “What is esp32jtag?”, or “How do you know this?”:
-  use `ael_repo_answering`
+Prefer documenting:
+- real problems already encountered
+- workflows already used or clearly needed
+- policy decisions that affect future work
+- engineering patterns likely to recur
 
-- When a short operator-facing AEL overview is needed before deeper specs:
-  start with `docs/what_is_ael.md`
+Do not present unverified hypotheses as established facts.
+Separate:
+- confirmed observations
+- current working assumptions
+- unresolved questions
 
-## Relationship Between The Current Skills
+## Suggested Structure
 
-The current first batch has a simple structure:
+A skill document should usually include:
 
-- `new_board_bringup` is the higher-level bring-up workflow skill.
-- `plan_stage_readiness_summary` and `user_correction_and_setup_reprint` are key sub-skills inside that bring-up flow.
-- `validation_summary_emission` and `last_known_good_extraction` are key post-success reporting skills.
-- `default_verification_review` is a baseline and system review skill, not part of the bring-up chain.
-- `ael_repo_answering` is a cross-cutting interpretation skill for factual and operational questions.
+- Purpose
+- Scope
+- Background
+- Failure / Issue Classes
+- Required Observations
+- Diagnosis Workflow
+- Interpretation Guide
+- Recommended Output Format
+- Current Known Conclusions
+- Unresolved Questions
+- Related Files
+- Notes
 
-## Current Limits
+Not every document must be identical, but this structure should be the default.
 
-This current skill set is not:
+## Naming Convention
 
-- a skill runtime
-- a dispatcher or registry
-- a complete skill library
-- the final shape of AEL skill formalization
+Use clear, topic-focused filenames in lowercase with underscores.
 
-## Near-Term Usage Guidance
+Examples:
+- `esp32c6_intermittent_bench_failure.md`
+- `default_verification_repeat_mode.md`
+- `probe_fallback_policy.md`
+- `worker_resource_locking.md`
 
-These skill specs can already be used now as:
+Avoid vague names such as:
+- `notes_1.md`
+- `new_workflow.md`
+- `thoughts.md`
 
-- prompt patterns for Codex or Gemini
-- behavior and review checklists
-- output expectations in recurring workflow situations
-- lightweight references for future workflow and architecture work
+## Evolution Plan
+
+These Markdown skill documents are the starting point.
+
+Later, some or all of this knowledge may be turned into:
+- more formal workflow documents
+- structured metadata
+- machine-readable skill formats
+- agent-usable diagnostic or execution guidance
+
+For now, the rule is simple:
+capture the knowledge first, formalize it later.
+
+## Immediate Use
+
+The first intended use is to create concrete reusable skill documents from current AEL work, such as:
+- ESP32-C6 intermittent bench failure investigation
+- default verification repeat mode guidance
+- probe fallback policy
+- worker resource locking
+
+These will serve both as practical references and as examples for future skill documents.
