@@ -12,6 +12,7 @@ def run(board_cfg):
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
     project_dir = build_cfg.get("project_dir")
     target = build_cfg.get("target") or board_cfg.get("target")
+    build_dir_override = str(build_cfg.get("build_dir") or "").strip()
     print(f"Build: target {name}")
 
     if not _idf_ok():
@@ -25,7 +26,10 @@ def run(board_cfg):
     root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
     proj = os.path.join(root, project_dir)
     target_name = str(target or "esp32s3").strip()
-    build_dir = os.path.join(root, "artifacts", f"build_{target_name}")
+    if build_dir_override:
+        build_dir = os.path.join(root, build_dir_override)
+    else:
+        build_dir = os.path.join(root, "artifacts", f"build_{target_name}")
     os.makedirs(build_dir, exist_ok=True)
 
     try:

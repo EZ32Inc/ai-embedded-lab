@@ -1,0 +1,110 @@
+{
+  "version": "v0.1",
+  "enums": {
+    "family": [
+      "rp2",
+      "stm32f1",
+      "esp32c6"
+    ],
+    "example_kind": [
+      "gpio_signature",
+      "uart_banner",
+      "adc_banner",
+      "spi_banner"
+    ],
+    "source_basis": [
+      "verified_local_example_first",
+      "official_example_or_support_second",
+      "hybrid_official_plus_local_shape"
+    ],
+    "validation_status": [
+      "hardware_verified_repeated",
+      "hardware_verified_single",
+      "build_and_plan_verified",
+      "plan_verified_only"
+    ]
+  },
+  "examples": [
+    {
+      "board_id": "rp2040_pico",
+      "family": "rp2",
+      "example_kind": "uart_banner",
+      "plan": "tests/plans/rp2040_uart_banner.json",
+      "target": "firmware/targets/rp2040_pico_uart",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "rp2040_pico",
+      "family": "rp2",
+      "example_kind": "adc_banner",
+      "plan": "tests/plans/rp2040_adc_banner.json",
+      "target": "firmware/targets/rp2040_pico_adc",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "rp2040_pico",
+      "family": "rp2",
+      "example_kind": "spi_banner",
+      "plan": "tests/plans/rp2040_spi_banner.json",
+      "target": "firmware/targets/rp2040_pico_spi",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "stm32f103",
+      "family": "stm32f1",
+      "example_kind": "uart_banner",
+      "plan": "tests/plans/stm32f103_uart_banner.json",
+      "target": "firmware/targets/stm32f103_uart",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "stm32f103",
+      "family": "stm32f1",
+      "example_kind": "adc_banner",
+      "plan": "tests/plans/stm32f103_adc_banner.json",
+      "target": "firmware/targets/stm32f103_adc",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "stm32f103",
+      "family": "stm32f1",
+      "example_kind": "spi_banner",
+      "plan": "tests/plans/stm32f103_spi_banner.json",
+      "target": "firmware/targets/stm32f103_spi",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "esp32c6_devkit",
+      "family": "esp32c6",
+      "example_kind": "uart_banner",
+      "plan": "tests/plans/esp32c6_uart_banner.json",
+      "target": "firmware/targets/esp32c6_uart_banner",
+      "source_basis": "official_example_or_support_second",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "esp32c6_devkit",
+      "family": "esp32c6",
+      "example_kind": "adc_banner",
+      "plan": "tests/plans/esp32c6_adc_meter.json",
+      "target": "firmware/targets/esp32c6_adc_meter",
+      "source_basis": "official_example_or_support_second",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "esp32c6_devkit",
+      "family": "esp32c6",
+      "example_kind": "spi_banner",
+      "plan": "tests/plans/esp32c6_spi_banner.json",
+      "target": "firmware/targets/esp32c6_spi_banner",
+      "source_basis": "official_example_or_support_second",
+      "validation_status": "build_and_plan_verified"
+    }
+  ]
+}

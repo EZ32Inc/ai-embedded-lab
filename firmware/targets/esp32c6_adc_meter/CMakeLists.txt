@@ -1,0 +1,3 @@
+cmake_minimum_required(VERSION 3.16)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(ael_esp32c6_adc_meter)

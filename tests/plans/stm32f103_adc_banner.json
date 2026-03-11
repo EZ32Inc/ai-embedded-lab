@@ -1,5 +1,5 @@
 {
-  "name": "stm32f103_uart_banner",
+  "name": "stm32f103_adc_banner",
   "board": "stm32f103",
   "pin": "sig",
   "duration_s": 1.0,
@@ -7,9 +7,9 @@
   "min_edges": 2,
   "max_edges": 20000,
   "build": {
-    "project_dir": "firmware/targets/stm32f103_uart",
-    "artifact_stem": "stm32f103_uart_app",
-    "build_dir": "artifacts/build_stm32f103_uart_banner"
+    "project_dir": "firmware/targets/stm32f103_adc",
+    "artifact_stem": "stm32f103_adc_app",
+    "build_dir": "artifacts/build_stm32f103_adc_banner"
   },
   "observe_uart": {
     "enabled": true,
@@ -18,7 +18,7 @@
     "profile": "stm32",
     "duration_s": 6,
     "expect_patterns": [
-      "AEL_READY STM32F103 UART"
+      "AEL_READY STM32F103 ADC"
     ]
   }
 }

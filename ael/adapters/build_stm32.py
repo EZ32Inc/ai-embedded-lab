@@ -19,6 +19,7 @@ def run(board_cfg):
     root = Path(__file__).resolve().parents[2]
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}
     project_dir = str(build_cfg.get("project_dir") or "").strip()
+    build_dir_override = str(build_cfg.get("build_dir") or "").strip()
     if not project_dir:
         project_dir = os.path.join("firmware", "targets", "stm32f103")
     fw_dir = Path(project_dir)
@@ -30,7 +31,10 @@ def run(board_cfg):
 
     target = str(board_cfg.get("target") or fw_dir.name or "stm32").strip()
     artifact_stem = str(build_cfg.get("artifact_stem") or f"{target}_app").strip()
-    build_dir = root / "artifacts" / f"build_{target}"
+    if build_dir_override:
+        build_dir = root / build_dir_override
+    else:
+        build_dir = root / "artifacts" / f"build_{target}"
     os.makedirs(build_dir, exist_ok=True)
 
     out_elf = build_dir / f"{artifact_stem}.elf"

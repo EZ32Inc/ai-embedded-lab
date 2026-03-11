@@ -1,11 +1,11 @@
 {
-  "name": "esp32c6_uart_banner",
+  "name": "esp32c6_adc_meter",
   "board": "esp32c6_devkit",
   "dut": "esp32c6_devkit",
   "pin": "sig",
   "build": {
-    "project_dir": "firmware/targets/esp32c6_uart_banner",
-    "build_dir": "artifacts/build_esp32c6_uart_banner"
+    "project_dir": "firmware/targets/esp32c6_adc_meter",
+    "build_dir": "artifacts/build_esp32c6_adc_meter"
   },
   "preflight": {
     "enabled": false
@@ -17,7 +17,7 @@
     "profile": "espidf",
     "duration_s": 8,
     "expect_patterns": [
-      "AEL_READY ESP32C6 UART"
+      "AEL_READY ESP32C6 ADC"
     ]
   },
   "instrument": {
