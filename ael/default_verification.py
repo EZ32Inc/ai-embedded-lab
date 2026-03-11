@@ -28,6 +28,26 @@ def _default_payload() -> Dict[str, Any]:
     return {"version": 1, "mode": "none"}
 
 
+def _infer_instrument_condition(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+    condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
+    if condition:
+        return condition
+    failure_class = str(result.get("failure_class") or observations.get("failure_class") or "").strip()
+    verify_substage = str(result.get("verify_substage") or observations.get("verify_substage") or "").strip()
+    if failure_class == "network_meter_reachability":
+        return "instrument_unreachable"
+    if failure_class == "network_meter_tcp":
+        return "instrument_transport_unavailable"
+    if failure_class == "network_meter_api":
+        return "instrument_api_unavailable"
+    if verify_substage == "instrument.signature" or failure_class.startswith("instrument_"):
+        return "instrument_verify_failed"
+    return ""
+
+
 def _load_text_payload(path: Path) -> Dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     # JSON is a YAML subset and keeps parsing deterministic without extra deps.
@@ -202,7 +222,11 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         details = getattr(exc, "details", {})
         out = {"ok": False, "error": str(exc)}
         if isinstance(details, dict) and details:
-            out["observations"] = details
+            out["observations"] = dict(details)
+            instrument_condition = _infer_instrument_condition({"observations": details})
+            if instrument_condition:
+                out["instrument_condition"] = instrument_condition
+                out["observations"].setdefault("instrument_condition", instrument_condition)
         return 2, out
     code = run_pipeline(
         probe_path=probe,
@@ -216,13 +240,18 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         if isinstance(payload, dict):
             out = {"ok": int(exit_code) == 0}
             if not bool(out["ok"]):
-                for key in ("error", "error_summary", "verify_substage", "failure_class", "observations"):
+                for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "observations"):
                     if key in payload and payload.get(key) not in (None, "", {}, []):
                         out[key] = payload.get(key)
-                if not any(key in out for key in ("error_summary", "verify_substage", "failure_class", "observations")):
+                if not any(key in out for key in ("error_summary", "verify_substage", "failure_class", "instrument_condition", "observations")):
                     for key, value in _extract_verify_result_details(payload).items():
                         if key not in out and value not in (None, "", {}, []):
                             out[key] = value
+                instrument_condition = _infer_instrument_condition(out)
+                if instrument_condition and "instrument_condition" not in out:
+                    out["instrument_condition"] = instrument_condition
+                if instrument_condition and isinstance(out.get("observations"), dict):
+                    out["observations"].setdefault("instrument_condition", instrument_condition)
             return int(exit_code), out
         return int(exit_code), {"ok": int(exit_code) == 0}
     return int(code), {"ok": int(code) == 0}

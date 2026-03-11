@@ -187,6 +187,7 @@ ESP32-C6 intermittent failure diagnosis should be treated as the first high-valu
 Current caution:
 - current remaining ESP32-C6 instability appears more likely bench-side, especially on the host Wi-Fi / network path to the meter
 - observability and classification may still be worth refining, but this issue should not currently be treated as evidence of an AEL core execution-model defect
+- this path is also becoming a useful validation case for how AEL behaves with a degraded external instrument
 
 ---
 

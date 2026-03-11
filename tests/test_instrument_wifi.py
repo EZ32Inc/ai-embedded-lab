@@ -170,6 +170,7 @@ class TestInstrumentWifi(unittest.TestCase):
             ) as ctx:
                 provision.ensure_meter_reachable(MANIFEST)
         self.assertEqual("network_meter_reachability", ctx.exception.details["failure_class"])
+        self.assertEqual("instrument_unreachable", ctx.exception.details["instrument_condition"])
         self.assertFalse(ctx.exception.details["ping"]["ok"])
 
     def test_ensure_meter_reachable_distinguishes_tcp_failure(self):
@@ -192,6 +193,7 @@ class TestInstrumentWifi(unittest.TestCase):
             ) as ctx:
                 provision.ensure_meter_reachable(MANIFEST)
         self.assertEqual("network_meter_tcp", ctx.exception.details["failure_class"])
+        self.assertEqual("instrument_transport_unavailable", ctx.exception.details["instrument_condition"])
 
     def test_ensure_meter_reachable_distinguishes_api_failure(self):
         with patch(
@@ -216,6 +218,7 @@ class TestInstrumentWifi(unittest.TestCase):
             ) as ctx:
                 provision.ensure_meter_reachable(MANIFEST)
         self.assertEqual("network_meter_api", ctx.exception.details["failure_class"])
+        self.assertEqual("instrument_api_unavailable", ctx.exception.details["instrument_condition"])
 
     def test_ensure_meter_reachable_accepts_icmp_failure_when_tcp_and_api_work(self):
         with patch(

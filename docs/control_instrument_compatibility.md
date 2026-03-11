@@ -94,3 +94,15 @@ This should happen only after:
 Near-term target:
 - keep compatibility explicit and narrow
 - shrink it surface by surface instead of attempting a risky repo-wide removal
+
+## Current Remaining Compatibility Surface
+
+Still intentionally present:
+- legacy board/probe aliases inside explicit `compatibility` objects
+- older raw config names such as `probe_config`
+- selected internal helper/wrapper names where immediate removal would create excessive churn
+
+Should no longer be treated as primary:
+- live runtime summaries
+- workflow archive primary fields
+- canonical plan/report contracts

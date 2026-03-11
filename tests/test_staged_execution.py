@@ -240,6 +240,10 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
     assert summary["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert summary["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert "serial:/dev/ttyACM0" in summary["selected_bench_resources"]["resource_keys"]
+    assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in summary["selected_bench_resources"]["resource_keys"]
+    assert "probe:192.168.2.98:4242" in summary["selected_bench_resources"]["resource_keys"]
+    assert summary["selected_bench_resources"]["resource_summary"]["serial_ports"] == ["/dev/ttyACM0"]
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
     assert summary["key_checks_passed"] == ["uart.verify", "instrument.signature"]
@@ -267,6 +271,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert lkg["compatibility"]["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert lkg["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert lkg["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in lkg["selected_bench_resources"]["resource_keys"]
     assert lkg["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert "X1(GPIO4) -> GPIO11 toggle @1000Hz" in lkg["wiring_assumptions"]
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
@@ -294,6 +299,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
     assert current_setup["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert current_setup["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert current_setup["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
     assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True

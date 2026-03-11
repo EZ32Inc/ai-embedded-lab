@@ -39,6 +39,7 @@ Also confirmed:
 - some bench semantics still live partly in docs, partly in config, and partly in runtime heuristics
 - resource locking is intentionally simple and in-memory for the current process model
 - some explanation paths still speak in probe-oriented terms because of legacy model seams
+- current runtime, explain, inventory, and archive payloads now carry canonical `selected_bench_resources` objects with grouped lock-relevant ownership
 
 ## 4. Bench Model Layers
 
@@ -110,6 +111,12 @@ Confirmed resource classes already represented in the current execution model:
 - explicit flash serial port
 - instrument endpoint
 
+Confirmed visibility model:
+- `selected_bench_resources.resource_keys`
+- `selected_bench_resources.resource_summary`
+
+These fields make the lock-relevant resource projection visible without forcing tools or users to parse ad hoc strings from unrelated payload sections.
+
 Reasonable interpretation:
 - these cover the most important current contention cases for default verification
 - future expansion may add more fine-grained or explicit resource classes if the bench grows more complex
@@ -175,6 +182,7 @@ This sequence is important:
   - `selected_dut`
   - `selected_board_profile`
 - expose `resource_keys` and a grouped `resource_summary` in worker-oriented result payloads so tools do not need to parse lock strings ad hoc
+- expose the same projection under `selected_bench_resources` so setup identity and lock identity stay aligned
 
 ### Phase 3: Tighten model alignment
 
@@ -200,7 +208,7 @@ This sequence is important:
 
 ### Open questions
 
-- should runtime output surface claimed resource keys directly
+- should additional bench resources eventually be modeled beyond endpoint/port-level ownership
 - which future bench arrangements will require additional explicit resource classes
 - how much more of the bench model should be standardized in schemas versus left as pragmatic metadata
 

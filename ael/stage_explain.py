@@ -12,6 +12,7 @@ from ael.config_resolver import (
 )
 from ael.instrument_metadata import resolve_capability_surface
 from ael.probe_binding import empty_probe_binding, load_probe_binding
+from ael.verification_model import summarize_resource_keys
 from ael.strategy_resolver import (
     build_preflight_step,
     build_uart_step,
@@ -67,13 +68,26 @@ def _selected_board_profile_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[
 def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
     connection_setup = build_connection_setup(resolved.connection_ctx)
+    resource_keys = []
+    control = _control_instrument_selection(ctx)
+    if isinstance(control, dict):
+        endpoint = control.get("endpoint") if isinstance(control.get("endpoint"), dict) else {}
+        config_path = control.get("config")
+        if endpoint.get("host") and endpoint.get("port") is not None:
+            resource_keys.append(f"probe:{endpoint.get('host')}:{endpoint.get('port')}")
+        elif config_path:
+            resource_keys.append(f"probe_path:{config_path}")
+    if resolved.instrument_id and resolved.instrument_host and resolved.instrument_port is not None:
+        resource_keys.append(f"instrument:{resolved.instrument_id}:{resolved.instrument_host}:{resolved.instrument_port}")
     return {
-        "control_instrument": _control_instrument_selection(ctx),
+        "control_instrument": control,
         "instrument": {
             "id": resolved.instrument_id,
             "communication": dict(resolved.instrument_communication or {}),
             "capability_surfaces": dict(resolved.instrument_capability_surfaces or {}),
         } if any([resolved.instrument_id, resolved.instrument_communication, resolved.instrument_capability_surfaces]) else None,
+        "resource_keys": resource_keys,
+        "resource_summary": summarize_resource_keys(resource_keys),
         "connection_setup": connection_setup,
     }
 

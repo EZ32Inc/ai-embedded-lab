@@ -31,6 +31,8 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['compatibility']['probe_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload["selected"]["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert "probe_path:configs/instrument_instances/esp32jtag_stm32_golden.yaml" in payload["selected"]["selected_bench_resources"]["resource_keys"]
+    assert payload["selected"]["selected_bench_resources"]["resource_summary"]["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'gpio_in' and item['surface'] == 'web_api' for item in payload['selected']['capability_surface_plan'])
 
@@ -74,6 +76,7 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     assert payload['selected']['compatibility']['probe'] is None
     assert payload['selected']['compatibility']['probe_instance'] is None
     assert payload["selected"]["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
+    assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in payload["selected"]["selected_bench_resources"]["resource_keys"]
     assert payload['selected']['instrument_communication']['endpoint'] == '192.168.4.1:9000'
     assert any(item['capability'] == 'measure.digital' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
     assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])

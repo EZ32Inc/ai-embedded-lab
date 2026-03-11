@@ -19,6 +19,7 @@ from ael.instruments.registry import InstrumentRegistry
 from ael.instrument_view import build_resolved_instrument_inventory, render_resolved_instrument_inventory_text
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
+from ael.verification_model import summarize_resource_keys
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -199,8 +200,22 @@ def _selected_board_profile_payload(root: Path, board_id: str, board_cfg: Dict[s
 
 
 def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], connection_setup: Dict[str, Any]) -> Dict[str, Any]:
+    resource_keys = []
+    kind = str(selected_instrument.get("kind") or "").strip()
+    endpoint = selected_instrument.get("endpoint") if isinstance(selected_instrument.get("endpoint"), dict) else {}
+    if kind == "control_instrument":
+        if endpoint.get("host") and endpoint.get("port") is not None:
+            resource_keys.append(f"probe:{endpoint.get('host')}:{endpoint.get('port')}")
+        elif selected_instrument.get("config"):
+            resource_keys.append(f"probe_path:{selected_instrument.get('config')}")
+    elif kind == "instrument":
+        inst_id = selected_instrument.get("id")
+        if inst_id and endpoint.get("host") and endpoint.get("port") is not None:
+            resource_keys.append(f"instrument:{inst_id}:{endpoint.get('host')}:{endpoint.get('port')}")
     return {
         "selected_instrument": dict(selected_instrument or {}),
+        "resource_keys": resource_keys,
+        "resource_summary": summarize_resource_keys(resource_keys),
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
     }

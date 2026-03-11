@@ -21,6 +21,7 @@ from ael import strategy_resolver
 from ael.config_resolver import resolve_control_instrument_instance
 from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines
 from ael.probe_binding import empty_probe_binding, load_probe_binding
+from ael.verification_model import summarize_resource_keys
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -157,9 +158,17 @@ def _verify_failure_observations(runner_result):
         or facts.get("failure_kind")
         or ""
     ).strip()
+    instrument_condition = str(
+        out.get("instrument_condition")
+        or facts.get("instrument_condition")
+        or ""
+    ).strip()
+    if not instrument_condition and (verify_substage == "instrument.signature" or failure_class.startswith("instrument_")):
+        instrument_condition = "instrument_verify_failed"
     return {
         "verify_substage": verify_substage,
         "failure_class": failure_class,
+        "instrument_condition": instrument_condition,
         "observations": dict(facts) if isinstance(facts, dict) else {},
     }
 
@@ -403,6 +412,13 @@ def _selected_bench_resources_payload(
     probe_capability_surfaces,
     connection_setup,
 ):
+    resource_keys = []
+    if flash_port:
+        resource_keys.append(f"serial:{flash_port}")
+    if instrument_id and instrument_host and instrument_port is not None:
+        resource_keys.append(f"instrument:{instrument_id}:{instrument_host}:{instrument_port}")
+    if probe_host and probe_port is not None:
+        resource_keys.append(f"probe:{probe_host}:{probe_port}")
     return {
         "serial_port": flash_port or None,
         "selected_ap_ssid": selected_ssid or None,
@@ -425,6 +441,8 @@ def _selected_bench_resources_payload(
             communication=probe_communication,
             capability_surfaces=probe_capability_surfaces,
         ),
+        "resource_keys": resource_keys,
+        "resource_summary": summarize_resource_keys(resource_keys),
         "connection_setup": dict(connection_setup or {}),
         "connection_digest": build_connection_digest(connection_setup),
     }
@@ -641,8 +659,14 @@ def _extract_verify_result_details(result_payload):
         "error_summary": verify_result.get("error_summary") or verify_result.get("error"),
         "verify_substage": verify_result.get("verify_substage"),
         "failure_class": verify_result.get("failure_class") or verify_result.get("failure_kind"),
+        "instrument_condition": verify_result.get("instrument_condition"),
         "observations": observations,
     }
+    if not details.get("instrument_condition"):
+        verify_substage = str(details.get("verify_substage") or "").strip()
+        failure_class = str(details.get("failure_class") or "").strip()
+        if verify_substage == "instrument.signature" or failure_class.startswith("instrument_"):
+            details["instrument_condition"] = "instrument_verify_failed"
     return {k: v for k, v in details.items() if v not in (None, "", [], {})}
 
 
@@ -1247,6 +1271,7 @@ def run_pipeline(
                 "failed_step": "check_meter_reachability",
                 "error_summary": error_summary,
                 "failure_class": details.get("failure_class"),
+                "instrument_condition": details.get("instrument_condition"),
                 "observations": details,
                 "started_at": run_started.isoformat(),
                 "ended_at": ended_at,
@@ -1295,6 +1320,7 @@ def run_pipeline(
                                 "termination": RunTermination.FAIL,
                                 "failed_step": "check_meter_reachability",
                                 "error_summary": error_summary,
+                                "instrument_condition": details.get("instrument_condition"),
                             },
                             "artifacts": {
                                 "run_root": str(run_paths.root),
@@ -1609,6 +1635,8 @@ def run_pipeline(
             result["verify_substage"] = verify_failure.get("verify_substage")
         if verify_failure.get("failure_class"):
             result["failure_class"] = verify_failure.get("failure_class")
+        if verify_failure.get("instrument_condition"):
+            result["instrument_condition"] = verify_failure.get("instrument_condition")
         if isinstance(verify_failure.get("observations"), dict) and verify_failure.get("observations"):
             result["observations"] = verify_failure.get("observations")
     if result["ok"]:

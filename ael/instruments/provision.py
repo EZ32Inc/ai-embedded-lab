@@ -223,6 +223,8 @@ def ensure_meter_reachable(
     }
     details = {
         "failure_class": "",
+        "instrument_condition": "",
+        "condition_scope": "bench_instrument",
         "instrument_id": inst_id,
         "host": target,
         "port": tcp_port,
@@ -238,6 +240,11 @@ def ensure_meter_reachable(
             if not ping_result.get("ok")
             else "network_meter_tcp"
         )
+        details["instrument_condition"] = (
+            "instrument_unreachable"
+            if not ping_result.get("ok")
+            else "instrument_transport_unavailable"
+        )
         raise MeterReachabilityError(
             (
                 f"meter {inst_id} at {target} is unreachable and needs manual checking. "
@@ -249,6 +256,7 @@ def ensure_meter_reachable(
         )
     if not api_result.get("ok"):
         details["failure_class"] = "network_meter_api"
+        details["instrument_condition"] = "instrument_api_unavailable"
         raise MeterReachabilityError(
             f"meter {inst_id} at {target}:{tcp_port} accepted tcp but api ping failed.",
             details=details,
@@ -266,6 +274,8 @@ def ensure_meter_reachable(
         "api": api_result,
         "wifi_state": wifi_state,
         "route_summary": route_result,
+        "instrument_condition": ("instrument_ready_with_network_warning" if warnings else "instrument_ready"),
+        "condition_scope": "bench_instrument",
         "warnings": warnings,
     }
 

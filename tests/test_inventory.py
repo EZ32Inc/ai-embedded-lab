@@ -88,6 +88,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
+    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.98:4242"]
+    assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
     assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])

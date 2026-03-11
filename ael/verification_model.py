@@ -58,6 +58,21 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
     if failure_class:
         parts.append(f"failure_class={failure_class}")
 
+    instrument_condition = str(result.get("instrument_condition") or "").strip()
+    if not instrument_condition and isinstance(observations, dict):
+        instrument_condition = str(observations.get("instrument_condition") or "").strip()
+    if not instrument_condition:
+        if failure_class == "network_meter_reachability":
+            instrument_condition = "instrument_unreachable"
+        elif failure_class == "network_meter_tcp":
+            instrument_condition = "instrument_transport_unavailable"
+        elif failure_class == "network_meter_api":
+            instrument_condition = "instrument_api_unavailable"
+        elif verify_substage == "instrument.signature" or failure_class.startswith("instrument_"):
+            instrument_condition = "instrument_verify_failed"
+    if instrument_condition:
+        parts.append(f"instrument_condition={instrument_condition}")
+
     error = str(result.get("error") or result.get("error_summary") or "").strip()
     if error:
         parts.append(f"error={error}")
