@@ -207,6 +207,7 @@ Current repo state:
 - instrument manifests, registry lookup, instrument capability metadata, and instrument CLI flows already exist
 - stage explanation and strategy resolution already surface some instrument communication and capability metadata
 - the implementation is still only partially unified; probe-specific and instrument-specific paths still coexist
+- durable architecture reference now exists in `docs/instrument_model.md`
 
 ### Topics to address
 - discovery
@@ -245,6 +246,7 @@ Current repo state:
 - DUT assets and CLI workflows already exist in partial form (`dut create`, `dut promote`, golden vs user assets)
 - board configs are still the dominant operational representation for live execution
 - a single unified DUT runtime model is not yet clearly established across the codebase
+- durable architecture reference now exists in `docs/dut_model.md`
 
 ### Topics to address
 Examples of common DUT actions may include:
@@ -291,6 +293,7 @@ Current repo state:
 - connection normalization, bench setup resolution, inventory connection description, and worker resource locks already exist
 - the repo already models several important dependency classes explicitly
 - the main remaining need is consolidation, clarification, and better coverage of edge cases rather than starting from zero
+- durable architecture reference now exists in `docs/bench_resource_model.md`
 
 ### Topics to address
 - DUT-to-instrument connections

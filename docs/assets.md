@@ -35,6 +35,9 @@ Golden assets should be:
 - documented (wiring, pins, known limitations)
 - verified on a known bench
 
+See also:
+- `docs/dut_model.md` for the repo-level DUT architecture model and the distinction between DUT assets, board runtime profiles, and bench/test setup.
+
 ## Using `--dut` in CLI
 `--dut <id>` resolves DUTs deterministically:
 1) `assets_user/duts/<id>/manifest.yaml` (preferred)

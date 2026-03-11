@@ -13,6 +13,9 @@ An Instrument is any device that can interact with a DUT (Device Under Test), su
 
 AEL is designed so instruments can be added without changing core orchestration logic.
 
+See also:
+- `docs/instrument_model.md` for the repo-level architecture position, including the planned retirement of `probe` as a parallel top-level concept.
+
 ---
 
 ## Instrument Manifest (v0.1)
