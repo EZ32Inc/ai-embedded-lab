@@ -52,6 +52,22 @@ def test_normalize_connection_context_captures_board_and_plan_shapes():
     assert not any("ground_confirmed" in warning for warning in ctx.warnings)
 
 
+def test_normalize_connection_context_preserves_example_contract_extensions():
+    ctx = normalize_connection_context(
+        {},
+        {
+            "bench_setup": {
+                "serial_console": {"port": "/dev/ttyACM0", "baud": 115200},
+                "peripheral_signals": [{"role": "ADC0", "dut_signal": "GPIO26/ADC0", "direction": "input"}],
+                "external_inputs": [{"source": "UNSPECIFIED_ANALOG_SOURCE", "dut_signal": "GPIO26/ADC0", "kind": "analog_in"}],
+            }
+        },
+    )
+    assert ctx.bench_setup["serial_console"]["port"] == "/dev/ttyACM0"
+    assert ctx.bench_setup["peripheral_signals"][0]["role"] == "ADC0"
+    assert ctx.bench_setup["external_inputs"][0]["kind"] == "analog_in"
+
+
 def test_normalize_connection_context_warns_on_duplicate_observation_points():
     ctx = normalize_connection_context(
         {

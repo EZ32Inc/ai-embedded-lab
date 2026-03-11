@@ -20,5 +20,29 @@
     "expect_patterns": [
       "AEL_READY RP2040 SPI"
     ]
+  },
+  "bench_setup": {
+    "serial_console": {
+      "port": "/dev/ttyACM0",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "SPI0_SCK",
+        "dut_signal": "GPIO2",
+        "direction": "output"
+      },
+      {
+        "role": "SPI0_MOSI",
+        "dut_signal": "GPIO3",
+        "direction": "output"
+      },
+      {
+        "role": "SPI0_MISO",
+        "dut_signal": "GPIO4",
+        "direction": "input"
+      }
+    ]
   }
 }

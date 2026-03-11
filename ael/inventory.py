@@ -562,12 +562,22 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []
+        if conn.get("kind"):
+            extra.append(str(conn.get("kind")))
         if conn.get("expect"):
             extra.append(str(conn.get("expect")))
         if conn.get("freq_hz") is not None:
             extra.append(f"{conn.get('freq_hz')}Hz")
+        if conn.get("baud") is not None:
+            extra.append(f"baud={conn.get('baud')}")
         if conn.get("expect_v_min") is not None and conn.get("expect_v_max") is not None:
             extra.append(f"{conn.get('expect_v_min')}..{conn.get('expect_v_max')}V")
+        if conn.get("status"):
+            extra.append(f"status={conn.get('status')}")
+        if conn.get("direction"):
+            extra.append(f"direction={conn.get('direction')}")
+        if conn.get("notes"):
+            extra.append(f"notes={conn.get('notes')}")
         suffix = f" ({', '.join(extra)})" if extra else ""
         lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
     lines.append("expected_checks:")
@@ -592,14 +602,24 @@ def render_connection_text(payload: Dict[str, Any]) -> str:
     lines.append("connections:")
     for conn in payload.get("connections", []):
         extra = []
+        if conn.get("kind"):
+            extra.append(str(conn.get("kind")))
         if conn.get("expect"):
             extra.append(str(conn.get("expect")))
         if conn.get("freq_hz") is not None:
             extra.append(f"{conn.get('freq_hz')}Hz")
+        if conn.get("baud") is not None:
+            extra.append(f"baud={conn.get('baud')}")
         if conn.get("expect_v_min") is not None and conn.get("expect_v_max") is not None:
             extra.append(f"{conn.get('expect_v_min')}..{conn.get('expect_v_max')}V")
         if conn.get("required") is True:
             extra.append("required")
+        if conn.get("status"):
+            extra.append(f"status={conn.get('status')}")
+        if conn.get("direction"):
+            extra.append(f"direction={conn.get('direction')}")
+        if conn.get("notes"):
+            extra.append(f"notes={conn.get('notes')}")
         suffix = f" ({', '.join(extra)})" if extra else ""
         lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
     return "\n".join(lines).rstrip() + "\n"

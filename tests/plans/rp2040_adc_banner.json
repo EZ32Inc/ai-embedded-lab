@@ -20,5 +20,29 @@
     "expect_patterns": [
       "AEL_READY RP2040 ADC"
     ]
+  },
+  "bench_setup": {
+    "serial_console": {
+      "port": "/dev/ttyACM0",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "ADC0",
+        "dut_signal": "GPIO26/ADC0",
+        "direction": "input"
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "UNSPECIFIED_ANALOG_SOURCE",
+        "dut_signal": "GPIO26/ADC0",
+        "kind": "analog_in",
+        "required": false,
+        "status": "not_defined",
+        "notes": "Current example reports local ADC samples but does not define an external analog stimulus contract."
+      }
+    ]
   }
 }

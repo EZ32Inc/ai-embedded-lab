@@ -65,6 +65,11 @@
         "avg": 32
       }
     ],
+    "serial_console": {
+      "port": "auto_usb_serial_jtag",
+      "baud": 115200,
+      "required": true
+    },
     "ground_required": true,
     "ground_confirmed": true
   },

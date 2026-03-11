@@ -65,6 +65,33 @@
         "avg": 32
       }
     ],
+    "serial_console": {
+      "port": "auto_usb_serial_jtag",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "SPI2_CS",
+        "dut_signal": "GPIO8",
+        "direction": "output"
+      },
+      {
+        "role": "SPI2_MISO",
+        "dut_signal": "GPIO2",
+        "direction": "input"
+      },
+      {
+        "role": "SPI2_MOSI",
+        "dut_signal": "GPIO10",
+        "direction": "output"
+      },
+      {
+        "role": "SPI2_SCK",
+        "dut_signal": "GPIO11",
+        "direction": "output"
+      }
+    ],
     "ground_required": true,
     "ground_confirmed": true
   },

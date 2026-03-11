@@ -1,15 +1,15 @@
 {
-  "name": "rp2040_uart_banner",
-  "board": "rp2040_pico",
+  "name": "rp2350_uart_banner",
+  "board": "rp2350_pico2",
   "pin": "sig",
   "sample_rate_hz": 260000,
   "duration_s": 1.0,
   "min_edges": 2,
   "max_edges": 20000,
   "build": {
-    "project_dir": "firmware/targets/rp2040_pico_uart",
-    "artifact_stem": "pico_uart_banner",
-    "build_dir": "artifacts/build_rp2040_uart_banner"
+    "project_dir": "firmware/targets/rp2350_pico2_uart",
+    "artifact_stem": "pico2_uart_banner",
+    "build_dir": "artifacts/build_rp2350_uart_banner"
   },
   "observe_uart": {
     "enabled": true,
@@ -18,7 +18,7 @@
     "profile": "rp2040",
     "duration_s": 6,
     "expect_patterns": [
-      "AEL_READY RP2040 UART"
+      "AEL_READY RP2350 UART"
     ]
   },
   "bench_setup": {

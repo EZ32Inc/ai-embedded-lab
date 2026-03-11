@@ -20,5 +20,29 @@
     "expect_patterns": [
       "AEL_READY STM32F103 SPI"
     ]
+  },
+  "bench_setup": {
+    "serial_console": {
+      "port": "/dev/ttyUSB0",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "SPI1_SCK",
+        "dut_signal": "PA5",
+        "direction": "output"
+      },
+      {
+        "role": "SPI1_MISO",
+        "dut_signal": "PA6",
+        "direction": "input"
+      },
+      {
+        "role": "SPI1_MOSI",
+        "dut_signal": "PA7",
+        "direction": "output"
+      }
+    ]
   }
 }

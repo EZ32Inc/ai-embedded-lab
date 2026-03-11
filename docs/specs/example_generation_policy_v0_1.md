@@ -118,6 +118,10 @@ Generated examples must be validated conservatively and in stages:
 Do not claim runtime verification when only plan/build checks have been
 completed.
 
+Generated examples should also expose enough formal connection metadata that a
+connection question can be answered from `describe-test`, the plan, and the
+board profile without needing firmware inspection for the normal case.
+
 ## Provenance requirements
 
 Generated examples should record:

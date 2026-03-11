@@ -20,5 +20,29 @@
     "expect_patterns": [
       "AEL_READY STM32F103 ADC"
     ]
+  },
+  "bench_setup": {
+    "serial_console": {
+      "port": "/dev/ttyUSB0",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "ADC1_IN0",
+        "dut_signal": "PA0/ADC1_IN0",
+        "direction": "input"
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "UNSPECIFIED_ANALOG_SOURCE",
+        "dut_signal": "PA0/ADC1_IN0",
+        "kind": "analog_in",
+        "required": false,
+        "status": "not_defined",
+        "notes": "Current example reports local ADC samples but does not define an external analog stimulus contract."
+      }
+    ]
   }
 }

@@ -171,6 +171,43 @@ def test_describe_test_for_rp2350_gpio_signature():
     assert "selected_board_profile: rp2350_pico2" in rendered
 
 
+def test_describe_test_for_rp2350_uart_banner():
+    payload = inventory.describe_test("rp2350_pico2", "tests/plans/rp2350_uart_banner.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["selected_dut"]["id"] == "rp2350_pico2"
+    assert payload["connection_setup"]["bench_setup"]["serial_console"]["port"] == "/dev/ttyACM0"
+    assert any(conn["from"] == "host serial" and conn["to"] == "/dev/ttyACM0" for conn in payload["connections"])
+    rendered = inventory.render_describe_text(payload)
+    assert "host serial -> /dev/ttyACM0" in rendered
+
+
+def test_describe_test_for_generated_rp2040_adc_contract():
+    payload = inventory.describe_test("rp2040_pico", "tests/plans/rp2040_adc_banner.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["connection_setup"]["bench_setup"]["serial_console"]["port"] == "/dev/ttyACM0"
+    assert payload["connection_setup"]["bench_setup"]["peripheral_signals"][0]["dut_signal"] == "GPIO26/ADC0"
+    assert payload["connection_setup"]["bench_setup"]["external_inputs"][0]["status"] == "not_defined"
+    assert any(conn["from"] == "host serial" and conn["to"] == "/dev/ttyACM0" for conn in payload["connections"])
+    assert any(conn["from"] == "ADC0" and conn["to"] == "GPIO26/ADC0" for conn in payload["connections"])
+    assert any(conn["to"] == "GPIO26/ADC0" and conn.get("status") == "not_defined" for conn in payload["connections"])
+    rendered = inventory.render_describe_text(payload)
+    assert "host serial -> /dev/ttyACM0" in rendered
+    assert "ADC0 -> GPIO26/ADC0" in rendered
+    assert "UNSPECIFIED_ANALOG_SOURCE -> GPIO26/ADC0" in rendered
+
+
+def test_describe_test_for_generated_stm32_spi_contract():
+    payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["connection_setup"]["bench_setup"]["serial_console"]["port"] == "/dev/ttyUSB0"
+    assert any(conn["from"] == "SPI1_SCK" and conn["to"] == "PA5" for conn in payload["connections"])
+    rendered = inventory.render_connection_text(
+        inventory.describe_connection("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
+    )
+    assert "SPI1_SCK -> PA5" in rendered
+    assert "host serial -> /dev/ttyUSB0" in rendered
+
+
 def test_describe_connection_for_meter_path():
     payload = inventory.describe_connection("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
     assert payload["ok"] is True

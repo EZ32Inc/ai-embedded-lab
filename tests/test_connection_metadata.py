@@ -29,12 +29,18 @@ def test_validate_bench_setup_requires_expected_shapes():
         {
             "dut_to_instrument": [{"inst_gpio": 11}],
             "dut_to_instrument_analog": [{"dut_signal": "3V3"}],
+            "serial_console": {"baud": 115200},
+            "external_inputs": [{"kind": "analog_in"}],
+            "peripheral_signals": [{"role": "SPI0_SCK"}],
             "ground_required": "yes",
             "ground_confirmed": "yes",
         }
     )
     assert "bench_setup.dut_to_instrument[0].dut_gpio is required" in errors
     assert "bench_setup.dut_to_instrument_analog[0].inst_adc_gpio is required" in errors
+    assert "bench_setup.serial_console.port is required" in errors
+    assert "bench_setup.external_inputs[0].dut_signal is required" in errors
+    assert "bench_setup.peripheral_signals[0].dut_signal is required" in errors
     assert "bench_setup.ground_required must be a boolean" in errors
     assert "bench_setup.ground_confirmed must be a boolean" in errors
 
@@ -45,6 +51,9 @@ def test_validate_connection_metadata_accepts_live_meter_shape():
         {
             "bench_setup": {
                 "dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}],
+                "serial_console": {"port": "auto_usb_serial_jtag", "baud": 115200},
+                "peripheral_signals": [{"role": "ADC1_CH0", "dut_signal": "GPIO0/ADC1_CH0"}],
+                "external_inputs": [{"source": "UNSPECIFIED_ANALOG_SOURCE", "dut_signal": "GPIO0/ADC1_CH0", "kind": "analog_in"}],
                 "ground_required": True,
                 "ground_confirmed": True,
             }

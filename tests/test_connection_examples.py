@@ -48,3 +48,35 @@ def test_live_signal_boards_have_no_semantic_conn_a_warnings_for_gpio_signature(
             if "observe_map.sig resolves" in item or "verification view" in item or "test pin" in item
         ]
         assert semantic == [], f"{board_name} has semantic ConnA warning(s): {semantic}"
+
+
+def test_generated_example_plans_expose_formal_connection_contract_extensions():
+    plan_names = (
+        "rp2040_uart_banner.json",
+        "rp2040_adc_banner.json",
+        "rp2040_spi_banner.json",
+        "rp2350_uart_banner.json",
+        "stm32f103_uart_banner.json",
+        "stm32f103_adc_banner.json",
+        "stm32f103_spi_banner.json",
+        "esp32c6_uart_banner.json",
+        "esp32c6_adc_meter.json",
+        "esp32c6_spi_banner.json",
+    )
+    plans_dir = REPO_ROOT / "tests" / "plans"
+    for name in plan_names:
+        payload = _load_json(plans_dir / name)
+        bench_setup = payload.get("bench_setup", {})
+        assert isinstance(bench_setup, dict) and bench_setup, f"generated example missing bench_setup: {name}"
+        assert isinstance(bench_setup.get("serial_console"), dict), f"generated example missing serial_console: {name}"
+        serial = bench_setup["serial_console"]
+        assert serial.get("port"), f"generated example missing serial_console.port: {name}"
+        assert serial.get("baud"), f"generated example missing serial_console.baud: {name}"
+
+        if "adc" in name:
+            external = bench_setup.get("external_inputs")
+            assert isinstance(external, list) and external, f"adc example missing external_inputs: {name}"
+            assert external[0].get("status"), f"adc example missing external_inputs.status: {name}"
+        if "spi" in name:
+            signals = bench_setup.get("peripheral_signals")
+            assert isinstance(signals, list) and signals, f"spi example missing peripheral_signals: {name}"

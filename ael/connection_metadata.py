@@ -109,6 +109,43 @@ def validate_bench_setup(raw: Dict[str, Any] | Any, *, source_name: str = "bench
                     errors.append(f"{source_name}.dut_to_instrument_analog[{index}].dut_signal is required")
                 if item.get("inst_adc_gpio") is None or not str(item.get("inst_adc_gpio")).strip():
                     errors.append(f"{source_name}.dut_to_instrument_analog[{index}].inst_adc_gpio is required")
+    serial_console = raw.get("serial_console")
+    if serial_console is not None:
+        if not isinstance(serial_console, dict):
+            errors.append(f"{source_name}.serial_console must be a mapping")
+        else:
+            if not str(serial_console.get("port") or "").strip():
+                errors.append(f"{source_name}.serial_console.port is required")
+            if serial_console.get("baud") is None or not str(serial_console.get("baud")).strip():
+                errors.append(f"{source_name}.serial_console.baud is required")
+    external_inputs = raw.get("external_inputs")
+    if external_inputs is not None:
+        if not isinstance(external_inputs, list):
+            errors.append(f"{source_name}.external_inputs must be a list")
+        else:
+            for index, item in enumerate(external_inputs):
+                if not isinstance(item, dict):
+                    errors.append(f"{source_name}.external_inputs[{index}] must be a mapping")
+                    continue
+                if not str(item.get("dut_signal") or "").strip():
+                    errors.append(f"{source_name}.external_inputs[{index}].dut_signal is required")
+                if not str(item.get("kind") or "").strip():
+                    errors.append(f"{source_name}.external_inputs[{index}].kind is required")
+                if "required" in item and not _is_bool_like(item.get("required")):
+                    errors.append(f"{source_name}.external_inputs[{index}].required must be a boolean")
+    peripheral_signals = raw.get("peripheral_signals")
+    if peripheral_signals is not None:
+        if not isinstance(peripheral_signals, list):
+            errors.append(f"{source_name}.peripheral_signals must be a list")
+        else:
+            for index, item in enumerate(peripheral_signals):
+                if not isinstance(item, dict):
+                    errors.append(f"{source_name}.peripheral_signals[{index}] must be a mapping")
+                    continue
+                if not str(item.get("role") or "").strip():
+                    errors.append(f"{source_name}.peripheral_signals[{index}].role is required")
+                if not str(item.get("dut_signal") or "").strip():
+                    errors.append(f"{source_name}.peripheral_signals[{index}].dut_signal is required")
     if "ground_required" in raw and not _is_bool_like(raw.get("ground_required")):
         errors.append(f"{source_name}.ground_required must be a boolean")
     if "ground_confirmed" in raw and not _is_bool_like(raw.get("ground_confirmed")):

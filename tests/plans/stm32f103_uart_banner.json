@@ -20,5 +20,12 @@
     "expect_patterns": [
       "AEL_READY STM32F103 UART"
     ]
+  },
+  "bench_setup": {
+    "serial_console": {
+      "port": "/dev/ttyUSB0",
+      "baud": 115200,
+      "required": true
+    }
   }
 }

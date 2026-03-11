@@ -65,6 +65,28 @@
         "avg": 32
       }
     ],
+    "serial_console": {
+      "port": "auto_usb_serial_jtag",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "ADC1_CH0",
+        "dut_signal": "GPIO0/ADC1_CH0",
+        "direction": "input"
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "UNSPECIFIED_ANALOG_SOURCE",
+        "dut_signal": "GPIO0/ADC1_CH0",
+        "kind": "analog_in",
+        "required": false,
+        "status": "not_defined",
+        "notes": "Current example reports local ADC samples but does not define an external analog stimulus contract."
+      }
+    ],
     "ground_required": true,
     "ground_confirmed": true
   },

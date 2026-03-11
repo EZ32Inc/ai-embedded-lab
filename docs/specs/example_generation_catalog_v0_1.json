@@ -26,6 +26,15 @@
   },
   "examples": [
     {
+      "board_id": "rp2350_pico2",
+      "family": "rp2",
+      "example_kind": "uart_banner",
+      "plan": "tests/plans/rp2350_uart_banner.json",
+      "target": "firmware/targets/rp2350_pico2_uart",
+      "source_basis": "hybrid_official_plus_local_shape",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
       "board_id": "rp2040_pico",
       "family": "rp2",
       "example_kind": "uart_banner",

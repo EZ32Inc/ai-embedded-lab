@@ -116,6 +116,19 @@ For detailed per-test questions such as connections, expected checks, or what a 
 
 Use manual repo inspection only as fallback when the inventory command is missing or insufficient.
 
+For connection questions specifically, answer in this order:
+
+1. resolved `inventory describe-test`
+2. test plan
+3. board profile
+4. firmware source only to identify missing contract data
+
+Separate:
+
+- formal contract
+- inferred implementation detail
+- missing contract data
+
 
 ## Stage Questions
 

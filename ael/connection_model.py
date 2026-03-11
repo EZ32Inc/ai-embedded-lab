@@ -254,8 +254,9 @@ def normalize_connection_context(
 def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, Any] | Any) -> List[Dict[str, Any]]:
     rows: List[Dict[str, Any]] = []
     test = test_raw if isinstance(test_raw, dict) else {}
-    if isinstance(test.get("instrument"), dict):
-        for item in ctx.bench_setup.get("dut_to_instrument", []) if isinstance(ctx.bench_setup.get("dut_to_instrument"), list) else []:
+    bench_setup = ctx.bench_setup if isinstance(ctx.bench_setup, dict) else {}
+    if isinstance(test.get("instrument"), dict) or bench_setup:
+        for item in bench_setup.get("dut_to_instrument", []) if isinstance(bench_setup.get("dut_to_instrument"), list) else []:
             if not isinstance(item, dict):
                 continue
             row = {
@@ -266,7 +267,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             if item.get("freq_hz") is not None:
                 row["freq_hz"] = item.get("freq_hz")
             rows.append(row)
-        for item in ctx.bench_setup.get("dut_to_instrument_analog", []) if isinstance(ctx.bench_setup.get("dut_to_instrument_analog"), list) else []:
+        for item in bench_setup.get("dut_to_instrument_analog", []) if isinstance(bench_setup.get("dut_to_instrument_analog"), list) else []:
             if not isinstance(item, dict):
                 continue
             row = {
@@ -278,9 +279,48 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             if item.get("avg") is not None:
                 row["avg"] = item.get("avg")
             rows.append(row)
-        if ctx.bench_setup.get("ground_required"):
+        for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            row = {
+                "from": item.get("source") or "external source",
+                "to": item.get("dut_signal"),
+                "kind": item.get("kind"),
+            }
+            if item.get("required") is not None:
+                row["required"] = item.get("required")
+            if item.get("status"):
+                row["status"] = item.get("status")
+            if item.get("notes"):
+                row["notes"] = item.get("notes")
+            rows.append(row)
+        for item in bench_setup.get("peripheral_signals", []) if isinstance(bench_setup.get("peripheral_signals"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            row = {
+                "from": item.get("role"),
+                "to": item.get("dut_signal"),
+                "kind": "peripheral_signal",
+            }
+            if item.get("direction"):
+                row["direction"] = item.get("direction")
+            if item.get("notes"):
+                row["notes"] = item.get("notes")
+            rows.append(row)
+        serial_console = bench_setup.get("serial_console")
+        if isinstance(serial_console, dict):
+            row = {
+                "from": "host serial",
+                "to": serial_console.get("port"),
+                "kind": "serial_console",
+            }
+            if serial_console.get("baud") is not None:
+                row["baud"] = serial_console.get("baud")
+            rows.append(row)
+        if bench_setup.get("ground_required"):
             rows.append({"from": "GND", "to": "inst GND", "required": True})
-        return rows
+        if rows:
+            return rows
 
     if ctx.resolved_wiring.get("swd"):
         rows.append({"from": "SWD", "to": ctx.resolved_wiring.get("swd")})
@@ -308,21 +348,43 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
 
 def wiring_assumption_lines(ctx: NormalizedConnectionContext) -> List[str]:
     lines: List[str] = []
-    for item in ctx.bench_setup.get("dut_to_instrument", []) if isinstance(ctx.bench_setup.get("dut_to_instrument"), list) else []:
+    bench_setup = ctx.bench_setup if isinstance(ctx.bench_setup, dict) else {}
+    for item in bench_setup.get("dut_to_instrument", []) if isinstance(bench_setup.get("dut_to_instrument"), list) else []:
         if not isinstance(item, dict):
             continue
         line = f"{item.get('dut_gpio')} -> GPIO{item.get('inst_gpio')} {item.get('expect')}"
         if item.get("freq_hz"):
             line += f" @{item.get('freq_hz')}Hz"
         lines.append(line)
-    for item in ctx.bench_setup.get("dut_to_instrument_analog", []) if isinstance(ctx.bench_setup.get("dut_to_instrument_analog"), list) else []:
+    for item in bench_setup.get("dut_to_instrument_analog", []) if isinstance(bench_setup.get("dut_to_instrument_analog"), list) else []:
         if not isinstance(item, dict):
             continue
         lines.append(
             f"{item.get('dut_signal')} -> ADC GPIO{item.get('inst_adc_gpio')} "
             f"{item.get('expect_v_min')}V..{item.get('expect_v_max')}V"
         )
-    if ctx.bench_setup.get("ground_required"):
+    for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        line = f"{item.get('source') or 'external source'} -> {item.get('dut_signal')}"
+        if item.get("kind"):
+            line += f" kind={item.get('kind')}"
+        if item.get("status"):
+            line += f" status={item.get('status')}"
+        lines.append(line)
+    for item in bench_setup.get("peripheral_signals", []) if isinstance(bench_setup.get("peripheral_signals"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        line = f"{item.get('role')} -> {item.get('dut_signal')}"
+        if item.get("direction"):
+            line += f" direction={item.get('direction')}"
+        lines.append(line)
+    serial_console = bench_setup.get("serial_console")
+    if isinstance(serial_console, dict):
+        lines.append(
+            f"host serial -> {serial_console.get('port')} baud={serial_console.get('baud')}"
+        )
+    if bench_setup.get("ground_required"):
         lines.append("GND -> GND")
     return lines
 
@@ -405,6 +467,29 @@ def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, inde
                 f"expect_v={item.get('expect_v_min')}..{item.get('expect_v_max')}"
             )
             lines.append(f"{indent}  - {line}")
+        serial_console = bench_setup.get("serial_console")
+        if isinstance(serial_console, dict):
+            lines.append(
+                f"{indent}  - host serial -> {serial_console.get('port')} baud={serial_console.get('baud')}"
+            )
+        for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            line = f"{item.get('source') or 'external source'} -> {item.get('dut_signal')} kind={item.get('kind')}"
+            if item.get("status"):
+                line += f" status={item.get('status')}"
+            if item.get("notes"):
+                line += f" notes={item.get('notes')}"
+            lines.append(f"{indent}  - {line}")
+        for item in bench_setup.get("peripheral_signals", []) if isinstance(bench_setup.get("peripheral_signals"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            line = f"{item.get('role')} -> {item.get('dut_signal')}"
+            if item.get("direction"):
+                line += f" direction={item.get('direction')}"
+            if item.get("notes"):
+                line += f" notes={item.get('notes')}"
+            lines.append(f"{indent}  - {line}")
         if bench_setup.get("ground_required") is not None:
             lines.append(f"{indent}  - ground_required: {bench_setup.get('ground_required')}")
         if "ground_confirmed" in bench_setup:
@@ -475,6 +560,27 @@ def build_connection_digest(connection_setup: Dict[str, Any] | Any) -> List[str]
             dst = str(item.get("inst_adc_gpio") or "").strip()
             if src and dst:
                 digest.append(f"analog {src}->ADC{dst}")
+        serial_console = bench_setup.get("serial_console")
+        if isinstance(serial_console, dict):
+            port = str(serial_console.get("port") or "").strip()
+            baud = str(serial_console.get("baud") or "").strip()
+            if port and baud:
+                digest.append(f"serial {port}@{baud}")
+        for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            src = str(item.get("source") or "").strip() or "external source"
+            dst = str(item.get("dut_signal") or "").strip()
+            kind = str(item.get("kind") or "").strip()
+            if dst:
+                digest.append(f"external {src}->{dst}:{kind}")
+        for item in bench_setup.get("peripheral_signals", []) if isinstance(bench_setup.get("peripheral_signals"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role") or "").strip()
+            dst = str(item.get("dut_signal") or "").strip()
+            if role and dst:
+                digest.append(f"peripheral {role}->{dst}")
         if bench_setup.get("ground_required") is True:
             ground_confirmed = bench_setup.get("ground_confirmed")
             digest.append(f"ground required confirmed={ground_confirmed}")
