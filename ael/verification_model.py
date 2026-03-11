@@ -94,6 +94,37 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
     return " ".join(parts).strip()
 
 
+def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, Any]:
+    condition_counts: Dict[str, int] = {}
+    degraded_workers: List[Dict[str, Any]] = []
+    for worker in list(workers or []):
+        if not isinstance(worker, dict):
+            continue
+        results = worker.get("results")
+        last = results[-1] if isinstance(results, list) and results else {}
+        result = last.get("result") if isinstance(last, dict) else {}
+        if not isinstance(result, dict):
+            continue
+        observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+        condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
+        if not condition:
+            continue
+        condition_counts[condition] = condition_counts.get(condition, 0) + 1
+        degraded_workers.append(
+            {
+                "name": worker.get("name"),
+                "board": worker.get("board"),
+                "instrument_condition": condition,
+                "completed_iterations": worker.get("completed_iterations"),
+                "requested_iterations": worker.get("requested_iterations"),
+            }
+        )
+    return {
+        "instrument_condition_counts": condition_counts,
+        "degraded_workers": degraded_workers,
+    }
+
+
 @dataclass(frozen=True)
 class VerificationTask:
     name: str

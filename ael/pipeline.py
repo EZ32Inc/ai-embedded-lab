@@ -625,6 +625,69 @@ def _build_current_setup(
     return setup
 
 
+def _bench_resource_signature(payload):
+    if not isinstance(payload, dict):
+        return {}
+    out = {
+        "resource_keys": list(payload.get("resource_keys") or []),
+        "connection_digest": list(payload.get("connection_digest") or []),
+        "selected_ap_ssid": payload.get("selected_ap_ssid"),
+        "serial_port": payload.get("serial_port"),
+        "instrument_endpoint": None,
+        "control_instrument_endpoint": None,
+    }
+    instrument = payload.get("instrument")
+    if isinstance(instrument, dict):
+        endpoint = instrument.get("endpoint")
+        if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
+            out["instrument_endpoint"] = f"{endpoint.get('host')}:{endpoint.get('port')}"
+    control = payload.get("control_instrument")
+    if isinstance(control, dict):
+        endpoint = control.get("endpoint")
+        if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
+            out["control_instrument_endpoint"] = f"{endpoint.get('host')}:{endpoint.get('port')}"
+    return out
+
+
+def _bench_resource_drift(current_setup, last_known_good):
+    current = _bench_resource_signature(
+        current_setup.get("selected_bench_resources") if isinstance(current_setup, dict) else {}
+    )
+    last = _bench_resource_signature(
+        last_known_good.get("selected_bench_resources") if isinstance(last_known_good, dict) else {}
+    )
+    drift = {}
+    for key in (
+        "resource_keys",
+        "connection_digest",
+        "selected_ap_ssid",
+        "serial_port",
+        "instrument_endpoint",
+        "control_instrument_endpoint",
+    ):
+        if current.get(key) != last.get(key):
+            drift[key] = {"current": current.get(key), "last_known_good": last.get(key)}
+    return drift
+
+
+def _format_bench_drift(drift):
+    if not isinstance(drift, dict) or not drift:
+        return None
+    parts = []
+    for key in (
+        "resource_keys",
+        "connection_digest",
+        "selected_ap_ssid",
+        "serial_port",
+        "instrument_endpoint",
+        "control_instrument_endpoint",
+    ):
+        if key not in drift or not isinstance(drift.get(key), dict):
+            continue
+        parts.append(f"{key}={drift[key].get('current')!r} vs {drift[key].get('last_known_good')!r}")
+    return "; ".join(parts) if parts else None
+
+
 def _extract_verify_result_details(result_payload):
     if not isinstance(result_payload, dict):
         return {}
@@ -835,6 +898,9 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(f"Summary: connection_warnings={'; '.join(conn.get('warnings', []))}")
     if current_setup.get("connection_digest"):
         print(f"Summary: connection_digest={'; '.join(current_setup.get('connection_digest', []))}")
+    drift_text = _format_bench_drift(summary.get("bench_resource_drift_from_lkg"))
+    if drift_text:
+        print(f"Summary: bench_resource_drift={drift_text}")
     lkg_dut = last_known_good.get("selected_dut") if isinstance(last_known_good.get("selected_dut"), dict) else {}
     lkg_board_name = lkg_dut.get("name") or lkg_dut.get("id")
     print(
@@ -1320,7 +1386,9 @@ def run_pipeline(
                                 "termination": RunTermination.FAIL,
                                 "failed_step": "check_meter_reachability",
                                 "error_summary": error_summary,
+                                "failure_class": details.get("failure_class"),
                                 "instrument_condition": details.get("instrument_condition"),
+                                "observations": details,
                             },
                             "artifacts": {
                                 "run_root": str(run_paths.root),
@@ -1710,6 +1778,10 @@ def run_pipeline(
         result["validation_summary"] = validation_summary
         result["last_known_good_setup"] = last_known_good_setup
         result["current_setup"] = current_setup
+        bench_drift = _bench_resource_drift(current_setup, last_known_good_setup)
+        if bench_drift:
+            result["bench_resource_drift_from_lkg"] = bench_drift
+            validation_summary["bench_resource_drift_from_lkg"] = bench_drift
     _write_json(run_paths.result, result)
 
     timings = {"total_s": round(time.monotonic() - run_started_mono, 3)}
@@ -1743,6 +1815,10 @@ def run_pipeline(
                         "termination": termination,
                         "failed_step": failed_step,
                         "error_summary": result.get("error_summary"),
+                        "failure_class": result.get("failure_class"),
+                        "verify_substage": result.get("verify_substage"),
+                        "instrument_condition": result.get("instrument_condition"),
+                        "observations": result.get("observations"),
                     },
                     "artifacts": {
                         "run_root": str(run_paths.root),

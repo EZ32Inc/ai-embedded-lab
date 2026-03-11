@@ -277,7 +277,6 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert "3V3 -> ADC GPIO4 2.8V..3.45V" in lkg["wiring_assumptions"]
     assert "GND -> GND" in lkg["wiring_assumptions"]
     assert any(item.startswith("ground required confirmed=True") for item in lkg["connection_digest"])
-
     assert current_setup["serial_or_flash_port"] == "/dev/ttyACM0"
     assert current_setup["selected_dut"]["id"] == "esp32c6_devkit"
     assert current_setup["selected_board_profile"]["id"] == "esp32c6_devkit"
@@ -304,6 +303,44 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
     assert current_setup["connection_setup"]["bench_setup"]["ground_required"] is True
     assert any(item.startswith("ground required confirmed=True") for item in current_setup["connection_digest"])
+
+
+def test_bench_resource_drift_detects_endpoint_change():
+    current = {
+        "selected_bench_resources": {
+            "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"],
+            "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
+            "instrument": {"endpoint": {"host": "192.168.4.1", "port": 9000}},
+            "control_instrument": {"endpoint": {"host": "192.168.2.98", "port": 4242}},
+            "serial_port": "/dev/ttyACM0",
+        }
+    }
+    lkg = {
+        "selected_bench_resources": {
+            "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.9:9000"],
+            "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
+            "instrument": {"endpoint": {"host": "192.168.4.9", "port": 9000}},
+            "control_instrument": {"endpoint": {"host": "192.168.2.98", "port": 4242}},
+            "serial_port": "/dev/ttyACM0",
+        }
+    }
+
+    drift = pipeline._bench_resource_drift(current, lkg)
+
+    assert drift["resource_keys"]["current"] == ["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"]
+    assert drift["instrument_endpoint"]["last_known_good"] == "192.168.4.9:9000"
+
+
+def test_format_bench_drift_renders_compact_summary():
+    text = pipeline._format_bench_drift(
+        {
+            "instrument_endpoint": {"current": "192.168.4.1:9000", "last_known_good": "192.168.4.9:9000"},
+            "selected_ap_ssid": {"current": "ESP32_GPIO_METER_E7F1", "last_known_good": "ESP32_GPIO_METER_OLD"},
+        }
+    )
+
+    assert "instrument_endpoint='192.168.4.1:9000' vs '192.168.4.9:9000'" in text
+    assert "selected_ap_ssid='ESP32_GPIO_METER_E7F1' vs 'ESP32_GPIO_METER_OLD'" in text
 
 
 def test_print_success_summary_includes_capability_surface_lines(capsys):

@@ -18,7 +18,7 @@ from ael.pipeline import _extract_verify_result_details, _normalize_probe_cfg, _
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
 from ael.verification_model import _failure_summary as _worker_failure_summary
-from ael.verification_model import summarize_resource_keys
+from ael.verification_model import summarize_resource_keys, summarize_worker_health
 
 
 DEFAULT_CONFIG_PATH = ael_paths.repo_root() / "configs" / "default_verification_setting.yaml"
@@ -220,9 +220,11 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     except Exception as exc:
         print(f"default_verification: {exc}")
         details = getattr(exc, "details", {})
-        out = {"ok": False, "error": str(exc)}
+        out = {"ok": False, "error": str(exc), "error_summary": str(exc)}
         if isinstance(details, dict) and details:
             out["observations"] = dict(details)
+            if details.get("failure_class"):
+                out["failure_class"] = details.get("failure_class")
             instrument_condition = _infer_instrument_condition({"observations": details})
             if instrument_condition:
                 out["instrument_condition"] = instrument_condition
@@ -383,6 +385,10 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
             if detail:
                 line += f" {detail}"
         _log_line(lock, line)
+    counts = summarize_worker_health(workers).get("instrument_condition_counts")
+    if isinstance(counts, dict) and counts:
+        parts = [f"{name}={counts[name]}" for name in sorted(counts)]
+        _log_line(lock, f"[SUMMARY] degraded_instruments {' '.join(parts)}")
 
 
 def _run_parallel_suite_once(
@@ -477,6 +483,7 @@ def _run_parallel_repeat_until_fail(
         "requested_iterations_per_worker": limit,
         "workers": workers,
         "results": results,
+        "health_summary": summarize_worker_health(workers),
     }
     if first_failure is not None:
         payload["failure"] = {

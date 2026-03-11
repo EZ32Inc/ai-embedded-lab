@@ -162,6 +162,7 @@ Current repo state:
 - first-pass structured meter reachability diagnostics now exist
 - early meter failures can emit structured observations into results/evidence
 - verify-stage evidence is richer than before, but still not yet a full failure taxonomy
+- degraded external instrument conditions are now promoted more explicitly in suite-level results and repeat-mode summaries
 
 ### Immediate goals
 - improve failure classification further

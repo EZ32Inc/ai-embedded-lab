@@ -24,6 +24,7 @@ Optional control-plane entry points (not required by default core CLI):
 `run(case, profile)` equivalent:
 - No single function named `run(case, profile)`.
 - Practical equivalent is `run_pipeline(probe_path, board_arg, test_path, ...)` in `ael/pipeline.py:365`.
+- Current preferred terminology is control-instrument-first; `probe_path` remains a compatibility-oriented parameter name in the runtime entrypoint.
 
 ## Task 2 - Run Lifecycle Verification
 

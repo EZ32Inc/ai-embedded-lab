@@ -29,6 +29,9 @@ Current execution model:
   for synchronized suite rounds
 - `verify-default repeat-until-fail` remains supported as a compatibility alias
   for the same behavior
+- when a worker fails because an external instrument is unstable, unrelated
+  workers should keep progressing and the failure summary should classify the
+  degraded instrument condition explicitly
 
 Current default sequence:
 

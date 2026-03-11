@@ -168,6 +168,8 @@ def test_run_single_blocks_unreachable_esp32_meter(tmp_path):
     assert result["error"] == (
         "meter esp32s3_dev_c_meter at 192.168.4.1 is unreachable and needs manual checking. Suggestion: add a meter reset feature."
     )
+    assert result["error_summary"] == result["error"]
+    assert result["failure_class"] == "network_meter_reachability"
     assert result["observations"]["failure_class"] == "network_meter_reachability"
     assert result["observations"]["instrument_condition"] == "instrument_unreachable"
     assert result["observations"]["host"] == "192.168.4.1"
@@ -263,6 +265,37 @@ def test_run_single_reads_verify_result_details_when_pipeline_payload_is_sparse(
     assert result["observations"]["mismatch_reasons"] == ["state_mismatch"]
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
+
+
+def test_print_worker_totals_reports_degraded_instrument_summary(capsys):
+    default_verification._print_worker_totals(
+        threading.Lock(),
+        [
+            {
+                "name": "esp32c6_golden_gpio",
+                "completed_iterations": 2,
+                "pass_count": 1,
+                "ok": False,
+                "results": [
+                    {
+                        "result": {
+                            "failure_class": "network_meter_api",
+                            "instrument_condition": "instrument_api_unavailable",
+                        }
+                    }
+                ],
+            },
+            {
+                "name": "rp2040_golden_gpio_signature",
+                "completed_iterations": 2,
+                "pass_count": 2,
+                "ok": True,
+                "results": [{"result": {"ok": True}}],
+            },
+        ],
+    )
+    out = capsys.readouterr().out
+    assert "[SUMMARY] degraded_instruments instrument_api_unavailable=1" in out
 
 
 def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
@@ -953,3 +986,5 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert by_name["unstable_meter"]["completed_iterations"] == 2
     assert by_name["stable_probe"]["completed_iterations"] == 5
     assert payload["failure"]["step_name"] == "unstable_meter"
+    assert payload["health_summary"]["instrument_condition_counts"] == {"instrument_api_unavailable": 1}
+    assert payload["health_summary"]["degraded_workers"][0]["name"] == "unstable_meter"

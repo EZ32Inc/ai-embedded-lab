@@ -54,12 +54,13 @@ Purpose: record **what was requested** (by CLI or pack), at an ID level.
 | Field | Type | Required | Description |
 |------|------|----------|-------------|
 | `board_id` | string | yes | Board identifier (e.g. `"stm32f4_nucleo"`) |
-| `probe_id` | string | no | Probe identifier (if applicable) |
+| `control_instrument_id` | string | no | Control-instrument identifier (if applicable) |
 | `instrument_id` | string | no | Instrument identifier (if applicable) |
 | `test_id` | string | yes | Test identifier |
 | `pack_id` | string | no | Pack identifier if invoked via pack |
 
 > Note: These are **IDs**, not implementation details. Different runs will have different values.
+> Compatibility note: older payloads may still carry `probe_id`.
 
 ---
 

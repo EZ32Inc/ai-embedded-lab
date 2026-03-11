@@ -48,7 +48,7 @@ serial.
 
 - top-level suite dispatch: parallel
 - per-board execution: serial
-- per-board iteration loop in `repeat-until-fail`: independent per worker
+- per-board iteration loop in `repeat` / `repeat-until-fail`: independent per worker
 - reporting:
   - suite start/done lines are interleaved safely through a log lock
   - pipeline-level logs still come from the existing serial run path and are not

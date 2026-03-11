@@ -132,6 +132,7 @@ def test_pipeline_blocks_unreachable_meter_before_run(monkeypatch, tmp_path):
     assert records[-1]["action"] == "run_finished"
     assert records[-1]["status"] == "failed"
     assert records[-1]["result"]["failed_step"] == "check_meter_reachability"
+    assert records[-1]["result"]["observations"] == {}
 
 
 def test_workflow_archive_demotes_legacy_probe_fields_under_compatibility(monkeypatch, tmp_path):
@@ -155,3 +156,53 @@ def test_workflow_archive_demotes_legacy_probe_fields_under_compatibility(monkey
     assert "board" not in finished
     assert finished["compatibility"]["probe"]["path"].endswith("configs/esp32jtag.yaml")
     assert finished["compatibility"]["board"]["id"] == "esp32c3_devkit"
+
+
+def test_workflow_archive_failed_result_keeps_verify_details(monkeypatch, tmp_path):
+    monkeypatch.setenv("AEL_RUNS_ROOT", str(tmp_path / "runs"))
+    monkeypatch.setenv("AEL_WORKFLOW_ARCHIVE_ROOT", str(tmp_path / "workflow_archive"))
+
+    def _fake_run_plan(*_args, **_kwargs):
+        return {
+            "ok": False,
+            "termination": "fail",
+            "error_summary": "instrument digital verification failed",
+            "steps": [
+                {
+                    "name": "check_signal",
+                    "ok": False,
+                    "result": {
+                        "ok": False,
+                        "verify_substage": "instrument.signature",
+                        "failure_class": "instrument_digital_mismatch",
+                        "evidence": [
+                            {
+                                "status": "fail",
+                                "facts": {
+                                    "missing_expected_channels": ["GPIO11"],
+                                },
+                            }
+                        ],
+                    },
+                }
+            ],
+        }
+
+    monkeypatch.setattr("ael.pipeline.run_plan", _fake_run_plan)
+    monkeypatch.setattr("ael.pipeline._ensure_meter_reachable_for_run", lambda *_args, **_kwargs: None)
+
+    code, run_paths = pipeline.run_pipeline(
+        probe_path="configs/esp32jtag.yaml",
+        board_arg="esp32c6_devkit",
+        test_path="tests/plans/esp32c6_gpio_signature_with_meter.json",
+        output_mode="quiet",
+        return_paths=True,
+    )
+
+    assert code == 6
+    records = _read_jsonl(run_paths.root / "workflow_events.jsonl")
+    finished = records[-1]
+    assert finished["result"]["failure_class"] == "instrument_digital_mismatch"
+    assert finished["result"]["verify_substage"] == "instrument.signature"
+    assert finished["result"]["instrument_condition"] == "instrument_verify_failed"
+    assert finished["result"]["observations"]["missing_expected_channels"] == ["GPIO11"]

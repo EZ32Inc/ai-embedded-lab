@@ -114,8 +114,10 @@ Confirmed resource classes already represented in the current execution model:
 Confirmed visibility model:
 - `selected_bench_resources.resource_keys`
 - `selected_bench_resources.resource_summary`
+- `bench_resource_drift_from_lkg` in successful validation output when current bound resources differ from last-known-good
 
 These fields make the lock-relevant resource projection visible without forcing tools or users to parse ad hoc strings from unrelated payload sections.
+They also make resource drift easier to spot when the same test is rerun against a different bench endpoint or serial path.
 
 Reasonable interpretation:
 - these cover the most important current contention cases for default verification

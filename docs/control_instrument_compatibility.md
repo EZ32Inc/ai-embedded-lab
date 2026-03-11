@@ -106,3 +106,14 @@ Should no longer be treated as primary:
 - live runtime summaries
 - workflow archive primary fields
 - canonical plan/report contracts
+
+## Current Deprecation Boundary
+
+Keep for now:
+- raw compatibility objects in runtime/archive payloads
+- legacy config names such as `probe_config`
+- internal wrappers whose removal would cause broad adapter churn
+
+Prefer to retire next:
+- older user-visible doc/examples that still present `probe` as a current primary term
+- remaining machine-readable payload examples that still show `probe_id` without a compatibility note
