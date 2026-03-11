@@ -48,7 +48,7 @@ Typical inputs include:
 Useful additional inputs may include:
 
 - test plan identity
-- instrument or probe identity
+- instrument or control-instrument identity
 - selected endpoint or port
 - run-specific bench facts that matter for repeatability
 

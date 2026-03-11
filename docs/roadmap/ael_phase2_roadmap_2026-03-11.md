@@ -161,6 +161,7 @@ The repo now contains enough real architecture and operational policy that undoc
 1. Audit remaining visible `probe*` references in active docs/examples/help.
 2. Demote or rewrite them where users would still be confused.
 3. Keep compatibility only where it is intentionally needed.
+4. Treat older active docs/examples as a higher priority than deep internal helper renames.
 
 ## Batch Group B: Degraded-Instrument Policy Hardening
 
@@ -179,6 +180,7 @@ The repo now contains enough real architecture and operational policy that undoc
 1. Tighten resource identity and drift semantics.
 2. Keep lock identity, selected bench resources, and current/LKG output aligned.
 3. Expand resource classes only for real new contention needs.
+4. Avoid changing stable comparison fields unless operator value clearly improves.
 
 ## Batch Group E: Workflow/Skills Expansion
 
@@ -242,3 +244,8 @@ The best next Phase 2 starting sequence is:
 3. keep tightening bench/resource comparison and drift semantics where operator value is clear
 4. continue bounded DUT/runtime cleanup only where board-profile-driven behavior is still too ambiguous in active outputs
 5. keep expanding workflow/skills in parallel around recurring Phase 2 review and operations work
+
+Current practical emphasis:
+- doc/example cleanup first
+- contract churn only when it buys real operator clarity
+- let real bench failures drive any further observability expansion

@@ -119,6 +119,10 @@ Prefer to retire next:
 - remaining machine-readable payload examples that still show `probe_id` without a compatibility note
 - remaining top-level CLI/help examples that still mention `--probe` outside an explicit legacy-compatibility context
 
+Current practical examples of "retire next":
+- older phase and trace docs that still say `board/probe/test`
+- active guidance docs that still say "probe or instrument" where the intended current meaning is "control instrument or instrument"
+
 Deferred while degraded-instrument policy settles:
 - low-level helper and adapter parameter names that still use `probe_cfg`
 - compatibility wrappers whose removal would mix naming churn with runtime policy work
@@ -130,6 +134,9 @@ Active user-facing/runtime-facing surfaces should now read as:
 - control-instrument-first
 - DUT and board-profile separated
 - bench resources compared through `selected_bench_resources`
+
+This means the main remaining cleanup target is no longer runtime summaries.
+It is active documentation/examples plus older compatibility-oriented wording that users can still encounter.
 
 Legacy `probe*` remains acceptable only when:
 

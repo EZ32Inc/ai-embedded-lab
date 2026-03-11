@@ -45,7 +45,7 @@ At board introduction, AEL should identify:
 - board id
 - target family
 - intended first test path
-- intended instrument or probe dependencies
+- intended instrument or control-instrument dependencies
 - any known assumptions carried over from a similar board
 
 Required output:
@@ -133,7 +133,7 @@ For `plan`:
 For `pre-flight`:
 
 - whether executed, skipped, or failed
-- probe or instrument readiness status
+- control-instrument or instrument readiness status
 - serial or flash port assumptions versus confirmed values
 - which checks are advisory versus required
 - precise reason for any skip

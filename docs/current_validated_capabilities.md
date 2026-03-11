@@ -43,13 +43,13 @@ Known nuance:
 ### 2. RP2040 / Raspberry Pi Pico Verification Path
 
 - board family: `rp2040`
-- validation style: probe-based pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main probe path: `ESP32JTAG` at `192.168.2.63:4242` with LA verify via `https://192.168.2.63:443`
+- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
+- main control-instrument path: `esp32jtag_rp2040_lab` at `192.168.2.63:4242` with LA verify via `https://192.168.2.63:443`
 - current status: validated on real hardware and stable in current default verification
 
 What is currently solid in this path:
 
-- pre-flight probe/network/LA checks are working
+- pre-flight control-instrument/network/LA checks are working
 - build and flash are working
 - logic-analyzer verification is working
 - standardized validation summary and last-known-good setup output are present
@@ -61,13 +61,13 @@ Known nuance:
 ### 3. STM32F103 / Bluepill Verification Path
 
 - board family: `stm32f103`
-- validation style: probe-based pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main probe path: `esp32jtag_stm32_golden` at `192.168.2.98:4242` with LA verify via `https://192.168.2.98:443`
+- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
+- main control-instrument path: `esp32jtag_stm32_golden` at `192.168.2.98:4242` with LA verify via `https://192.168.2.98:443`
 - current status: validated on real hardware and stable in current default verification
 
 What is currently solid in this path:
 
-- pre-flight probe/network/LA checks are working
+- pre-flight control-instrument/network/LA checks are working
 - build and flash are working
 - logic-analyzer verification is working
 - the STM32 BMDA post-load reattach sequence is stable in repeated golden runs
@@ -135,7 +135,7 @@ The most important strengths that are now clearly real:
 - multiple MCU families are validated in practice
 - multiple bench interaction styles are already working:
   - Wi-Fi instrument path
-  - probe/JTAG/logic-analyzer path
+  - control-instrument/JTAG/logic-analyzer path
 - default verification covers more than one family and more than one validation style
 - evidence-driven validation is real, not hypothetical
 - successful runs now produce usable summaries instead of only raw logs
@@ -151,7 +151,7 @@ Most relevant current gaps:
 - instrument abstraction is improved, but not yet fully unified in implementation
 - some intermittent meter-side timeout behavior has been observed in reruns
 - the workflow/skills layer is growing, but still not broad enough to cover all recurring review patterns
-- some older docs/examples still use legacy probe-first wording
+- some older docs/examples still use legacy probe-first wording and remain candidates for gradual cleanup
 
 ## Current Product / Engineering Decisions
 

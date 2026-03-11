@@ -108,7 +108,7 @@ Its job is to answer:
 
 Confirmed resource classes already represented in the current execution model:
 - DUT identity
-- probe endpoint or probe binding
+- control-instrument endpoint or control-instrument binding
 - explicit flash serial port
 - instrument endpoint
 
@@ -212,6 +212,7 @@ This sequence is important:
 ### Reasonable interpretation
 
 - the main next need is better visibility and continued alignment, not a wholesale redesign
+- active operator-facing comparison is now good enough that further changes should be driven by concrete usability gaps, not contract churn
 
 ### Open questions
 
