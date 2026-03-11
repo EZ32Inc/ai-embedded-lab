@@ -140,8 +140,8 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
     ).strip() or None
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
     return {
-        "kind": "probe",
-        "canonical_kind": "control_instrument",
+        "kind": "control_instrument",
+        "legacy_kind": "probe",
         "id": binding.instance_id or binding.raw.get("probe", {}).get("name") or "ESP32JTAG",
         "type": binding.type_id,
         "instrument_role": "control",
@@ -158,11 +158,11 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
 def _primary_selected_instrument(poi: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(poi, dict):
         return {}
-    canonical_kind = str(poi.get("canonical_kind") or poi.get("kind") or "").strip()
-    if canonical_kind == "control_instrument":
+    kind = str(poi.get("kind") or "").strip()
+    if kind == "control_instrument":
         return {
             "kind": "control_instrument",
-            "legacy_kind": poi.get("kind"),
+            "legacy_kind": poi.get("legacy_kind"),
             "id": poi.get("id"),
             "type": poi.get("type"),
             "instrument_role": poi.get("instrument_role") or "control",
@@ -360,7 +360,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "path": path.relative_to(root).as_posix(),
             "validation_style": _infer_validation_style(payload),
         },
-        "probe_or_instrument": _resolve_probe_or_instrument(root, board_id, payload),
+        "selected_instrument": _primary_selected_instrument(_resolve_probe_or_instrument(root, board_id, payload)),
         "connections": build_connection_rows(connection_ctx, payload),
         "expected_checks": _build_expected_checks(board_cfg, payload),
         "board_context": {
@@ -374,7 +374,9 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         "notes": payload.get("notes"),
         "warnings": [f"warning: {item}" for item in connection_ctx.warnings],
     }
-    result["selected_instrument"] = _primary_selected_instrument(result["probe_or_instrument"])
+    legacy = _resolve_probe_or_instrument(root, board_id, payload)
+    if legacy.get("legacy_kind"):
+        result["compatibility"] = {"probe_or_instrument": legacy}
     return result
 
 
@@ -437,7 +439,7 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"board: {payload.get('board')}")
     test = payload.get("test", {})
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
-    poi = payload.get("selected_instrument", {}) or payload.get("probe_or_instrument", {})
+    poi = payload.get("selected_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
     if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):
         lines.append(f"legacy_kind: {poi.get('legacy_kind')}")

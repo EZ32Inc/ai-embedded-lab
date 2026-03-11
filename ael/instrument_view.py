@@ -85,8 +85,8 @@ def build_probe_instance_view(
     binding = load_probe_binding(root, instance_id=instance_id)
     refs = referenced_by or {}
     return {
-        "kind": "probe_instance",
-        "canonical_kind": "control_instrument_instance",
+        "kind": "control_instrument_instance",
+        "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
@@ -209,12 +209,14 @@ def build_resolved_instrument_inventory(repo_root: Path | str | None = None) -> 
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "repo_root": str(root),
         "summary": {
-            "probe_instance_count": len(probe_instances),
             "control_instrument_instance_count": len(probe_instances),
             "instrument_count": len(instruments),
         },
         "control_instrument_instances": probe_instances,
-        "probe_instances": probe_instances,
+        "compatibility": {
+            "probe_instances": probe_instances,
+            "probe_instance_count": len(probe_instances),
+        },
         "instruments": instruments,
     }
 
@@ -224,10 +226,10 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         return f"error: {payload.get('error')}\n"
     lines: List[str] = []
     lines.append(f"id: {payload.get('id')}")
-    kind = payload.get("canonical_kind") or payload.get("kind")
+    kind = payload.get("kind")
     lines.append(f"kind: {kind}")
-    if payload.get("kind") and payload.get("canonical_kind") and payload.get("kind") != payload.get("canonical_kind"):
-        lines.append(f"legacy_kind: {payload.get('kind')}")
+    if payload.get("legacy_kind"):
+        lines.append(f"legacy_kind: {payload.get('legacy_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_role"):
@@ -277,10 +279,10 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
     if not payload.get("ok"):
         return f"error: {payload.get('error')}\n"
     lines: List[str] = []
-    kind = payload.get("canonical_kind") or payload.get("kind")
+    kind = payload.get("kind")
     lines.append(f"{payload.get('id')} [{kind}]")
-    if payload.get("kind") and payload.get("canonical_kind") and payload.get("kind") != payload.get("canonical_kind"):
-        lines.append(f"legacy_kind: {payload.get('kind')}")
+    if payload.get("legacy_kind"):
+        lines.append(f"legacy_kind: {payload.get('legacy_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_role"):
@@ -321,8 +323,10 @@ def render_resolved_instrument_inventory_text(payload: Dict[str, Any]) -> str:
     summary = payload.get("summary") or {}
     lines.append("Instrument instances")
     lines.append(f"control_instrument_instance_count: {summary.get('control_instrument_instance_count', 0)}")
-    lines.append(f"probe_instance_count: {summary.get('probe_instance_count', 0)}")
     lines.append(f"instrument_count: {summary.get('instrument_count', 0)}")
+    compat = payload.get("compatibility") or {}
+    if compat.get("probe_instance_count") is not None:
+        lines.append(f"legacy_probe_instance_count: {compat.get('probe_instance_count')}")
     lines.append("")
     for item in payload.get("control_instrument_instances") or []:
         lines.append(f"{item.get('id')} ({item.get('type')})")

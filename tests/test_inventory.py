@@ -58,18 +58,18 @@ def test_inventory_instances_cli_json_output():
     )
     payload = json.loads(res.stdout)
     assert payload["ok"] is True
-    assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["probe_instances"])
     assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["control_instrument_instances"])
     assert any(item["id"] == "esp32s3_dev_c_meter" for item in payload["instruments"])
-    assert all(not item["metadata_validation_errors"] for item in payload["probe_instances"])
+    assert all(not item["metadata_validation_errors"] for item in payload["control_instrument_instances"])
+    assert any(item["id"] == "esp32jtag_stm32_golden" for item in payload["compatibility"]["probe_instances"])
 
 
 def test_build_instrument_instance_inventory_includes_references():
     payload = inventory.build_instrument_instance_inventory(REPO_ROOT)
-    probe = next(item for item in payload["probe_instances"] if item["id"] == "esp32jtag_stm32_golden")
+    probe = next(item for item in payload["control_instrument_instances"] if item["id"] == "esp32jtag_stm32_golden")
     meter = next(item for item in payload["instruments"] if item["id"] == "esp32s3_dev_c_meter")
     assert payload["summary"]["control_instrument_instance_count"] >= 1
-    assert probe["canonical_kind"] == "control_instrument_instance"
+    assert probe["kind"] == "control_instrument_instance"
     assert "stm32f103" in probe["referenced_by"]["boards"]
     assert "stm32f401rct6" in probe["referenced_by"]["boards"]
     assert "esp32c6_gpio_signature_with_meter.json" in " ".join(meter["referenced_by"]["plans"])
@@ -84,13 +84,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["selected_instrument"]["legacy_kind"] == "probe"
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
-    assert payload["probe_or_instrument"]["kind"] == "probe"
-    assert payload["probe_or_instrument"]["canonical_kind"] == "control_instrument"
-    assert payload["probe_or_instrument"]["id"] == "esp32jtag_stm32_golden"
-    assert payload["probe_or_instrument"]["type"] == "esp32jtag"
-    assert payload["probe_or_instrument"]["instrument_role"] == "control"
-    assert payload["probe_or_instrument"]["communication"]["primary"] == "gdb_remote"
-    assert payload["probe_or_instrument"]["capability_surfaces"]["swd"] == "gdb_remote"
+    assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
+    assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
@@ -125,10 +120,7 @@ def test_describe_test_for_meter_path():
     assert payload["ok"] is True
     assert payload["selected_instrument"]["kind"] == "instrument"
     assert payload["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
-    assert payload["probe_or_instrument"]["kind"] == "instrument"
-    assert payload["probe_or_instrument"]["id"] == "esp32s3_dev_c_meter"
-    assert payload["probe_or_instrument"]["communication"]["protocol"] == "gpio_meter_v1"
-    assert payload["probe_or_instrument"]["capability_surfaces"]["measure.digital"] == "primary"
+    assert "compatibility" not in payload or "probe_or_instrument" not in payload.get("compatibility", {})
     assert any(conn["from"] == "X1(GPIO4)" and conn["to"] == "inst GPIO11" for conn in payload["connections"])
     assert any(check["type"] == "instrument_measure" for check in payload["expected_checks"])
     rendered = inventory.render_describe_text(payload)

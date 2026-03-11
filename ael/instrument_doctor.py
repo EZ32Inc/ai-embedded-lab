@@ -76,8 +76,8 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
     }
     return {
         "ok": overall_ok,
-        "kind": "probe_instance",
-        "canonical_kind": "control_instrument_instance",
+        "kind": "control_instrument_instance",
+        "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
@@ -137,7 +137,7 @@ def doctor(repo_root: str | Path, target_id: str) -> Dict[str, Any]:
     resolved = build_resolved_instrument_view(Path(repo_root), target_id)
     if not resolved.get("ok"):
         return resolved
-    if resolved.get("kind") == "probe_instance":
+    if resolved.get("kind") == "control_instrument_instance" or resolved.get("legacy_kind") == "probe_instance":
         payload = doctor_probe_instance(repo_root, target_id)
     else:
         payload = doctor_instrument_manifest(target_id)

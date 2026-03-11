@@ -13,8 +13,8 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def test_build_resolved_probe_instance_view():
     payload = instrument_view.build_resolved_instrument_view(REPO_ROOT, "esp32jtag_stm32_golden")
     assert payload["ok"] is True
-    assert payload["kind"] == "probe_instance"
-    assert payload["canonical_kind"] == "control_instrument_instance"
+    assert payload["kind"] == "control_instrument_instance"
+    assert payload["legacy_kind"] == "probe_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
     assert payload["type"] == "esp32jtag"
     assert payload["instrument_role"] == "control"
