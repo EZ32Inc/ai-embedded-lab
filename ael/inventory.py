@@ -185,7 +185,16 @@ def _selected_dut_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) 
         "mcu": manifest.get("mcu") or board_cfg.get("target"),
         "family": manifest.get("family"),
         "source": "user" if isinstance(dut, dict) and "/assets_user/" in str(dut.get("path") or "") else ("golden" if dut else None),
-        "board_config": f"configs/boards/{board_id}.yaml" if (root / "configs" / "boards" / f"{board_id}.yaml").exists() else None,
+    }
+
+
+def _selected_board_profile_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    board_path = root / "configs" / "boards" / f"{board_id}.yaml"
+    return {
+        "id": board_id,
+        "name": board_cfg.get("name"),
+        "target": board_cfg.get("target"),
+        "config": board_path.relative_to(root).as_posix() if board_path.exists() else None,
     }
 
 
@@ -386,6 +395,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "validation_style": _infer_validation_style(payload),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
+        "selected_board_profile": _selected_board_profile_payload(root, board_id, board_cfg),
         "selected_instrument": selected_instrument,
         "selected_bench_resources": _selected_bench_resources_payload(selected_instrument, connection_setup),
         "connections": build_connection_rows(connection_ctx, payload),
@@ -473,6 +483,11 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
             lines.append(f"dut_name: {dut.get('name')}")
         if dut.get("target"):
             lines.append(f"dut_target: {dut.get('target')}")
+    board_profile = payload.get("selected_board_profile", {})
+    if isinstance(board_profile, dict) and board_profile:
+        lines.append(f"selected_board_profile: {board_profile.get('id')}")
+        if board_profile.get("config"):
+            lines.append(f"board_profile_config: {board_profile.get('config')}")
     poi = payload.get("selected_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
     if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):

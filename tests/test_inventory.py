@@ -81,6 +81,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_dut"]["id"] == "stm32f401rct6"
+    assert payload["selected_board_profile"]["id"] == "stm32f401rct6"
+    assert payload["selected_board_profile"]["config"] == "configs/boards/stm32f401rct6.yaml"
     assert payload["selected_instrument"]["kind"] == "control_instrument"
     assert payload["selected_instrument"]["legacy_kind"] == "probe"
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
@@ -104,6 +106,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
     rendered = inventory.render_describe_text(payload)
     assert "selected_dut: stm32f401rct6" in rendered
+    assert "selected_board_profile: stm32f401rct6" in rendered
+    assert "board_profile_config: configs/boards/stm32f401rct6.yaml" in rendered
     assert "control_instrument: esp32jtag_stm32_golden" in rendered
     assert "legacy_kind: probe" in rendered
     assert "connection_setup:" in rendered
@@ -123,6 +127,7 @@ def test_describe_test_for_meter_path():
     payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_dut"]["id"] == "esp32c6_devkit"
+    assert payload["selected_board_profile"]["config"] == "configs/boards/esp32c6_devkit.yaml"
     assert payload["selected_instrument"]["kind"] == "instrument"
     assert payload["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["selected_bench_resources"]["selected_instrument"]["id"] == "esp32s3_dev_c_meter"
