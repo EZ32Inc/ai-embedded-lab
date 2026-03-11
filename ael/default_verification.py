@@ -211,6 +211,16 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         wiring=None,
         output_mode=output_mode,
     )
+    if isinstance(code, tuple) and len(code) == 2:
+        exit_code, payload = code
+        if isinstance(payload, dict):
+            out = {"ok": int(exit_code) == 0}
+            if not bool(out["ok"]):
+                for key in ("error", "error_summary", "verify_substage", "failure_class", "observations"):
+                    if key in payload and payload.get(key) not in (None, "", {}, []):
+                        out[key] = payload.get(key)
+            return int(exit_code), out
+        return int(exit_code), {"ok": int(exit_code) == 0}
     return int(code), {"ok": int(code) == 0}
 
 
