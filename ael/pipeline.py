@@ -346,6 +346,25 @@ def _key_passed_checks(evidence_payload):
     return checks
 
 
+def _control_instrument_payload(
+    *,
+    instance_id,
+    type_id,
+    endpoint,
+    communication,
+    capability_surfaces,
+):
+    if not any([instance_id, type_id, endpoint, communication, capability_surfaces]):
+        return None
+    return {
+        "instance": instance_id or None,
+        "type": type_id or None,
+        "endpoint": endpoint,
+        "communication": dict(communication or {}),
+        "capability_surfaces": dict(capability_surfaces or {}),
+    }
+
+
 def _build_validation_summary(
     *,
     run_id,
@@ -386,6 +405,13 @@ def _build_validation_summary(
         "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "probe_communication": dict(probe_communication or {}),
         "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
+        "control_instrument": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint=(f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None),
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument_instance": probe_instance_id or None,
         "control_instrument_type": probe_type or None,
         "control_instrument_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
@@ -443,6 +469,16 @@ def _build_current_setup(
         },
         "probe_communication": dict(probe_communication or {}),
         "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
+        "control_instrument": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint={
+                "host": probe_host or None,
+                "port": probe_port if probe_port is not None else None,
+            },
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument_instance": probe_instance_id or None,
         "control_instrument_type": probe_type or None,
         "control_instrument_endpoint": {
@@ -497,6 +533,13 @@ def _build_last_known_good_setup(
         "probe_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "probe_communication": dict(probe_communication or {}),
         "probe_capability_surfaces": dict(probe_capability_surfaces or {}),
+        "control_instrument": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint=(f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None),
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument_instance": probe_instance_id or None,
         "control_instrument_type": probe_type or None,
         "control_instrument_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,

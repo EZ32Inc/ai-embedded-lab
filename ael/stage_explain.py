@@ -24,6 +24,25 @@ from ael.strategy_resolver import (
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
+    instance = ctx.get("probe_instance_id")
+    config_path = ctx.get("probe_path")
+    type_id = ctx.get("probe_type")
+    communication = dict(ctx.get("probe_communication") or {})
+    capability_surfaces = dict(ctx.get("probe_capability_surfaces") or {})
+    if not any([instance, config_path, type_id, communication, capability_surfaces]):
+        return None
+    return {
+        "config": config_path,
+        "instance": instance,
+        "type": type_id,
+        "communication": communication,
+        "capability_surfaces": capability_surfaces,
+    }
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -149,6 +168,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "board": board_id,
         "test": {"name": test_raw.get("name"), "path": ctx["test_path"]},
         "selected": {
+            "control_instrument_selection": _control_instrument_selection(ctx),
             "probe": ctx["probe_path"],
             "probe_instance": ctx.get("probe_instance_id"),
             "probe_type": ctx.get("probe_type"),
