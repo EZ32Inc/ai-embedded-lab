@@ -11,6 +11,8 @@ def test_explain_plan_for_stm32f401():
     assert payload['ok'] is True
     assert payload['stage'] == 'plan'
     assert payload["selected"]["selected_dut"]["id"] == "stm32f401rct6"
+    assert payload["selected"]["selected_board_profile"]["id"] == "stm32f401rct6"
+    assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/stm32f401rct6.yaml"
     assert payload['selected']['builder_kind'] == 'arm_debug'
     assert payload['selected']['board_clock_hz'] == 16000000
     assert payload['selected']['check_model'] == 'signal_verify'
@@ -37,6 +39,7 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "rp2040_pico"
+    assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/rp2040_pico.yaml"
     assert payload['selected']['control_instrument_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['control_instrument_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
@@ -64,6 +67,7 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "esp32c6_devkit"
+    assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/esp32c6_devkit.yaml"
     assert payload['selected']['control_instrument_selection'] is None
     assert payload['selected']['control_instrument'] is None
     assert payload['selected']['control_instrument_instance'] is None
@@ -84,6 +88,7 @@ def test_render_text_includes_communication_blocks_readably():
             "test": {"name": "gpio_signature", "path": "tests/plans/gpio_signature.json"},
             "selected": {
                 "selected_dut": {"id": "stm32f401rct6", "name": "STM32F401"},
+                "selected_board_profile": {"id": "stm32f401rct6", "config": "configs/boards/stm32f401rct6.yaml"},
                 "selected_bench_resources": {
                     "control_instrument": {"instance": "esp32jtag_stm32_golden"},
                     "connection_setup": {
@@ -112,6 +117,7 @@ def test_render_text_includes_communication_blocks_readably():
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
     assert "selected_dut:" in text
+    assert "selected_board_profile:" in text
     assert "selected_bench_resources:" in text
     assert "connection_setup:" in text
     assert "ground_confirmed: True" in text

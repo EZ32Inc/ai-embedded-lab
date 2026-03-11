@@ -50,7 +50,17 @@ def _selected_dut_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "id": board_id,
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
-        "board_config": ctx.get("board_path"),
+    }
+
+
+def _selected_board_profile_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
+    resolved = ctx.get("resolved")
+    board_cfg = resolved.board_cfg if resolved is not None else {}
+    return {
+        "id": board_id,
+        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
+        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "config": ctx.get("board_path"),
     }
 
 
@@ -194,6 +204,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "test": {"name": test_raw.get("name"), "path": ctx["test_path"]},
         "selected": {
             "selected_dut": _selected_dut_payload(board_id, ctx),
+            "selected_board_profile": _selected_board_profile_payload(board_id, ctx),
             "selected_bench_resources": _selected_bench_resources_payload(ctx),
             "control_instrument_selection": _control_instrument_selection(ctx),
             "control_instrument": ctx["probe_path"],

@@ -90,6 +90,18 @@ This separation matters because the same DUT may:
 - run on more than one bench arrangement
 - share build policy with a board family while still differing in test intent
 
+## 5.1 Runtime Boundary
+
+In runtime and explanation outputs, AEL should prefer:
+
+- `selected_dut` for target identity
+- `selected_board_profile` for board-policy identity
+- `selected_bench_resources` for bound external resources
+
+This boundary is important because board profile is not DUT identity.
+Board profile explains how AEL will build/flash/observe by default.
+DUT explains what target is being verified.
+
 ## 6. Current Operational Reality
 
 Today, AEL runtime behavior is driven primarily by:
@@ -160,6 +172,7 @@ The next steps should be incremental.
 - surface selected DUT identity more consistently in results and explanation paths
 - make it easier to tell whether a run is board-selected, DUT-selected, or both
 - prefer a canonical `selected_dut` object in structured outputs, with older flat board fields kept only for compatibility where necessary
+- add a peer `selected_board_profile` object so board policy is explicit instead of being hidden inside DUT selection
 
 ### Phase 3: Tighten resolver policy
 

@@ -375,6 +375,17 @@ def _selected_dut_payload(*, board_id, board_cfg):
     }
 
 
+def _selected_board_profile_payload(*, board_id, board_cfg):
+    if not board_id and not isinstance(board_cfg, dict):
+        return None
+    return {
+        "id": board_id or None,
+        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
+        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "config": (f"configs/boards/{board_id}.yaml" if board_id else None),
+    }
+
+
 def _selected_bench_resources_payload(
     *,
     flash_port,
@@ -445,6 +456,7 @@ def _build_validation_summary(
 ):
     summary = {
         "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_board_profile": _selected_board_profile_payload(board_id=board_id, board_cfg=board_cfg),
         "selected_bench_resources": _selected_bench_resources_payload(
             flash_port=flash_info.get("port"),
             selected_ssid=selected_ssid,
@@ -534,6 +546,7 @@ def _build_current_setup(
 ):
     setup = {
         "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_board_profile": _selected_board_profile_payload(board_id=board_id, board_cfg=board_cfg),
         "selected_bench_resources": _selected_bench_resources_payload(
             flash_port=flash_info.get("port"),
             selected_ssid=selected_ssid,
@@ -618,6 +631,7 @@ def _build_last_known_good_setup(
 ):
     setup = {
         "selected_dut": _selected_dut_payload(board_id=board_id, board_cfg=board_cfg),
+        "selected_board_profile": _selected_board_profile_payload(board_id=board_id, board_cfg=board_cfg),
         "selected_bench_resources": _selected_bench_resources_payload(
             flash_port=flash_info.get("port"),
             selected_ssid=selected_ssid,
