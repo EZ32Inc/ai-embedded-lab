@@ -51,11 +51,11 @@ Notes:
 
 1. Receive run request
 - `ael/__main__.py:main` (`run` command)
-- Resolves board/probe/test input and calls `ael.pipeline.run_cli`.
+- Resolves board/control-instrument/test input and calls `ael.pipeline.run_cli`.
 
 2. Load config/spec/profile-like inputs
 - `ael/pipeline.py:run_pipeline`
-- Loads test JSON, probe YAML, board YAML; merges into effective config.
+- Loads test JSON, control-instrument config, board YAML; merges into effective config.
 
 3. Prepare execution plan
 - `ael/pipeline.py:run_pipeline`
@@ -118,5 +118,5 @@ Notes:
 - `ael/pipeline.py` still mixes orchestration with strategy details (build/flash/verify branching).
 - Recovery framework exists, but default recovery action is mostly noop.
 - No first-class run-level timeout termination in core runner.
-- Case/profile concepts are implicit (board/probe/test inputs) rather than explicit typed entities.
+- Case/profile concepts are implicit (board/control-instrument/test inputs) rather than explicit typed entities.
 - Multiple entry surfaces (`ael`, `ael.pipeline`, `ael_controlplane`, `ael.cli`) can be confusing without a single canonical architecture doc.

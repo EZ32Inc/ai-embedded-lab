@@ -26,7 +26,7 @@ python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
   - Verify a signal pin (`sig`) with freq/duty constraints over ~1s window.
 - Environment assumptions:
   - RP2040 toolchain and `PICO_SDK_PATH` available for CMake build.
-  - Probe/network reachable for preflight + LA verify.
+  - Control-instrument/network path reachable for preflight + LA verify.
 
 ## 3) End-to-end call chain
 
@@ -110,3 +110,6 @@ From `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature/`:
 - `recovery_policy.retries` exists in plan JSON, but effective retry counts are enforced by runner step-type defaults; coupling is implicit.
 - Retry budget precedence is now explicit in runner: `step.retry_budget` > `recovery_policy.retries` > built-in defaults.
 - `verify.log` is always part of result metadata even when signal verification primarily uses observe + measure files.
+
+Compatibility note:
+- step type names such as `preflight.probe` are still legacy internal step labels, not the preferred external architecture vocabulary.

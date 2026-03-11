@@ -1,8 +1,8 @@
 # Phase B Strategy Boundary
 
 ## 1. Logic moved out of `pipeline.py`
-- Probe/board/test strategy normalization:
-  - probe config normalization
+- Control-instrument/board/test strategy normalization:
+  - control-instrument config normalization
   - board build override shaping from test inputs
   - wiring merge/default requirement shaping
   - timeout resolution
@@ -18,8 +18,11 @@
 ## 2. New module/object introduced
 - New module: `ael/strategy_resolver.py`
 - New thin output object:
-  - `ResolvedRunStrategy` dataclass containing normalized `probe_cfg`, `board_cfg`, `wiring_cfg`, resolved timeout, and banner-level test/instrument fields.
+  - `ResolvedRunStrategy` dataclass containing normalized control-instrument config, board config, wiring config, resolved timeout, and banner-level test/instrument fields.
 - The resolver module now owns strategy/policy and step-input shaping; it does not execute steps.
+
+Compatibility note:
+- some internal field names still use `probe_cfg` for compatibility, but this should not be treated as the preferred architecture vocabulary.
 
 ## 3. What remains intentionally in `pipeline.py`
 - Top-level orchestration:

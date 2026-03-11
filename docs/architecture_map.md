@@ -20,7 +20,7 @@ Path traced from `python3 -m ael run ...`:
 
 - Parse and resolve CLI input:
   - `ael/__main__.py:main`
-  - board/probe resolution via `ael/config_resolver.py`
+  - board/control-instrument resolution via `ael/config_resolver.py`
 - Start pipeline:
   - `ael/pipeline.py:run_cli` -> `run_pipeline`
   - run directory created by `ael/run_manager.py:create_run`
@@ -63,7 +63,7 @@ Path traced from `python3 -m ael run ...`:
 - External tool subprocesses:
   - `cmake`, `idf.py`, `arm-none-eabi-gdb`, and related toolchain commands
 - Device/API calls:
-  - probe/instrument TCP and HTTP(S) endpoints (preflight, LA capture, instrument ops)
+  - control-instrument/instrument TCP and HTTP(S) endpoints (preflight, LA capture, instrument ops)
 - Filesystem outputs:
   - runs under `runs/<run_id>/...` (deterministic default from `ael/paths.py:runs_root`)
   - queue/reports paths under repo root (`ael/paths.py`)
