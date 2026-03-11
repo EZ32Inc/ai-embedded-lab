@@ -1,0 +1,12 @@
+usb_uart_bridge:
+  selected_serial_number: null
+  listen:
+    host: "127.0.0.1"
+    port: 8767
+  serial:
+    baudrate: 115200
+    bytesize: 8
+    parity: "N"
+    stopbits: 1
+    timeout: 1.0
+
