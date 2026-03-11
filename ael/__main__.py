@@ -13,8 +13,8 @@ from ael.doctor_checks import la_capture_ok, monitor_version, validate_config
 from ael import run_manager
 from ael.config_resolver import (
     resolve_board_config,
+    resolve_control_instrument_config,
     resolve_doctor_required_tools,
-    resolve_probe_config,
 )
 from ael.probe_binding import load_probe_binding
 from ael.default_verification import (
@@ -44,7 +44,7 @@ def main():
     run_p.add_argument("--pack", required=False)
     run_p.add_argument("--board", required=False, help="Board id")
     run_p.add_argument("--dut", required=False, help="DUT id from assets_golden/assets_user")
-    run_p.add_argument("--probe", required=False, default=None)
+    run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
     run_p.add_argument(
@@ -58,7 +58,7 @@ def main():
     out_group.add_argument("--verbose", action="store_true", help="Verbose console output")
 
     doc_p = sub.add_parser("doctor")
-    doc_p.add_argument("--probe", default=None)
+    doc_p.add_argument("--probe", default=None, help="Legacy compatibility flag for control instrument config")
     doc_p.add_argument("--board", default=None)
     doc_p.add_argument("--test", default=os.path.join("tests", "blink_gpio.json"))
 
@@ -213,8 +213,8 @@ def main():
 
     la_check_p = sub.add_parser("la-check")
     la_check_p.add_argument("--pin", required=True)
-    la_check_p.add_argument("--board", required=False, help="Board id used to resolve default probe")
-    la_check_p.add_argument("--probe", required=False, default=None)
+    la_check_p.add_argument("--board", required=False, help="Board id used to resolve default control instrument")
+    la_check_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for control instrument config")
     la_check_p.add_argument("--duration-s", type=float, default=1.0)
     la_check_p.add_argument("--expected-hz", type=float, default=1.0)
     la_check_p.add_argument("--min-edges", type=int, default=1)
@@ -280,7 +280,7 @@ def main():
                     verify_only=False,
                 )
                 sys.exit(code)
-        probe_path = resolve_probe_config(repo_root, args, board_id=board_id)
+        probe_path = resolve_control_instrument_config(repo_root, args, board_id=board_id)
         if not test_path and not pack_path:
             print("Provide --test or --pack (or use --dut with defaults).")
             sys.exit(2)
@@ -294,7 +294,7 @@ def main():
         )
         sys.exit(code)
     if args.cmd == "doctor":
-        doc_probe = resolve_probe_config(repo_root, args, pack_meta={"mode": "doctor"})
+        doc_probe = resolve_control_instrument_config(repo_root, args, pack_meta={"mode": "doctor"})
         doc_board = resolve_board_config(repo_root, args, pack_meta={"mode": "doctor"})
         code = run_doctor(doc_probe, doc_board, args.test)
         sys.exit(code)
@@ -857,7 +857,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
         t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
         print(f"Using pack: {pack_name}")
         print(f"Pack test: {t}")
-        probe_path = resolve_probe_config(
+        probe_path = resolve_control_instrument_config(
             repo_root,
             args=None,
             board_id=pack_board,

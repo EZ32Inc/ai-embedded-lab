@@ -16,6 +16,11 @@ AEL is designed so instruments can be added without changing core orchestration 
 See also:
 - `docs/instrument_model.md` for the repo-level architecture position, including the planned retirement of `probe` as a parallel top-level concept.
 
+Terminology note:
+- preferred current term: `control instrument`
+- legacy compatibility term: `probe`
+- in current AEL output, debug/JTAG-style hardware may still carry legacy `probe_*` fields for compatibility, but the preferred user-facing wording is `control_instrument*`
+
 ---
 
 ## Instrument Manifest (v0.1)

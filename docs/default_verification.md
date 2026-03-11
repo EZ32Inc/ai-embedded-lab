@@ -39,12 +39,12 @@ Current default sequence:
 2. `rp2040_golden_gpio_signature`
    - board: `rp2040_pico`
    - test: `tests/plans/gpio_signature.json`
-   - probe instance: `esp32jtag_rp2040_lab`
+   - control instrument instance: `esp32jtag_rp2040_lab`
    - evidence: logic-analyzer `gpio.signal`
 3. `stm32f103_golden_gpio_signature`
    - board: `stm32f103`
    - test: `tests/plans/gpio_signature.json`
-   - probe instance: `esp32jtag_stm32_golden`
+   - control instrument instance: `esp32jtag_stm32_golden`
    - evidence: logic-analyzer `gpio.signal`
 
 Current validated baseline:
@@ -65,5 +65,5 @@ Known-good comparison artifacts:
 
 Legacy note:
 
-- old raw probe configs such as `configs/esp32jtag.yaml` are still accepted
+- old raw probe configs such as `configs/esp32jtag.yaml` are still accepted as legacy control-instrument config forms
 - they now warn: `Using legacy shared probe config; explicit instrument instance is recommended.`
