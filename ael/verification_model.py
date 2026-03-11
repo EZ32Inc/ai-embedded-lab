@@ -12,6 +12,35 @@ VerificationRunner = Callable[[Path, Dict[str, Any], str], Tuple[int, Dict[str, 
 VerificationLogger = Callable[[str], None]
 
 
+def summarize_resource_keys(keys: List[str] | None) -> Dict[str, Any]:
+    raw = list(keys or [])
+    summary: Dict[str, Any] = {
+        "dut_ids": [],
+        "control_instrument_endpoints": [],
+        "control_instrument_configs": [],
+        "serial_ports": [],
+        "instrument_endpoints": [],
+        "other": [],
+    }
+    for key in raw:
+        text = str(key or "").strip()
+        if not text:
+            continue
+        if text.startswith("dut:"):
+            summary["dut_ids"].append(text.split(":", 1)[1])
+        elif text.startswith("probe:"):
+            summary["control_instrument_endpoints"].append(text.split(":", 1)[1])
+        elif text.startswith("probe_path:"):
+            summary["control_instrument_configs"].append(text.split(":", 1)[1])
+        elif text.startswith("serial:"):
+            summary["serial_ports"].append(text.split(":", 1)[1])
+        elif text.startswith("instrument:"):
+            summary["instrument_endpoints"].append(text.split(":", 1)[1])
+        else:
+            summary["other"].append(text)
+    return summary
+
+
 def _failure_summary(result: Dict[str, Any] | Any) -> str:
     if not isinstance(result, dict):
         return ""
@@ -83,6 +112,8 @@ class VerificationWorkerResult:
     fail_count: int
     ok: bool
     results: List[Dict[str, Any]]
+    resource_keys: List[str]
+    resource_summary: Dict[str, Any]
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -94,6 +125,8 @@ class VerificationWorkerResult:
             "fail_count": self.fail_count,
             "ok": self.ok,
             "results": list(self.results),
+            "resource_keys": list(self.resource_keys),
+            "resource_summary": dict(self.resource_summary),
         }
 
 
@@ -152,6 +185,8 @@ class VerificationWorker:
             fail_count=fail_count,
             ok=fail_count == 0 and len(iterations) == self.iteration_limit,
             results=iterations,
+            resource_keys=list(self.resource_keys),
+            resource_summary=summarize_resource_keys(self.resource_keys),
         )
 
     def _log(self, message: str) -> None:

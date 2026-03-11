@@ -6,7 +6,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from ael import default_verification
-from ael.verification_model import VerificationTask, VerificationWorker
+from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
 
 
 def test_worker_logs_failure_summary_details():
@@ -82,6 +82,34 @@ def test_worker_logs_wait_when_blocked_on_shared_resource():
 
     wait_line = next(item for item in second_lines if item.startswith("[WAIT]"))
     assert "stm32f103_golden_gpio_signature waiting for resource instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in wait_line
+
+
+def test_worker_result_includes_resource_keys_and_summary():
+    worker = VerificationWorker(
+        task=VerificationTask(name="rp2040_golden_gpio_signature", board="rp2040_pico"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=lambda *_args: (0, {"ok": True}),
+        resource_keys=[
+            "dut:rp2040_pico",
+            "probe:192.168.2.63:4242",
+            "serial:/dev/ttyACM0",
+            "instrument:esp32s3_dev_c_meter:192.168.4.1:9000",
+        ],
+    )
+
+    payload = worker.run().to_dict()
+
+    assert payload["resource_keys"] == [
+        "dut:rp2040_pico",
+        "probe:192.168.2.63:4242",
+        "serial:/dev/ttyACM0",
+        "instrument:esp32s3_dev_c_meter:192.168.4.1:9000",
+    ]
+    assert payload["resource_summary"]["dut_ids"] == ["rp2040_pico"]
+    assert payload["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.63:4242"]
+    assert payload["resource_summary"]["serial_ports"] == ["/dev/ttyACM0"]
+    assert payload["resource_summary"]["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -493,10 +521,14 @@ def test_task_resource_keys_include_explicit_probe_and_instrument(tmp_path):
     )
 
     keys = default_verification._task_resource_keys(REPO_ROOT, task)
+    summary = default_verification._task_resource_summary(REPO_ROOT, task)
 
     assert "dut:esp32c6_devkit" in keys
     assert any(key.endswith("/configs/esp32jtag.yaml") for key in keys)
     assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in keys
+    assert summary["dut_ids"] == ["esp32c6_devkit"]
+    assert summary["control_instrument_configs"]
+    assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
 
 
 def test_task_resource_keys_for_esp32c6_default_do_not_include_probe(tmp_path):
@@ -525,10 +557,34 @@ def test_task_resource_keys_for_esp32c6_default_do_not_include_probe(tmp_path):
     )
 
     keys = default_verification._task_resource_keys(REPO_ROOT, task)
+    summary = default_verification._task_resource_summary(REPO_ROOT, task)
 
     assert "dut:esp32c6_devkit" in keys
     assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in keys
     assert not any(key.startswith("probe:") or key.startswith("probe_path:") for key in keys)
+    assert summary["control_instrument_endpoints"] == []
+    assert summary["control_instrument_configs"] == []
+    assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
+
+
+def test_summarize_resource_keys_groups_known_types():
+    summary = summarize_resource_keys(
+        [
+            "dut:stm32f103",
+            "probe:192.168.2.98:4242",
+            "probe_path:configs/instrument_instances/esp32jtag_stm32_golden.yaml",
+            "serial:/dev/ttyACM1",
+            "instrument:esp32s3_dev_c_meter:192.168.4.1:9000",
+            "custom:thing",
+        ]
+    )
+
+    assert summary["dut_ids"] == ["stm32f103"]
+    assert summary["control_instrument_endpoints"] == ["192.168.2.98:4242"]
+    assert summary["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
+    assert summary["serial_ports"] == ["/dev/ttyACM1"]
+    assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
+    assert summary["other"] == ["custom:thing"]
 
 
 def test_worker_claims_shared_resources_serially():
