@@ -41,6 +41,49 @@ def test_worker_logs_failure_summary_details():
     assert "observations=ping=ok,tcp=ok,api=fail" in fail_line
 
 
+def test_worker_logs_wait_when_blocked_on_shared_resource():
+    first_lines = []
+    second_lines = []
+    release = threading.Event()
+
+    def first_runner(*_args):
+        release.wait(timeout=1.0)
+        return 0, {"ok": True}
+
+    def second_runner(*_args):
+        return 0, {"ok": True}
+
+    worker_a = VerificationWorker(
+        task=VerificationTask(name="esp32c6_golden_gpio", board="esp32c6_devkit"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=first_runner,
+        log_fn=first_lines.append,
+        resource_keys=["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"],
+    )
+    worker_b = VerificationWorker(
+        task=VerificationTask(name="stm32f103_golden_gpio_signature", board="stm32f103"),
+        repo_root=REPO_ROOT,
+        output_mode="normal",
+        runner=second_runner,
+        log_fn=second_lines.append,
+        resource_keys=["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"],
+    )
+
+    t1 = threading.Thread(target=worker_a.run)
+    t2 = threading.Thread(target=worker_b.run)
+    t1.start()
+    time.sleep(0.05)
+    t2.start()
+    time.sleep(0.1)
+    release.set()
+    t1.join(timeout=1.0)
+    t2.join(timeout=1.0)
+
+    wait_line = next(item for item in second_lines if item.startswith("[WAIT]"))
+    assert "stm32f103_golden_gpio_signature waiting for resource instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in wait_line
+
+
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 

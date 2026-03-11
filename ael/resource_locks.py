@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import threading
+import time
 from contextlib import contextmanager
-from typing import Iterable
+from typing import Callable, Iterable
 
 
 _LOCKS_GUARD = threading.Lock()
@@ -32,13 +33,25 @@ def normalize_keys(keys: Iterable[str] | None) -> list[str]:
 
 
 @contextmanager
-def claim(keys: Iterable[str] | None):
+def claim(
+    keys: Iterable[str] | None,
+    *,
+    on_wait: Callable[[str], None] | None = None,
+    poll_interval_s: float = 0.05,
+):
     normalized = normalize_keys(keys)
-    locks = [_get_lock(key) for key in normalized]
-    for lock in locks:
-        lock.acquire()
+    locks = [(key, _get_lock(key)) for key in normalized]
+    for key, lock in locks:
+        notified = False
+        while True:
+            if lock.acquire(blocking=False):
+                break
+            if not notified and on_wait is not None:
+                on_wait(key)
+                notified = True
+            time.sleep(max(0.0, poll_interval_s))
     try:
         yield normalized
     finally:
-        for lock in reversed(locks):
+        for _key, lock in reversed(locks):
             lock.release()

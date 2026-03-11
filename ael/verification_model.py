@@ -111,7 +111,7 @@ class VerificationWorker:
     def run(self) -> VerificationWorkerResult:
         iterations: List[Dict[str, Any]] = []
 
-        with resource_locks.claim(self.resource_keys):
+        with resource_locks.claim(self.resource_keys, on_wait=self._log_wait):
             for iteration in range(1, self.iteration_limit + 1):
                 label = self.task.name if self.iteration_limit == 1 else f"{self.task.name} iteration {iteration}"
                 self._log(f"[START] {label}")
@@ -157,3 +157,6 @@ class VerificationWorker:
     def _log(self, message: str) -> None:
         if self.log_fn is not None:
             self.log_fn(message)
+
+    def _log_wait(self, resource_key: str) -> None:
+        self._log(f"[WAIT] {self.task.name} waiting for resource {resource_key}")
