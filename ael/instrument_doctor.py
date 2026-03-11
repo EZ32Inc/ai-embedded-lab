@@ -65,6 +65,15 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "logic_analyzer": {"ok": bool(la_ok), "detail": la_detail},
     }
     overall_ok = bool(tcp.get("ok") and monitor_ok and la_ok)
+    control_instrument = {
+        "kind": "control_instrument_instance",
+        "legacy_kind": "probe_instance",
+        "instance": binding.instance_id,
+        "type": binding.type_id,
+        "endpoint": {"host": binding.endpoint_host, "port": binding.endpoint_port},
+        "communication": dict(binding.communication or {}),
+        "capability_surfaces": dict(binding.capability_surfaces or {}),
+    }
     return {
         "ok": overall_ok,
         "kind": "probe_instance",
@@ -72,6 +81,7 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
+        "control_instrument": control_instrument,
         "endpoint": {"host": binding.endpoint_host, "port": binding.endpoint_port},
         "communication": dict(binding.communication or {}),
         "capability_surfaces": dict(binding.capability_surfaces or {}),

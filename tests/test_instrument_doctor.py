@@ -23,6 +23,8 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["canonical_kind"] == "control_instrument_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
     assert payload["instrument_role"] == "control"
+    assert payload["control_instrument"]["kind"] == "control_instrument_instance"
+    assert payload["control_instrument"]["legacy_kind"] == "probe_instance"
     assert payload["checks"]["monitor_version"]["ok"] is True
     assert payload["checks"]["logic_analyzer"]["ok"] is True
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"

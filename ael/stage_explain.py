@@ -334,7 +334,19 @@ def render_text(payload: Dict[str, Any]) -> str:
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
     if payload.get("selected"):
         lines.append("selected:")
+        selected = payload.get("selected") or {}
+        has_control_selection = isinstance(selected.get("control_instrument_selection"), dict) and bool(
+            selected.get("control_instrument_selection")
+        )
         for k, v in (payload.get("selected") or {}).items():
+            if has_control_selection and k in (
+                "probe",
+                "probe_instance",
+                "probe_type",
+                "probe_communication",
+                "probe_capability_surfaces",
+            ):
+                continue
             if k in (
                 "control_instrument_communication",
                 "instrument_communication",
@@ -351,6 +363,11 @@ def render_text(payload: Dict[str, Any]) -> str:
                 lines.append(f"  - {k}:")
                 for item in v:
                     lines.append(f"    {json.dumps(item, sort_keys=True)}")
+                continue
+            if k == "control_instrument_selection" and isinstance(v, dict):
+                lines.append(f"  - {k}:")
+                for inner_k, inner_v in v.items():
+                    lines.append(f"    {inner_k}: {inner_v}")
                 continue
             if k == "connection_setup" and isinstance(v, dict):
                 lines.append(f"  - {k}:")

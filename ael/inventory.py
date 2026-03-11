@@ -128,8 +128,16 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
             ),
         }
     board_cfg = _load_board_cfg(root, board_id)
-    instance_id = str(board_cfg.get("instrument_instance") or "").strip() or None
-    probe_path = str(board_cfg.get("probe_config") or "").strip() or None
+    instance_id = str(
+        board_cfg.get("control_instrument_instance")
+        or board_cfg.get("instrument_instance")
+        or ""
+    ).strip() or None
+    probe_path = str(
+        board_cfg.get("control_instrument_config")
+        or board_cfg.get("probe_config")
+        or ""
+    ).strip() or None
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
     return {
         "kind": "probe",
@@ -145,6 +153,25 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
         "capability_surfaces": binding.capability_surfaces,
         "metadata_validation_errors": list(binding.metadata_validation_errors),
     }
+
+
+def _primary_selected_instrument(poi: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(poi, dict):
+        return {}
+    canonical_kind = str(poi.get("canonical_kind") or poi.get("kind") or "").strip()
+    if canonical_kind == "control_instrument":
+        return {
+            "kind": "control_instrument",
+            "legacy_kind": poi.get("kind"),
+            "id": poi.get("id"),
+            "type": poi.get("type"),
+            "instrument_role": poi.get("instrument_role") or "control",
+            "endpoint": poi.get("endpoint"),
+            "communication": dict(poi.get("communication") or {}),
+            "capability_surfaces": dict(poi.get("capability_surfaces") or {}),
+            "metadata_validation_errors": list(poi.get("metadata_validation_errors") or []),
+        }
+    return dict(poi)
 
 
 def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -347,6 +374,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         "notes": payload.get("notes"),
         "warnings": [f"warning: {item}" for item in connection_ctx.warnings],
     }
+    result["selected_instrument"] = _primary_selected_instrument(result["probe_or_instrument"])
     return result
 
 
@@ -409,8 +437,10 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"board: {payload.get('board')}")
     test = payload.get("test", {})
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
-    poi = payload.get("probe_or_instrument", {})
+    poi = payload.get("selected_instrument", {}) or payload.get("probe_or_instrument", {})
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
+    if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):
+        lines.append(f"legacy_kind: {poi.get('legacy_kind')}")
     if poi.get("type"):
         lines.append(f"type: {poi.get('type')}")
     endpoint = poi.get("endpoint")

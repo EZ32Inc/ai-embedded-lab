@@ -80,6 +80,8 @@ def test_build_instrument_instance_inventory_includes_references():
 def test_describe_test_for_stm32f401_gpio_signature():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
+    assert payload["selected_instrument"]["kind"] == "control_instrument"
+    assert payload["selected_instrument"]["legacy_kind"] == "probe"
     assert payload["probe_or_instrument"]["kind"] == "probe"
     assert payload["probe_or_instrument"]["canonical_kind"] == "control_instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32jtag_stm32_golden"
@@ -101,6 +103,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["connection_setup"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert any(check["type"] == "signal" for check in payload["expected_checks"])
     rendered = inventory.render_describe_text(payload)
+    assert "control_instrument: esp32jtag_stm32_golden" in rendered
+    assert "legacy_kind: probe" in rendered
     assert "connection_setup:" in rendered
     assert "source_summary:" in rendered
     assert "resolved_wiring:" in rendered
@@ -117,6 +121,7 @@ def test_describe_test_warns_on_duplicate_mcu_pin_connections():
 def test_describe_test_for_meter_path():
     payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
     assert payload["ok"] is True
+    assert payload["selected_instrument"]["kind"] == "instrument"
     assert payload["probe_or_instrument"]["kind"] == "instrument"
     assert payload["probe_or_instrument"]["id"] == "esp32s3_dev_c_meter"
     assert payload["probe_or_instrument"]["communication"]["protocol"] == "gpio_meter_v1"

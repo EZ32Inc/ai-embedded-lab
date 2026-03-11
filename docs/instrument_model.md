@@ -60,7 +60,7 @@ Also confirmed:
 - board config policy still includes fields such as `probe_required`, `probe_config`, and `allow_legacy_probe_fallback`
 - `instrument_instance` in board config currently selects what is operationally a probe-like instrument instance
 - `config_resolver.py` still exposes `resolve_probe_config()` and `resolve_probe_instance()`
-- `stage_explain.py` still emits `selected.probe`, `probe_instance`, and `probe_type` as first-class outputs
+- some compatibility payloads still emit `probe*` fields alongside the newer control-instrument structures
 
 So the repo is not missing an instrument model.
 It has a partially unified instrument model with legacy probe-specific seams.
@@ -197,6 +197,7 @@ The migration should be controlled, not a blind rename.
 
 - report selected hardware primarily as instruments and capabilities
 - keep probe-specific wording only as a secondary explanatory alias when useful
+- prefer structured control-instrument objects over duplicated flat legacy fields
 
 ### Phase 5: Runtime simplification
 
@@ -232,6 +233,7 @@ The migration should be controlled, not a blind rename.
 - [configs/instrument_instances/esp32jtag_stm32_golden.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/instrument_instances/esp32jtag_stm32_golden.yaml)
 - [configs/boards/esp32c6_devkit.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/boards/esp32c6_devkit.yaml)
 - [docs/skills/probe_fallback_policy.md](/nvme1t/work/codex/ai-embedded-lab/docs/skills/probe_fallback_policy.md)
+- [docs/control_instrument_compatibility.md](/nvme1t/work/codex/ai-embedded-lab/docs/control_instrument_compatibility.md)
 
 ## 11. Short Guidance
 

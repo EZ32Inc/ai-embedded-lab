@@ -317,6 +317,10 @@ This means:
 Architectural consequence:
 - execution and stage explanation should reflect the real intended bench path, even if that means “no probe binding selected”
 
+Current preferred wording:
+- user-facing and architecture-facing output should prefer `control_instrument`
+- legacy `probe*` fields may still remain as compatibility aliases in some payloads
+
 ## 9. Operational Guidance
 
 ### When to use `verify-default run`
