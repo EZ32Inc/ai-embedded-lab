@@ -181,6 +181,14 @@ def test_describe_test_for_rp2350_uart_banner():
     assert "host serial -> /dev/ttyACM0" in rendered
 
 
+def test_describe_test_for_rp2350_gpio_signature_contract():
+    payload = inventory.describe_test("rp2350_pico2", "tests/plans/rp2350_gpio_signature.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert payload["connection_setup"]["bench_setup"]["serial_console"]["port"] == "not_used"
+    rendered = inventory.render_describe_text(payload)
+    assert "host serial -> not_used" in rendered
+
+
 def test_describe_test_for_generated_rp2040_adc_contract():
     payload = inventory.describe_test("rp2040_pico", "tests/plans/rp2040_adc_banner.json", REPO_ROOT)
     assert payload["ok"] is True
@@ -206,6 +214,14 @@ def test_describe_test_for_generated_stm32_spi_contract():
     )
     assert "SPI1_SCK -> PA5" in rendered
     assert "host serial -> /dev/ttyUSB0" in rendered
+
+
+def test_describe_test_for_generated_esp32_i2c_contract():
+    payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_i2c_banner.json", REPO_ROOT)
+    assert payload["ok"] is True
+    assert any(conn["from"] == "I2C0_SDA" and conn["to"] == "GPIO8" for conn in payload["connections"])
+    rendered = inventory.render_describe_text(payload)
+    assert "I2C0_SDA -> GPIO8" in rendered
 
 
 def test_describe_connection_for_meter_path():

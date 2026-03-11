@@ -1,0 +1,91 @@
+{
+  "name": "esp32c6_i2c_banner",
+  "board": "esp32c6_devkit",
+  "dut": "esp32c6_devkit",
+  "pin": "sig",
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_i2c_banner",
+    "build_dir": "artifacts/build_esp32c6_i2c_banner"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": null,
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "expect_patterns": [
+      "AEL_READY ESP32C6 I2C"
+    ]
+  },
+  "instrument": {
+    "id": "esp32s3_dev_c_meter",
+    "tcp": {
+      "host": "192.168.4.1",
+      "port": 9000
+    },
+    "run_selftest": false,
+    "measure": {
+      "duration_ms": 500
+    }
+  },
+  "bench_setup": {
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "X1(GPIO4)",
+        "inst_gpio": 11,
+        "expect": "toggle",
+        "freq_hz": 1000
+      },
+      {
+        "dut_gpio": "X2(GPIO5)",
+        "inst_gpio": 12,
+        "expect": "toggle",
+        "freq_hz": 2000
+      },
+      {
+        "dut_gpio": "X3(GPIO6)",
+        "inst_gpio": 13,
+        "expect": "high"
+      },
+      {
+        "dut_gpio": "X4(GPIO7)",
+        "inst_gpio": 14,
+        "expect": "low"
+      }
+    ],
+    "dut_to_instrument_analog": [
+      {
+        "dut_signal": "3V3",
+        "inst_adc_gpio": 4,
+        "expect_v_min": 2.8,
+        "expect_v_max": 3.45,
+        "avg": 32
+      }
+    ],
+    "serial_console": {
+      "port": "auto_usb_serial_jtag",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "I2C0_SDA",
+        "dut_signal": "GPIO8",
+        "direction": "bidirectional"
+      },
+      {
+        "role": "I2C0_SCL",
+        "dut_signal": "GPIO9",
+        "direction": "output"
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": true
+  },
+  "measurement": {
+    "duration_ms": 500
+  }
+}

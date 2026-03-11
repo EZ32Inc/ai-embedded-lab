@@ -8,5 +8,12 @@
   "duty_max": 0.6,
   "duration_s": 1.0,
   "min_edges": 2,
-  "max_edges": 20000
+  "max_edges": 20000,
+  "bench_setup": {
+    "serial_console": {
+      "port": "not_used",
+      "baud": "not_applicable",
+      "required": false
+    }
+  }
 }

@@ -55,13 +55,17 @@ def test_generated_example_plans_expose_formal_connection_contract_extensions():
         "rp2040_uart_banner.json",
         "rp2040_adc_banner.json",
         "rp2040_spi_banner.json",
+        "rp2040_i2c_banner.json",
+        "rp2350_gpio_signature.json",
         "rp2350_uart_banner.json",
         "stm32f103_uart_banner.json",
         "stm32f103_adc_banner.json",
         "stm32f103_spi_banner.json",
+        "stm32f103_i2c_banner.json",
         "esp32c6_uart_banner.json",
         "esp32c6_adc_meter.json",
         "esp32c6_spi_banner.json",
+        "esp32c6_i2c_banner.json",
     )
     plans_dir = REPO_ROOT / "tests" / "plans"
     for name in plan_names:
@@ -80,3 +84,6 @@ def test_generated_example_plans_expose_formal_connection_contract_extensions():
         if "spi" in name:
             signals = bench_setup.get("peripheral_signals")
             assert isinstance(signals, list) and signals, f"spi example missing peripheral_signals: {name}"
+        if "i2c" in name:
+            signals = bench_setup.get("peripheral_signals")
+            assert isinstance(signals, list) and signals, f"i2c example missing peripheral_signals: {name}"

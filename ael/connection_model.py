@@ -255,6 +255,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
     rows: List[Dict[str, Any]] = []
     test = test_raw if isinstance(test_raw, dict) else {}
     bench_setup = ctx.bench_setup if isinstance(ctx.bench_setup, dict) else {}
+    bench_rows: List[Dict[str, Any]] = []
     if isinstance(test.get("instrument"), dict) or bench_setup:
         for item in bench_setup.get("dut_to_instrument", []) if isinstance(bench_setup.get("dut_to_instrument"), list) else []:
             if not isinstance(item, dict):
@@ -266,7 +267,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             }
             if item.get("freq_hz") is not None:
                 row["freq_hz"] = item.get("freq_hz")
-            rows.append(row)
+            bench_rows.append(row)
         for item in bench_setup.get("dut_to_instrument_analog", []) if isinstance(bench_setup.get("dut_to_instrument_analog"), list) else []:
             if not isinstance(item, dict):
                 continue
@@ -278,7 +279,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             }
             if item.get("avg") is not None:
                 row["avg"] = item.get("avg")
-            rows.append(row)
+            bench_rows.append(row)
         for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
             if not isinstance(item, dict):
                 continue
@@ -293,7 +294,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
                 row["status"] = item.get("status")
             if item.get("notes"):
                 row["notes"] = item.get("notes")
-            rows.append(row)
+            bench_rows.append(row)
         for item in bench_setup.get("peripheral_signals", []) if isinstance(bench_setup.get("peripheral_signals"), list) else []:
             if not isinstance(item, dict):
                 continue
@@ -306,7 +307,7 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
                 row["direction"] = item.get("direction")
             if item.get("notes"):
                 row["notes"] = item.get("notes")
-            rows.append(row)
+            bench_rows.append(row)
         serial_console = bench_setup.get("serial_console")
         if isinstance(serial_console, dict):
             row = {
@@ -316,11 +317,11 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             }
             if serial_console.get("baud") is not None:
                 row["baud"] = serial_console.get("baud")
-            rows.append(row)
+            bench_rows.append(row)
         if bench_setup.get("ground_required"):
-            rows.append({"from": "GND", "to": "inst GND", "required": True})
-        if rows:
-            return rows
+            bench_rows.append({"from": "GND", "to": "inst GND", "required": True})
+        if isinstance(test.get("instrument"), dict) and bench_rows:
+            return bench_rows
 
     if ctx.resolved_wiring.get("swd"):
         rows.append({"from": "SWD", "to": ctx.resolved_wiring.get("swd")})
@@ -332,6 +333,8 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
         if src and dst:
             rows.append({"from": src, "to": dst})
     if rows and len(rows) > 2:
+        if bench_rows:
+            rows.extend(bench_rows)
         return rows
     pin = test.get("pin")
     if pin:
@@ -343,6 +346,8 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
                     observed_label = key.upper() if key.startswith(("pa", "pb", "pc")) else str(key)
                     break
         rows.append({"from": observed_label, "to": resolved})
+    if bench_rows:
+        rows.extend(bench_rows)
     return rows
 
 

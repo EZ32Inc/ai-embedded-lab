@@ -10,7 +10,8 @@
       "gpio_signature",
       "uart_banner",
       "adc_banner",
-      "spi_banner"
+      "spi_banner",
+      "i2c_banner"
     ],
     "source_basis": [
       "verified_local_example_first",
@@ -25,6 +26,15 @@
     ]
   },
   "examples": [
+    {
+      "board_id": "rp2350_pico2",
+      "family": "rp2",
+      "example_kind": "gpio_signature",
+      "plan": "tests/plans/rp2350_gpio_signature.json",
+      "target": "firmware/targets/rp2350_pico2",
+      "source_basis": "hybrid_official_plus_local_shape",
+      "validation_status": "build_and_plan_verified"
+    },
     {
       "board_id": "rp2350_pico2",
       "family": "rp2",
@@ -62,6 +72,15 @@
       "validation_status": "build_and_plan_verified"
     },
     {
+      "board_id": "rp2040_pico",
+      "family": "rp2",
+      "example_kind": "i2c_banner",
+      "plan": "tests/plans/rp2040_i2c_banner.json",
+      "target": "firmware/targets/rp2040_pico_i2c",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
       "board_id": "stm32f103",
       "family": "stm32f1",
       "example_kind": "uart_banner",
@@ -89,6 +108,15 @@
       "validation_status": "build_and_plan_verified"
     },
     {
+      "board_id": "stm32f103",
+      "family": "stm32f1",
+      "example_kind": "i2c_banner",
+      "plan": "tests/plans/stm32f103_i2c_banner.json",
+      "target": "firmware/targets/stm32f103_i2c",
+      "source_basis": "verified_local_example_first",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
       "board_id": "esp32c6_devkit",
       "family": "esp32c6",
       "example_kind": "uart_banner",
@@ -112,6 +140,15 @@
       "example_kind": "spi_banner",
       "plan": "tests/plans/esp32c6_spi_banner.json",
       "target": "firmware/targets/esp32c6_spi_banner",
+      "source_basis": "official_example_or_support_second",
+      "validation_status": "build_and_plan_verified"
+    },
+    {
+      "board_id": "esp32c6_devkit",
+      "family": "esp32c6",
+      "example_kind": "i2c_banner",
+      "plan": "tests/plans/esp32c6_i2c_banner.json",
+      "target": "firmware/targets/esp32c6_i2c_banner",
       "source_basis": "official_example_or_support_second",
       "validation_status": "build_and_plan_verified"
     }
