@@ -126,16 +126,40 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
 def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, Any]:
     condition_counts: Dict[str, int] = {}
     policy_counts: Dict[str, int] = {}
+    failure_class_counts: Dict[str, int] = {}
+    verify_substage_counts: Dict[str, int] = {}
+    local_path_counts: Dict[str, int] = {}
+    worker_pass_counts: Dict[str, int] = {}
+    worker_fail_counts: Dict[str, int] = {}
     degraded_workers: List[Dict[str, Any]] = []
+    total_pass_count = 0
+    total_fail_count = 0
     for worker in list(workers or []):
         if not isinstance(worker, dict):
             continue
+        name = str(worker.get("name") or "").strip()
+        pass_count = int(worker.get("pass_count") or 0)
+        fail_count = int(worker.get("fail_count") or 0)
+        total_pass_count += pass_count
+        total_fail_count += fail_count
+        if name:
+            worker_pass_counts[name] = pass_count
+            worker_fail_counts[name] = fail_count
         results = worker.get("results")
         last = results[-1] if isinstance(results, list) and results else {}
         result = last.get("result") if isinstance(last, dict) else {}
         if not isinstance(result, dict):
             continue
         observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+        local_path = str(result.get("local_instrument_interface_path") or "").strip()
+        if local_path:
+            local_path_counts[local_path] = local_path_counts.get(local_path, 0) + 1
+        failure_class = str(result.get("failure_class") or observations.get("failure_class") or "").strip()
+        if failure_class:
+            failure_class_counts[failure_class] = failure_class_counts.get(failure_class, 0) + 1
+        verify_substage = str(result.get("verify_substage") or observations.get("verify_substage") or "").strip()
+        if verify_substage:
+            verify_substage_counts[verify_substage] = verify_substage_counts.get(verify_substage, 0) + 1
         condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
         if not condition:
             continue
@@ -162,8 +186,16 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
             }
         )
     return {
+        "total_workers": len(list(workers or [])),
+        "total_pass_count": total_pass_count,
+        "total_fail_count": total_fail_count,
+        "worker_pass_counts": worker_pass_counts,
+        "worker_fail_counts": worker_fail_counts,
         "instrument_condition_counts": condition_counts,
         "policy_class_counts": policy_counts,
+        "failure_class_counts": failure_class_counts,
+        "verify_substage_counts": verify_substage_counts,
+        "local_instrument_interface_path_counts": local_path_counts,
         "degraded_workers": degraded_workers,
     }
 

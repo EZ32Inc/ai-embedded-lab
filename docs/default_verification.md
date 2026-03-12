@@ -12,6 +12,17 @@ Stress it with:
 python3 -m ael verify-default repeat --limit 20
 ```
 
+Health-hardening note:
+
+- repeat-mode health output is intended to show bounded repeatability evidence
+- current health summaries expose:
+  - total pass/fail counts
+  - degraded instrument counts
+  - failure-category counts when failures occur
+  - expected Local Instrument Interface path counts:
+    - `control_instrument_native_api`
+    - `meter_native_api`
+
 Preferred repeated-run mode:
 
 - use `verify-default repeat --limit N` for repeated baseline checks

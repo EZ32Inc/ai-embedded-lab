@@ -196,7 +196,8 @@ def test_run_single_skips_meter_guard_for_non_meter_test(tmp_path):
         code, result = default_verification._run_single(tmp_path, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
 
@@ -363,7 +364,8 @@ def test_run_single_retries_transient_meter_api_failure_once(tmp_path):
         code, result = default_verification._run_single(tmp_path, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "meter_native_api"
     assert guard_mock.call_count == 2
     sleep_mock.assert_called_once_with(1.0)
     run_mock.assert_called_once()
@@ -463,7 +465,8 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
         code, result = default_verification._run_single(REPO_ROOT, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
 
@@ -501,7 +504,8 @@ connection:
         code, result = default_verification._run_single(tmp_path, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"].endswith("configs/instrument_instances/esp32jtag_rp2040_lab.yaml")
 
@@ -539,7 +543,8 @@ def test_run_single_uses_no_probe_for_esp32c6_meter_path(tmp_path):
         code, result = default_verification._run_single(REPO_ROOT, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "meter_native_api"
     guard_mock.assert_called_once()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -577,7 +582,8 @@ def test_run_single_keeps_meter_instrument_path_for_esp32c6(tmp_path):
         code, result = default_verification._run_single(REPO_ROOT, step, "normal")
 
     assert code == 0
-    assert result == {"ok": True}
+    assert result["ok"] is True
+    assert result["local_instrument_interface_path"] == "meter_native_api"
     guard_mock.assert_called_once()
     assert guard_mock.call_args.kwargs["host"] == "192.168.4.1"
     assert guard_mock.call_args.kwargs["manifest"]["id"] == "esp32s3_dev_c_meter"
@@ -1115,6 +1121,7 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
                             "error": "meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed.",
                             "failure_class": "network_meter_api",
                             "instrument_condition": "instrument_api_unavailable",
+                            "local_instrument_interface_path": "meter_native_api",
                         },
                     },
                 ],
@@ -1147,4 +1154,55 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert payload["failure"]["instrument_condition"] == "instrument_api_unavailable"
     assert payload["health_summary"]["instrument_condition_counts"] == {"instrument_api_unavailable": 1}
     assert payload["health_summary"]["policy_class_counts"] == {"bench_degraded_retry_once": 1}
+    assert payload["health_summary"]["failure_class_counts"] == {"network_meter_api": 1}
+    assert payload["health_summary"]["local_instrument_interface_path_counts"] == {"meter_native_api": 1}
+    assert payload["health_summary"]["total_pass_count"] == 6
+    assert payload["health_summary"]["total_fail_count"] == 1
+    assert payload["health_summary"]["worker_pass_counts"]["stable_probe"] == 5
+    assert payload["health_summary"]["worker_fail_counts"]["unstable_meter"] == 1
     assert payload["health_summary"]["degraded_workers"][0]["name"] == "unstable_meter"
+
+
+def test_run_single_reports_local_instrument_interface_path_for_default_targets(tmp_path):
+    rp2040_test = tmp_path / "gpio_signature.json"
+    rp2040_test.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ):
+        code, result = default_verification._run_single(
+            REPO_ROOT,
+            {"board": "rp2040_pico", "test": str(rp2040_test)},
+            "normal",
+        )
+
+    assert code == 0
+    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
+    guard_mock.assert_not_called()
+
+    esp32_test = tmp_path / "esp32c6_gpio_signature_with_meter.json"
+    esp32_test.write_text(
+        json.dumps(
+            {
+                "name": "esp32c6_gpio_signature_with_meter",
+                "instrument": {"id": "esp32s3_dev_c_meter", "tcp": {"host": "192.168.4.1", "port": 9000}},
+                "bench_setup": {"dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}]},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=0,
+    ):
+        code, result = default_verification._run_single(
+            tmp_path,
+            {"board": "esp32c6_devkit", "test": str(esp32_test)},
+            "normal",
+        )
+
+    assert code == 0
+    assert result["local_instrument_interface_path"] == "meter_native_api"
+    guard_mock.assert_called_once()

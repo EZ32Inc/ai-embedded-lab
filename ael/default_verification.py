@@ -221,6 +221,25 @@ def _resolve_board_raw(repo_root: Path, board: str | None) -> Dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
+def _local_instrument_interface_path(repo_root: Path, board: str | None, test_path: str | None) -> str:
+    board_id = str(board or "").strip()
+    if not board_id:
+        return ""
+    board_raw = _resolve_board_raw(repo_root, board_id)
+    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    if test_path:
+        test_raw = _load_text_payload(Path(test_path))
+        if isinstance(test_raw, dict):
+            instrument_id, _tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+            if str(instrument_id or "").strip() == "esp32s3_dev_c_meter":
+                return "meter_native_api"
+    probe_raw, probe_path = _resolve_step_probe_binding(repo_root, {"board": board_id, "test": test_path})
+    probe_cfg = _normalize_probe_cfg(probe_raw)
+    if probe_path or str(probe_cfg.get("host") or "").strip():
+        return "control_instrument_native_api"
+    return ""
+
+
 def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: str | None) -> None:
     if not test_path:
         return
@@ -254,6 +273,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     test = _resolve_path(repo_root, step.get("test"))
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
+    local_interface_path = _local_instrument_interface_path(repo_root, str(board), test)
     _probe_raw, probe = _resolve_step_probe_binding(repo_root, step)
     meter_attempts = 0
     while True:
@@ -279,6 +299,8 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 out["failure_scope"] = failure_scope
                 if isinstance(out.get("observations"), dict):
                     out["observations"].setdefault("failure_scope", failure_scope)
+            if local_interface_path:
+                out["local_instrument_interface_path"] = local_interface_path
             policy = _degraded_instrument_policy(out)
             out["degraded_instrument_policy"] = policy
             out["retry_summary"] = {
@@ -308,6 +330,8 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         exit_code, payload = code
         if isinstance(payload, dict):
             out = {"ok": int(exit_code) == 0}
+            if local_interface_path:
+                out["local_instrument_interface_path"] = local_interface_path
             if not bool(out["ok"]):
                 for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "observations"):
                     if key in payload and payload.get(key) not in (None, "", {}, []):
@@ -331,6 +355,8 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                     out["degraded_instrument_policy"] = policy
             return int(exit_code), out
         out = {"ok": int(exit_code) == 0}
+        if local_interface_path:
+            out["local_instrument_interface_path"] = local_interface_path
         if not bool(out["ok"]) and hasattr(payload, "artifacts_dir"):
             details = _extract_verify_result_details(
                 {
@@ -356,7 +382,10 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
             if policy.get("policy_class"):
                 out["degraded_instrument_policy"] = policy
         return int(exit_code), out
-    return int(code), {"ok": int(code) == 0}
+    out = {"ok": int(code) == 0}
+    if local_interface_path:
+        out["local_instrument_interface_path"] = local_interface_path
+    return int(code), out
 
 
 def _normalized_step(setting: Dict[str, Any], raw_step: Dict[str, Any], idx: int) -> Dict[str, Any]:
@@ -485,7 +514,17 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
             if detail:
                 line += f" {detail}"
         _log_line(lock, line)
-    counts = summarize_worker_health(workers).get("instrument_condition_counts")
+    health = summarize_worker_health(workers)
+    _log_line(
+        lock,
+        "[SUMMARY] health pass_count="
+        f"{health.get('total_pass_count', 0)} fail_count={health.get('total_fail_count', 0)}",
+    )
+    local_paths = health.get("local_instrument_interface_path_counts")
+    if isinstance(local_paths, dict) and local_paths:
+        parts = [f"{name}={local_paths[name]}" for name in sorted(local_paths)]
+        _log_line(lock, f"[SUMMARY] local_instrument_interface_paths {' '.join(parts)}")
+    counts = health.get("instrument_condition_counts")
     if isinstance(counts, dict) and counts:
         parts = [f"{name}={counts[name]}" for name in sorted(counts)]
         _log_line(lock, f"[SUMMARY] degraded_instruments {' '.join(parts)}")
