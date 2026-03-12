@@ -362,6 +362,20 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
     if not (isinstance(observe_uart_cfg, dict) and observe_uart_cfg.get("enabled")):
         return None
     observe_uart_cfg = dict(observe_uart_cfg)
+    bench_setup = resolve_bench_setup(effective)
+    if isinstance(bench_setup, dict):
+        for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("role") or "").strip() != "uart_instrument":
+                continue
+            endpoint = str(item.get("endpoint") or "").strip()
+            instrument_id = str(item.get("instrument_id") or "").strip()
+            if endpoint:
+                observe_uart_cfg.setdefault("bridge_endpoint", endpoint)
+            if instrument_id:
+                observe_uart_cfg.setdefault("bridge_instrument_id", instrument_id)
+            break
     observe_uart_cfg.setdefault("auto_reset_on_download", True)
     observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
     step = {

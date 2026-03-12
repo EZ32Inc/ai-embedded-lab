@@ -7,9 +7,9 @@ This document records the currently stable baseline after the STM32 BMDA flash f
 - `rp2040_pico` -> `esp32jtag_rp2040_lab`
   - endpoint: `192.168.2.63:4242`
 - `stm32f103` -> `esp32jtag_stm32_golden`
-  - endpoint: `192.168.2.98:4242`
+  - endpoint: `192.168.2.99:4242`
 - `stm32f401rct6` -> `esp32jtag_stm32_golden`
-  - endpoint: `192.168.2.98:4242`
+  - endpoint: `192.168.2.99:4242`
 
 Instrument type:
 

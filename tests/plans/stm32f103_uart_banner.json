@@ -22,10 +22,40 @@
     ]
   },
   "bench_setup": {
+    "instrument_roles": [
+      {
+        "role": "control_instrument",
+        "instrument_id": "esp32jtag_stm32_golden",
+        "endpoint": "192.168.2.99:4242",
+        "required": true,
+        "notes": "Used for flash/load and existing GPIO-side verification support."
+      },
+      {
+        "role": "uart_instrument",
+        "instrument_id": "usb_uart_bridge_daemon",
+        "endpoint": "127.0.0.1:8767",
+        "required": true,
+        "notes": "Phase 1 local bridge endpoint; Phase 2 should allow a remote host endpoint."
+      }
+    ],
     "serial_console": {
       "port": "/dev/ttyUSB0",
       "baud": 115200,
       "required": true
-    }
+    },
+    "peripheral_signals": [
+      {
+        "role": "uart_tx",
+        "dut_signal": "PA9/USART1_TX",
+        "direction": "output",
+        "notes": "Connect STM32 PA9 to USB-UART RX."
+      },
+      {
+        "role": "uart_rx",
+        "dut_signal": "PA10/USART1_RX",
+        "direction": "input",
+        "notes": "Optional for Phase 1; connect USB-UART TX to STM32 PA10 only if bidirectional UART is needed."
+      }
+    ]
   }
 }

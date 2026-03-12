@@ -318,6 +318,21 @@ def build_connection_rows(ctx: NormalizedConnectionContext, test_raw: Dict[str, 
             if serial_console.get("baud") is not None:
                 row["baud"] = serial_console.get("baud")
             bench_rows.append(row)
+        for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            row = {
+                "from": item.get("role"),
+                "to": item.get("instrument_id"),
+                "kind": "instrument_role",
+            }
+            if item.get("required") is not None:
+                row["required"] = item.get("required")
+            if item.get("endpoint"):
+                row["endpoint"] = item.get("endpoint")
+            if item.get("notes"):
+                row["notes"] = item.get("notes")
+            bench_rows.append(row)
         if bench_setup.get("ground_required"):
             bench_rows.append({"from": "GND", "to": "inst GND", "required": True})
         if isinstance(test.get("instrument"), dict) and bench_rows:
@@ -389,6 +404,15 @@ def wiring_assumption_lines(ctx: NormalizedConnectionContext) -> List[str]:
         lines.append(
             f"host serial -> {serial_console.get('port')} baud={serial_console.get('baud')}"
         )
+    for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        line = f"{item.get('role')} -> {item.get('instrument_id')}"
+        if item.get("endpoint"):
+            line += f" endpoint={item.get('endpoint')}"
+        if item.get("required") is not None:
+            line += f" required={item.get('required')}"
+        lines.append(line)
     if bench_setup.get("ground_required"):
         lines.append("GND -> GND")
     return lines
@@ -477,6 +501,17 @@ def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, inde
             lines.append(
                 f"{indent}  - host serial -> {serial_console.get('port')} baud={serial_console.get('baud')}"
             )
+        for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            line = f"{item.get('role')} -> {item.get('instrument_id')}"
+            if item.get("endpoint"):
+                line += f" endpoint={item.get('endpoint')}"
+            if item.get("required") is not None:
+                line += f" required={item.get('required')}"
+            if item.get("notes"):
+                line += f" notes={item.get('notes')}"
+            lines.append(f"{indent}  - {line}")
         for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
             if not isinstance(item, dict):
                 continue
@@ -571,6 +606,13 @@ def build_connection_digest(connection_setup: Dict[str, Any] | Any) -> List[str]
             baud = str(serial_console.get("baud") or "").strip()
             if port and baud:
                 digest.append(f"serial {port}@{baud}")
+        for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+            if not isinstance(item, dict):
+                continue
+            role = str(item.get("role") or "").strip()
+            instrument_id = str(item.get("instrument_id") or "").strip()
+            if role and instrument_id:
+                digest.append(f"instrument_role {role}->{instrument_id}")
         for item in bench_setup.get("external_inputs", []) if isinstance(bench_setup.get("external_inputs"), list) else []:
             if not isinstance(item, dict):
                 continue

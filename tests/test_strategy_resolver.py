@@ -159,6 +159,39 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(step.get("name"), "check_meter")
         self.assertEqual(step.get("inputs", {}).get("links"), [{"inst_gpio": 11, "expect": "high"}])
 
+    def test_build_uart_step_uses_uart_instrument_role_endpoint(self):
+        test_raw = {
+            "observe_uart": {
+                "enabled": True,
+                "port": "/dev/ttyUSB0",
+                "baud": 115200,
+            },
+            "bench_setup": {
+                "instrument_roles": [
+                    {
+                        "role": "uart_instrument",
+                        "instrument_id": "usb_uart_bridge_daemon",
+                        "endpoint": "127.0.0.1:8767",
+                    }
+                ]
+            },
+        }
+
+        step = strategy_resolver.build_uart_step(
+            effective=test_raw,
+            board_cfg={},
+            output_mode="normal",
+            observe_uart_log="/tmp/uart.log",
+            uart_json="/tmp/uart.json",
+            flash_json="/tmp/flash.json",
+            observe_uart_step_log="/tmp/uart_step.log",
+        )
+
+        self.assertIsNotNone(step)
+        cfg = step["inputs"]["observe_uart_cfg"]
+        self.assertEqual(cfg["bridge_endpoint"], "127.0.0.1:8767")
+        self.assertEqual(cfg["bridge_instrument_id"], "usb_uart_bridge_daemon")
+
 
 if __name__ == "__main__":
     unittest.main()

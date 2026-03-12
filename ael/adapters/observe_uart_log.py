@@ -1,6 +1,10 @@
+import base64
+import json
 import os
 import re
 import time
+from urllib import error as urllib_error
+from urllib import request as urllib_request
 
 from ael.adapters import control_download_mode_serial
 
@@ -242,6 +246,53 @@ def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patt
     }
 
 
+def _bridge_json(method, endpoint, path, payload=None):
+    url = f"http://{endpoint}{path}"
+    data = None
+    headers = {}
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = urllib_request.Request(url, data=data, headers=headers, method=method)
+    with urllib_request.urlopen(req, timeout=5.0) as resp:  # nosec B310 - bounded local/explicit endpoint
+        return json.loads(resp.read().decode("utf-8"))
+
+
+def _capture_via_bridge(endpoint, duration_s, start_delay_s):
+    data = bytearray()
+    last_error = None
+    try:
+        opened = _bridge_json("POST", endpoint, "/open", {})
+        if not opened.get("ok", False):
+            return None, opened.get("error") or "bridge open failed"
+        if start_delay_s > 0:
+            time.sleep(start_delay_s)
+        deadline = time.time() + max(0.0, duration_s)
+        while time.time() < deadline:
+            chunk = _bridge_json("POST", endpoint, "/read", {"size": 4096})
+            if not chunk.get("ok", False):
+                last_error = chunk.get("error") or "bridge read failed"
+                break
+            b64 = str(chunk.get("data_b64") or "")
+            if b64:
+                try:
+                    data.extend(base64.b64decode(b64.encode("ascii")))
+                except Exception:
+                    pass
+            if int(chunk.get("bytes_read") or 0) <= 0:
+                time.sleep(0.05)
+    except (urllib_error.URLError, urllib_error.HTTPError, TimeoutError, OSError, ValueError) as exc:
+        return None, str(exc)
+    finally:
+        try:
+            _bridge_json("POST", endpoint, "/close", {})
+        except Exception:
+            pass
+    if last_error:
+        return None, last_error
+    return bytes(data), None
+
+
 def run(cfg, raw_log_path: str):
     try:
         import serial  # type: ignore
@@ -287,6 +338,43 @@ def run(cfg, raw_log_path: str):
     expect_patterns = cfg.get("expect_patterns") or []
     forbid_patterns = cfg.get("forbid_patterns") or []
     boot_signatures = cfg.get("boot_signatures") or []
+    bridge_endpoint = str(cfg.get("bridge_endpoint") or "").strip()
+
+    if bridge_endpoint:
+        start_delay_s = float(cfg.get("start_delay_s", 0.4))
+        data, last_exc = _capture_via_bridge(bridge_endpoint, duration_s, start_delay_s)
+        if data is None:
+            return {
+                "ok": False,
+                "bytes": 0,
+                "lines": 0,
+                "port": port or bridge_endpoint,
+                "baud": baud,
+                "crash_detected": False,
+                "reboot_loop_suspected": False,
+                "errors": [],
+                "warnings": [],
+                "matched": {},
+                "raw_log_path": raw_log_path,
+                "error_summary": f"failed to read UART via bridge: {last_exc}",
+                "bridge_endpoint": bridge_endpoint,
+            }
+        with open(raw_log_path, "wb") as f:
+            f.write(data)
+        text = data.decode("utf-8", errors="replace")
+        result = _evaluate_capture(
+            text=text,
+            data=data,
+            port=port or bridge_endpoint,
+            baud=baud,
+            raw_log_path=raw_log_path,
+            profile=profile,
+            expect_patterns=expect_patterns,
+            forbid_patterns=forbid_patterns,
+            boot_signatures=boot_signatures,
+        )
+        result["bridge_endpoint"] = bridge_endpoint
+        return result
 
     if not os.path.exists(port):
         return {

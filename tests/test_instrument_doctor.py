@@ -14,7 +14,7 @@ def test_doctor_probe_instance_reports_probe_health():
         return_value=(True, "len=65532"),
     ), patch(
         "ael.instrument_doctor._tcp_check",
-        return_value={"ok": True, "host": "192.168.2.98", "port": 4242},
+        return_value={"ok": True, "host": "192.168.2.99", "port": 4242},
     ):
         payload = instrument_doctor.doctor(REPO_ROOT, "esp32jtag_stm32_golden")
 

@@ -838,7 +838,7 @@ def test_summarize_resource_keys_groups_known_types():
     summary = summarize_resource_keys(
         [
             "dut:stm32f103",
-            "probe:192.168.2.98:4242",
+            "probe:192.168.2.99:4242",
             "probe_path:configs/instrument_instances/esp32jtag_stm32_golden.yaml",
             "serial:/dev/ttyACM1",
             "instrument:esp32s3_dev_c_meter:192.168.4.1:9000",
@@ -847,7 +847,7 @@ def test_summarize_resource_keys_groups_known_types():
     )
 
     assert summary["dut_ids"] == ["stm32f103"]
-    assert summary["control_instrument_endpoints"] == ["192.168.2.98:4242"]
+    assert summary["control_instrument_endpoints"] == ["192.168.2.99:4242"]
     assert summary["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
     assert summary["serial_ports"] == ["/dev/ttyACM1"]
     assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]

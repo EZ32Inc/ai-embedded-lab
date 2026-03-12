@@ -30,6 +30,7 @@ def test_validate_bench_setup_requires_expected_shapes():
             "dut_to_instrument": [{"inst_gpio": 11}],
             "dut_to_instrument_analog": [{"dut_signal": "3V3"}],
             "serial_console": {"baud": 115200},
+            "instrument_roles": [{"role": "uart_instrument"}],
             "external_inputs": [{"kind": "analog_in"}],
             "peripheral_signals": [{"role": "SPI0_SCK"}],
             "ground_required": "yes",
@@ -39,6 +40,7 @@ def test_validate_bench_setup_requires_expected_shapes():
     assert "bench_setup.dut_to_instrument[0].dut_gpio is required" in errors
     assert "bench_setup.dut_to_instrument_analog[0].inst_adc_gpio is required" in errors
     assert "bench_setup.serial_console.port is required" in errors
+    assert "bench_setup.instrument_roles[0].instrument_id is required" in errors
     assert "bench_setup.external_inputs[0].dut_signal is required" in errors
     assert "bench_setup.peripheral_signals[0].dut_signal is required" in errors
     assert "bench_setup.ground_required must be a boolean" in errors

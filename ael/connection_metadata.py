@@ -118,6 +118,21 @@ def validate_bench_setup(raw: Dict[str, Any] | Any, *, source_name: str = "bench
                 errors.append(f"{source_name}.serial_console.port is required")
             if serial_console.get("baud") is None or not str(serial_console.get("baud")).strip():
                 errors.append(f"{source_name}.serial_console.baud is required")
+    instrument_roles = raw.get("instrument_roles")
+    if instrument_roles is not None:
+        if not isinstance(instrument_roles, list):
+            errors.append(f"{source_name}.instrument_roles must be a list")
+        else:
+            for index, item in enumerate(instrument_roles):
+                if not isinstance(item, dict):
+                    errors.append(f"{source_name}.instrument_roles[{index}] must be a mapping")
+                    continue
+                if not str(item.get("role") or "").strip():
+                    errors.append(f"{source_name}.instrument_roles[{index}].role is required")
+                if not str(item.get("instrument_id") or "").strip():
+                    errors.append(f"{source_name}.instrument_roles[{index}].instrument_id is required")
+                if "required" in item and not _is_bool_like(item.get("required")):
+                    errors.append(f"{source_name}.instrument_roles[{index}].required must be a boolean")
     external_inputs = raw.get("external_inputs")
     if external_inputs is not None:
         if not isinstance(external_inputs, list):

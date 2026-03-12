@@ -168,7 +168,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
-        probe_host="192.168.2.98",
+        probe_host="192.168.2.99",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
@@ -188,7 +188,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
-        probe_host="192.168.2.98",
+        probe_host="192.168.2.99",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
@@ -207,7 +207,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
         instrument_capability_surfaces={"measure.digital": "primary"},
         probe_instance_id="esp32jtag_stm32_golden",
         probe_type="esp32jtag",
-        probe_host="192.168.2.98",
+        probe_host="192.168.2.99",
         probe_port=4242,
         probe_communication={"primary": "gdb_remote"},
         probe_capability_surfaces={"swd": "gdb_remote"},
@@ -229,14 +229,14 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert summary["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert summary["control_instrument_instance"] == "esp32jtag_stm32_golden"
     assert summary["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
-    assert summary["control_instrument"]["endpoint"] == "192.168.2.98:4242"
+    assert summary["control_instrument"]["endpoint"] == "192.168.2.99:4242"
     assert summary["control_instrument_type"] == "esp32jtag"
-    assert summary["control_instrument_endpoint"] == "192.168.2.98:4242"
+    assert summary["control_instrument_endpoint"] == "192.168.2.99:4242"
     assert summary["control_instrument_communication"]["primary"] == "gdb_remote"
     assert summary["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert summary["compatibility"]["probe_instance"] == "esp32jtag_stm32_golden"
     assert summary["compatibility"]["probe_type"] == "esp32jtag"
-    assert summary["compatibility"]["probe_endpoint"] == "192.168.2.98:4242"
+    assert summary["compatibility"]["probe_endpoint"] == "192.168.2.99:4242"
     assert summary["compatibility"]["probe_communication"]["primary"] == "gdb_remote"
     assert summary["compatibility"]["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert summary["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
@@ -247,7 +247,7 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert "ssid:ESP32_GPIO_METER_E7F1" in summary["selected_bench_resources"]["selection_digest"]
     assert "control_instrument_instance:esp32jtag_stm32_golden" in summary["selected_bench_resources"]["selection_digest"]
     assert "instrument:esp32s3_dev_c_meter:192.168.4.1:9000" in summary["selected_bench_resources"]["resource_keys"]
-    assert "probe:192.168.2.98:4242" in summary["selected_bench_resources"]["resource_keys"]
+    assert "probe:192.168.2.99:4242" in summary["selected_bench_resources"]["resource_keys"]
     assert summary["selected_bench_resources"]["resource_summary"]["serial_ports"] == ["/dev/ttyACM0"]
     assert summary["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert summary["cleanup_items"] == ["pre-flight skipped by configuration"]
@@ -267,13 +267,13 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert lkg["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert lkg["control_instrument_instance"] == "esp32jtag_stm32_golden"
     assert lkg["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
-    assert lkg["control_instrument"]["endpoint"] == "192.168.2.98:4242"
+    assert lkg["control_instrument"]["endpoint"] == "192.168.2.99:4242"
     assert lkg["control_instrument_type"] == "esp32jtag"
-    assert lkg["control_instrument_endpoint"] == "192.168.2.98:4242"
+    assert lkg["control_instrument_endpoint"] == "192.168.2.99:4242"
     assert lkg["control_instrument_communication"]["primary"] == "gdb_remote"
     assert lkg["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert lkg["compatibility"]["probe_instance"] == "esp32jtag_stm32_golden"
-    assert lkg["compatibility"]["probe_endpoint"] == "192.168.2.98:4242"
+    assert lkg["compatibility"]["probe_endpoint"] == "192.168.2.99:4242"
     assert lkg["compatibility"]["probe_communication"]["primary"] == "gdb_remote"
     assert lkg["compatibility"]["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert lkg["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
@@ -296,20 +296,20 @@ def test_success_summary_contains_validation_and_last_known_good_fields():
     assert current_setup["instrument_capability_surfaces"]["measure.digital"] == "primary"
     assert current_setup["control_instrument_instance"] == "esp32jtag_stm32_golden"
     assert current_setup["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
-    assert current_setup["control_instrument"]["endpoint"] == {"host": "192.168.2.98", "port": 4242}
+    assert current_setup["control_instrument"]["endpoint"] == {"host": "192.168.2.99", "port": 4242}
     assert current_setup["control_instrument_type"] == "esp32jtag"
-    assert current_setup["control_instrument_endpoint"] == {"host": "192.168.2.98", "port": 4242}
+    assert current_setup["control_instrument_endpoint"] == {"host": "192.168.2.99", "port": 4242}
     assert current_setup["control_instrument_communication"]["primary"] == "gdb_remote"
     assert current_setup["control_instrument_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["compatibility"]["probe_instance"] == "esp32jtag_stm32_golden"
-    assert current_setup["compatibility"]["probe_endpoint"] == {"host": "192.168.2.98", "port": 4242}
+    assert current_setup["compatibility"]["probe_endpoint"] == {"host": "192.168.2.99", "port": 4242}
     assert current_setup["compatibility"]["probe_communication"]["primary"] == "gdb_remote"
     assert current_setup["compatibility"]["probe_capability_surfaces"]["swd"] == "gdb_remote"
     assert current_setup["selected_bench_resources"]["serial_port"] == "/dev/ttyACM0"
     assert current_setup["selected_bench_resources"]["contract_version"] == 1
     assert current_setup["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert current_setup["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
-    assert current_setup["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
+    assert current_setup["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.99:4242"]
     assert "instrument_id:esp32s3_dev_c_meter" in current_setup["selected_bench_resources"]["selection_digest"]
     assert current_setup["selected_ap_ssid"] == "ESP32_GPIO_METER_E7F1"
     assert current_setup["selected_endpoint"] == {"host": "192.168.4.1", "port": 9000}
@@ -325,7 +325,7 @@ def test_bench_resource_drift_detects_endpoint_change():
             "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.1:9000"],
             "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
             "instrument": {"endpoint": {"host": "192.168.4.1", "port": 9000}},
-            "control_instrument": {"endpoint": {"host": "192.168.2.98", "port": 4242}},
+            "control_instrument": {"endpoint": {"host": "192.168.2.99", "port": 4242}},
             "serial_port": "/dev/ttyACM0",
         }
     }
@@ -336,7 +336,7 @@ def test_bench_resource_drift_detects_endpoint_change():
             "resource_keys": ["instrument:esp32s3_dev_c_meter:192.168.4.9:9000"],
             "connection_digest": ["digital X1(GPIO4)->GPIO11 expect=toggle"],
             "instrument": {"endpoint": {"host": "192.168.4.9", "port": 9000}},
-            "control_instrument": {"endpoint": {"host": "192.168.2.98", "port": 4242}},
+            "control_instrument": {"endpoint": {"host": "192.168.2.99", "port": 4242}},
             "serial_port": "/dev/ttyACM0",
         }
     }
@@ -378,7 +378,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "instrument_capability_surfaces": {"measure.digital": "primary"},
         "control_instrument_instance": "esp32jtag_stm32_golden",
         "control_instrument_type": "esp32jtag",
-        "control_instrument_endpoint": "192.168.2.98:4242",
+        "control_instrument_endpoint": "192.168.2.99:4242",
         "control_instrument_capability_surfaces": {"swd": "gdb_remote"},
         "connection_digest": ["wiring: verify=P0.0"],
         "key_artifact_paths": {"result": "/tmp/result.json", "run_plan": "/tmp/run_plan.json"},
@@ -395,7 +395,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "instrument_capability_surfaces": {"measure.digital": "primary"},
         "control_instrument_instance": "esp32jtag_stm32_golden",
         "control_instrument_type": "esp32jtag",
-        "control_instrument_endpoint": "192.168.2.98:4242",
+        "control_instrument_endpoint": "192.168.2.99:4242",
         "control_instrument_capability_surfaces": {"swd": "gdb_remote"},
         "connection_digest": ["wiring: verify=P0.0"],
         "artifact_or_evidence_location": "/tmp/evidence.json",
@@ -404,7 +404,7 @@ def test_print_success_summary_includes_capability_surface_lines(capsys):
         "selected_endpoint": {"host": "192.168.4.1", "port": 9000},
         "instrument_profile": "esp32s3_dev_c_meter",
         "control_instrument_instance": "esp32jtag_stm32_golden",
-        "control_instrument_endpoint": {"host": "192.168.2.98", "port": 4242},
+        "control_instrument_endpoint": {"host": "192.168.2.99", "port": 4242},
         "connection_digest": ["wiring: verify=P0.0"],
         "selected_bench_resources": {
             "contract_version": 1,

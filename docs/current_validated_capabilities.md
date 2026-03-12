@@ -62,7 +62,7 @@ Known nuance:
 
 - board family: `stm32f103`
 - validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main control-instrument path: `esp32jtag_stm32_golden` at `192.168.2.98:4242` with LA verify via `https://192.168.2.98:443`
+- main control-instrument path: `esp32jtag_stm32_golden` at `192.168.2.99:4242` with LA verify via `https://192.168.2.99:443`
 - current status: validated on real hardware and stable in current default verification
 
 What is currently solid in this path:
