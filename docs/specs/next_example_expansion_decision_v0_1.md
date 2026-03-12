@@ -7,17 +7,26 @@ runtime-validation governance pass.
 
 The next generated-example expansion work should prioritize:
 
-1. bounded runtime validation of UART examples on RP2040 and STM32F103
-2. only after that, selective runtime validation of other generated examples
+1. readiness-aware next-action selection
+2. bounded runtime validation only on examples that are actually runtime-ready
 3. defer USB and new-vendor family expansion
+
+That next-action selection should be based on:
+- formal connection-contract completeness
+- runtime-readiness status
+- actual runtime-validation status
+
+For the execution-facing state transitions behind that decision, see:
+- [example_runtime_readiness_transition_table_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/example_runtime_readiness_transition_table_v0_1.md)
 
 ## Why
 
-### RP2040 and STM32F103 are the least blocked current paths
+### RP2040 and STM32F103 are structurally strong, but not currently provisioned
 
 - their default verification paths are stable enough for repeated use
 - their generated UART examples are formally complete
-- they do not currently depend on the unstable ESP32-C6 meter bench path
+- but the generated UART example runtime paths are currently blocked by missing
+  bench setup
 
 ### ESP32-C6 remains useful but should stay conservative
 
@@ -38,12 +47,10 @@ bounded validation path.
 
 ## Recommended immediate next batch
 
-1. choose one RP2040 UART example and one STM32F103 UART example
-2. run staged validation:
-   - `inventory describe-test`
-   - `explain-stage --stage plan`
-   - live `run`
-3. update the example catalog conservatively from the result
+1. use the runtime-readiness model to choose the next least blocked example path
+2. do not attempt live validation on examples blocked by missing bench setup
+3. continue with bounded generation/spec work unless or until a real runtime
+   path is provisioned
 
 ## Out of scope for this decision
 
