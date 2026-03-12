@@ -128,9 +128,15 @@ For repo tracking, generated examples should also record:
 - build-smoke status
 - runtime validation status
 - runtime validation basis
+- runtime readiness status
 
 When an example leaves an external stimulus intentionally undefined, that should
 be recorded explicitly rather than treated as an implicit gap.
+
+When a generated example is not meaningfully runnable on the current bench, the
+repo should record that separately from runtime-validation status. Runtime
+readiness answers whether a live run is meaningful to attempt now. It does not
+mean that runtime validation has already happened.
 
 When a live bench run is attempted but blocked by bench-side conditions, the
 example should not be promoted to a stronger runtime-validation status. Instead,
@@ -175,6 +181,8 @@ Generated examples should record:
 - one strong baseline before broad example expansion
 - formal connection-contract completeness before runtime-claim expansion
 - runtime-validation on the least blocked path first
+- explicit runtime-readiness tracking before live validation attempts on newly
+  generated examples
 
 ## Relationship to family policies
 
@@ -184,4 +192,5 @@ Examples:
 
 - [esp32_example_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/esp32_example_generation_policy_v0_1.md)
 - [rp2_example_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/rp2_example_generation_policy_v0_1.md)
+- [stm32_official_source_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32_official_source_generation_policy_v0_1.md)
 - [dut_target_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/dut_target_generation_policy_v0_1.md)

@@ -43,6 +43,12 @@
       "live_bench_run",
       "live_bench_repeat"
     ],
+    "runtime_readiness_status": [
+      "runtime_ready_now",
+      "blocked_missing_bench_setup",
+      "blocked_unbound_external_input",
+      "blocked_unstable_bench_path"
+    ],
     "family_method": [
       "rp2_local_reference_first",
       "rp2350_hybrid_first_baseline",
@@ -63,6 +69,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "rp2350_hybrid_first_baseline"
     },
     {
@@ -77,6 +84,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "rp2350_hybrid_first_baseline"
     },
     {
@@ -91,6 +99,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "rp2_local_reference_first"
     },
     {
@@ -105,6 +114,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_unbound_external_input",
       "family_method": "rp2_local_reference_first"
     },
     {
@@ -119,6 +129,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "rp2_local_reference_first"
     },
     {
@@ -133,6 +144,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "rp2_local_reference_first"
     },
     {
@@ -147,6 +159,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "stm32_local_reference_first"
     },
     {
@@ -161,6 +174,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_unbound_external_input",
       "family_method": "stm32_local_reference_first"
     },
     {
@@ -175,6 +189,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "stm32_local_reference_first"
     },
     {
@@ -189,6 +204,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "stm32_local_reference_first"
     },
     {
@@ -204,6 +220,7 @@
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "live_bench_attempt_failed",
       "runtime_validation_note": "Live bench run attempted on 2026-03-12; blocked by meter reachability on current ESP32-C6 bench path.",
+      "runtime_readiness_status": "blocked_unstable_bench_path",
       "family_method": "esp32_idf_example_first"
     },
     {
@@ -218,6 +235,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_unbound_external_input",
       "family_method": "esp32_idf_example_first"
     },
     {
@@ -232,6 +250,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_unstable_bench_path",
       "family_method": "esp32_idf_example_first"
     },
     {
@@ -246,6 +265,7 @@
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
+      "runtime_readiness_status": "blocked_unstable_bench_path",
       "family_method": "esp32_idf_example_first"
     }
   ]

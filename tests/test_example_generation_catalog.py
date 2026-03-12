@@ -25,6 +25,7 @@ def test_example_catalog_entries_use_valid_enums_and_required_fields():
         "build_status",
         "runtime_validation_status",
         "runtime_validation_basis",
+        "runtime_readiness_status",
         "family_method",
     }
 
@@ -38,6 +39,7 @@ def test_example_catalog_entries_use_valid_enums_and_required_fields():
         assert entry["build_status"] in enums["build_status"]
         assert entry["runtime_validation_status"] in enums["runtime_validation_status"]
         assert entry["runtime_validation_basis"] in enums["runtime_validation_basis"]
+        assert entry["runtime_readiness_status"] in enums["runtime_readiness_status"]
         assert entry["family_method"] in enums["family_method"]
 
 
@@ -61,3 +63,16 @@ def test_non_adc_examples_are_marked_as_formal_contract_complete():
     for entry in catalog["examples"]:
         if entry["example_kind"] != "adc_banner":
             assert entry["contract_completeness"] == "formal_contract_complete"
+
+
+def test_runtime_readiness_matches_current_known_blockers():
+    catalog = _load_catalog()
+    by_plan = {entry["plan"]: entry for entry in catalog["examples"]}
+
+    assert by_plan["tests/plans/rp2040_uart_banner.json"]["runtime_readiness_status"] == "blocked_missing_bench_setup"
+    assert by_plan["tests/plans/stm32f103_uart_banner.json"]["runtime_readiness_status"] == "blocked_missing_bench_setup"
+    assert by_plan["tests/plans/esp32c6_uart_banner.json"]["runtime_readiness_status"] == "blocked_unstable_bench_path"
+
+    for entry in catalog["examples"]:
+        if entry["example_kind"] == "adc_banner":
+            assert entry["runtime_readiness_status"] == "blocked_unbound_external_input"

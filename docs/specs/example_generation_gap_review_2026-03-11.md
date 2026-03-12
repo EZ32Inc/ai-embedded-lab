@@ -18,6 +18,8 @@ This review covers the current generated-example path for:
 - ESP32 family
   - current bounded review based on ESP32-C6 example generation
 
+It also reflects the current runtime-readiness classification pass.
+
 ## Confirmed current state
 
 ### Repo-level generation support
@@ -74,6 +76,17 @@ The repo now also has:
 This is strong enough for bounded runtime-validation work without overstating
 hardware confidence.
 
+### Runtime-readiness governance
+
+The repo now also has:
+
+- runtime-readiness categories for generated examples
+- explicit distinction between readiness and runtime-validation status
+- a bounded runtime-readiness review workflow
+
+This is strong enough to continue generation/governance work even when live
+bench setup is not available for every generated example.
+
 ## Family review
 
 ### STM32 family
@@ -92,14 +105,14 @@ Current gaps:
 - example generation tracking is still weaker than target generation tracking
 - family coverage is still effectively one bounded example-generation baseline
   board (`stm32f103`)
-- no STM32-family example-generation skill at the same canonical level as the
-  ESP32 and RP2 family skills
 - no runtime-validated STM32 generated example yet
+- current generated STM32 examples are mostly blocked by missing bench setup,
+  not by generation-structure weakness
 
 Recommended next improvement:
 
-- add a canonical STM32-family example-generation skill or policy note that
-  connects official-source target rules to example-generation rules
+- continue using the new canonical STM32-family example-generation skill and
+  only widen STM32 runtime claims when actual bench setup exists
 
 ### ESP32 family
 
@@ -121,6 +134,8 @@ Current gaps:
   still selective and meter-path dependent
 - the first runtime-validation candidate was attempted, but current bench
   stability blocked promotion beyond `build_and_plan_verified`
+- ESP32 generated examples are currently more blocked by bench stability than
+  by generation-rule weakness
 
 Recommended next improvement:
 
@@ -146,6 +161,8 @@ Current gaps:
 - RP2350 example set is still light compared with RP2040
 - no runtime-validated RP2350 baseline yet
 - no runtime-validated RP2040 generated example yet
+- current RP2 generated examples are mostly blocked by missing bench setup,
+  not by connection-contract completeness
 
 Recommended next improvement:
 
@@ -181,11 +198,13 @@ The repo is still intentionally light on:
 3. broader-family tracking only if expansion widens further
 4. explicit review of examples whose external connection contract is still
    intentionally unbound
+5. explicit distinction between missing bench setup and true generation-model
+   gaps
 
 ## Recommended next steps
 
-1. runtime-validate a small subset of generated examples on RP2040 and STM32
-   first
+1. when bench setup exists, runtime-validate a small subset of generated
+   examples on RP2040 and STM32 first
 2. keep ESP32 generated-example runtime claims conservative until the current
    meter-backed bench path is less blocking
 3. add a canonical STM32-family example-generation skill

@@ -80,6 +80,11 @@ That means:
 - ADC examples remain formally complete, but some are not yet runtime-ready
   because the external analog source contract is still intentionally undefined
 
+There is also a separate bounded case where a formal contract is complete, but
+the runtime bench setup is not yet provisioned. In that case, connection
+retrieval is still formal and complete, but runtime readiness should be tracked
+as blocked by missing bench setup rather than treated as a retrieval gap.
+
 ## Verification Rule
 
 For generated examples, the connection contract is good enough when:
