@@ -31,6 +31,8 @@ def test_build_resolved_instrument_manifest_view():
     assert payload["communication"]["protocol"] == "gpio_meter_v1"
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
     assert payload["native_interface"]["role"] == "instrument_native_api"
+    assert payload["native_interface_summary"]["metadata_command_count"] == 4
+    assert payload["native_interface_summary"]["action_command_count"] == 3
     assert "measure_digital" in payload["native_interface"]["action_commands"]
     assert payload["metadata_validation_errors"] == []
 
@@ -100,6 +102,8 @@ def test_instruments_describe_cli_summary_output():
     assert "endpoint: 192.168.4.1:9000" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "native_actions: measure_digital, measure_voltage, stim_digital" in res.stdout
+    assert "native_metadata_count: 4" in res.stdout
+    assert "native_action_count: 3" in res.stdout
 
 
 def test_instruments_describe_cli_text_output_shows_native_interface():

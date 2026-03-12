@@ -123,6 +123,14 @@ def build_instrument_manifest_view(
     communication = dict(manifest.get("communication") or {})
     native_interface = dict(manifest.get("native_interface") or {})
     capability_surfaces = dict(manifest.get("capability_surfaces") or {})
+    native_interface_summary = {}
+    if native_interface:
+        native_interface_summary = {
+            "protocol": native_interface.get("protocol"),
+            "role": native_interface.get("role"),
+            "metadata_command_count": len(native_interface.get("metadata_commands") or []),
+            "action_command_count": len(native_interface.get("action_commands") or []),
+        }
     return {
         "kind": "instrument",
         "id": instrument_id,
@@ -130,6 +138,7 @@ def build_instrument_manifest_view(
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,
         "native_interface": native_interface,
+        "native_interface_summary": native_interface_summary,
         "capability_surfaces": capability_surfaces,
         "metadata_validation_errors": (
             validate_communication(communication)
@@ -277,6 +286,11 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
             if key in {"name", "protocol", "role", "metadata_commands", "action_commands", "response_model"}:
                 continue
             lines.append(f"  - {key}: {value}")
+    native_interface_summary = payload.get("native_interface_summary")
+    if isinstance(native_interface_summary, dict) and native_interface_summary:
+        lines.append("native_interface_summary:")
+        for key, value in native_interface_summary.items():
+            lines.append(f"  - {key}: {value}")
     capability_surfaces = payload.get("capability_surfaces")
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         lines.append("capability_surfaces:")
@@ -334,6 +348,14 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
         action_commands = native_interface.get("action_commands") or []
         if action_commands:
             lines.append(f"native_actions: {', '.join(str(item) for item in action_commands)}")
+    native_interface_summary = payload.get("native_interface_summary") or {}
+    if isinstance(native_interface_summary, dict) and native_interface_summary:
+        if native_interface_summary.get("role"):
+            lines.append(f"native_role: {native_interface_summary.get('role')}")
+        if native_interface_summary.get("metadata_command_count") is not None:
+            lines.append(f"native_metadata_count: {native_interface_summary.get('metadata_command_count')}")
+        if native_interface_summary.get("action_command_count") is not None:
+            lines.append(f"native_action_count: {native_interface_summary.get('action_command_count')}")
     capability_surfaces = payload.get("capability_surfaces") or {}
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         parts = [f"{key}->{value}" for key, value in capability_surfaces.items()]
