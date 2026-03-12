@@ -1,7 +1,8 @@
-# Example Generation Gap Review 2026-03-11
+# Example Generation Gap Review 2026-03-12
 
 This document records the current repo-level gap review for generated example
-support after the first bounded UART/ADC/SPI/I2C expansion batch.
+support after the first bounded UART/ADC/SPI/I2C expansion batch and the first
+runtime-validation governance pass.
 
 It is a planning and status document, not a family policy.
 
@@ -61,6 +62,18 @@ The current generated example set has:
 
 This is strong enough for bounded example expansion work.
 
+### Runtime-validation governance
+
+The repo now also has:
+
+- a bounded runtime-validation candidate set
+- a generated-example runtime-validation workflow
+- runtime-validation basis tracking in the example catalog
+- a conservative rule for attempted-but-blocked live validation
+
+This is strong enough for bounded runtime-validation work without overstating
+hardware confidence.
+
 ## Family review
 
 ### STM32 family
@@ -81,6 +94,7 @@ Current gaps:
   board (`stm32f103`)
 - no STM32-family example-generation skill at the same canonical level as the
   ESP32 and RP2 family skills
+- no runtime-validated STM32 generated example yet
 
 Recommended next improvement:
 
@@ -105,6 +119,8 @@ Current gaps:
 - current formal review is effectively centered on `esp32c6_devkit`
 - generated examples are build-and-plan validated, but runtime validation is
   still selective and meter-path dependent
+- the first runtime-validation candidate was attempted, but current bench
+  stability blocked promotion beyond `build_and_plan_verified`
 
 Recommended next improvement:
 
@@ -129,6 +145,7 @@ Current gaps:
 - no RP2 generation catalog
 - RP2350 example set is still light compared with RP2040
 - no runtime-validated RP2350 baseline yet
+- no runtime-validated RP2040 generated example yet
 
 Recommended next improvement:
 
@@ -158,13 +175,19 @@ The repo is still intentionally light on:
 
 ### Current highest-value gaps
 
-1. selective runtime validation of generated examples
+1. selective runtime validation of generated examples on the least blocked
+   families/paths
 2. a stronger STM32-family example-generation skill
 3. broader-family tracking only if expansion widens further
+4. explicit review of examples whose external connection contract is still
+   intentionally unbound
 
 ## Recommended next steps
 
-1. runtime-validate a small subset of generated examples
-2. add a canonical STM32-family example-generation skill
-3. keep USB and new-vendor family expansion separate from the current bounded
+1. runtime-validate a small subset of generated examples on RP2040 and STM32
+   first
+2. keep ESP32 generated-example runtime claims conservative until the current
+   meter-backed bench path is less blocking
+3. add a canonical STM32-family example-generation skill
+4. keep USB and new-vendor family expansion separate from the current bounded
    batch

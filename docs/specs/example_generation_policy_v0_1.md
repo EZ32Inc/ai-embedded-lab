@@ -127,9 +127,15 @@ For repo tracking, generated examples should also record:
 - connection-contract completeness
 - build-smoke status
 - runtime validation status
+- runtime validation basis
 
 When an example leaves an external stimulus intentionally undefined, that should
 be recorded explicitly rather than treated as an implicit gap.
+
+When a live bench run is attempted but blocked by bench-side conditions, the
+example should not be promoted to a stronger runtime-validation status. Instead,
+the repo should record that attempted-but-blocked state explicitly through the
+runtime-validation basis and any short note needed for future review.
 
 ## UART default rule
 
@@ -167,6 +173,8 @@ Generated examples should record:
 - explicit provenance over implicit copying
 - conservative validation claims
 - one strong baseline before broad example expansion
+- formal connection-contract completeness before runtime-claim expansion
+- runtime-validation on the least blocked path first
 
 ## Relationship to family policies
 

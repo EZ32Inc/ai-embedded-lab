@@ -24,6 +24,7 @@ def test_example_catalog_entries_use_valid_enums_and_required_fields():
         "contract_completeness",
         "build_status",
         "runtime_validation_status",
+        "runtime_validation_basis",
         "family_method",
     }
 
@@ -36,6 +37,7 @@ def test_example_catalog_entries_use_valid_enums_and_required_fields():
         assert entry["contract_completeness"] in enums["contract_completeness"]
         assert entry["build_status"] in enums["build_status"]
         assert entry["runtime_validation_status"] in enums["runtime_validation_status"]
+        assert entry["runtime_validation_basis"] in enums["runtime_validation_basis"]
         assert entry["family_method"] in enums["family_method"]
 
 

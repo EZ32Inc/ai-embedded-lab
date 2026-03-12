@@ -64,6 +64,22 @@ Generated UART/ADC/SPI examples now carry enough explicit test-level contract da
 - key peripheral signals
 - ADC external-input gaps
 
+## Current completeness boundary
+
+The generated example set is now good enough to answer normal connection
+questions through formal surfaces.
+
+The main remaining intentional gap is not missing retrieval structure. It is
+that some examples still declare external stimulus as explicitly unbound. In the
+current generated set, this mainly affects ADC examples.
+
+That means:
+
+- UART/SPI/I2C examples are generally good runtime-validation candidates when
+  the bench path is available
+- ADC examples remain formally complete, but some are not yet runtime-ready
+  because the external analog source contract is still intentionally undefined
+
 ## Verification Rule
 
 For generated examples, the connection contract is good enough when:
