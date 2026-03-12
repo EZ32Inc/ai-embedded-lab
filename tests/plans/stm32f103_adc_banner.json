@@ -36,12 +36,16 @@
     ],
     "external_inputs": [
       {
-        "source": "UNSPECIFIED_ANALOG_SOURCE",
+        "source": "FIXED_3V3_SUPPLY",
         "dut_signal": "PA0/ADC1_IN0",
         "kind": "analog_in",
-        "required": false,
-        "status": "not_defined",
-        "notes": "Current example reports local ADC samples but does not define an external analog stimulus contract."
+        "required": true,
+        "status": "defined_not_provisioned",
+        "expected_range_v": [
+          2.8,
+          3.45
+        ],
+        "notes": "Execution contract: connect a fixed 3V3 bench supply to PA0/ADC1_IN0 before runtime validation. This contract is defined but not yet bench-provisioned."
       }
     ]
   }

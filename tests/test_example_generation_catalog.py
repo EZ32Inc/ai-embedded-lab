@@ -55,7 +55,10 @@ def test_adc_examples_are_marked_as_unbound_external_input_contracts():
     adc_entries = [entry for entry in catalog["examples"] if entry["example_kind"] == "adc_banner"]
     assert adc_entries
     for entry in adc_entries:
-        assert entry["contract_completeness"] == "formal_contract_complete_with_unbound_external_inputs"
+        if entry["plan"] == "tests/plans/stm32f103_adc_banner.json":
+            assert entry["contract_completeness"] == "formal_contract_complete"
+        else:
+            assert entry["contract_completeness"] == "formal_contract_complete_with_unbound_external_inputs"
 
 
 def test_non_adc_examples_are_marked_as_formal_contract_complete():
@@ -75,4 +78,7 @@ def test_runtime_readiness_matches_current_known_blockers():
 
     for entry in catalog["examples"]:
         if entry["example_kind"] == "adc_banner":
-            assert entry["runtime_readiness_status"] == "blocked_unbound_external_input"
+            if entry["plan"] == "tests/plans/stm32f103_adc_banner.json":
+                assert entry["runtime_readiness_status"] == "blocked_missing_bench_setup"
+            else:
+                assert entry["runtime_readiness_status"] == "blocked_unbound_external_input"

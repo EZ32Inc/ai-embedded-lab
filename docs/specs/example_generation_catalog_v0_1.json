@@ -43,11 +43,11 @@
       "live_bench_run",
       "live_bench_repeat"
     ],
-    "runtime_readiness_status": [
-      "runtime_ready_now",
-      "blocked_missing_bench_setup",
-      "blocked_unbound_external_input",
-      "blocked_unstable_bench_path"
+      "runtime_readiness_status": [
+        "runtime_ready_now",
+        "blocked_missing_bench_setup",
+        "blocked_unbound_external_input",
+        "blocked_unstable_bench_path"
     ],
     "family_method": [
       "rp2_local_reference_first",
@@ -170,11 +170,11 @@
       "target": "firmware/targets/stm32f103_adc",
       "source_basis": "verified_local_example_first",
       "validation_status": "build_and_plan_verified",
-      "contract_completeness": "formal_contract_complete_with_unbound_external_inputs",
+      "contract_completeness": "formal_contract_complete",
       "build_status": "build_smoke_passed",
       "runtime_validation_status": "not_run",
       "runtime_validation_basis": "not_attempted",
-      "runtime_readiness_status": "blocked_unbound_external_input",
+      "runtime_readiness_status": "blocked_missing_bench_setup",
       "family_method": "stm32_local_reference_first"
     },
     {

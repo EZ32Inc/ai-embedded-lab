@@ -45,13 +45,15 @@ It already contains:
 
 Reasonable current phase description:
 
-- Phase 1 core architecture work is largely complete
-- the repo is in a consolidation and operational-policy phase
+- Phase 1 bounded Local Instrument Interface refactor is complete
+- Phase 2 default-verification runtime migration is complete in bounded form
+- the repo is now moving from instrument-layer consolidation toward execution enablement on generated examples
 
 This means:
 - the main execution architecture is already real
+- the main instrument-facing lower layer is proven on bounded production paths
 - the main models are already visible in code and docs
-- the next work should mostly be bounded cleanup, policy tightening, compatibility retirement, and workflow/method buildup
+- the next work should mostly be bounded execution enablement, selective contract completion, and workflow/method buildup
 
 ## Main Architecture Parts
 

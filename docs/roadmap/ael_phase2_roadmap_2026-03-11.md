@@ -41,6 +41,21 @@ So Phase 2 should assume:
 - broad rewrites are not the default answer
 - the next value is in tightening boundaries, reducing compatibility debt, and improving durable operational guidance
 
+## Current Closeout Status
+
+As of the current repo state, Phase 2 is substantially complete in bounded form.
+
+That closeout includes:
+
+- the bounded Local Instrument Interface refactor from Phase 1 is complete
+- the three default-verification paths now route their required instrument-touching runtime interactions through the Local Instrument Interface
+- `verify-default` remains stable within the known bench-side ESP32-C6 meter-instability envelope
+
+What this means operationally:
+
+- Phase 2 should now be treated as closed for new architecture-expansion work
+- follow-on work should open a new execution-facing phase instead of extending Phase 2 by momentum
+
 ## Working Principles
 
 Phase 2 should follow these rules:

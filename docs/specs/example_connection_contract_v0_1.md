@@ -71,7 +71,8 @@ questions through formal surfaces.
 
 The main remaining intentional gap is not missing retrieval structure. It is
 that some examples still declare external stimulus as explicitly unbound. In the
-current generated set, this mainly affects ADC examples.
+current generated set, this mainly affects ADC examples, although one bounded
+first contract-completion step has now been made for `stm32f103_adc_banner`.
 
 That means:
 
@@ -79,11 +80,14 @@ That means:
   the bench path is available
 - ADC examples remain formally complete, but some are not yet runtime-ready
   because the external analog source contract is still intentionally undefined
+  or defined-but-not-provisioned
 
 There is also a separate bounded case where a formal contract is complete, but
 the runtime bench setup is not yet provisioned. In that case, connection
 retrieval is still formal and complete, but runtime readiness should be tracked
-as blocked by missing bench setup rather than treated as a retrieval gap.
+as blocked by missing bench setup rather than treated as a retrieval gap. The
+current `stm32f103_adc_banner` path is the first example of that narrower
+blocker class.
 
 ## Verification Rule
 
@@ -100,3 +104,4 @@ For generated examples, the connection contract is good enough when:
 
 - This is intentionally a bounded extension, not a broad connection-model rewrite.
 - Missing external sources may be declared explicitly as `not_defined`; that is better than leaving them implicit.
+- A defined external source may still remain `defined_not_provisioned`; that is a contract-complete but execution-blocked state, not a retrieval gap.
