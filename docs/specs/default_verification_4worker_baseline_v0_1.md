@@ -36,6 +36,15 @@ Under the current instrument-instance ownership model, this means:
 
 This is the expected bounded behavior today.
 
+Related bounded design follow-on:
+
+- [shared_instrument_resource_model_phase_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/shared_instrument_resource_model_phase_closeout_v0_1.md)
+
+That follow-on concluded:
+
+- the earlier false DUT collapse was the real bug and is now fixed
+- the remaining shared control-instrument blocking in the active STM32 pilot should remain in place for now
+
 ## UART worker shape
 
 `stm32f103_uart_bridge_banner` is a bounded 2-instrument execution path:
@@ -58,4 +67,3 @@ It does not claim:
 - general multi-instrument runtime support
 - shared sub-resource support inside one instrument
 - broad UART framework support
-

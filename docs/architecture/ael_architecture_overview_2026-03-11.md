@@ -167,6 +167,10 @@ The current repo is best described as seven main parts, plus one cross-cutting l
 - Runtime execution is still more board-profile-driven than fully DUT-driven.
 - Internal compatibility seams remain, especially around older `probe*` naming and helper paths.
 - Bench/resource semantics are strongest around default verification, not every future mode.
+- Shared-instrument ownership is still modeled mostly at the whole instrument-instance level.
+- The bounded shared-instrument follow-on clarified that:
+  - false DUT collapse was the real 4-worker bug and has been fixed
+  - current whole-instrument control-instrument blocking remains the correct safe behavior for the active STM32 pilot
 
 ### Reasonable interpretation
 
