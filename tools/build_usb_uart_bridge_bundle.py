@@ -42,6 +42,72 @@ Quick start:
 """
 
 
+INSTALL_REMOTE = """# Install / Setup (Remote Host)
+
+This bundle is the minimum remote-host package for Phase 2b of the bounded
+USB-to-UART verification path.
+
+## 1. Unpack
+
+Unzip the bundle on the remote Linux/Ubuntu host.
+
+## 2. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+## 3. Create the local runtime config
+
+```bash
+cp configs/instruments/usb_uart_bridge.example.yaml configs/instruments/usb_uart_bridge.yaml
+```
+
+## 4. List devices
+
+```bash
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml --format text list
+```
+
+## 5. Select the attached USB-UART device
+
+If the device has a stable serial:
+
+```bash
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --serial <SERIAL>
+```
+
+If it does not have a usable serial, select by stable device identity:
+
+```bash
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --device-id <ID>
+```
+
+## 6. Verify the selected device
+
+```bash
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml --format text show
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml --format text doctor
+```
+
+## 7. Start the bridge daemon
+
+```bash
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml serve --host 0.0.0.0 --port 8767
+```
+
+## 8. What the remote host is
+
+The remote host is only an instrument node/service for the USB-UART bridge.
+
+It is not:
+
+- a full AEL orchestrator
+- a remote worker
+- a cloud/session node
+"""
+
+
 def _copy_file(src_rel: str, dst_rel: str) -> None:
     src = REPO_ROOT / src_rel
     dst = BUNDLE_ROOT / dst_rel
@@ -59,6 +125,7 @@ def build_bundle() -> dict[str, object]:
 
     (BUNDLE_ROOT / "requirements.txt").write_text("pyserial\nPyYAML\n", encoding="utf-8")
     (BUNDLE_ROOT / "README.md").write_text(README, encoding="utf-8")
+    (BUNDLE_ROOT / "INSTALL_REMOTE.md").write_text(INSTALL_REMOTE, encoding="utf-8")
 
     with zipfile.ZipFile(ZIP_PATH, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for path in sorted(BUNDLE_ROOT.rglob("*")):
