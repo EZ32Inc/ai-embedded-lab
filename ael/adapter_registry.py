@@ -23,6 +23,7 @@ from ael import run_manager
 from ael import evidence as ael_evidence
 from ael import failure_recovery
 from ael import check_eval
+from ael.instruments import native_api_dispatch
 from ael.verification import la_verify
 
 
@@ -161,11 +162,19 @@ class _PreflightAdapter:
         out_json = inputs.get("out_json")
         output_mode = inputs.get("output_mode", "normal")
         log_path = inputs.get("log_path")
+        def _run_preflight_native():
+            payload = native_api_dispatch.preflight_probe(probe_cfg)
+            if payload.get("status") == "ok":
+                return True, payload.get("data", {})
+            details = payload.get("error", {}).get("details", {})
+            info = details.get("preflight", {}) if isinstance(details, dict) else {}
+            return False, info if isinstance(info, dict) else {}
+
         if log_path:
             with _tee_output(log_path, output_mode):
-                ok, info = preflight.run(probe_cfg)
+                ok, info = _run_preflight_native()
         else:
-            ok, info = preflight.run(probe_cfg)
+            ok, info = _run_preflight_native()
         if out_json:
             _write_json(out_json, info or {})
         if not ok:
@@ -229,7 +238,13 @@ class _LoadAdapter:
             if self.method == "idf_esptool":
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
             else:
-                ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
+                payload = native_api_dispatch.program_firmware(
+                    probe_cfg,
+                    firmware_path=firmware_path,
+                    flash_cfg=flash_cfg,
+                    flash_json_path=flash_json_path,
+                )
+                ok = payload.get("status") == "ok"
         if not ok:
             return {"ok": False, "error_summary": "load failed"}
         settle_s = 0.0
@@ -498,21 +513,42 @@ class _InstrumentSignatureAdapter:
         if not pins:
             return {"ok": False, "error_summary": "no instrument pins configured"}
 
-        try:
-            backend = self._backend_registry.resolve(instrument_id, "measure.digital")
-        except KeyError as exc:
-            sig_facts = {"backend_ready": False, "mismatch_count": 0, "error_summary": str(exc)}
-            verdict = check_eval.evaluate_instrument_signature_facts(sig_facts)
-            return {
-                "ok": False,
-                "error_summary": verdict.get("error_summary") or str(exc),
-                "failure_kind": verdict.get("failure_kind", failure_recovery.FAILURE_INSTRUMENT_NOT_READY),
-                "facts": sig_facts,
-            }
-        try:
-            meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
-        except Exception as exc:
-            return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
+        manifest = {"id": instrument_id, "communication": {"endpoint": f"{cfg.get('host')}:{cfg.get('port')}"}} if instrument_id else {}
+        native_digital = native_api_dispatch.measure_digital(
+            manifest,
+            pins=pins,
+            duration_ms=duration_ms,
+            host=cfg.get("host"),
+            port=cfg.get("port"),
+        )
+        if native_digital.get("status") == "ok":
+            meas = native_digital.get("data", {})
+        elif native_digital.get("error", {}).get("code") != "native_measure_digital_unsupported":
+            err = native_digital.get("error", {})
+            return self._backend_exception_result(
+                instrument_id,
+                cfg,
+                verify_out,
+                digital_out,
+                analog_out,
+                RuntimeError(str(err.get("message") or "instrument native digital measurement failed")),
+            )
+        else:
+            try:
+                backend = self._backend_registry.resolve(instrument_id, "measure.digital")
+            except KeyError as exc:
+                sig_facts = {"backend_ready": False, "mismatch_count": 0, "error_summary": str(exc)}
+                verdict = check_eval.evaluate_instrument_signature_facts(sig_facts)
+                return {
+                    "ok": False,
+                    "error_summary": verdict.get("error_summary") or str(exc),
+                    "failure_kind": verdict.get("failure_kind", failure_recovery.FAILURE_INSTRUMENT_NOT_READY),
+                    "facts": sig_facts,
+                }
+            try:
+                meas = backend.measure_digital(cfg=cfg, pins=pins, duration_ms=duration_ms, out_path=digital_out)
+            except Exception as exc:
+                return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
         pin_rows = meas.get("pins", []) if isinstance(meas, dict) else []
         actual_by_gpio = {}
         for row in pin_rows:
@@ -560,14 +596,34 @@ class _InstrumentSignatureAdapter:
                 min_v = center - tol
                 max_v = center + tol
 
-            try:
-                analog_backend = self._backend_registry.resolve(instrument_id, "measure.voltage")
-            except KeyError as exc:
-                return {"ok": False, "error_summary": str(exc)}
-            try:
-                meas_v = analog_backend.measure_voltage(cfg=cfg, gpio=adc_gpio, avg=avg, out_path=None)
-            except Exception as exc:
-                return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
+            native_voltage = native_api_dispatch.measure_voltage(
+                manifest,
+                gpio=adc_gpio,
+                avg=avg,
+                host=cfg.get("host"),
+                port=cfg.get("port"),
+            )
+            if native_voltage.get("status") == "ok":
+                meas_v = native_voltage.get("data", {})
+            elif native_voltage.get("error", {}).get("code") != "native_measure_voltage_unsupported":
+                err = native_voltage.get("error", {})
+                return self._backend_exception_result(
+                    instrument_id,
+                    cfg,
+                    verify_out,
+                    digital_out,
+                    analog_out,
+                    RuntimeError(str(err.get("message") or "instrument native voltage measurement failed")),
+                )
+            else:
+                try:
+                    analog_backend = self._backend_registry.resolve(instrument_id, "measure.voltage")
+                except KeyError as exc:
+                    return {"ok": False, "error_summary": str(exc)}
+                try:
+                    meas_v = analog_backend.measure_voltage(cfg=cfg, gpio=adc_gpio, avg=avg, out_path=None)
+                except Exception as exc:
+                    return self._backend_exception_result(instrument_id, cfg, verify_out, digital_out, analog_out, exc)
             analog_measurements.append({"inst_adc_gpio": adc_gpio, "avg": avg, "response": meas_v})
             measured_v = _extract_voltage_v(meas_v)
             check = {
@@ -741,16 +797,20 @@ class _SignalVerifyAdapter:
                 }
 
         def _capture_once(local_capture):
-            return observe_gpio_pin.run(
+            native_capture = native_api_dispatch.capture_signature(
                 probe_cfg,
                 pin=pin_value,
                 duration_s=duration_s,
                 expected_hz=expected_hz,
                 min_edges=min_edges,
                 max_edges=max_edges,
-                capture_out=local_capture,
-                verify_edges=False,
             )
+            if native_capture.get("status") != "ok":
+                return False
+            payload = native_capture.get("data", {})
+            if isinstance(payload, dict):
+                local_capture.update(payload)
+            return True
 
         def _led_level_poll():
             attempts = max(1, int(led_observe_cfg.get("max_attempts", 10)))

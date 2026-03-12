@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from ael.adapter_registry import AdapterRegistry
 
@@ -77,27 +78,31 @@ class TestInstrumentBackendRouting(unittest.TestCase):
         fake_registry = _FakeBackendRegistry(fake_backend)
         adapter._backend_registry = fake_registry
 
-        with tempfile.TemporaryDirectory() as td:
-            digital_out = str(Path(td) / "instrument_digital.json")
-            verify_out = str(Path(td) / "verify_result.json")
-            analog_out = str(Path(td) / "instrument_voltage.json")
-            result = adapter.execute(
-                {
-                    "type": "check.instrument_signature",
-                    "inputs": {
-                        "instrument_id": "esp32s3_dev_c_meter",
-                        "cfg": {"host": "127.0.0.1", "port": 9000},
-                        "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
-                        "analog_links": [{"inst_adc_gpio": 4, "expect_v_min": 1.0, "expect_v_max": 1.4}],
-                        "digital_out": digital_out,
-                        "verify_out": verify_out,
-                        "analog_out": analog_out,
-                        "duration_ms": 500,
+        with patch("ael.instruments.native_api_dispatch.measure_digital", return_value={"status": "error", "error": {"code": "native_measure_digital_unsupported", "message": "unsupported", "retryable": False}}), patch(
+            "ael.instruments.native_api_dispatch.measure_voltage",
+            return_value={"status": "error", "error": {"code": "native_measure_voltage_unsupported", "message": "unsupported", "retryable": False}},
+        ):
+            with tempfile.TemporaryDirectory() as td:
+                digital_out = str(Path(td) / "instrument_digital.json")
+                verify_out = str(Path(td) / "verify_result.json")
+                analog_out = str(Path(td) / "instrument_voltage.json")
+                result = adapter.execute(
+                    {
+                        "type": "check.instrument_signature",
+                        "inputs": {
+                            "instrument_id": "esp32s3_dev_c_meter",
+                            "cfg": {"host": "127.0.0.1", "port": 9000},
+                            "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
+                            "analog_links": [{"inst_adc_gpio": 4, "expect_v_min": 1.0, "expect_v_max": 1.4}],
+                            "digital_out": digital_out,
+                            "verify_out": verify_out,
+                            "analog_out": analog_out,
+                            "duration_ms": 500,
+                        },
                     },
-                },
-                None,
-                None,
-            )
+                    None,
+                    None,
+                )
         self.assertTrue(result.get("ok"))
         self.assertEqual(
             fake_registry.resolve_calls,
@@ -138,24 +143,25 @@ class TestInstrumentBackendRouting(unittest.TestCase):
         fake_registry = _FakeBackendRegistry(fake_backend)
         adapter._backend_registry = fake_registry
 
-        with tempfile.TemporaryDirectory() as td:
-            digital_out = str(Path(td) / "instrument_digital.json")
-            verify_out = str(Path(td) / "verify_result.json")
-            result = adapter.execute(
-                {
-                    "type": "check.instrument_signature",
-                    "inputs": {
-                        "instrument_id": "esp32s3_dev_c_meter",
-                        "cfg": {"host": "127.0.0.1", "port": 9000},
-                        "links": [{"inst_gpio": 11, "expect": "toggle", "dut_gpio": "GPIO2"}],
-                        "digital_out": digital_out,
-                        "verify_out": verify_out,
-                        "duration_ms": 500,
+        with patch("ael.instruments.native_api_dispatch.measure_digital", return_value={"status": "error", "error": {"code": "native_measure_digital_unsupported", "message": "unsupported", "retryable": False}}):
+            with tempfile.TemporaryDirectory() as td:
+                digital_out = str(Path(td) / "instrument_digital.json")
+                verify_out = str(Path(td) / "verify_result.json")
+                result = adapter.execute(
+                    {
+                        "type": "check.instrument_signature",
+                        "inputs": {
+                            "instrument_id": "esp32s3_dev_c_meter",
+                            "cfg": {"host": "127.0.0.1", "port": 9000},
+                            "links": [{"inst_gpio": 11, "expect": "toggle", "dut_gpio": "GPIO2"}],
+                            "digital_out": digital_out,
+                            "verify_out": verify_out,
+                            "duration_ms": 500,
+                        },
                     },
-                },
-                None,
-                None,
-            )
+                    None,
+                    None,
+                )
         self.assertFalse(result.get("ok"))
         self.assertEqual(result.get("verify_substage"), "instrument.signature")
         self.assertEqual(result.get("failure_class"), "instrument_digital_mismatch")
@@ -168,24 +174,25 @@ class TestInstrumentBackendRouting(unittest.TestCase):
         fake_registry = _FakeBackendRegistry(_TimeoutBackend())
         adapter._backend_registry = fake_registry
 
-        with tempfile.TemporaryDirectory() as td:
-            digital_out = str(Path(td) / "instrument_digital.json")
-            verify_out = str(Path(td) / "verify_result.json")
-            result = adapter.execute(
-                {
-                    "type": "check.instrument_signature",
-                    "inputs": {
-                        "instrument_id": "esp32s3_dev_c_meter",
-                        "cfg": {"host": "127.0.0.1", "port": 9000},
-                        "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
-                        "digital_out": digital_out,
-                        "verify_out": verify_out,
-                        "duration_ms": 500,
+        with patch("ael.instruments.native_api_dispatch.measure_digital", return_value={"status": "error", "error": {"code": "native_measure_digital_unsupported", "message": "unsupported", "retryable": False}}):
+            with tempfile.TemporaryDirectory() as td:
+                digital_out = str(Path(td) / "instrument_digital.json")
+                verify_out = str(Path(td) / "verify_result.json")
+                result = adapter.execute(
+                    {
+                        "type": "check.instrument_signature",
+                        "inputs": {
+                            "instrument_id": "esp32s3_dev_c_meter",
+                            "cfg": {"host": "127.0.0.1", "port": 9000},
+                            "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
+                            "digital_out": digital_out,
+                            "verify_out": verify_out,
+                            "duration_ms": 500,
+                        },
                     },
-                },
-                None,
-                None,
-            )
+                    None,
+                    None,
+                )
         self.assertFalse(result.get("ok"))
         self.assertEqual(result.get("verify_substage"), "instrument.signature")
         self.assertEqual(result.get("failure_class"), "instrument_backend_timeout")
