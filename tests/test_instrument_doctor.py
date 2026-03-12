@@ -66,8 +66,10 @@ def test_doctor_usb_uart_bridge_manifest_reports_tcp_health():
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "usb_uart_bridge_daemon"
+    assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
     assert payload["checks"]["tcp"]["ok"] is True
     assert payload["resolved_view"]["id"] == "usb_uart_bridge_daemon"
     rendered = instrument_view.render_doctor_text(payload)
     assert "usb_uart_bridge_daemon" in rendered
     assert "tcp: ok=True" in rendered
+    assert "native_interface:" in rendered

@@ -39,6 +39,7 @@ def test_build_resolved_usb_uart_bridge_manifest_view():
     assert payload["kind"] == "instrument"
     assert payload["id"] == "usb_uart_bridge_daemon"
     assert payload["communication"]["protocol"] == "ael-usb-uart-bridge-v0.1"
+    assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
     assert payload["capability_surfaces"]["observe.uart"] == "primary"
     assert payload["capability_surfaces"]["bridge.serial"] == "primary"
     assert payload["metadata_validation_errors"] == []
@@ -96,3 +97,18 @@ def test_instruments_describe_cli_summary_output():
     assert "esp32s3_dev_c_meter [instrument]" in res.stdout
     assert "endpoint: 192.168.4.1:9000" in res.stdout
     assert "capability_surfaces:" in res.stdout
+
+
+def test_instruments_describe_cli_text_output_shows_native_interface():
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [sys.executable, "-m", "ael", "instruments", "describe", "--id", "usb_uart_bridge_daemon", "--format", "text"],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    assert "native_interface:" in res.stdout
+    assert "ael.local_instrument.native_api.v0.1" in res.stdout

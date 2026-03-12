@@ -121,6 +121,7 @@ def build_instrument_manifest_view(
         return {"ok": False, "error": f"instrument not found: {instrument_id}"}
     refs = referenced_by or {}
     communication = dict(manifest.get("communication") or {})
+    native_interface = dict(manifest.get("native_interface") or {})
     capability_surfaces = dict(manifest.get("capability_surfaces") or {})
     return {
         "kind": "instrument",
@@ -128,6 +129,7 @@ def build_instrument_manifest_view(
         "origin": manifest.get("_origin"),
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,
+        "native_interface": native_interface,
         "capability_surfaces": capability_surfaces,
         "metadata_validation_errors": (
             validate_communication(communication)
@@ -253,6 +255,11 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
     if isinstance(communication, dict) and communication:
         lines.append("communication:")
         lines.extend(_render_communication_text(communication, indent="  "))
+    native_interface = payload.get("native_interface")
+    if isinstance(native_interface, dict) and native_interface:
+        lines.append("native_interface:")
+        for key, value in native_interface.items():
+            lines.append(f"  - {key}: {value}")
     capability_surfaces = payload.get("capability_surfaces")
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         lines.append("capability_surfaces:")
@@ -301,6 +308,9 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
             lines.append(f"primary_surface: {primary}")
         elif communication.get("protocol"):
             lines.append(f"protocol: {communication.get('protocol')}")
+    native_interface = payload.get("native_interface") or {}
+    if isinstance(native_interface, dict) and native_interface.get("protocol"):
+        lines.append(f"native_interface: {native_interface.get('protocol')}")
     capability_surfaces = payload.get("capability_surfaces") or {}
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         parts = [f"{key}->{value}" for key, value in capability_surfaces.items()]
@@ -365,6 +375,11 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
             lines.append(f"  {line}")
     if "ok" in payload:
         lines.append(f"doctor_ok: {payload.get('ok')}")
+    native_interface = payload.get("native_interface")
+    if isinstance(native_interface, dict) and native_interface:
+        lines.append("native_interface:")
+        for key, value in native_interface.items():
+            lines.append(f"  {key}: {value}")
     checks = payload.get("checks") or {}
     if isinstance(checks, dict) and checks:
         lines.append("checks:")

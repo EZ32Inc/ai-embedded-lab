@@ -141,6 +141,9 @@ GET:
 - `/list_devices`
 - `/show_selected_device`
 - `/doctor`
+- `/identify`
+- `/get_capabilities`
+- `/get_status`
 
 POST:
 
@@ -153,6 +156,27 @@ Current write/read behavior:
 
 - `write` accepts UTF-8 `text` or base64 payload
 - `read` returns base64 and UTF-8 text when decodable
+
+## Local Instrument Interface Pilot
+
+The bridge now also serves as the first bounded Local Instrument Interface / Instrument Native API pilot in AEL.
+
+Native profile:
+
+- protocol: `ael.local_instrument.native_api.v0.1`
+- metadata commands:
+  - `identify`
+  - `get_capabilities`
+  - `get_status`
+  - `doctor`
+- action commands:
+  - `open`
+  - `close`
+  - `write_uart`
+  - `read_uart`
+
+These native-interface endpoints are intended as the lower local layer.
+Future cloud-facing registration/session work should build on top of this layer rather than replacing it.
 
 ## How it fits the AEL instrument model
 

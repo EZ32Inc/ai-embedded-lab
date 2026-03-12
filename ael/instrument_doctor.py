@@ -120,6 +120,7 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
         "id": instrument_id,
         "endpoint": endpoint,
         "communication": dict(communication or {}),
+        "native_interface": dict(manifest.get("native_interface") or {}),
         "capability_surfaces": dict(manifest.get("capability_surfaces") or {}),
         "metadata_validation_errors": (
             validate_communication(communication)

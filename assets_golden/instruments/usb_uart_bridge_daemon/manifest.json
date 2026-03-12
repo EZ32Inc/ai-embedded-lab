@@ -17,6 +17,21 @@
     "protocol": "ael-usb-uart-bridge-v0.1",
     "invocation_style": "request_response"
   },
+  "native_interface": {
+    "protocol": "ael.local_instrument.native_api.v0.1",
+    "metadata_commands": [
+      "identify",
+      "get_capabilities",
+      "get_status",
+      "doctor"
+    ],
+    "action_commands": [
+      "open",
+      "close",
+      "write_uart",
+      "read_uart"
+    ]
+  },
   "capability_surfaces": {
     "observe.uart": "primary",
     "bridge.serial": "primary"

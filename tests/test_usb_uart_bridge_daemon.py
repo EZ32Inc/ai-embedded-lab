@@ -248,6 +248,41 @@ def test_service_open_write_read_close(tmp_path):
     assert closed["ok"] is True
 
 
+def test_native_interface_metadata_commands(tmp_path):
+    config_path = tmp_path / "bridge.yaml"
+    payload = bridge.load_bridge_config(config_path)
+    payload["usb_uart_bridge"]["selected_identity_kind"] = "usb_serial"
+    payload["usb_uart_bridge"]["selected_identity_value"] = "ABC123"
+    payload["usb_uart_bridge"]["selected_serial_number"] = "ABC123"
+    bridge.save_bridge_config(config_path, payload)
+
+    service = bridge.USBUARTBridgeService(
+        config_path,
+        serial_factory=FakeSerial,
+        list_ports_fn=lambda: _ports(FakePort("/dev/ttyUSB0", "ABC123")),
+        by_id_dir=tmp_path / "missing",
+    )
+
+    identify = service.identify()
+    assert identify["status"] == "ok"
+    assert identify["data"]["protocol_version"] == bridge.NATIVE_API_PROTOCOL
+
+    caps = service.get_capabilities()
+    assert caps["status"] == "ok"
+    assert "observe.uart" in caps["data"]["capabilities"]
+
+    status = service.get_status()
+    assert status["status"] == "ok"
+    assert status["data"]["selected_serial_number"] == "ABC123"
+
+
+def test_native_interface_doctor_error_shape(tmp_path):
+    service = bridge.USBUARTBridgeService(tmp_path / "bridge.yaml")
+    payload = service.doctor()
+    assert payload["status"] == "error"
+    assert payload["error"]["code"] == "doctor_failed"
+
+
 def test_http_daemon_endpoints(tmp_path):
     config_path = tmp_path / "bridge.yaml"
     payload = bridge.load_bridge_config(config_path)
@@ -274,6 +309,14 @@ def test_http_daemon_endpoints(tmp_path):
         conn.request("GET", "/status")
         status = json.loads(conn.getresponse().read().decode("utf-8"))
         assert status["ok"] is True
+
+        conn.request("GET", "/identify")
+        identify = json.loads(conn.getresponse().read().decode("utf-8"))
+        assert identify["status"] == "ok"
+
+        conn.request("GET", "/get_capabilities")
+        caps = json.loads(conn.getresponse().read().decode("utf-8"))
+        assert caps["status"] == "ok"
 
         conn.request("POST", "/open", body=b"{}")
         opened = json.loads(conn.getresponse().read().decode("utf-8"))

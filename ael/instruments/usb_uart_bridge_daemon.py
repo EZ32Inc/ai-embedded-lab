@@ -14,6 +14,7 @@ from ael.pipeline import _simple_yaml_load
 DEFAULT_LISTEN_HOST = "127.0.0.1"
 DEFAULT_LISTEN_PORT = 8767
 DEFAULT_TIMEOUT = 1.0
+NATIVE_API_PROTOCOL = "ael.local_instrument.native_api.v0.1"
 
 
 def _import_serial():
@@ -24,6 +25,41 @@ def _import_serial():
         return serial
     except Exception as exc:  # pragma: no cover - environment dependent
         raise RuntimeError("pyserial is required for usb_uart_bridge_daemon") from exc
+
+
+def native_interface_profile() -> Dict[str, Any]:
+    return {
+        "name": "Local Instrument Interface",
+        "protocol": NATIVE_API_PROTOCOL,
+        "role": "instrument_native_api",
+        "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
+        "action_commands": ["open", "close", "write_uart", "read_uart"],
+        "response_model": {
+            "success": {"status": "ok", "data": "..."},
+            "error": {
+                "status": "error",
+                "error": {"code": "string", "message": "string", "retryable": False},
+            },
+        },
+    }
+
+
+def _native_ok(data: Dict[str, Any]) -> Dict[str, Any]:
+    return {"status": "ok", "data": data}
+
+
+def _native_error(code: str, message: str, *, retryable: bool = False, details: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    payload = {
+        "status": "error",
+        "error": {
+            "code": code,
+            "message": message,
+            "retryable": bool(retryable),
+        },
+    }
+    if details:
+        payload["error"]["details"] = details
+    return payload
 
 
 @dataclass(frozen=True)
@@ -374,6 +410,63 @@ def doctor_selected_device(
     return payload
 
 
+def identify_bridge(config_path: str | Path) -> Dict[str, Any]:
+    cfg = load_bridge_config(config_path)
+    bridge_cfg = cfg.get("usb_uart_bridge", {}) if isinstance(cfg.get("usb_uart_bridge"), dict) else {}
+    return _native_ok(
+        {
+            "device_type": "usb_uart_bridge_daemon",
+            "model": "USB UART Bridge Daemon",
+            "protocol_version": NATIVE_API_PROTOCOL,
+            "selected_identity_kind": bridge_cfg.get("selected_identity_kind"),
+            "selected_identity_value": bridge_cfg.get("selected_identity_value"),
+            "selected_serial_number": bridge_cfg.get("selected_serial_number"),
+        }
+    )
+
+
+def bridge_capabilities(config_path: str | Path) -> Dict[str, Any]:
+    cfg = load_bridge_config(config_path)
+    bridge_cfg = cfg.get("usb_uart_bridge", {}) if isinstance(cfg.get("usb_uart_bridge"), dict) else {}
+    serial_cfg = bridge_cfg.get("serial", {}) if isinstance(bridge_cfg.get("serial"), dict) else {}
+    return _native_ok(
+        {
+            "protocol_version": NATIVE_API_PROTOCOL,
+            "capabilities": {
+                "observe.uart": {
+                    "ports": 1,
+                    "defaults": {
+                        "baudrate": int(serial_cfg.get("baudrate", 115200)),
+                        "bytesize": int(serial_cfg.get("bytesize", 8)),
+                        "parity": str(serial_cfg.get("parity", "N")),
+                        "stopbits": float(serial_cfg.get("stopbits", 1)),
+                        "timeout": float(serial_cfg.get("timeout", DEFAULT_TIMEOUT)),
+                    },
+                },
+                "bridge.serial": {
+                    "supports_open_close": True,
+                    "supports_read_write": True,
+                },
+            },
+        }
+    )
+
+
+def bridge_status(config_path: str | Path, *, serial_open: bool, selected_device: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    cfg = load_bridge_config(config_path)
+    bridge_cfg = cfg.get("usb_uart_bridge", {}) if isinstance(cfg.get("usb_uart_bridge"), dict) else {}
+    return _native_ok(
+        {
+            "protocol_version": NATIVE_API_PROTOCOL,
+            "selected_identity_kind": bridge_cfg.get("selected_identity_kind"),
+            "selected_identity_value": bridge_cfg.get("selected_identity_value"),
+            "selected_serial_number": bridge_cfg.get("selected_serial_number"),
+            "selected_device": selected_device,
+            "serial_open": bool(serial_open),
+        }
+    )
+
+
 class USBUARTBridgeService:
     def __init__(
         self,
@@ -411,17 +504,30 @@ class USBUARTBridgeService:
         return serial_mod.Serial
 
     def status(self) -> Dict[str, Any]:
-        cfg = load_bridge_config(self.config_path)
         selected = resolve_selected_device(self.config_path, discovery=self._discovery())
-        return {
-            "ok": True,
-            "config_path": self.config_path,
-            "selected_identity_kind": cfg.get("usb_uart_bridge", {}).get("selected_identity_kind"),
-            "selected_identity_value": cfg.get("usb_uart_bridge", {}).get("selected_identity_value"),
-            "selected_serial_number": cfg.get("usb_uart_bridge", {}).get("selected_serial_number"),
-            "selected_device": selected.get("device"),
-            "serial_open": self._serial_handle is not None,
-        }
+        payload = bridge_status(
+            self.config_path,
+            serial_open=self._serial_handle is not None,
+            selected_device=selected.get("device"),
+        )
+        data = payload["data"]
+        data["ok"] = True
+        data["config_path"] = self.config_path
+        return data
+
+    def identify(self) -> Dict[str, Any]:
+        return identify_bridge(self.config_path)
+
+    def get_capabilities(self) -> Dict[str, Any]:
+        return bridge_capabilities(self.config_path)
+
+    def get_status(self) -> Dict[str, Any]:
+        selected = resolve_selected_device(self.config_path, discovery=self._discovery())
+        return bridge_status(
+            self.config_path,
+            serial_open=self._serial_handle is not None,
+            selected_device=selected.get("device"),
+        )
 
     def list_devices(self) -> Dict[str, Any]:
         return self._discovery()
@@ -430,10 +536,17 @@ class USBUARTBridgeService:
         return resolve_selected_device(self.config_path, discovery=self._discovery())
 
     def doctor(self) -> Dict[str, Any]:
-        return doctor_selected_device(
+        payload = doctor_selected_device(
             self.config_path,
             serial_factory=self._serial_factory,
             discovery=self._discovery(),
+        )
+        if payload.get("ok"):
+            return _native_ok(payload)
+        return _native_error(
+            "doctor_failed",
+            str(payload.get("error") or "doctor failed"),
+            details=payload,
         )
 
     def open(self) -> Dict[str, Any]:
@@ -523,6 +636,9 @@ class _USBUARTBridgeRequestHandler(BaseHTTPRequestHandler):
             "/list_devices": self.server.service.list_devices,
             "/show_selected_device": self.server.service.show_selected_device,
             "/doctor": self.server.service.doctor,
+            "/identify": self.server.service.identify,
+            "/get_capabilities": self.server.service.get_capabilities,
+            "/get_status": self.server.service.get_status,
         }
         handler = routes.get(self.path)
         if handler is None:
