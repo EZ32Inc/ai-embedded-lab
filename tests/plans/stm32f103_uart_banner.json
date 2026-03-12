@@ -33,9 +33,9 @@
       {
         "role": "uart_instrument",
         "instrument_id": "usb_uart_bridge_daemon",
-        "endpoint": "127.0.0.1:8767",
+        "endpoint": "192.168.2.78:8767",
         "required": true,
-        "notes": "Phase 1 local bridge endpoint; Phase 2 should allow a remote host endpoint."
+        "notes": "Phase 2b remote bridge endpoint."
       }
     ],
     "serial_console": {
