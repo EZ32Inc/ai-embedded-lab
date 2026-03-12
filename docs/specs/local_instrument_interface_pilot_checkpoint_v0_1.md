@@ -21,7 +21,7 @@ This was chosen because it already had:
 
 ## What Is Now Proven
 
-The pilot now proves that AEL can expose a lower local instrument-facing layer with:
+The current pilot/follow-on state now proves that AEL can expose a lower local instrument-facing layer with:
 
 - a bounded native interface profile
 - explicit metadata commands
@@ -70,13 +70,14 @@ So the pilot did not regress the current default-verification path.
 
 ## What Is Still Out of Scope
 
-This pilot does not yet prove:
+This pilot state does not yet prove:
 
-- meter-path normalization into the same lower-layer API
 - control-instrument/JTAG-path normalization into the same lower-layer API
 - cloud registration/session implementation
 
-Those remain later follow-on work.
+The meter path has now advanced to an additive follow-on lower-layer mapping, but higher-level meter-backed verification still remains above the lower layer.
+
+The remaining items stay later follow-on work.
 
 ## Recommended Next Decision
 
@@ -85,7 +86,8 @@ The next decision should be one of:
 1. stop here and keep the bridge pilot as the proven lower-layer example
 2. start a bounded meter-path normalization review
 
-The safer immediate choice is still:
+The current safe position is:
 
 - treat the bridge pilot as the established baseline
-- approach the meter path only as a bounded, regression-gated follow-on
+- treat the meter path as the current additive follow-on
+- keep control-instrument work at review level for now

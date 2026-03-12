@@ -14,6 +14,7 @@ Confirmed current repo state:
 - AEL already supports network-facing instruments
 - AEL already has instrument manifests, capability metadata, and doctor/inventory/reporting surfaces
 - AEL now has a first USB-UART bridge daemon that turns local hardware into a network-facing AEL instrument
+- AEL now also has an additive lower-layer meter mapping using the same native API protocol
 - AEL does not yet have cloud registration, remote session routing, or cloud-side orchestration services
 
 Agreed layering:

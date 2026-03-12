@@ -39,14 +39,15 @@ def test_doctor_probe_instance_reports_probe_health():
 
 def test_doctor_meter_manifest_reports_reachability():
     with patch(
-        "ael.instrument_doctor.instrument_provision.ensure_meter_reachable",
-        return_value={"ok": True, "host": "192.168.4.1", "tcp_port": 9000},
+        "ael.instrument_doctor.native_api_dispatch.doctor",
+        return_value={"status": "ok", "data": {"ok": True, "host": "192.168.4.1", "tcp_port": 9000}},
     ):
         payload = instrument_doctor.doctor(REPO_ROOT, "esp32s3_dev_c_meter")
 
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "esp32s3_dev_c_meter"
+    assert payload["checks"]["native_doctor"]["status"] == "ok"
     assert payload["native_interface"]["role"] == "instrument_native_api"
     assert payload["checks"]["reachability"]["ok"] is True
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
@@ -54,6 +55,7 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["resolved_view"]["kind"] == "instrument"
     rendered = instrument_view.render_doctor_text(payload)
     assert "esp32s3_dev_c_meter" in rendered
+    assert "native_doctor: ok=None" in rendered
     assert "reachability: ok=True" in rendered
     assert "action_commands: measure_digital, measure_voltage, stim_digital" in rendered
 

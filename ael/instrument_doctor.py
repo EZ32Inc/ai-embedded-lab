@@ -8,6 +8,7 @@ from ael.doctor_checks import la_capture_ok, monitor_version
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import provision as instrument_provision
+from ael.instruments import native_api_dispatch
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
 
@@ -101,11 +102,18 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
     checks: Dict[str, Any] = {}
 
     if instrument_id == "esp32s3_dev_c_meter":
-        try:
-            checks["reachability"] = instrument_provision.ensure_meter_reachable(manifest=manifest, host=host, timeout_s=1.0)
-        except Exception as exc:
-            checks["reachability"] = {"ok": False, "error": str(exc), "host": host}
-        overall_ok = bool((checks.get("reachability") or {}).get("ok"))
+        native_doctor = native_api_dispatch.doctor(manifest)
+        checks["native_doctor"] = native_doctor
+        if native_doctor.get("status") == "ok":
+            checks["reachability"] = native_doctor.get("data", {})
+            overall_ok = bool((checks.get("reachability") or {}).get("ok"))
+        else:
+            checks["reachability"] = {
+                "ok": False,
+                "error": ((native_doctor.get("error") or {}).get("message") or "native doctor failed"),
+                "host": host,
+            }
+            overall_ok = False
     else:
         if host and port is not None:
             checks["tcp"] = _tcp_check(host, port)

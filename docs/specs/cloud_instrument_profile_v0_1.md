@@ -238,6 +238,8 @@ This profile fits current AEL without requiring a broad rewrite because the repo
 - communication metadata
 - capability metadata
 - doctor/inventory/reporting surfaces
+- one strong lower-layer pilot on the USB-UART bridge
+- one additive lower-layer follow-on on the meter path
 - at least one concrete bridge daemon
 - one bounded Local Instrument Interface pilot on the USB-UART bridge
 
