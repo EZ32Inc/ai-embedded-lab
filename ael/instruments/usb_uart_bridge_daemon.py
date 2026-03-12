@@ -8,9 +8,6 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, Callable, Dict, Iterable, List, Optional
 
-from ael.pipeline import _simple_yaml_load
-
-
 DEFAULT_LISTEN_HOST = "127.0.0.1"
 DEFAULT_LISTEN_PORT = 8767
 DEFAULT_TIMEOUT = 1.0
@@ -25,6 +22,22 @@ def _import_serial():
         return serial
     except Exception as exc:  # pragma: no cover - environment dependent
         raise RuntimeError("pyserial is required for usb_uart_bridge_daemon") from exc
+
+
+def _simple_yaml_load(path: str) -> Dict[str, Any]:
+    text = Path(path).read_text(encoding="utf-8")
+    try:
+        payload = json.loads(text)
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        pass
+    try:
+        import yaml  # type: ignore
+
+        payload = yaml.safe_load(text)
+        return payload if isinstance(payload, dict) else {}
+    except Exception:
+        return {}
 
 
 def native_interface_profile() -> Dict[str, Any]:
