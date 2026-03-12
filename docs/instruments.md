@@ -15,6 +15,8 @@ AEL is designed so instruments can be added without changing core orchestration 
 
 See also:
 - `docs/instrument_model.md` for the repo-level architecture position, including the planned retirement of `probe` as a parallel top-level concept.
+- `docs/architecture/cloud_instrument_architecture_v0_1.md` for the network-native/cloud-ready instrument direction.
+- `docs/specs/cloud_instrument_profile_v0_1.md` for the bounded cloud-ready instrument profile.
 
 Terminology note:
 - preferred current term: `control instrument`

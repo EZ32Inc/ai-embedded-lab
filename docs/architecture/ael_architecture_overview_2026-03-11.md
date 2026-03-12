@@ -158,6 +158,7 @@ The current repo is best described as seven main parts, plus one cross-cutting l
   - `selected_bench_resources`
 - Control-instrument-first migration is well established on active surfaces.
 - Resource identity is now visible enough to support both operator reasoning and tooling.
+- The current instrument direction is also increasingly network-native, which preserves a clean path toward future cloud-facing instrument nodes and local bridge daemons.
 
 ### Still consolidating
 

@@ -22,6 +22,20 @@
     "protocol": "gpio_meter_v1",
     "invocation_style": "request_response"
   },
+  "native_interface": {
+    "protocol": "ael.local_instrument.native_api.v0.1",
+    "metadata_commands": [
+      "identify",
+      "get_capabilities",
+      "get_status",
+      "doctor"
+    ],
+    "action_commands": [
+      "measure_digital",
+      "measure_voltage",
+      "stim_digital"
+    ]
+  },
   "capability_surfaces": {
     "measure.digital": "primary",
     "measure.voltage": "primary",
