@@ -23,7 +23,9 @@
     "invocation_style": "request_response"
   },
   "native_interface": {
+    "name": "Local Instrument Interface",
     "protocol": "ael.local_instrument.native_api.v0.1",
+    "role": "instrument_native_api",
     "metadata_commands": [
       "identify",
       "get_capabilities",
@@ -34,7 +36,18 @@
       "measure_digital",
       "measure_voltage",
       "stim_digital"
-    ]
+    ],
+    "response_model": {
+      "success": { "status": "ok", "data": "..." },
+      "error": {
+        "status": "error",
+        "error": {
+          "code": "string",
+          "message": "string",
+          "retryable": false
+        }
+      }
+    }
   },
   "capability_surfaces": {
     "measure.digital": "primary",

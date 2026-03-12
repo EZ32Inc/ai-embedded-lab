@@ -54,3 +54,16 @@ For now:
 
 - keep control-instrument review architectural and observational
 - do not force runtime unification in the current phase
+
+## Current Boundary
+
+Current intended boundary is:
+
+- USB-UART bridge:
+  - implemented as the first lower-layer pilot
+- meter path:
+  - additive lower-layer follow-on now exists
+- control instruments:
+  - still review-only in this phase
+
+That boundary should remain stable until there is a stronger reason to normalize control-instrument actions.

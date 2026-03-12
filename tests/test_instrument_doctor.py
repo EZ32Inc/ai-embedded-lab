@@ -47,6 +47,7 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "esp32s3_dev_c_meter"
+    assert payload["native_interface"]["role"] == "instrument_native_api"
     assert payload["checks"]["reachability"]["ok"] is True
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
     assert payload["resolved_view"]["id"] == "esp32s3_dev_c_meter"
@@ -54,6 +55,7 @@ def test_doctor_meter_manifest_reports_reachability():
     rendered = instrument_view.render_doctor_text(payload)
     assert "esp32s3_dev_c_meter" in rendered
     assert "reachability: ok=True" in rendered
+    assert "action_commands: measure_digital, measure_voltage, stim_digital" in rendered
 
 
 def test_doctor_usb_uart_bridge_manifest_reports_tcp_health():

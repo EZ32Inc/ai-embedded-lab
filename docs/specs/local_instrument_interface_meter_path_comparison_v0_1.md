@@ -55,6 +55,25 @@ The meter path already shares several important lower-layer properties with the 
 
 This means the meter path is not alien to the Local Instrument Interface idea.
 
+## What Now Aligns in the Current Repo
+
+The current repo now has an additive meter-native layer in:
+
+- `ael.instruments.meter_native_api`
+
+That layer now exposes:
+
+- `identify`
+- `get_capabilities`
+- `get_status`
+- `doctor`
+- `measure_digital`
+- `measure_voltage`
+- `stim_digital`
+
+So the meter path is no longer only a comparison target.
+It is now a bounded follow-on pilot.
+
 ## What Does Not Yet Align
 
 The meter path is still less normalized than the bridge pilot in a few ways:
@@ -67,7 +86,7 @@ The meter path is still less normalized than the bridge pilot in a few ways:
 Most importantly:
 
 - the meter path is still optimized for a concrete verification flow
-- the bridge pilot is now shaped as a reusable lower-layer instrument interface
+- the bridge pilot remains the cleaner reusable lower-layer baseline
 
 ## What Should Be Reused Later
 
@@ -109,5 +128,5 @@ So any future meter normalization should remain:
 Reasonable current conclusion:
 
 - the USB-UART bridge was the right first pilot
-- the meter path is the next meaningful comparison target
-- but it should remain a later bounded follow-on, not part of the first pilot batch
+- the meter path is now a bounded additive follow-on pilot
+- higher-level verification logic should still remain above the lower layer

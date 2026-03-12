@@ -258,7 +258,24 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
     native_interface = payload.get("native_interface")
     if isinstance(native_interface, dict) and native_interface:
         lines.append("native_interface:")
+        if native_interface.get("name"):
+            lines.append(f"  - name: {native_interface.get('name')}")
+        if native_interface.get("protocol"):
+            lines.append(f"  - protocol: {native_interface.get('protocol')}")
+        if native_interface.get("role"):
+            lines.append(f"  - role: {native_interface.get('role')}")
+        metadata_commands = native_interface.get("metadata_commands") or []
+        if metadata_commands:
+            lines.append(f"  - metadata_commands: {', '.join(str(item) for item in metadata_commands)}")
+        action_commands = native_interface.get("action_commands") or []
+        if action_commands:
+            lines.append(f"  - action_commands: {', '.join(str(item) for item in action_commands)}")
+        response_model = native_interface.get("response_model")
+        if response_model is not None:
+            lines.append(f"  - response_model: {response_model}")
         for key, value in native_interface.items():
+            if key in {"name", "protocol", "role", "metadata_commands", "action_commands", "response_model"}:
+                continue
             lines.append(f"  - {key}: {value}")
     capability_surfaces = payload.get("capability_surfaces")
     if isinstance(capability_surfaces, dict) and capability_surfaces:
@@ -311,6 +328,12 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
     native_interface = payload.get("native_interface") or {}
     if isinstance(native_interface, dict) and native_interface.get("protocol"):
         lines.append(f"native_interface: {native_interface.get('protocol')}")
+        metadata_commands = native_interface.get("metadata_commands") or []
+        if metadata_commands:
+            lines.append(f"native_metadata: {', '.join(str(item) for item in metadata_commands)}")
+        action_commands = native_interface.get("action_commands") or []
+        if action_commands:
+            lines.append(f"native_actions: {', '.join(str(item) for item in action_commands)}")
     capability_surfaces = payload.get("capability_surfaces") or {}
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         parts = [f"{key}->{value}" for key, value in capability_surfaces.items()]
@@ -378,7 +401,23 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
     native_interface = payload.get("native_interface")
     if isinstance(native_interface, dict) and native_interface:
         lines.append("native_interface:")
+        if native_interface.get("name"):
+            lines.append(f"  name: {native_interface.get('name')}")
+        if native_interface.get("protocol"):
+            lines.append(f"  protocol: {native_interface.get('protocol')}")
+        if native_interface.get("role"):
+            lines.append(f"  role: {native_interface.get('role')}")
+        metadata_commands = native_interface.get("metadata_commands") or []
+        if metadata_commands:
+            lines.append(f"  metadata_commands: {', '.join(str(item) for item in metadata_commands)}")
+        action_commands = native_interface.get("action_commands") or []
+        if action_commands:
+            lines.append(f"  action_commands: {', '.join(str(item) for item in action_commands)}")
+        if native_interface.get("response_model") is not None:
+            lines.append(f"  response_model: {native_interface.get('response_model')}")
         for key, value in native_interface.items():
+            if key in {"name", "protocol", "role", "metadata_commands", "action_commands", "response_model"}:
+                continue
             lines.append(f"  {key}: {value}")
     checks = payload.get("checks") or {}
     if isinstance(checks, dict) and checks:

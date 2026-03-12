@@ -45,12 +45,32 @@ def _cfg_from_manifest(manifest: Dict[str, Any], *, host: Optional[str] = None, 
     }
 
 
+def native_interface_profile() -> Dict[str, Any]:
+    return {
+        "name": "Local Instrument Interface",
+        "protocol": NATIVE_API_PROTOCOL,
+        "role": "instrument_native_api",
+        "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
+        "action_commands": ["measure_digital", "measure_voltage", "stim_digital"],
+        "response_model": {
+            "success": {"status": "ok", "data": "..."},
+            "error": {
+                "status": "error",
+                "error": {"code": "string", "message": "string", "retryable": False},
+            },
+        },
+    }
+
+
 def identify(manifest: Dict[str, Any]) -> Dict[str, Any]:
+    cfg = _cfg_from_manifest(manifest)
     return _native_ok(
         {
-            "device_type": str(manifest.get("id") or "meter"),
+            "device_id": str(manifest.get("id") or "meter"),
+            "device_type": "meter",
             "model": str(manifest.get("model") or "ESP32 Meter"),
             "protocol_version": NATIVE_API_PROTOCOL,
+            "endpoint": f"{cfg['host']}:{cfg['port']}",
             "communication_protocol": ((manifest.get("communication") or {}) if isinstance(manifest.get("communication"), dict) else {}).get("protocol"),
         }
     )
@@ -91,7 +111,12 @@ def get_status(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_
             }
         )
     except Exception as exc:
-        return _native_error("meter_status_failed", str(exc), retryable=True)
+        return _native_error(
+            "meter_status_failed",
+            str(exc),
+            retryable=True,
+            details={"host": cfg["host"], "port": cfg["port"], "protocol_version": NATIVE_API_PROTOCOL},
+        )
 
 
 def doctor(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_s: float = 3.0) -> Dict[str, Any]:
@@ -100,7 +125,12 @@ def doctor(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_s: f
         payload = instrument_provision.ensure_meter_reachable(manifest=manifest, host=cfg["host"], timeout_s=timeout_s)
         return _native_ok(payload)
     except Exception as exc:
-        return _native_error("meter_doctor_failed", str(exc), retryable=True)
+        return _native_error(
+            "meter_doctor_failed",
+            str(exc),
+            retryable=True,
+            details={"host": cfg["host"], "port": cfg["port"], "protocol_version": NATIVE_API_PROTOCOL},
+        )
 
 
 def measure_digital(manifest: Dict[str, Any], *, pins: list[int], duration_ms: int = 500, host: Optional[str] = None, port: Optional[int] = None) -> Dict[str, Any]:

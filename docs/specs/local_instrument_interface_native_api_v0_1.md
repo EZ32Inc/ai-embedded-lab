@@ -22,7 +22,7 @@ The current proven pilot is:
 
 - `usb_uart_bridge_daemon`
 
-The current partially aligned follow-on candidate is:
+The current additive follow-on pilot is:
 
 - `esp32s3_dev_c_meter`
 
@@ -61,6 +61,13 @@ Current meter-aligned candidate actions:
 - `measure_digital`
 - `measure_voltage`
 - `stim_digital`
+
+Current meter and bridge implementations now share:
+
+- protocol:
+  - `ael.local_instrument.native_api.v0.1`
+- metadata command vocabulary
+- success/error response envelope shape
 
 ## Response Model
 
@@ -123,3 +130,11 @@ The next safe use is:
 
 - continue applying this lower-layer shape selectively
 - use `default veri` as a regression gate whenever shared instrument surfaces are touched
+
+## Current Stop Point
+
+At the current stop point:
+
+- bridge pilot is the strongest lower-layer example
+- meter pilot is additive and useful
+- control-instrument normalization is still intentionally deferred

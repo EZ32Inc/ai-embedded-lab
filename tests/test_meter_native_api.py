@@ -17,9 +17,15 @@ def _manifest():
 
 def test_meter_identify_and_capabilities():
     manifest = _manifest()
+    profile = meter_native_api.native_interface_profile()
+    assert profile["protocol"] == meter_native_api.NATIVE_API_PROTOCOL
+    assert "measure_digital" in profile["action_commands"]
+
     identify = meter_native_api.identify(manifest)
     assert identify["status"] == "ok"
     assert identify["data"]["protocol_version"] == meter_native_api.NATIVE_API_PROTOCOL
+    assert identify["data"]["device_id"] == "esp32s3_dev_c_meter"
+    assert identify["data"]["endpoint"] == "192.168.4.1:9000"
 
     caps = meter_native_api.get_capabilities(manifest)
     assert caps["status"] == "ok"
@@ -38,10 +44,12 @@ def test_meter_status_and_doctor_error_shapes(monkeypatch):
     status = meter_native_api.get_status(manifest)
     assert status["status"] == "error"
     assert status["error"]["code"] == "meter_status_failed"
+    assert status["error"]["details"]["host"] == "192.168.4.1"
 
     doctor = meter_native_api.doctor(manifest)
     assert doctor["status"] == "error"
     assert doctor["error"]["code"] == "meter_doctor_failed"
+    assert doctor["error"]["details"]["protocol_version"] == meter_native_api.NATIVE_API_PROTOCOL
 
 
 def test_meter_action_wrappers(monkeypatch):
