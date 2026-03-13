@@ -1,1 +1,24 @@
 configs/instruments/usb_uart_bridge.yaml
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Runtime outputs
+runs/
+workflow_archive/
+pack_runs/
+
+# Build and generated artifacts
+artifacts/
+firmware/**/build/
+assets_golden/duts/**/firmware/build/
+
+# ESP-IDF generated config files
+firmware/**/sdkconfig
+firmware/**/sdkconfig.old
+assets_golden/duts/**/firmware/sdkconfig
+assets_golden/duts/**/firmware/sdkconfig.old
+
+# Local tool/vendor caches
+third_party/cache/
