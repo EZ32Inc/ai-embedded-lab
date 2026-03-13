@@ -1,0 +1,57 @@
+{
+  "experiment_id": "stm32f103_exti_self_check_2026-03-13",
+  "board": "stm32f103",
+  "fixture_variant": "stm32f103_unified_capability_fixture_v0_1",
+  "capability_demo": "exti_self_check",
+  "wiring": {
+    "control": [
+      "SWD->P3",
+      "RESET->NC",
+      "GND->probe GND"
+    ],
+    "observe": [
+      "PA4->P0.0",
+      "PA5->P0.1 (optional auxiliary)"
+    ],
+    "loopbacks": [
+      "PA1->PA0",
+      "PA9->PA10",
+      "PA7->PA6",
+      "PA8->PB8"
+    ]
+  },
+  "firmware_target": "firmware/targets/stm32f103_exti",
+  "test_plan": "tests/plans/stm32f103_exti_banner.json",
+  "instrument_path": {
+    "control_instrument": "esp32jtag_stm32_golden@192.168.2.98:4242",
+    "observe_path": "PA4->P0.0 via esp32jtag gpio capture"
+  },
+  "classification": "live-pass",
+  "repeat_count": 1,
+  "result": "pass",
+  "run_id": "2026-03-13_11-27-03_stm32f103_stm32f103_exti_banner",
+  "runtime_evidence": {
+    "verify_edges": 25,
+    "verify_high": 32363,
+    "verify_low": 33169,
+    "verify_window_s": 0.252,
+    "key_checks_passed": [
+      "gpio.signal"
+    ]
+  },
+  "conclusion": "Bounded STM32 EXTI self-check passes on the unified STM32 fixture using PA8->PB8 internal loopback and PA4 as the external machine-checkable result.",
+  "anchor_impact": {
+    "anchor": "stm32f103",
+    "effect": "adds bounded live-pass proof for EXTI self-check"
+  },
+  "what_it_proves": [
+    "PA8->PB8 loopback is usable for EXTI-class self-check on the unified STM32 fixture",
+    "Firmware can count EXTI events internally and export the result on PA4",
+    "AEL can verify the bounded EXTI result through the existing PA4 observe path"
+  ],
+  "what_it_does_not_prove": [
+    "general interrupt framework correctness",
+    "timer capture/timing proof",
+    "broad multi-board EXTI support"
+  ]
+}
