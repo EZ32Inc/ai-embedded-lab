@@ -7,8 +7,8 @@ Purpose:
 - command shape:
   - `python3 -m ael verify-default run`
 - workers:
-  - `rp2040_golden_gpio_signature`
-  - `stm32f103_golden_gpio_signature`
+  - `rp2040_gpio_signature`
+  - `stm32f103_gpio_signature`
   - `stm32f103_uart_bridge_banner`
   - `esp32c6_golden_gpio`
 - use when:
@@ -22,7 +22,7 @@ Purpose:
 - board family:
   - `stm32f103`
 - bounded paths:
-  - `stm32f103_golden_gpio_signature`
+  - `stm32f103_gpio_signature`
   - `stm32f103_uart_bridge_banner`
   - `stm32f103_adc_banner`
 - use when:
@@ -31,7 +31,7 @@ Purpose:
 
 ### Anchor Set C: Secondary family baseline
 - path:
-  - `rp2040_golden_gpio_signature`
+  - `rp2040_gpio_signature`
 - use when:
   - a change should be checked against a second family baseline
   - but the full 4-worker suite is not required

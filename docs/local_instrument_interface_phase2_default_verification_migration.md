@@ -11,8 +11,8 @@ Phase 2 has one narrower goal:
 
 The three target paths are:
 
-- `rp2040_golden_gpio_signature`
-- `stm32f103_golden_gpio_signature`
+- `rp2040_gpio_signature`
+- `stm32f103_gpio_signature`
 - `esp32c6_golden_gpio`
 
 This phase is intentionally limited.
@@ -224,11 +224,11 @@ STM32 default-verification flows.
 
 ### Batch 4
 
-Migrate `rp2040_golden_gpio_signature` to the Local Instrument Interface.
+Migrate `rp2040_gpio_signature` to the Local Instrument Interface.
 
 ### Batch 5
 
-Migrate `stm32f103_golden_gpio_signature` using the same model.
+Migrate `stm32f103_gpio_signature` using the same model.
 
 ### Batch 6
 

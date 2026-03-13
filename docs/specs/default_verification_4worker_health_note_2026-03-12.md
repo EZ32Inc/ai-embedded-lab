@@ -12,8 +12,8 @@ python3 -m ael verify-default repeat --limit 3
 
 ## Result
 
-- `rp2040_golden_gpio_signature`: `3/3 PASS`
-- `stm32f103_golden_gpio_signature`: `3/3 PASS`
+- `rp2040_gpio_signature`: `3/3 PASS`
+- `stm32f103_gpio_signature`: `3/3 PASS`
 - `stm32f103_uart_bridge_banner`: `3/3 PASS`
 - `esp32c6_golden_gpio`: `1/2 PASS`, then stopped on iteration 2
 
@@ -36,7 +36,7 @@ This matches the known ESP32-C6 meter-side instability pattern and does not indi
 
 ## Strongest bounded evidence
 
-- `stm32f103_golden_gpio_signature`: `3/3 PASS`
+- `stm32f103_gpio_signature`: `3/3 PASS`
 - `stm32f103_uart_bridge_banner`: `3/3 PASS`
 - remote UART bridge endpoint remained in use for the UART worker:
   - `192.168.2.78:8767`
@@ -46,4 +46,3 @@ This matches the known ESP32-C6 meter-side instability pattern and does not indi
 This note is a bounded health record only.
 
 It does not claim that the full 4-worker suite is free of bench-side instability, because the ESP32-C6 meter path remains known to be intermittent.
-

@@ -9,8 +9,8 @@ This note records the closeout state of Phase 2:
 
 The three target paths are:
 
-- `rp2040_golden_gpio_signature`
-- `stm32f103_golden_gpio_signature`
+- `rp2040_gpio_signature`
+- `stm32f103_gpio_signature`
 - `esp32c6_golden_gpio`
 
 ## What Is Now Migrated

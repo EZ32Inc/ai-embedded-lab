@@ -7,8 +7,8 @@ default-verification migration.
 
 It is intentionally limited to:
 
-- `rp2040_golden_gpio_signature`
-- `stm32f103_golden_gpio_signature`
+- `rp2040_gpio_signature`
+- `stm32f103_gpio_signature`
 
 ## Required Metadata Commands
 

@@ -10,7 +10,7 @@ Pilot instrument:
 Current bounded execution evidence comes from the STM32 workers in the 4-worker
 default suite:
 
-- `stm32f103_golden_gpio_signature`
+- `stm32f103_gpio_signature`
 - `stm32f103_uart_bridge_banner`
 
 These two workers are now correctly separated by DUT identity:
@@ -77,4 +77,3 @@ For this pilot, current evidence is sufficient to say:
 
 Current evidence is not sufficient to justify relaxing control-instrument
 blocking for the active STM32 default-verification paths.
-

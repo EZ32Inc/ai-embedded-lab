@@ -33,14 +33,14 @@ At the end of this phase, AEL should have a clear, bounded answer to:
 
 The main motivating execution evidence is the current 4-worker default suite:
 
-1. `rp2040_golden_gpio_signature`
-2. `stm32f103_golden_gpio_signature`
+1. `rp2040_gpio_signature`
+2. `stm32f103_gpio_signature`
 3. `stm32f103_uart_bridge_banner`
 4. `esp32c6_golden_gpio`
 
 The most concrete shared-resource case in that baseline is:
 
-- `stm32f103_golden_gpio_signature`
+- `stm32f103_gpio_signature`
 - `stm32f103_uart_bridge_banner`
 
 These two workers:
@@ -92,4 +92,3 @@ This phase is complete when:
 
 If the pilot does not reveal a clearly safe, clearly useful tiny change, the
 correct result is to stop at design.
-

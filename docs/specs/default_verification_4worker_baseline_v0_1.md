@@ -8,8 +8,8 @@ Record the current bounded default-verification suite shape after adding the STM
 
 The default-verification suite currently includes:
 
-1. `rp2040_golden_gpio_signature`
-2. `stm32f103_golden_gpio_signature`
+1. `rp2040_gpio_signature`
+2. `stm32f103_gpio_signature`
 3. `stm32f103_uart_bridge_banner`
 4. `esp32c6_golden_gpio`
 
@@ -17,7 +17,7 @@ The default-verification suite currently includes:
 
 The two STM32 workers are intentionally modeled as different DUTs:
 
-- `stm32f103_golden_gpio_signature` uses DUT identity `stm32f103`
+- `stm32f103_gpio_signature` uses DUT identity `stm32f103`
 - `stm32f103_uart_bridge_banner` uses DUT identity `stm32f103_uart`
 
 This means they are no longer treated as the same physical board.

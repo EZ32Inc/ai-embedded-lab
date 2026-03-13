@@ -7,7 +7,7 @@ Purpose:
 
 #### RP2040 GPIO golden fixture
 - DUT: `rp2040_pico`
-- path: `rp2040_golden_gpio_signature`
+- path: `rp2040_gpio_signature`
 - control instrument: `esp32jtag_rp2040_lab @ 192.168.2.63:4242`
 - role:
   - core default baseline worker
@@ -15,7 +15,7 @@ Purpose:
 
 #### STM32 GPIO golden fixture
 - DUT: `stm32f103`
-- path: `stm32f103_golden_gpio_signature`
+- path: `stm32f103_gpio_signature`
 - control instrument: `esp32jtag_stm32_golden @ 192.168.2.98:4242`
 - role:
   - core default baseline worker

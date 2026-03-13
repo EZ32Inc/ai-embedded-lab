@@ -9,8 +9,8 @@ broader instrument/runtime migration without opening a new phase explicitly.
 
 For the three default-verification paths:
 
-- `rp2040_golden_gpio_signature`
-- `stm32f103_golden_gpio_signature`
+- `rp2040_gpio_signature`
+- `stm32f103_gpio_signature`
 - `esp32c6_golden_gpio`
 
 the required instrument-touching runtime interactions now route through:

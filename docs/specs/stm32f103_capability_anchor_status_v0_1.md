@@ -94,7 +94,7 @@
 ## Real-pass vs design-confirmed
 
 ### Real-pass / repeat-pass
-- `stm32f103_golden_gpio_signature`
+- `stm32f103_gpio_signature`
 - `stm32f103_uart_bridge_banner`
 - `stm32f103_uart_loopback_banner`
 - `stm32f103_adc_banner`
