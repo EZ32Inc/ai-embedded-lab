@@ -17,7 +17,7 @@ Current default verification baseline:
   - board: esp32c6_devkit
   - validation style: meter-backed GPIO golden test through `esp32s3_dev_c_meter`
   - current run result: blocked before execution because the meter at 192.168.4.1 is unreachable
-- rp2040_golden_gpio_signature
+- rp2040_gpio_signature
   - board: rp2040_pico
   - validation style: probe-based GPIO signature test
   - current run result: not reached because the default sequence stops on the first failure

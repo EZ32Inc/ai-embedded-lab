@@ -688,6 +688,25 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
     assert any(not item["ok"] for item in payload["results"])
 
 
+def test_serial_default_verification_prints_selected_dut_tests(tmp_path, capsys):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "serial"},
+        "steps": [
+            {"board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
+        ],
+    }
+
+    with patch("ael.default_verification._run_step_action", return_value=(0, {"ok": True})):
+        code, payload = default_verification.run_default_setting(path=_write_setting(tmp_path, setting))
+
+    out = capsys.readouterr().out
+    assert code == 0
+    assert payload["selected_dut_tests"] == ["stm32f103_gpio_signature"]
+    assert "default_verification: selected DUT tests: stm32f103_gpio_signature" in out
+
+
 def test_sequence_setting_materializes_suite_and_tasks():
     setting = {
         "version": 1,

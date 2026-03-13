@@ -577,6 +577,7 @@ def _run_parallel_suite_once(
 ) -> Tuple[int, Dict[str, Any]]:
     log_lock = threading.Lock()
     workers: List[Dict[str, Any]] = []
+    _log_line(log_lock, f"default_verification: selected DUT tests: {', '.join(task.name for task in suite.tasks)}")
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, len(suite.tasks))) as executor:
         futures = [
@@ -612,6 +613,7 @@ def _run_serial_suite_once(
     overall_ok = True
     last_code = 0
     results: List[Dict[str, Any]] = []
+    print(f"default_verification: selected DUT tests: {', '.join(task.name for task in suite.tasks)}")
 
     for task in suite.tasks:
         code, result = _run_step_action(repo_root, task.step(), output_mode)
@@ -734,6 +736,7 @@ def run_default_setting(
     if mode == "single_run":
         code, result = _run_single(repo_root, setting, output_mode)
         selected_test = _canonical_test_name(_resolve_path(repo_root, setting.get("test")))
+        print(f"default_verification: selected DUT tests: {selected_test}")
         results.append({"name": selected_test, "code": code, "ok": code == 0, "result": result})
         return code, {"ok": code == 0, "mode": mode, "selected_dut_tests": [selected_test], "results": results}
 
