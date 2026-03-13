@@ -3,7 +3,10 @@
   "board": "stm32f103",
   "pin": "sig",
   "duration_s": 1.0,
-  "expected_hz": 2.5,
+  "min_freq_hz": 35.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
   "min_edges": 2,
   "max_edges": 20000,
   "build": {
@@ -11,41 +14,28 @@
     "artifact_stem": "stm32f103_adc_app",
     "build_dir": "artifacts/build_stm32f103_adc_banner"
   },
-  "observe_uart": {
-    "enabled": true,
-    "port": "/dev/ttyUSB0",
-    "baud": 115200,
-    "profile": "stm32",
-    "duration_s": 6,
-    "expect_patterns": [
-      "AEL_READY STM32F103 ADC"
-    ]
-  },
   "bench_setup": {
-    "serial_console": {
-      "port": "/dev/ttyUSB0",
-      "baud": 115200,
-      "required": true
-    },
     "peripheral_signals": [
       {
         "role": "ADC1_IN0",
         "dut_signal": "PA0/ADC1_IN0",
         "direction": "input"
+      },
+      {
+        "role": "ADC_LOOPBACK_SOURCE",
+        "dut_signal": "PA1",
+        "direction": "output",
+        "notes": "Firmware drives PA1 at about 100 Hz and samples PA0/ADC1_IN0 through a physical loopback jumper."
       }
     ],
     "external_inputs": [
       {
-        "source": "FIXED_3V3_SUPPLY",
+        "source": "PA1_LOOPBACK",
         "dut_signal": "PA0/ADC1_IN0",
         "kind": "analog_in",
         "required": true,
-        "status": "defined_not_provisioned",
-        "expected_range_v": [
-          2.8,
-          3.45
-        ],
-        "notes": "Execution contract: connect a fixed 3V3 bench supply to PA0/ADC1_IN0 before runtime validation. This contract is defined but not yet bench-provisioned."
+        "status": "manual_loopback_required",
+        "notes": "Execution contract: physically connect PA1 to PA0 so the DUT can self-drive a 100 Hz square wave into ADC1_IN0 during runtime validation."
       }
     ]
   }
