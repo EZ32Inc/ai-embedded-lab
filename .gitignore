@@ -12,6 +12,9 @@ pack_runs/
 # Build and generated artifacts
 artifacts/
 firmware/**/build/
+firmware/targets/**/*.o
+firmware/targets/**/*.elf
+firmware/targets/**/*.bin
 assets_golden/duts/**/firmware/build/
 
 # ESP-IDF generated config files
