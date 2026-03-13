@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ael import paths as ael_paths
+from ael import inventory as inventory_view
 from ael import strategy_resolver
 from ael.config_resolver import resolve_control_instrument_config, resolve_control_instrument_instance
 from ael.adapters import preflight
@@ -178,6 +179,54 @@ def _resolve_path(repo_root: Path, value: str | None, default: str | None = None
     return str((repo_root / p).resolve())
 
 
+def _load_test_payload(test_path: str | None) -> Dict[str, Any]:
+    if not test_path:
+        return {}
+    path = Path(test_path)
+    if not path.exists():
+        return {}
+    return _load_text_payload(path)
+
+
+def _canonical_test_name(test_path: str | None) -> str:
+    payload = _load_test_payload(test_path)
+    name = str(payload.get("name") or "").strip() if isinstance(payload, dict) else ""
+    if name:
+        return name
+    return Path(str(test_path or "")).stem or "unknown_test"
+
+
+def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any]) -> Tuple[bool, str]:
+    steps = setting.get("steps", [])
+    if not isinstance(steps, list) or not steps:
+        return False, "sequence mode requires non-empty steps"
+    inventory_payload = inventory_view.build_inventory(repo_root)
+    valid_pairs = {
+        (
+            str(dut.get("dut_id") or "").strip(),
+            _resolve_path(repo_root, str(test.get("path") or "").strip()) or str(test.get("path") or "").strip(),
+        )
+        for dut in inventory_payload.get("duts", [])
+        if isinstance(dut, dict)
+        for test in dut.get("tests", [])
+        if isinstance(test, dict)
+    }
+    forbidden_fields = ("name", "probe", "instrument_instance")
+    for idx, raw_step in enumerate(steps, start=1):
+        if not isinstance(raw_step, dict):
+            return False, f"step {idx} must be an object"
+        board = str(raw_step.get("board") or "").strip()
+        test = _resolve_path(repo_root, raw_step.get("test"))
+        if not board or not test:
+            return False, f"step {idx} requires board and test"
+        if (board, test) not in valid_pairs:
+            return False, f"step {idx} references non-DUT test board={board} test={test}"
+        bad = [field for field in forbidden_fields if raw_step.get(field) not in (None, "")]
+        if bad:
+            return False, f"step {idx} must not redefine DUT test identity/setup fields: {', '.join(bad)}"
+    return True, ""
+
+
 def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[Dict[str, Any], str | None]:
     config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
     instance_id = str(step.get("instrument_instance") or "").strip() or resolve_control_instrument_instance(
@@ -274,7 +323,6 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
     local_interface_path = _local_instrument_interface_path(repo_root, str(board), test)
-    _probe_raw, probe = _resolve_step_probe_binding(repo_root, step)
     meter_attempts = 0
     while True:
         try:
@@ -319,7 +367,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 continue
             return 2, out
     code = run_pipeline(
-        probe_path=probe,
+        probe_path=None,
         board_arg=str(board),
         test_path=str(test),
         wiring=None,
@@ -390,11 +438,8 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
 
 def _normalized_step(setting: Dict[str, Any], raw_step: Dict[str, Any], idx: int) -> Dict[str, Any]:
     step = dict(raw_step) if isinstance(raw_step, dict) else {}
-    if not step.get("probe") and setting.get("probe"):
-        step["probe"] = setting.get("probe")
-    if not step.get("instrument_instance") and setting.get("instrument_instance"):
-        step["instrument_instance"] = setting.get("instrument_instance")
-    step["name"] = str(step.get("name") or f"step_{idx:02d}")
+    test_path = _resolve_path(ael_paths.repo_root(), step.get("test"))
+    step["name"] = _canonical_test_name(test_path)
     step["action"] = str(step.get("action") or "single_run").strip().lower()
     return step
 
@@ -694,9 +739,10 @@ def run_default_setting(
         return code, {"ok": code == 0, "mode": mode, "results": results}
 
     if mode == "sequence":
+        ok, error = _validate_sequence_steps(repo_root, setting)
+        if not ok:
+            return 2, {"ok": False, "mode": mode, "error": error}
         suite = _suite_from_setting(setting)
-        if not suite.tasks:
-            return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
         if suite.execution_policy.get("kind") == "serial":
             return _run_serial_suite_once(repo_root, setting, suite, output_mode)
         return _run_parallel_suite_once(repo_root, suite, output_mode)
@@ -740,9 +786,10 @@ def run_until_fail(
     setting = load_setting(path)
     mode = str(setting.get("mode", "none")).strip().lower()
     if mode == "sequence":
+        ok, error = _validate_sequence_steps(ael_paths.repo_root(), setting)
+        if not ok:
+            return 2, {"ok": False, "mode": mode, "error": error}
         suite = _suite_from_setting(setting)
-        if not suite.tasks:
-            return 2, {"ok": False, "mode": mode, "error": "sequence mode requires non-empty steps"}
         if suite.execution_policy.get("kind") != "serial":
             repo_root = ael_paths.repo_root()
             return _run_parallel_repeat_until_fail(
