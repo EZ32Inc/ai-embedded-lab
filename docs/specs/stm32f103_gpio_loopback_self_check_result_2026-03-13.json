@@ -1,0 +1,71 @@
+{
+  "schema_version": "0.1",
+  "board": "stm32f103",
+  "fixture_variant": "stm32f103_unified_capability_fixture_v0_1",
+  "capability_demo": "stm32f103_gpio_loopback_self_check",
+  "status": "live-pass",
+  "wiring": [
+    {
+      "from": "PA4",
+      "to": "P0.0"
+    },
+    {
+      "from": "PA5",
+      "to": "P0.1",
+      "optional": true
+    },
+    {
+      "from": "PA1",
+      "to": "PA0"
+    },
+    {
+      "from": "PA9",
+      "to": "PA10"
+    },
+    {
+      "from": "PA7",
+      "to": "PA6"
+    },
+    {
+      "from": "PA8",
+      "to": "PB8"
+    }
+  ],
+  "firmware_target": "firmware/targets/stm32f103_gpio_loopback",
+  "test_plan": "tests/plans/stm32f103_gpio_loopback_banner.json",
+  "instrument_paths": [
+    {
+      "role": "control_instrument",
+      "instrument_id": "esp32jtag_stm32_golden",
+      "endpoint": "192.168.2.98:4242"
+    }
+  ],
+  "evidence": {
+    "run_id": "2026-03-13_11-04-57_stm32f103_stm32f103_gpio_loopback_banner",
+    "run_path": "runs/2026-03-13_11-04-57_stm32f103_stm32f103_gpio_loopback_banner",
+    "summary_metrics": {
+      "result": "pass",
+      "edges": 25,
+      "high": 33575,
+      "low": 31957,
+      "window_s": 0.252
+    },
+    "strongest_artifact": "runs/2026-03-13_11-04-57_stm32f103_stm32f103_gpio_loopback_banner/artifacts/verify_result.json"
+  },
+  "repeat_count": 1,
+  "failure_modes": [
+    "a follow-on 3-run repeat attempt failed in preflight under restricted execution context with Operation not permitted and was not accepted as bench evidence"
+  ],
+  "conclusion": "The bounded STM32 GPIO loopback self-check path is live-pass on the unified STM32 capability fixture. Firmware drives PA8, samples PB8, and exports GPIO-valid status on PA4 for machine-checkable external verification.",
+  "does_not_prove": [
+    "repeat-pass stability on unrestricted bench runs",
+    "general GPIO framework behavior beyond this bounded self-check",
+    "EXTI or timing/capture behavior on PA8->PB8"
+  ],
+  "anchor_impact": "Upgrades the STM32 GPIO loopback self-check path from design-confirmed to live-pass on the primary STM32 sample-board capability anchor.",
+  "notes": [
+    "PA8->PB8 is treated as an internal digital self-check loopback.",
+    "PA4 remains the main external machine-checkable proof line.",
+    "PA5->P0.1 remains optional auxiliary observation only."
+  ]
+}

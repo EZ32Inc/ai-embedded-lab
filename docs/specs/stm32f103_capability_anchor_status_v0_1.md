@@ -40,6 +40,14 @@
   - internal PWM self-check on the unified timing loopback
   - result encoded onto `PA4`
 
+### GPIO loopback self-check path
+- status: `live-pass`
+- meaning:
+  - bounded generated GPIO loopback execution proof
+  - `PA8 -> PB8`
+  - internal GPIO self-check on the unified timing loopback
+  - result encoded onto `PA4`
+
 ## Accepted immediate next path
 - `PA8 -> PB8` bounded digital timing path follow-on
 - expected bounded shape:
@@ -70,10 +78,10 @@
 - `stm32f103_adc_banner`
 - `stm32f103_spi_banner`
 - `stm32f103_pwm_banner`
+- `stm32f103_gpio_loopback_banner`
 
 ### Design-confirmed / next to execute
 - bounded STM32 `PA8 -> PB8` timing/self-check follow-on path:
-  - GPIO
   - EXTI
   - capture/timing
 
