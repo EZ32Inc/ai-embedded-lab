@@ -3,7 +3,10 @@
   "board": "stm32f103",
   "pin": "sig",
   "duration_s": 1.0,
-  "expected_hz": 2.5,
+  "min_freq_hz": 35.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
   "min_edges": 2,
   "max_edges": 20000,
   "build": {
@@ -11,22 +14,7 @@
     "artifact_stem": "stm32f103_spi_app",
     "build_dir": "artifacts/build_stm32f103_spi_banner"
   },
-  "observe_uart": {
-    "enabled": true,
-    "port": "/dev/ttyUSB0",
-    "baud": 115200,
-    "profile": "stm32",
-    "duration_s": 6,
-    "expect_patterns": [
-      "AEL_READY STM32F103 SPI"
-    ]
-  },
   "bench_setup": {
-    "serial_console": {
-      "port": "/dev/ttyUSB0",
-      "baud": 115200,
-      "required": true
-    },
     "peripheral_signals": [
       {
         "role": "SPI1_SCK",
@@ -42,6 +30,16 @@
         "role": "SPI1_MOSI",
         "dut_signal": "PA7",
         "direction": "output"
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "SPI_LOOPBACK",
+        "dut_signal": "PA6/SPI1_MISO",
+        "kind": "digital_loopback",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Execution contract: physically connect PA7/SPI1_MOSI to PA6/SPI1_MISO. Firmware performs a bounded SPI loopback self-check internally and exports SPI-valid status on PA4."
       }
     ]
   }

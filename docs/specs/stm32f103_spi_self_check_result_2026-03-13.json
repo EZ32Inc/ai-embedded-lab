@@ -1,0 +1,70 @@
+{
+  "schema_version": "0.1",
+  "board": "stm32f103",
+  "fixture_variant": "stm32f103_unified_capability_fixture_v0_1",
+  "capability_demo": "stm32f103_spi_self_check",
+  "status": "live-pass",
+  "wiring": [
+    {
+      "from": "PA4",
+      "to": "P0.0"
+    },
+    {
+      "from": "PA5",
+      "to": "P0.1"
+    },
+    {
+      "from": "PA1",
+      "to": "PA0"
+    },
+    {
+      "from": "PA9",
+      "to": "PA10"
+    },
+    {
+      "from": "PA7",
+      "to": "PA6"
+    },
+    {
+      "from": "PA8",
+      "to": "PB8"
+    }
+  ],
+  "firmware_target": "firmware/targets/stm32f103_spi",
+  "test_plan": "tests/plans/stm32f103_spi_banner.json",
+  "instrument_paths": [
+    {
+      "role": "control_instrument",
+      "instrument_id": "esp32jtag_stm32_golden",
+      "endpoint": "192.168.2.98:4242"
+    }
+  ],
+  "evidence": {
+    "run_id": "2026-03-13_10-13-28_stm32f103_stm32f103_spi_banner",
+    "run_path": "runs/2026-03-13_10-13-28_stm32f103_stm32f103_spi_banner",
+    "summary_metrics": {
+      "result": "pass",
+      "edges": 25,
+      "high": 32640,
+      "low": 32892,
+      "window_s": 0.252
+    },
+    "strongest_artifact": "runs/2026-03-13_10-13-28_stm32f103_stm32f103_spi_banner/artifacts/verify_result.json"
+  },
+  "repeat_count": 1,
+  "failure_modes": [
+    "a follow-on 3-run repeat attempt failed in preflight under restricted execution context with Operation not permitted and was not accepted as bench evidence"
+  ],
+  "conclusion": "The bounded STM32 SPI self-check path is live-pass on the unified STM32 capability fixture. Firmware performs SPI loopback internally on PA5/PA6/PA7 and exports SPI-valid status on PA4 for machine-checkable external verification.",
+  "does_not_prove": [
+    "repeat-pass stability on unrestricted bench runs",
+    "general SPI framework support",
+    "direct external observation of PA5/PA6/PA7 as proof signals"
+  ],
+  "anchor_impact": "Upgrades the STM32 SPI self-check path from design-confirmed to live-pass on the primary STM32 sample-board capability anchor.",
+  "notes": [
+    "PA5/PA6/PA7 are treated as SPI-internal self-check wiring only.",
+    "PA4 remains the single external machine-checkable proof line.",
+    "PA5->P0.1 remains optional auxiliary observation only."
+  ]
+}

@@ -207,13 +207,16 @@ def test_describe_test_for_generated_rp2040_adc_contract():
 def test_describe_test_for_generated_stm32_spi_contract():
     payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
     assert payload["ok"] is True
-    assert payload["connection_setup"]["bench_setup"]["serial_console"]["port"] == "/dev/ttyUSB0"
+    bench_setup = payload["connection_setup"]["bench_setup"]
+    assert "serial_console" not in bench_setup
+    assert bench_setup["external_inputs"][0]["source"] == "SPI_LOOPBACK"
     assert any(conn["from"] == "SPI1_SCK" and conn["to"] == "PA5" for conn in payload["connections"])
+    assert any(conn["from"] == "SPI_LOOPBACK" and conn["to"] == "PA6/SPI1_MISO" for conn in payload["connections"])
     rendered = inventory.render_connection_text(
         inventory.describe_connection("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
     )
     assert "SPI1_SCK -> PA5" in rendered
-    assert "host serial -> /dev/ttyUSB0" in rendered
+    assert "SPI_LOOPBACK -> PA6/SPI1_MISO" in rendered
 
 
 def test_describe_test_for_generated_stm32_uart_dual_instrument_contract():
