@@ -33,7 +33,7 @@
       {
         "role": "uart_instrument",
         "instrument_id": "usb_uart_bridge_daemon",
-        "endpoint": "192.168.2.78:8767",
+        "endpoint": "192.168.2.173:8767",
         "required": true,
         "notes": "Phase 2b remote bridge endpoint."
       }

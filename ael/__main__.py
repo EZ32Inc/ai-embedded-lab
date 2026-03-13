@@ -283,7 +283,10 @@ def main():
                     verify_only=False,
                 )
                 sys.exit(code)
-        probe_path = resolve_control_instrument_config(repo_root, args, board_id=board_id)
+        explicit_control = getattr(args, "control_instrument", None) or getattr(args, "probe", None)
+        probe_path = None
+        if explicit_control:
+            probe_path = resolve_control_instrument_config(repo_root, args, board_id=board_id)
         if not test_path and not pack_path:
             print("Provide --test or --pack (or use --dut with defaults).")
             sys.exit(2)
