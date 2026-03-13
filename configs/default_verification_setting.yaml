@@ -5,6 +5,14 @@
   "mode": "sequence",
   "steps": [
     {
+      "board": "esp32c6_devkit",
+      "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"
+    },
+    {
+      "board": "rp2040_pico",
+      "test": "tests/plans/rp2040_gpio_signature.json"
+    },
+    {
       "board": "stm32f103",
       "test": "tests/plans/stm32f103_gpio_signature.json"
     }
