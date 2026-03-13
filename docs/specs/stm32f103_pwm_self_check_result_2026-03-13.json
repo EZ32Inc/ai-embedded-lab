@@ -1,0 +1,66 @@
+{
+  "schema_version": "0.1",
+  "board": "stm32f103",
+  "fixture_variant": "stm32f103_unified_capability_fixture_v0_1",
+  "capability_demo": "stm32f103_pwm_self_check",
+  "status": "live-pass",
+  "wiring": [
+    {
+      "from": "PA4",
+      "to": "P0.0"
+    },
+    {
+      "from": "PA5",
+      "to": "P0.1"
+    },
+    {
+      "from": "PA1",
+      "to": "PA0"
+    },
+    {
+      "from": "PA9",
+      "to": "PA10"
+    },
+    {
+      "from": "PA7",
+      "to": "PA6"
+    },
+    {
+      "from": "PA8",
+      "to": "PB8"
+    }
+  ],
+  "firmware_target": "firmware/targets/stm32f103_pwm",
+  "test_plan": "tests/plans/stm32f103_pwm_banner.json",
+  "instrument_paths": [
+    {
+      "role": "control_instrument",
+      "instrument_id": "esp32jtag_stm32_golden",
+      "endpoint": "192.168.2.98:4242"
+    }
+  ],
+  "evidence": {
+    "run_id": "2026-03-13_10-41-01_stm32f103_stm32f103_pwm_banner",
+    "run_path": "runs/2026-03-13_10-41-01_stm32f103_stm32f103_pwm_banner",
+    "summary_metrics": {
+      "edges": 25,
+      "high": 31788,
+      "low": 33744,
+      "window_s": 0.252
+    },
+    "strongest_artifact": "runs/2026-03-13_10-41-01_stm32f103_stm32f103_pwm_banner/artifacts/verify_result.json"
+  },
+  "repeat_count": 1,
+  "failure_modes": [],
+  "conclusion": "Bounded STM32 PWM self-check passed on the unified fixture. Firmware generated PWM on PA8, sampled loopback on PB8, and exported pass/fail on PA4 for external machine verification.",
+  "does_not_prove": [
+    "repeat-pass stability for the PWM path",
+    "general timer framework coverage",
+    "direct external measurement of PA8/PB8 timing semantics"
+  ],
+  "anchor_impact": "Adds bounded live-pass execution evidence for PWM on the STM32F103 capability anchor.",
+  "notes": [
+    "PA4 remained the main external machine-checkable proof line.",
+    "PA5 -> P0.1 stayed optional auxiliary observation only."
+  ]
+}

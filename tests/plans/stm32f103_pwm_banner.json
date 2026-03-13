@@ -1,0 +1,43 @@
+{
+  "name": "stm32f103_pwm_banner",
+  "board": "stm32f103",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 35.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f103_pwm",
+    "artifact_stem": "stm32f103_pwm_app",
+    "build_dir": "artifacts/build_stm32f103_pwm_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      {
+        "role": "TIM1_CH1_PWM_OUT",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "Firmware generates PWM on PA8 using TIM1_CH1."
+      },
+      {
+        "role": "PWM_SELF_CHECK_INPUT",
+        "dut_signal": "PB8",
+        "direction": "input",
+        "notes": "Firmware samples PB8 through a manual PA8 -> PB8 loopback and encodes the result onto PA4."
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "PWM_LOOPBACK",
+        "dut_signal": "PB8",
+        "kind": "digital_loopback",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Execution contract: physically connect PA8/TIM1_CH1 to PB8 so the DUT can confirm PWM high/low states internally. AEL should observe PA4, not PA8/PB8, for the bounded proof."
+      }
+    ]
+  }
+}

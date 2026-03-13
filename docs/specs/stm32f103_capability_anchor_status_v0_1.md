@@ -32,17 +32,28 @@
   - internal SPI self-check on `PA5/PA6/PA7`
   - result encoded onto `PA4`
 
+### PWM self-check path
+- status: `live-pass`
+- meaning:
+  - bounded generated PWM execution proof
+  - `PA8 -> PB8`
+  - internal PWM self-check on the unified timing loopback
+  - result encoded onto `PA4`
+
 ## Accepted immediate next path
-- `PA8 -> PB8` bounded digital timing path
+- `PA8 -> PB8` bounded digital timing path follow-on
 - expected bounded shape:
-  - one output pin and one input pin on the same board
+  - reuse the same output/input pair on the same board
   - result encoded onto `PA4`
   - external observation remains on `PA4`
+  - next sub-path should be one of:
+    - GPIO self-check
+    - EXTI
+    - capture/timing
 
 ## Proposed second-wave path
 - `PA8 -> PB8`
 - intended for:
-  - PWM
   - GPIO
   - EXTI
   - capture/timing-class demos
@@ -58,12 +69,16 @@
 - `stm32f103_uart_bridge_banner`
 - `stm32f103_adc_banner`
 - `stm32f103_spi_banner`
+- `stm32f103_pwm_banner`
 
 ### Design-confirmed / next to execute
-- bounded STM32 `PA8 -> PB8` timing/self-check path
+- bounded STM32 `PA8 -> PB8` timing/self-check follow-on path:
+  - GPIO
+  - EXTI
+  - capture/timing
 
 ## What should happen next
-- use the unified fixture to implement the bounded `PA8 -> PB8` timing/self-check path
+- use the unified fixture to implement the next bounded `PA8 -> PB8` timing/self-check follow-on path
 - keep the scope to:
   - one blocker
   - one path
