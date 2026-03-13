@@ -18,6 +18,7 @@ from ael.strategy_resolver import (
     build_uart_step,
     build_verify_step,
     normalize_probe_cfg,
+    resolve_control_instrument_override,
     resolve_build_stage,
     resolve_load_stage,
     resolve_run_strategy,
@@ -144,8 +145,10 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     test_file = _abs(repo_root, test_path)
     if not test_file.exists():
         raise FileNotFoundError(f"test not found: {test_file}")
-    probe_rel = resolve_control_instrument_config(str(repo_root), args=None, board_id=board_id)
-    instance_id = resolve_control_instrument_instance(str(repo_root), args=None, board_id=board_id)
+    test_raw = _load_json(test_file)
+    override_instance_id, override_probe_rel = resolve_control_instrument_override(repo_root, test_raw)
+    probe_rel = override_probe_rel or resolve_control_instrument_config(str(repo_root), args=None, board_id=board_id)
+    instance_id = override_instance_id or resolve_control_instrument_instance(str(repo_root), args=None, board_id=board_id)
     if probe_rel or instance_id:
         binding = load_probe_binding(
             repo_root,
@@ -158,7 +161,6 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
         binding = empty_probe_binding()
         probe_path_rel = None
     board_raw = _simple_yaml_load(str(board_path))
-    test_raw = _load_json(test_file)
     probe_raw = binding.raw
     resolved = resolve_run_strategy(probe_raw, board_raw, test_raw, wiring=None, request_timeout_s=None, repo_root=repo_root)
     return {

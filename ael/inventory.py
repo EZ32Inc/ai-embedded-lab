@@ -19,6 +19,7 @@ from ael.instruments.registry import InstrumentRegistry
 from ael.instrument_view import build_resolved_instrument_inventory, render_resolved_instrument_inventory_text
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
+from ael.strategy_resolver import resolve_control_instrument_override
 from ael.verification_model import summarize_resource_keys
 
 
@@ -131,14 +132,17 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
                 )
             ),
         }
+    override_instance_id, override_probe_rel = resolve_control_instrument_override(root, payload)
     board_cfg = _load_board_cfg(root, board_id)
     instance_id = str(
-        board_cfg.get("control_instrument_instance")
+        override_instance_id
+        or board_cfg.get("control_instrument_instance")
         or board_cfg.get("instrument_instance")
         or ""
     ).strip() or None
     probe_path = str(
-        board_cfg.get("control_instrument_config")
+        override_probe_rel
+        or board_cfg.get("control_instrument_config")
         or board_cfg.get("probe_config")
         or ""
     ).strip() or None

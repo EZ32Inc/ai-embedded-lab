@@ -1121,7 +1121,10 @@ def run_pipeline(
     )
 
     board_raw = _simple_yaml_load(board_path) if board_path else {}
-    board_control_instrument_instance = resolve_control_instrument_instance(repo_root, args=None, board_id=board_id)
+    plan_control_instance, plan_control_config = strategy_resolver.resolve_control_instrument_override(Path(repo_root), test_raw)
+    board_control_instrument_instance = plan_control_instance or resolve_control_instrument_instance(repo_root, args=None, board_id=board_id)
+    if not probe_path and plan_control_config:
+        probe_path = plan_control_config
     if probe_path or board_control_instrument_instance:
         binding = load_probe_binding(
             repo_root,

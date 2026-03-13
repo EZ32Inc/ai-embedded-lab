@@ -22,7 +22,7 @@
       "test": "tests/plans/stm32f103_gpio_signature.json"
     },
     {
-      "board": "stm32f103_uart",
+      "board": "stm32f103",
       "instrument_instance": "esp32jtag_stm32_uart",
       "name": "stm32f103_uart_bridge_banner",
       "test": "tests/plans/stm32f103_uart_banner.json"

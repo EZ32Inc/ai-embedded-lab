@@ -230,6 +230,9 @@ def test_describe_test_for_generated_stm32_spi_contract():
 def test_describe_test_for_generated_stm32_uart_dual_instrument_contract():
     payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_uart_banner.json", REPO_ROOT)
     assert payload["ok"] is True
+    assert payload["selected_dut"]["id"] == "stm32f103"
+    assert payload["selected_board_profile"]["id"] == "stm32f103"
+    assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_uart"
     bench_setup = payload["connection_setup"]["bench_setup"]
     assert bench_setup["serial_console"]["port"] == "/dev/ttyUSB0"
     assert bench_setup["instrument_roles"][0]["instrument_id"] == "esp32jtag_stm32_uart"

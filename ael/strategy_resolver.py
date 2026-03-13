@@ -78,6 +78,23 @@ def _normalize_capability_surfaces(payload: Dict[str, Any] | Any) -> Dict[str, s
     return out
 
 
+def resolve_control_instrument_override(repo_root: Path, test_raw: Dict[str, Any] | Any) -> Tuple[Optional[str], Optional[str]]:
+    bench_setup = resolve_bench_setup(test_raw)
+    if not isinstance(bench_setup, dict):
+        return None, None
+    for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("role") or "").strip() != "control_instrument":
+            continue
+        instance_id = str(item.get("instrument_id") or "").strip() or None
+        if not instance_id:
+            return None, None
+        rel = os.path.join("configs", "instrument_instances", f"{instance_id}.yaml")
+        return instance_id, (rel if (repo_root / rel).exists() else None)
+    return None, None
+
+
 def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any):
     explicit: Dict[str, Any] = {}
     if isinstance(test_raw, dict):
