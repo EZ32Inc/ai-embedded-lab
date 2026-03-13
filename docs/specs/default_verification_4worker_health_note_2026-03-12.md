@@ -15,13 +15,13 @@ python3 -m ael verify-default repeat --limit 3
 - `rp2040_gpio_signature`: `3/3 PASS`
 - `stm32f103_gpio_signature`: `3/3 PASS`
 - `stm32f103_uart_bridge_banner`: `3/3 PASS`
-- `esp32c6_golden_gpio`: `1/2 PASS`, then stopped on iteration 2
+- `esp32c6_gpio_signature_with_meter`: `1/2 PASS`, then stopped on iteration 2
 
 ## Observed failure
 
 The only failure in this bounded repeat run was:
 
-- worker: `esp32c6_golden_gpio`
+- worker: `esp32c6_gpio_signature_with_meter`
 - iteration: `2`
 - error: `timed out`
 

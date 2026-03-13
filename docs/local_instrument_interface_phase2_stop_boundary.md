@@ -11,7 +11,7 @@ For the three default-verification paths:
 
 - `rp2040_gpio_signature`
 - `stm32f103_gpio_signature`
-- `esp32c6_golden_gpio`
+- `esp32c6_gpio_signature_with_meter`
 
 the required instrument-touching runtime interactions now route through:
 

@@ -13,7 +13,7 @@ What is currently covered and is the default verification baseline healthy?
 
 Current default verification baseline:
 
-- esp32c6_golden_gpio
+- esp32c6_gpio_signature_with_meter
   - board: esp32c6_devkit
   - validation style: meter-backed GPIO golden test
   - result: pass

@@ -11,7 +11,7 @@ The default-verification suite currently includes:
 1. `rp2040_gpio_signature`
 2. `stm32f103_gpio_signature`
 3. `stm32f103_uart_bridge_banner`
-4. `esp32c6_golden_gpio`
+4. `esp32c6_gpio_signature_with_meter`
 
 ## STM32 split
 

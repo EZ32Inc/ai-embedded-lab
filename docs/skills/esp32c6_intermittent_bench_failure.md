@@ -2,7 +2,7 @@
 
 ## 1. Purpose
 
-This document is a reusable troubleshooting workflow for intermittent `esp32c6_golden_gpio` failures in AEL default verification.
+This document is a reusable troubleshooting workflow for intermittent `esp32c6_gpio_signature_with_meter` failures in AEL default verification.
 
 Its job is to help future AEL/Codex/AI users:
 - classify the failure correctly

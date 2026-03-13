@@ -11,7 +11,7 @@ The three target paths are:
 
 - `rp2040_gpio_signature`
 - `stm32f103_gpio_signature`
-- `esp32c6_golden_gpio`
+- `esp32c6_gpio_signature_with_meter`
 
 ## What Is Now Migrated
 

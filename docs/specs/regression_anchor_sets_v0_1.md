@@ -10,7 +10,7 @@ Purpose:
   - `rp2040_gpio_signature`
   - `stm32f103_gpio_signature`
   - `stm32f103_uart_bridge_banner`
-  - `esp32c6_golden_gpio`
+  - `esp32c6_gpio_signature_with_meter`
 - use when:
   - shared runtime
   - shared routing

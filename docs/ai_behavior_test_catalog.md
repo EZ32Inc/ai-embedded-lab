@@ -7,6 +7,7 @@ AEL now has important behaviors that are not only code behaviors. They are also 
 This catalog exists to make those behaviors testable and repeatable across versions.
 
 Historical approved references can remain in the repo as archival evidence. They should be labeled as historical when they no longer represent the current live inventory or runtime output.
+Approved references should prefer canonical DUT test names over orchestration aliases unless the reference is intentionally preserving historical wording.
 
 The goal is not exact text matching. The goal is to define whether the AI:
 

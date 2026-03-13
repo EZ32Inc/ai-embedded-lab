@@ -32,7 +32,7 @@ Purpose:
 
 #### ESP32-C6 meter fixture
 - DUT: `esp32c6_devkit`
-- path: `esp32c6_golden_gpio`
+- path: `esp32c6_gpio_signature_with_meter`
 - instrument: `esp32s3_dev_c_meter`
 - role:
   - core default baseline worker
