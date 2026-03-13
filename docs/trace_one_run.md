@@ -2,9 +2,9 @@
 
 ## 1) Selected case
 
-- Case/profile: `rp2040_pico` + `gpio_signature`
+- Case/profile: `rp2040_pico` + `rp2040_gpio_signature`
 - Relevant spec/config files:
-  - `tests/plans/gpio_signature.json`
+  - `tests/plans/rp2040_gpio_signature.json`
   - `configs/boards/rp2040_pico.yaml`
   - `configs/instrument_instances/esp32jtag_rp2040_lab.yaml`
 - Run instance traced: `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature` (successful, `ok: true`)
@@ -17,7 +17,7 @@
 - Command shape used by this run (inferred from `meta.json` + resolved defaults):
 
 ```bash
-python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
+python3 -m ael run --board rp2040_pico --test tests/plans/rp2040_gpio_signature.json
 ```
 
 - Control-instrument selection:

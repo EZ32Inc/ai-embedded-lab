@@ -29,11 +29,10 @@
   must_use_formal_path: true
   required_output_elements:
     - "DUT id stm32f401rct6"
-    - "available test name gpio_signature"
+    - "available test name stm32f401_gpio_signature"
     - "clear indication that coverage comes through the current repo-native inventory path"
   forbidden_failure_modes:
     - "missing pack-linked coverage"
-    - "claiming direct board-specific plan files when none exist"
     - "answering from stale memory instead of current inventory"
   judge_rubric:
     - "retrieval path used first is inventory list"
@@ -46,16 +45,16 @@
   intent_type: test_detail_question
   user_question: "Please show me stm32f401rct6 golden GPIO test connections and what will be tested."
   expected_retrieval_path:
-    - "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json"
+    - "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json"
   must_use_formal_path: true
   required_output_elements:
     - "probe identity ESP32JTAG"
     - "connections including SWD, RESET, and observed signal"
     - "expected signal checks"
-    - "current limitation that only the generic signal path is checked if that remains true"
+    - "current validation scope of the stm32f401 GPIO signature path"
   forbidden_failure_modes:
     - "using ad hoc repo reconstruction as the primary path"
-    - "claiming multi-pin validation when only the generic signal path is checked"
+    - "claiming multi-pin validation when only the PA4 signature path is checked"
     - "omitting what the test actually validates"
   judge_rubric:
     - "retrieval path used first is inventory describe-test"
@@ -69,7 +68,7 @@
   intent_type: stage_semantics_question
   user_question: "What's in plan?"
   expected_retrieval_path:
-    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage plan"
+    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json --stage plan"
   must_use_formal_path: true
   required_output_elements:
     - "selected board and test"
@@ -93,7 +92,7 @@
   intent_type: stage_semantics_question
   user_question: "What will be included in pre-flight?"
   expected_retrieval_path:
-    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage pre-flight"
+    - "python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json --stage pre-flight"
   must_use_formal_path: true
   required_output_elements:
     - "expected pre-flight checks"

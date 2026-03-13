@@ -10,7 +10,7 @@ For this STM32F401RCT6 path, plan includes configuration and execution-shape res
 
 Plan includes:
 - selected board: stm32f401rct6
-- selected test: gpio_signature
+- selected test: stm32f401_gpio_signature
 - selected probe path: ESP32JTAG
 - resolved wiring assumptions: swd=P3, reset=NC, verify=P0.0
 - resolved board clock: 16000000 Hz
@@ -30,4 +30,4 @@ What plan does not prove:
 
 ## Retrieval Path
 
-- `python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/gpio_signature.json --stage plan`
+- `python3 -m ael explain-stage --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json --stage plan`

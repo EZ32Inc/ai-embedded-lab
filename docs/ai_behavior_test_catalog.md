@@ -6,6 +6,8 @@ AEL now has important behaviors that are not only code behaviors. They are also 
 
 This catalog exists to make those behaviors testable and repeatable across versions.
 
+Historical approved references can remain in the repo as archival evidence. They should be labeled as historical when they no longer represent the current live inventory or runtime output.
+
 The goal is not exact text matching. The goal is to define whether the AI:
 
 - used the correct formal retrieval path
@@ -91,6 +93,8 @@ What should be tested instead:
 - whether the required information was present
 - whether the answer stayed grounded in repo state
 - whether known failure modes were avoided
+
+When an approved reference is intentionally archival rather than live-current, the judge should preserve its historical meaning instead of trying to reconcile it with the latest repo state.
 
 ## Runner / Judge Idea
 
@@ -195,7 +199,7 @@ Purpose:
 - `case_type`: `organic`
 - `intent_type`: `test_detail_question`
 - `user_question`: `Please show me stm32f401rct6 golden GPIO test connections and what will be tested info.`
-- `expected_retrieval_path`: `python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json`
+- `expected_retrieval_path`: `python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json`
 - `expected_skill_guidance`: none
 - `required_behavior`:
   - use describe-test path first

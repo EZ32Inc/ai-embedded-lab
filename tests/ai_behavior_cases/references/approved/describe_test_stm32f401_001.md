@@ -9,7 +9,7 @@ Please show me stm32f401rct6 golden GPIO test connections and what will be teste
 STM32F401RCT6 golden GPIO test:
 
 - board: stm32f401rct6
-- test: gpio_signature
+- test: stm32f401_gpio_signature
 - probe: ESP32JTAG
 
 Connections:
@@ -22,7 +22,7 @@ Connections:
 - PC13 -> LED
 
 What will be tested:
-- signal validation on PA4 through the generic sig path
+- signal validation on PA4 through the stm32f401-specific GPIO signature path
 - duration: 1.0 s
 - expected frequency range: 200 Hz .. 100000 Hz
 - expected duty range: 0.4 .. 0.6
@@ -30,9 +30,9 @@ What will be tested:
 - maximum edges: 20000
 
 Current notes:
-- this test validates the generic signal path on PA4, while LED blink is tracked as a separate verification view on P0.3
+- this test validates the signal path on PA4, while LED blink is tracked as a separate verification view on P0.3
 - inventory warns that PC13 is connected to two observation points: P0.3 and LED
 
 ## Retrieval Path
 
-- `python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json`
+- `python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json`

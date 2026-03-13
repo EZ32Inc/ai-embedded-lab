@@ -58,12 +58,12 @@ Current default sequence:
    - evidence: UART + meter-backed `instrument.signature`
 2. `rp2040_golden_gpio_signature`
    - board: `rp2040_pico`
-   - test: `tests/plans/gpio_signature.json`
+   - test: `tests/plans/rp2040_gpio_signature.json`
    - control instrument instance: `esp32jtag_rp2040_lab`
    - evidence: logic-analyzer `gpio.signal`
 3. `stm32f103_golden_gpio_signature`
    - board: `stm32f103`
-   - test: `tests/plans/gpio_signature.json`
+   - test: `tests/plans/stm32f103_gpio_signature.json`
    - control instrument instance: `esp32jtag_stm32_golden`
    - evidence: logic-analyzer `gpio.signal`
 

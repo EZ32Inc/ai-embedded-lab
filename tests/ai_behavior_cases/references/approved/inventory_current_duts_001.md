@@ -19,16 +19,16 @@ Current DUTs and tests:
   - esp32s3_gpio_signature_with_meter
 - rp2040_pico
   - blink_gpio
-  - gpio_signature
+  - rp2040_gpio_signature
   - recovery_demo_signal_fail_after_recovery
   - recovery_demo_signal_fail_first
   - recovery_demo_uart_fail_first
 - stm32f103
-  - gpio_signature
+  - stm32f103_gpio_signature
 - stm32f401rct6
+  - stm32f401_gpio_signature
   - stm32f401_gpio_smoke
   - stm32f401_led_blink
-  - gpio_signature
 
 MCUs with tests:
 - esp32c3

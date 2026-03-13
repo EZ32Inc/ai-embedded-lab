@@ -2,7 +2,7 @@
 
 ## A) Selected Case
 
-- Case: `rp2040_pico` + `tests/plans/gpio_signature.json`
+- Case: `rp2040_pico` + `tests/plans/rp2040_gpio_signature.json`
 - Real run directory: `runs/2026-03-06_17-00-39_rp2040_pico_gpio_signature`
 - Why this case:
   - Typical core hardware path (preflight -> build -> flash -> signal verify).
@@ -13,13 +13,13 @@
 Representative command shape:
 
 ```bash
-python3 -m ael run --board rp2040_pico --test tests/plans/gpio_signature.json
+python3 -m ael run --board rp2040_pico --test tests/plans/rp2040_gpio_signature.json
 ```
 
 Resolved defaults in this run:
 - Probe config: `configs/esp32jtag.yaml` (default resolution path)
 - Board config: `configs/boards/rp2040_pico.yaml`
-- Test config: `tests/plans/gpio_signature.json`
+- Test config: `tests/plans/rp2040_gpio_signature.json`
 
 Assumptions:
 - RP2040 toolchain + `PICO_SDK_PATH` available.

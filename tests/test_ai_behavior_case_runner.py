@@ -68,7 +68,7 @@ def test_single_case_runner_can_print_answer_prompt(tmp_path):
     )
     assert "---ANSWER_PROMPT---" in res.stdout
     assert "Please show me stm32f401rct6 golden GPIO test connections" in res.stdout
-    assert "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/gpio_signature.json" in res.stdout
+    assert "python3 -m ael inventory describe-test --board stm32f401rct6 --test tests/plans/stm32f401_gpio_signature.json" in res.stdout
 
 
 def test_suite_runner_emits_summary_and_case_files(tmp_path):
