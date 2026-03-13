@@ -69,7 +69,7 @@ def test_run_prefers_control_instrument_arg(monkeypatch):
         control_instrument = "configs/instrument_instances/esp32jtag_stm32_golden.yaml"
         probe = "configs/esp32jtag.yaml"
         board = "stm32f103"
-        test = "tests/plans/gpio_signature.json"
+        test = "tests/plans/stm32f103_gpio_signature.json"
         wiring = None
         output_mode = "normal"
         skip_flash = False

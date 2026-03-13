@@ -26,7 +26,7 @@ def test_connection_doctor_for_meter_path_reports_clean_conn_a():
 def test_connection_doctor_for_stm32_path_surfaces_duplicate_observation_warning():
     payload = connection_doctor.doctor(
         board_id="stm32f401rct6",
-        test_path="tests/plans/gpio_signature.json",
+        test_path="tests/plans/stm32f401_gpio_signature.json",
         repo_root=REPO_ROOT,
     )
     assert payload["ok"] is True
@@ -38,7 +38,7 @@ def test_connection_doctor_for_stm32_path_surfaces_duplicate_observation_warning
 def test_connection_doctor_for_rp2040_path_reports_clean_semantics():
     payload = connection_doctor.doctor(
         board_id="rp2040_pico",
-        test_path="tests/plans/gpio_signature.json",
+        test_path="tests/plans/rp2040_gpio_signature.json",
         repo_root=REPO_ROOT,
     )
     assert payload["ok"] is True

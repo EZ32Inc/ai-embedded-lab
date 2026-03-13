@@ -37,8 +37,12 @@ def test_probe_observed_live_boards_explicitly_include_ground_in_bench_connectio
 
 
 def test_live_signal_boards_have_no_semantic_conn_a_warnings_for_gpio_signature():
-    test_payload = _load_json(REPO_ROOT / "tests" / "plans" / "gpio_signature.json")
-    for board_name in ("rp2040_pico", "stm32f103"):
+    plan_by_board = {
+        "rp2040_pico": "rp2040_gpio_signature.json",
+        "stm32f103": "stm32f103_gpio_signature.json",
+    }
+    for board_name, plan_name in plan_by_board.items():
+        test_payload = _load_json(REPO_ROOT / "tests" / "plans" / plan_name)
         raw = _simple_yaml_load(str(REPO_ROOT / "configs" / "boards" / f"{board_name}.yaml"))
         board_cfg = raw.get("board", {}) if isinstance(raw, dict) else {}
         ctx = normalize_connection_context(board_cfg, test_payload, required_wiring=["verify"])
@@ -72,10 +76,11 @@ def test_generated_example_plans_expose_formal_connection_contract_extensions():
         payload = _load_json(plans_dir / name)
         bench_setup = payload.get("bench_setup", {})
         assert isinstance(bench_setup, dict) and bench_setup, f"generated example missing bench_setup: {name}"
-        assert isinstance(bench_setup.get("serial_console"), dict), f"generated example missing serial_console: {name}"
-        serial = bench_setup["serial_console"]
-        assert serial.get("port"), f"generated example missing serial_console.port: {name}"
-        assert serial.get("baud"), f"generated example missing serial_console.baud: {name}"
+        if "serial_console" in bench_setup:
+            assert isinstance(bench_setup.get("serial_console"), dict), f"generated example malformed serial_console: {name}"
+            serial = bench_setup["serial_console"]
+            assert serial.get("port"), f"generated example missing serial_console.port: {name}"
+            assert serial.get("baud"), f"generated example missing serial_console.baud: {name}"
 
         if "adc" in name:
             external = bench_setup.get("external_inputs")

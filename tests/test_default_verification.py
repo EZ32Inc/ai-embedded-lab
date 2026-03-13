@@ -596,7 +596,7 @@ def test_run_until_fail_stops_on_first_failure(tmp_path):
             "version": 1,
             "mode": "sequence",
             "execution_policy": {"kind": "serial"},
-            "steps": [{"name": "dummy", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"}],
+            "steps": [{"name": "dummy", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"}],
         },
     )
     calls = [
@@ -641,7 +641,7 @@ def test_run_until_fail_reports_success_when_all_runs_pass(tmp_path):
             "version": 1,
             "mode": "sequence",
             "execution_policy": {"kind": "serial"},
-            "steps": [{"name": "dummy", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"}],
+            "steps": [{"name": "dummy", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"}],
         },
     )
     with patch(
@@ -666,8 +666,8 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
         "mode": "sequence",
         "execution_policy": {"kind": "parallel"},
         "steps": [
-            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
-            {"name": "stm32", "board": "stm32f103", "test": "tests/plans/gpio_signature.json"},
+            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+            {"name": "stm32", "board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -693,8 +693,8 @@ def test_sequence_setting_materializes_suite_and_tasks():
         "mode": "sequence",
         "execution_policy": {"kind": "parallel"},
         "steps": [
-            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
-            {"name": "stm32", "board": "stm32f103", "test": "tests/plans/gpio_signature.json"},
+            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+            {"name": "stm32", "board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -712,7 +712,7 @@ def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
         "mode": "sequence",
         "execution_policy": {"kind": "parallel"},
         "steps": [
-            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
+            {"name": "rp2040", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
             {"name": "esp32", "board": "esp32c6_devkit", "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
         ],
     }
@@ -967,8 +967,8 @@ def test_parallel_suite_waits_for_other_workers_after_one_failure(tmp_path):
         "mode": "sequence",
         "execution_policy": {"kind": "parallel"},
         "steps": [
-            {"name": "fast_fail", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
-            {"name": "slow_pass", "board": "stm32f103", "test": "tests/plans/gpio_signature.json"},
+            {"name": "fast_fail", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+            {"name": "slow_pass", "board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -1094,7 +1094,7 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
         "execution_policy": {"kind": "parallel"},
         "steps": [
             {"name": "unstable_meter", "board": "esp32c6_devkit", "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
-            {"name": "stable_probe", "board": "rp2040_pico", "test": "tests/plans/gpio_signature.json"},
+            {"name": "stable_probe", "board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
         ],
     }
     cfg_path = _write_setting(tmp_path, setting)

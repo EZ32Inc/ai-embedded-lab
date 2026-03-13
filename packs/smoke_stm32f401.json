@@ -2,6 +2,6 @@
   "name": "smoke_stm32f401",
   "board": "stm32f401rct6",
   "tests": [
-    "tests/plans/gpio_signature.json"
+    "tests/plans/stm32f401_gpio_signature.json"
   ]
 }

@@ -1,0 +1,58 @@
+{
+  "name": "stm32f103_gpio_signature",
+  "board": "stm32f103",
+  "build": {
+    "project_dir": "firmware/targets/stm32f103_gpio_signature",
+    "artifact_stem": "stm32f103_gpio_signature_app",
+    "build_dir": "artifacts/build_stm32f103_gpio_signature"
+  },
+  "signal_checks": [
+    {
+      "name": "pa4_fast",
+      "pin": "pa4",
+      "duration_s": 1.0,
+      "min_freq_hz": 40000.0,
+      "max_freq_hz": 150000.0,
+      "duty_min": 0.4,
+      "duty_max": 0.6,
+      "min_edges": 100,
+      "max_edges": 50000
+    },
+    {
+      "name": "pa5_half_rate",
+      "pin": "pa5",
+      "duration_s": 1.0,
+      "min_freq_hz": 20000.0,
+      "max_freq_hz": 80000.0,
+      "duty_min": 0.4,
+      "duty_max": 0.6,
+      "min_edges": 50,
+      "max_edges": 50000
+    }
+  ],
+  "signal_relations": [
+    {
+      "type": "frequency_ratio",
+      "numerator": "pa4_fast",
+      "denominator": "pa5_half_rate",
+      "min_ratio": 1.8,
+      "max_ratio": 2.2
+    }
+  ],
+  "bench_setup": {
+    "peripheral_signals": [
+      {
+        "role": "GPIO_SIGNATURE_FAST",
+        "dut_signal": "PA4",
+        "direction": "output",
+        "notes": "Firmware drives PA4 as a high-rate square wave for direct capture."
+      },
+      {
+        "role": "GPIO_SIGNATURE_HALF_RATE",
+        "dut_signal": "PA5",
+        "direction": "output",
+        "notes": "Firmware drives PA5 at half the PA4 rate so the control instrument can verify the frequency ratio directly."
+      }
+    ]
+  }
+}

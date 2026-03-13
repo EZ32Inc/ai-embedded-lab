@@ -7,7 +7,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_explain_plan_for_stm32f401():
-    payload = stage_explain.explain_stage('stm32f401rct6', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
+    payload = stage_explain.explain_stage('stm32f401rct6', 'tests/plans/stm32f401_gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload['stage'] == 'plan'
     assert payload["selected"]["selected_dut"]["id"] == "stm32f401rct6"
@@ -42,7 +42,7 @@ def test_explain_plan_for_stm32f401():
 
 
 def test_explain_plan_for_rp2040_uses_board_probe_config():
-    payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/gpio_signature.json', 'plan', REPO_ROOT)
+    payload = stage_explain.explain_stage('rp2040_pico', 'tests/plans/rp2040_gpio_signature.json', 'plan', REPO_ROOT)
     assert payload['ok'] is True
     assert payload["selected"]["selected_dut"]["id"] == "rp2040_pico"
     assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
@@ -98,7 +98,7 @@ def test_render_text_includes_communication_blocks_readably():
             "ok": True,
             "stage": "plan",
             "board": "stm32f401rct6",
-            "test": {"name": "gpio_signature", "path": "tests/plans/gpio_signature.json"},
+            "test": {"name": "stm32f401_gpio_signature", "path": "tests/plans/stm32f401_gpio_signature.json"},
             "selected": {
                 "selected_dut": {"id": "stm32f401rct6", "name": "STM32F401"},
                 "selected_board_profile": {"id": "stm32f401rct6", "config": "configs/boards/stm32f401rct6.yaml"},

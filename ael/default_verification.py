@@ -141,7 +141,7 @@ def preset_payload(name: str) -> Dict[str, Any]:
             "version": 1,
             "mode": "single_run",
             "board": "rp2040_pico",
-            "test": "tests/plans/gpio_signature.json",
+            "test": "tests/plans/rp2040_gpio_signature.json",
             "instrument_instance": "esp32jtag_rp2040_lab",
         }
     if key in ("esp32s3_then_rp2040", "esp32s3_gpio_then_rp2040"):
@@ -160,7 +160,7 @@ def preset_payload(name: str) -> Dict[str, Any]:
                 {
                     "name": "rp2040_golden_gpio_signature",
                     "board": "rp2040_pico",
-                    "test": "tests/plans/gpio_signature.json",
+                    "test": "tests/plans/rp2040_gpio_signature.json",
                     "instrument_instance": "esp32jtag_rp2040_lab",
                 },
             ],

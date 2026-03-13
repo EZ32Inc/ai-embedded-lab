@@ -26,7 +26,7 @@ def test_build_inventory_includes_key_duts_and_mcus():
 def test_build_inventory_includes_pack_linked_stm32_test_and_no_missing_smoke_ref():
     payload = inventory.build_inventory(REPO_ROOT)
     stm32 = next(item for item in payload["duts"] if item["dut_id"] == "stm32f103")
-    assert any(test["name"] == "gpio_signature" and any(source["via"] == "pack" for source in test["sources"]) for test in stm32["tests"])
+    assert any(test["name"] == "stm32f103_gpio_signature" and any(source["via"] == "pack" for source in test["sources"]) for test in stm32["tests"])
     rp2040 = next(item for item in payload["duts"] if item["dut_id"] == "rp2040_pico")
     assert not any(test["path"] == "tests/plans/uart_banner.json" for test in rp2040["tests"])
 
@@ -45,6 +45,14 @@ def test_inventory_cli_json_output():
     payload = json.loads(res.stdout)
     assert payload["ok"] is True
     assert "esp32c3_devkit" in payload["summary"]["duts_with_tests"]
+
+
+def test_inventory_text_render_omits_generic_section():
+    payload = inventory.build_inventory(REPO_ROOT)
+    text = inventory.render_text(payload)
+    assert "generic_tests" not in text
+    assert "stm32f103_gpio_signature" in text
+    assert "rp2040_gpio_signature" in text
 
 
 def test_inventory_instances_cli_json_output():
@@ -80,7 +88,7 @@ def test_build_instrument_instance_inventory_includes_references():
 
 
 def test_describe_test_for_stm32f401_gpio_signature():
-    payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
+    payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
     assert payload["selected_dut"]["id"] == "stm32f401rct6"
     assert payload["selected_dut"]["runtime_binding"] == "board_profile_driven"
@@ -129,7 +137,7 @@ def test_describe_test_for_stm32f401_gpio_signature():
 
 
 def test_describe_test_warns_on_duplicate_mcu_pin_connections():
-    payload = inventory.describe_test("stm32f401rct6", "tests/plans/gpio_signature.json", REPO_ROOT)
+    payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_gpio_signature.json", REPO_ROOT)
     assert len(payload["warnings"]) == 1
     assert "MCU pin PC13 is connected to 2 observation points" in payload["warnings"][0]
     assert payload["connection_setup"]["warnings"]
@@ -284,11 +292,11 @@ def test_inventory_diff_connection_cli_text_output():
             "--board",
             "rp2040_pico",
             "--test",
-            "tests/plans/gpio_signature.json",
+            "tests/plans/rp2040_gpio_signature.json",
             "--against-board",
             "stm32f103",
             "--against-test",
-            "tests/plans/gpio_signature.json",
+            "tests/plans/stm32f103_gpio_signature.json",
             "--format",
             "text",
         ],
@@ -300,6 +308,24 @@ def test_inventory_diff_connection_cli_text_output():
     )
     assert "left_only:" in res.stdout
     assert "right_only:" in res.stdout
+
+
+def test_describe_test_for_stm32f103_gpio_signature_multi_signal_contract():
+    payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_gpio_signature.json", REPO_ROOT)
+    assert payload["ok"] is True
+    checks = payload["expected_checks"]
+    assert any(check["type"] == "signal" and check["pin"] == "pa4" for check in checks)
+    assert any(check["type"] == "signal" and check["pin"] == "pa5" for check in checks)
+    assert any(
+        check["type"] == "frequency_ratio"
+        and check.get("numerator") == "pa4_fast"
+        and check.get("denominator") == "pa5_half_rate"
+        for check in checks
+    )
+    assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
+    assert any(conn["from"] == "PA5" and conn["to"] == "P0.1" for conn in payload["connections"])
+    rendered = inventory.render_describe_text(payload)
+    assert "frequency_ratio: pa4_fast/pa5_half_rate min=1.8 max=2.2" in rendered
 
 
 def test_describe_test_for_stm32f401_led_blink():

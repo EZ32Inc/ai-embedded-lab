@@ -1,5 +1,6 @@
 {
   "name": "gpio_signature",
+  "notes": "Legacy generic shared GPIO signature plan kept for compatibility; prefer board-specific gpio_signature plans for user-facing workflows.",
   "pin": "sig",
   "min_freq_hz": 200.0,
   "max_freq_hz": 100000.0,

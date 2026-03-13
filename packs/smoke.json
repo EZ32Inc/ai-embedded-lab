@@ -3,6 +3,6 @@
   "board": "rp2040_pico",
   "tests": [
     "tests/plans/blink_gpio.json",
-    "tests/plans/gpio_signature.json"
+    "tests/plans/rp2040_gpio_signature.json"
   ]
 }

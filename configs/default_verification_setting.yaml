@@ -13,13 +13,13 @@
       "board": "rp2040_pico",
       "instrument_instance": "esp32jtag_rp2040_lab",
       "name": "rp2040_golden_gpio_signature",
-      "test": "tests/plans/gpio_signature.json"
+      "test": "tests/plans/rp2040_gpio_signature.json"
     },
     {
       "board": "stm32f103",
       "instrument_instance": "esp32jtag_stm32_golden",
       "name": "stm32f103_golden_gpio_signature",
-      "test": "tests/plans/gpio_signature.json"
+      "test": "tests/plans/stm32f103_gpio_signature.json"
     },
     {
       "board": "stm32f103_uart",
