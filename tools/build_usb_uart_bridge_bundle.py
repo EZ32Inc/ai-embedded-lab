@@ -13,9 +13,7 @@ ZIP_PATH = OUT_DIR / "usb_uart_bridge_bundle_v0_1.zip"
 
 
 FILES = [
-    ("ael/__init__.py", "ael/__init__.py"),
     ("ael/usb_uart_bridge_cli.py", "ael/usb_uart_bridge_cli.py"),
-    ("ael/instruments/__init__.py", "ael/instruments/__init__.py"),
     ("ael/instruments/usb_uart_bridge_daemon.py", "ael/instruments/usb_uart_bridge_daemon.py"),
     ("configs/instruments/usb_uart_bridge.example.yaml", "configs/instruments/usb_uart_bridge.example.yaml"),
     ("docs/instruments/usb_uart_bridge_daemon_v0_1.md", "docs/instruments/usb_uart_bridge_daemon_v0_1.md"),
@@ -108,6 +106,12 @@ It is not:
 """
 
 
+AEL_INIT = ""
+
+
+INSTRUMENTS_INIT = ""
+
+
 def _copy_file(src_rel: str, dst_rel: str) -> None:
     src = REPO_ROOT / src_rel
     dst = BUNDLE_ROOT / dst_rel
@@ -123,6 +127,10 @@ def build_bundle() -> dict[str, object]:
     for src_rel, dst_rel in FILES:
         _copy_file(src_rel, dst_rel)
 
+    (BUNDLE_ROOT / "ael").mkdir(parents=True, exist_ok=True)
+    (BUNDLE_ROOT / "ael" / "__init__.py").write_text(AEL_INIT, encoding="utf-8")
+    (BUNDLE_ROOT / "ael" / "instruments").mkdir(parents=True, exist_ok=True)
+    (BUNDLE_ROOT / "ael" / "instruments" / "__init__.py").write_text(INSTRUMENTS_INIT, encoding="utf-8")
     (BUNDLE_ROOT / "requirements.txt").write_text("pyserial\nPyYAML\n", encoding="utf-8")
     (BUNDLE_ROOT / "README.md").write_text(README, encoding="utf-8")
     (BUNDLE_ROOT / "INSTALL_REMOTE.md").write_text(INSTALL_REMOTE, encoding="utf-8")

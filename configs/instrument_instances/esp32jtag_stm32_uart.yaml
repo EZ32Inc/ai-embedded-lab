@@ -1,10 +1,10 @@
 instance:
-  id: esp32jtag_stm32_golden
+  id: esp32jtag_stm32_uart
   type: esp32jtag
-  label: ESP32JTAG STM32 Golden
+  label: ESP32JTAG STM32 UART
 
 connection:
-  ip: 192.168.2.98
+  ip: 192.168.2.99
   gdb_port: 4242
 
 communication:
@@ -12,12 +12,12 @@ communication:
   surfaces:
     - name: gdb_remote
       transport: wifi
-      endpoint: 192.168.2.98:4242
+      endpoint: 192.168.2.99:4242
       protocol: gdb_remote
       invocation_style: request_response
     - name: web_api
       transport: wifi
-      endpoint: https://192.168.2.98:443
+      endpoint: https://192.168.2.99:443
       protocol: esp32jtag_web_api_v1
       invocation_style: request_response
       auth:

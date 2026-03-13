@@ -92,10 +92,10 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
-    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.99:4242"]
+    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.98:4242"]
     assert payload["selected_bench_resources"]["contract_version"] == 1
     assert "control_instrument_id:esp32jtag_stm32_golden" in payload["selected_bench_resources"]["selection_digest"]
-    assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.99:4242"]
+    assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
     assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
@@ -118,7 +118,7 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert "dut_runtime_binding: board_profile_driven" in rendered
     assert "board_profile_role: runtime_policy" in rendered
     assert "bench_resource_contract_version: 1" in rendered
-    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.99:4242" in rendered
+    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.98:4242" in rendered
     assert "board_profile_config: configs/boards/stm32f401rct6.yaml" in rendered
     assert "control_instrument: esp32jtag_stm32_golden" in rendered
     assert "legacy_kind: probe" in rendered
@@ -221,14 +221,14 @@ def test_describe_test_for_generated_stm32_uart_dual_instrument_contract():
     assert payload["ok"] is True
     bench_setup = payload["connection_setup"]["bench_setup"]
     assert bench_setup["serial_console"]["port"] == "/dev/ttyUSB0"
-    assert bench_setup["instrument_roles"][0]["instrument_id"] == "esp32jtag_stm32_golden"
+    assert bench_setup["instrument_roles"][0]["instrument_id"] == "esp32jtag_stm32_uart"
     assert bench_setup["instrument_roles"][1]["instrument_id"] == "usb_uart_bridge_daemon"
     assert any(conn["from"] == "uart_tx" and conn["to"] == "PA9/USART1_TX" for conn in payload["connections"])
-    assert any(conn["from"] == "control_instrument" and conn["to"] == "esp32jtag_stm32_golden" for conn in payload["connections"])
+    assert any(conn["from"] == "control_instrument" and conn["to"] == "esp32jtag_stm32_uart" for conn in payload["connections"])
     assert any(conn["from"] == "uart_instrument" and conn["to"] == "usb_uart_bridge_daemon" for conn in payload["connections"])
     rendered = inventory.render_describe_text(payload)
     assert "uart_tx -> PA9/USART1_TX" in rendered
-    assert "control_instrument -> esp32jtag_stm32_golden" in rendered
+    assert "control_instrument -> esp32jtag_stm32_uart" in rendered
     assert "uart_instrument -> usb_uart_bridge_daemon" in rendered
 
 

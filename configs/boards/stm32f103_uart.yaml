@@ -1,0 +1,65 @@
+board:
+  name: STM32F103 Bluepill UART Bench
+  target: stm32f103c8t6
+  instrument_instance: esp32jtag_stm32_uart
+  clock_hz: 8000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f103
+    artifact_stem: stm32f103_app
+  firmware:
+    description: Toggle PA4-PA7 fast, blink PC13 at 0.5 s intervals
+  flash:
+    speed_khz: 1000
+    reset_strategy: connect_under_reset
+    post_load_settle_s: 5.0
+    notice_output_keywords:
+      - "warning"
+      - "error"
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "monitor a"
+      - "attach {target_id}"
+      - "load"
+      - "attach {target_id}"
+      - "detach"
+  observe_map:
+    sig: P0.0
+    pa4: P0.0
+    pa5: P0.1
+    pa6: P0.2
+    pa7: P0.3
+    led: LED
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Generic GPIO signature capture on PA4
+    led:
+      pin: led
+      resolved_to: LED
+      description: Visual Bluepill LED blink on PC13
+  bench_connections:
+    - from: PA4
+      to: P0.0
+    - from: PA5
+      to: P0.1
+    - from: PA6
+      to: P0.2
+    - from: PA7
+      to: P0.3
+    - from: PC13
+      to: LED
+    - from: GND
+      to: probe GND
+  safe_pins:
+    - PA4
+    - PA5
+    - PA6
+    - PA7
+    - PC13
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "P0.0"
