@@ -100,6 +100,8 @@ def _infer_validation_style(payload: Dict[str, Any]) -> str:
         return "instrument_selftest"
     if payload.get("observe_uart"):
         return "uart_or_signal"
+    if isinstance(payload.get("signal_checks"), list) and payload.get("signal_checks"):
+        return "signal"
     if payload.get("pin"):
         return "signal"
     return "generic"
@@ -242,7 +244,29 @@ def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], conne
 
 def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     checks: List[Dict[str, Any]] = []
-    if payload.get("pin"):
+    signal_checks = payload.get("signal_checks")
+    if isinstance(signal_checks, list) and signal_checks:
+        for item in signal_checks:
+            if not isinstance(item, dict):
+                continue
+            checks.append(
+                {
+                    "type": "signal",
+                    "name": item.get("name"),
+                    "pin": item.get("pin"),
+                    "min_freq_hz": item.get("min_freq_hz"),
+                    "max_freq_hz": item.get("max_freq_hz"),
+                    "duty_min": item.get("duty_min"),
+                    "duty_max": item.get("duty_max"),
+                    "duration_s": item.get("duration_s", payload.get("duration_s")),
+                    "min_edges": item.get("min_edges", payload.get("min_edges")),
+                    "max_edges": item.get("max_edges", payload.get("max_edges")),
+                }
+            )
+        for relation in payload.get("signal_relations", []) if isinstance(payload.get("signal_relations"), list) else []:
+            if isinstance(relation, dict):
+                checks.append({"type": "signal_relation", **relation})
+    elif payload.get("pin"):
         checks.append(
             {
                 "type": "signal",
@@ -582,6 +606,13 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append(f"  - {conn.get('from')} -> {conn.get('to')}{suffix}")
     lines.append("expected_checks:")
     for check in payload.get("expected_checks", []):
+        if check.get("type") == "frequency_ratio":
+            lines.append(
+                "  - frequency_ratio: "
+                f"{check.get('numerator')}/{check.get('denominator')} "
+                f"min={check.get('min_ratio')} max={check.get('max_ratio')}"
+            )
+            continue
         lines.append(f"  - {check.get('type')}: {json.dumps(check, sort_keys=True)}")
     for warning in payload.get("warnings", []):
         lines.append(warning)
@@ -668,11 +699,6 @@ def render_text(inventory: Dict[str, Any]) -> str:
                 extras.append(via)
             lines.append(f"  - {test.get('name')} [{' ; '.join([e for e in extras if e])}]")
         lines.append("")
-    generic = inventory.get("generic_tests") or []
-    if generic:
-        lines.append("generic_tests")
-        for test in generic:
-            lines.append(f"  - {test.get('name')} ({test.get('path')})")
     return "\n".join(lines).rstrip() + "\n"
 
 

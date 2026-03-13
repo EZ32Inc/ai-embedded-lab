@@ -126,14 +126,23 @@ def validate_config(probe_raw, board_raw, test_raw):
     if isinstance(test_raw, dict):
         if not test_raw.get("name"):
             issues.append("test.name missing")
-        if not test_raw.get("pin"):
-            issues.append("test.pin missing")
-        if test_raw.get("min_freq_hz") is None:
-            issues.append("test.min_freq_hz missing")
-        if test_raw.get("max_freq_hz") is None:
-            issues.append("test.max_freq_hz missing")
-        if test_raw.get("duty_min") is None:
-            issues.append("test.duty_min missing")
-        if test_raw.get("duty_max") is None:
-            issues.append("test.duty_max missing")
+        signal_checks = test_raw.get("signal_checks")
+        if isinstance(signal_checks, list) and signal_checks:
+            for index, item in enumerate(signal_checks):
+                if not isinstance(item, dict):
+                    issues.append(f"test.signal_checks[{index}] must be a mapping")
+                    continue
+                if not item.get("pin"):
+                    issues.append(f"test.signal_checks[{index}].pin missing")
+        else:
+            if not test_raw.get("pin"):
+                issues.append("test.pin missing")
+            if test_raw.get("min_freq_hz") is None:
+                issues.append("test.min_freq_hz missing")
+            if test_raw.get("max_freq_hz") is None:
+                issues.append("test.max_freq_hz missing")
+            if test_raw.get("duty_min") is None:
+                issues.append("test.duty_min missing")
+            if test_raw.get("duty_max") is None:
+                issues.append("test.duty_max missing")
     return issues

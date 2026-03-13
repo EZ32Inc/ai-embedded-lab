@@ -131,6 +131,7 @@ def capture_signature(
     probe_cfg: Dict[str, Any],
     *,
     pin: str,
+    pins: list[str] | None = None,
     duration_s: float,
     expected_hz: float,
     min_edges: int,
@@ -141,6 +142,7 @@ def capture_signature(
         ok = observe_gpio_pin.run(
             probe_cfg,
             pin=pin,
+            pins=pins,
             duration_s=duration_s,
             expected_hz=expected_hz,
             min_edges=min_edges,

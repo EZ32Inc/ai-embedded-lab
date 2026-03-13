@@ -728,6 +728,9 @@ class _SignalVerifyAdapter:
         expected_hz = float(inputs.get("expected_hz", 1.0))
         min_edges = int(inputs.get("min_edges", 2))
         max_edges = int(inputs.get("max_edges", 6))
+        raw_signal_checks = inputs.get("signal_checks", [])
+        signal_checks = [item for item in raw_signal_checks if isinstance(item, dict)]
+        signal_relations = [item for item in inputs.get("signal_relations", []) if isinstance(item, dict)]
         log_path = inputs.get("log_path")
         output_mode = inputs.get("output_mode", "normal")
         measure_path = inputs.get("measure_path")
@@ -797,9 +800,11 @@ class _SignalVerifyAdapter:
                 }
 
         def _capture_once(local_capture):
+            capture_pins = [str(item.get("resolved_pin") or item.get("pin") or "") for item in signal_checks if str(item.get("resolved_pin") or item.get("pin") or "").strip()]
             native_capture = native_api_dispatch.capture_signature(
                 probe_cfg,
                 pin=pin_value,
+                pins=capture_pins,
                 duration_s=duration_s,
                 expected_hz=expected_hz,
                 min_edges=min_edges,
@@ -811,6 +816,71 @@ class _SignalVerifyAdapter:
             if isinstance(payload, dict):
                 local_capture.update(payload)
             return True
+
+        def _analyze_signal_measure(capture_payload, check_cfg):
+            pin_bits = capture_payload.get("pin_bits", {}) if isinstance(capture_payload.get("pin_bits"), dict) else {}
+            resolved_pin = str(check_cfg.get("resolved_pin") or check_cfg.get("pin") or pin_value)
+            bit = pin_bits.get(resolved_pin, capture_payload.get("bit", 0))
+            measure_payload = la_verify.analyze_capture_bytes(
+                capture_payload.get("blob"),
+                int(capture_payload.get("sample_rate_hz", 0)),
+                int(bit),
+                min_edges=int(check_cfg.get("min_edges", min_edges)),
+            )
+            ok_local = bool(measure_payload.get("ok"))
+            metrics_local = measure_payload.get("metrics", {})
+            min_f = check_cfg.get("min_freq_hz")
+            max_f = check_cfg.get("max_freq_hz")
+            duty_min = check_cfg.get("duty_min")
+            duty_max = check_cfg.get("duty_max")
+            if min_f is not None and metrics_local.get("freq_hz", 0.0) < float(min_f):
+                measure_payload.setdefault("reasons", []).append("freq_below_min")
+                ok_local = False
+            if max_f is not None and metrics_local.get("freq_hz", 0.0) > float(max_f):
+                measure_payload.setdefault("reasons", []).append("freq_above_max")
+                ok_local = False
+            if duty_min is not None and metrics_local.get("duty", 0.0) < float(duty_min):
+                measure_payload.setdefault("reasons", []).append("duty_below_min")
+                ok_local = False
+            if duty_max is not None and metrics_local.get("duty", 0.0) > float(duty_max):
+                measure_payload.setdefault("reasons", []).append("duty_above_max")
+                ok_local = False
+            measure_payload["ok"] = bool(ok_local)
+            measure_payload["pin"] = resolved_pin
+            measure_payload["name"] = str(check_cfg.get("name") or resolved_pin)
+            return measure_payload
+
+        def _evaluate_signal_relations(check_measures):
+            relation_results = []
+            ok_local = True
+            index = {str(item.get("name") or ""): item for item in check_measures}
+            for relation in signal_relations:
+                if str(relation.get("type") or "") != "frequency_ratio":
+                    continue
+                numerator = str(relation.get("numerator") or "")
+                denominator = str(relation.get("denominator") or "")
+                left = index.get(numerator)
+                right = index.get(denominator)
+                result = dict(relation)
+                ratio = None
+                relation_ok = False
+                if left and right:
+                    left_freq = float(((left.get("metrics") or {}).get("freq_hz")) or 0.0)
+                    right_freq = float(((right.get("metrics") or {}).get("freq_hz")) or 0.0)
+                    if right_freq > 0.0:
+                        ratio = left_freq / right_freq
+                        relation_ok = True
+                        if relation.get("min_ratio") is not None and ratio < float(relation.get("min_ratio")):
+                            relation_ok = False
+                        if relation.get("max_ratio") is not None and ratio > float(relation.get("max_ratio")):
+                            relation_ok = False
+                result["ok"] = relation_ok
+                if ratio is not None:
+                    result["ratio"] = ratio
+                if not relation_ok:
+                    ok_local = False
+                relation_results.append(result)
+            return ok_local, relation_results
 
         def _led_level_poll():
             attempts = max(1, int(led_observe_cfg.get("max_attempts", 10)))
@@ -898,32 +968,55 @@ class _SignalVerifyAdapter:
             }
 
         if not led_observe_cfg.get("enabled"):
-            measure = la_verify.analyze_capture_bytes(
-                capture.get("blob"),
-                int(capture.get("sample_rate_hz", 0)),
-                int(capture.get("bit", 0)),
-                min_edges=min_edges,
-            )
-            ok = bool(measure.get("ok"))
-            metrics = measure.get("metrics", {})
-            min_f = test_limits.get("min_freq_hz")
-            max_f = test_limits.get("max_freq_hz")
-            duty_min = test_limits.get("duty_min")
-            duty_max = test_limits.get("duty_max")
-            if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
-                measure.setdefault("reasons", []).append("freq_below_min")
-                ok = False
-            if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
-                measure.setdefault("reasons", []).append("freq_above_max")
-                ok = False
-            if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
-                measure.setdefault("reasons", []).append("duty_below_min")
-                ok = False
-            if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
-                measure.setdefault("reasons", []).append("duty_above_max")
-                ok = False
+            if signal_checks:
+                check_measures = [_analyze_signal_measure(capture, item) for item in signal_checks]
+                relations_ok, relation_results = _evaluate_signal_relations(check_measures)
+                ok = all(bool(item.get("ok")) for item in check_measures) and relations_ok
+                reasons = []
+                for item in check_measures:
+                    for reason in item.get("reasons", []):
+                        reasons.append(f"{item.get('name')}:{reason}")
+                for relation in relation_results:
+                    if not relation.get("ok", False):
+                        reasons.append(
+                            "relation_failed:"
+                            f"{relation.get('numerator')}:{relation.get('denominator')}"
+                        )
+                primary = check_measures[0] if check_measures else {"metrics": {}}
+                measure = {
+                    "ok": bool(ok),
+                    "metrics": dict(primary.get("metrics", {})),
+                    "reasons": reasons,
+                    "checks": check_measures,
+                    "relations": relation_results,
+                }
+            else:
+                measure = la_verify.analyze_capture_bytes(
+                    capture.get("blob"),
+                    int(capture.get("sample_rate_hz", 0)),
+                    int(capture.get("bit", 0)),
+                    min_edges=min_edges,
+                )
+                ok = bool(measure.get("ok"))
+                metrics = measure.get("metrics", {})
+                min_f = test_limits.get("min_freq_hz")
+                max_f = test_limits.get("max_freq_hz")
+                duty_min = test_limits.get("duty_min")
+                duty_max = test_limits.get("duty_max")
+                if min_f is not None and metrics.get("freq_hz", 0.0) < float(min_f):
+                    measure.setdefault("reasons", []).append("freq_below_min")
+                    ok = False
+                if max_f is not None and metrics.get("freq_hz", 0.0) > float(max_f):
+                    measure.setdefault("reasons", []).append("freq_above_max")
+                    ok = False
+                if duty_min is not None and metrics.get("duty", 0.0) < float(duty_min):
+                    measure.setdefault("reasons", []).append("duty_below_min")
+                    ok = False
+                if duty_max is not None and metrics.get("duty", 0.0) > float(duty_max):
+                    measure.setdefault("reasons", []).append("duty_above_max")
+                    ok = False
 
-            measure["ok"] = bool(ok)
+                measure["ok"] = bool(ok)
         if measure_path:
             _write_json(measure_path, measure)
         signal_facts.update(
@@ -937,6 +1030,9 @@ class _SignalVerifyAdapter:
                 "duration_s": duration_s,
             }
         )
+        if signal_checks:
+            signal_facts["signal_checks"] = measure.get("checks", [])
+            signal_facts["signal_relations"] = measure.get("relations", [])
         verdict = check_eval.evaluate_signal_facts(signal_facts)
         evidence_item = ael_evidence.make_item(
             kind="gpio.signal",

@@ -426,9 +426,36 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
         }
 
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
+    raw_signal_checks = test_raw.get("signal_checks", []) if isinstance(test_raw, dict) else []
+    signal_checks = []
+    if isinstance(raw_signal_checks, list):
+        for index, item in enumerate(raw_signal_checks):
+            if not isinstance(item, dict):
+                continue
+            pin_name = item.get("pin")
+            resolved_pin = pin_name
+            if pin_name and isinstance(observe_map, dict) and pin_name in observe_map:
+                resolved_pin = observe_map.get(pin_name)
+            if not resolved_pin:
+                continue
+            signal_checks.append(
+                {
+                    "name": str(item.get("name") or f"signal_{index + 1}"),
+                    "pin": str(pin_name or ""),
+                    "resolved_pin": str(resolved_pin),
+                    "expected_hz": float(item.get("expected_hz", 1.0)),
+                    "duration_s": float(item.get("duration_s", test_raw.get("duration_s", 3.0))),
+                    "min_edges": int(item.get("min_edges", test_raw.get("min_edges", 2))),
+                    "max_edges": int(item.get("max_edges", test_raw.get("max_edges", 6))),
+                    "min_freq_hz": item.get("min_freq_hz"),
+                    "max_freq_hz": item.get("max_freq_hz"),
+                    "duty_min": item.get("duty_min"),
+                    "duty_max": item.get("duty_max"),
+                }
+            )
     test_pin = test_raw.get("pin") if isinstance(test_raw, dict) else None
-    pin_value = test_pin
-    if test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
+    pin_value = signal_checks[0]["resolved_pin"] if signal_checks else test_pin
+    if not signal_checks and test_pin and isinstance(observe_map, dict) and test_pin in observe_map:
         pin_value = observe_map.get(test_pin)
     if not pin_value:
         pin_value = wiring_cfg.get("verify")
@@ -444,6 +471,8 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
         "inputs": {
             "probe_cfg": check_probe_cfg,
             "pin": pin_value,
+            "signal_checks": signal_checks,
+            "signal_relations": (list(test_raw.get("signal_relations", [])) if isinstance(test_raw, dict) and isinstance(test_raw.get("signal_relations"), list) else []),
             "duration_s": duration_s,
             "expected_hz": float(test_raw.get("expected_hz", 1.0)) if isinstance(test_raw, dict) else 1.0,
             "min_edges": int(test_raw.get("min_edges", 2)) if isinstance(test_raw, dict) else 2,

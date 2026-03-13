@@ -146,7 +146,7 @@ def _bit_from_pin(pin: str) -> int:
     return -1
 
 
-def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out=None, verify_edges=True):
+def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out=None, verify_edges=True, pins=None):
     ip = probe_cfg.get("ip")
     scheme = probe_cfg.get("web_scheme", "https")
     port = int(probe_cfg.get("web_port", 443))
@@ -156,21 +156,41 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
     suppress_ssl_warnings = bool(probe_cfg.get("web_suppress_ssl_warnings", False))
     sample_rate = int(probe_cfg.get("la_sample_rate", 0)) or _choose_sample_rate(duration_s)
 
-    bit = _bit_from_pin(pin)
-    if bit < 0 or bit > 15:
-        print(f"Verify: invalid LA bit from pin '{pin}'. Use P0.x or 0..15.")
+    normalized_pins = []
+    seen_pins = set()
+    for candidate in [pin, *list(pins or [])]:
+        text = str(candidate or "").strip()
+        if not text or text in seen_pins:
+            continue
+        seen_pins.add(text)
+        normalized_pins.append(text)
+
+    if not normalized_pins:
+        print("Verify: no capture pins configured.")
         return False
+
+    bit_map = {name: _bit_from_pin(name) for name in normalized_pins}
+    invalid = [name for name, bit in bit_map.items() if bit < 0 or bit > 15]
+    if invalid:
+        print(f"Verify: invalid LA bit from pin '{invalid[0]}'. Use P0.x or 0..15.")
+        return False
+    bit = bit_map[normalized_pins[0]]
 
     base_url = f"{scheme}://{ip}:{port}"
     auth = HTTPBasicAuth(user, password)
 
     _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
-    print(f"Verify: LA host={base_url} bit={bit} duration~{duration_s:.2f}s sample_rate={sample_rate}")
+    print(
+        "Verify: LA host="
+        f"{base_url} bits={','.join(str(bit_map[name]) for name in normalized_pins)} "
+        f"duration~{duration_s:.2f}s sample_rate={sample_rate}"
+    )
 
     channels = ["disabled"] * 16
-    if 0 <= bit < len(channels):
-        channels[bit] = "enabled"
+    for enabled_bit in bit_map.values():
+        if 0 <= enabled_bit < len(channels):
+            channels[enabled_bit] = "enabled"
 
     try:
         _configure_la(
@@ -215,6 +235,8 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
         capture_out["blob"] = blob
         capture_out["sample_rate_hz"] = sample_rate
         capture_out["bit"] = bit
+        capture_out["pins"] = list(normalized_pins)
+        capture_out["pin_bits"] = dict(bit_map)
         capture_out["window_s"] = window_s
         capture_out["edges"] = edges
         capture_out["high"] = high
