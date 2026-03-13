@@ -1,0 +1,57 @@
+{
+  "experiment_id": "stm32f103_capture_self_check_2026-03-13",
+  "board": "stm32f103",
+  "fixture_variant": "stm32f103_unified_capability_fixture_v0_1",
+  "capability_demo": "capture_timing_self_check",
+  "wiring": {
+    "control": [
+      "SWD -> P3",
+      "RESET -> NC",
+      "GND -> probe GND"
+    ],
+    "observe": [
+      "PA4 -> P0.0",
+      "PA5 -> P0.1 (optional auxiliary observe)"
+    ],
+    "loopbacks": [
+      "PA1 -> PA0",
+      "PA9 -> PA10",
+      "PA7 -> PA6",
+      "PA8 -> PB8"
+    ]
+  },
+  "firmware_target": "firmware/targets/stm32f103_capture",
+  "test_plan": "tests/plans/stm32f103_capture_banner.json",
+  "instrument_path": {
+    "control_instrument": "esp32jtag_stm32_golden @ 192.168.2.98:4242",
+    "observe_path": "PA4 -> P0.0"
+  },
+  "classification": "live-pass",
+  "repeat_count": 1,
+  "result": "pass",
+  "run_id": "2026-03-13_11-35-42_stm32f103_stm32f103_capture_banner",
+  "runtime_evidence": {
+    "verify_edges": 25,
+    "verify_high": 33104,
+    "verify_low": 32428,
+    "verify_window_s": 0.252,
+    "key_checks_passed": [
+      "gpio.signal"
+    ]
+  },
+  "conclusion": "The bounded STM32F103 capture/timing self-check passed on real hardware using the unified PA8 -> PB8 loopback path, with capture success encoded onto PA4 for machine-checkable external observation.",
+  "anchor_impact": {
+    "anchor": "stm32f103 primary sample-board capability anchor",
+    "effect": "adds bounded live-pass proof for capture/timing-class self-check on the existing unified fixture"
+  },
+  "what_it_proves": [
+    "PA8 -> PB8 can support a bounded capture/timing self-check on the current unified STM32 fixture",
+    "Firmware can detect capture timing success internally and export the result on PA4",
+    "AEL can verify the exported PA4 result through the existing external observe path"
+  ],
+  "what_it_does_not_prove": [
+    "broad timer/capture framework completeness",
+    "precision timing measurement accuracy",
+    "external waveform analyzer equivalence"
+  ]
+}

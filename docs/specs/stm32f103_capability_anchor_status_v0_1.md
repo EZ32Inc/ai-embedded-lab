@@ -48,16 +48,29 @@
   - internal GPIO self-check on the unified timing loopback
   - result encoded onto `PA4`
 
-## Accepted immediate next path
-- `PA8 -> PB8` bounded digital timing path follow-on
-- expected bounded shape:
-  - reuse the same output/input pair on the same board
+### EXTI self-check path
+- status: `live-pass`
+- meaning:
+  - bounded generated EXTI execution proof
+  - `PA8 -> PB8`
+  - internal EXTI self-check on the unified timing loopback
   - result encoded onto `PA4`
-  - external observation remains on `PA4`
-  - next sub-path should be one of:
-    - GPIO self-check
-    - EXTI
-    - capture/timing
+
+### Capture/timing self-check path
+- status: `live-pass`
+- meaning:
+  - bounded generated capture/timing execution proof
+  - `PA8 -> PB8`
+  - internal timing/capture self-check on the unified timing loopback
+  - result encoded onto `PA4`
+
+## Accepted immediate next path
+- stop and review before adding another capability path on this fixture
+- current bounded `PA8 -> PB8` path set is now:
+  - GPIO loopback
+  - PWM
+  - EXTI
+  - capture/timing
 
 ## Proposed second-wave path
 - `PA8 -> PB8`
@@ -79,15 +92,14 @@
 - `stm32f103_spi_banner`
 - `stm32f103_pwm_banner`
 - `stm32f103_gpio_loopback_banner`
+ - `stm32f103_exti_banner`
+ - `stm32f103_capture_banner`
 
 ### Design-confirmed / next to execute
-- bounded STM32 `PA8 -> PB8` timing/self-check follow-on path:
-  - EXTI
-  - capture/timing
+- none required before the next anchor review
 
 ## What should happen next
-- use the unified fixture to implement the next bounded `PA8 -> PB8` timing/self-check follow-on path
-- keep the scope to:
-  - one blocker
-  - one path
-  - one proof
+- do a bounded STM32 capability-anchor review before adding the next capability path
+- decide whether the next move should be:
+  - one more self-check on the same fixture
+  - or a new external-path / family direction
