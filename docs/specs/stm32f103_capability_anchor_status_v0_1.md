@@ -16,6 +16,14 @@
   - bounded generated UART execution proof
   - proven locally, daemonized same-host, and remote-host through the USB-UART bridge path
 
+### UART loopback self-check path
+- status: `live-pass`
+- meaning:
+  - bounded generated unified-board UART execution proof
+  - `PA9 -> PA10`
+  - internal UART self-check on the unified fixture
+  - result encoded onto `PA4`
+
 ### ADC closed-loop path
 - status: `repeat-pass`
 - meaning:
@@ -88,12 +96,13 @@
 ### Real-pass / repeat-pass
 - `stm32f103_golden_gpio_signature`
 - `stm32f103_uart_bridge_banner`
+- `stm32f103_uart_loopback_banner`
 - `stm32f103_adc_banner`
 - `stm32f103_spi_banner`
 - `stm32f103_pwm_banner`
 - `stm32f103_gpio_loopback_banner`
- - `stm32f103_exti_banner`
- - `stm32f103_capture_banner`
+- `stm32f103_exti_banner`
+- `stm32f103_capture_banner`
 
 ### Design-confirmed / next to execute
 - none required before the next anchor review
