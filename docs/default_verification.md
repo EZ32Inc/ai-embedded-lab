@@ -35,12 +35,14 @@ Preferred repeated-run mode:
 
 Current execution model:
 
-- the default verification baseline is treated as a suite of independent board
-  verification workers
-- the current default execution policy is `parallel`
-- `verify-default run` starts all three workers immediately
-- `verify-default repeat` repeats independently per worker rather than waiting
-  for synchronized suite rounds
+- default verification selects DUT tests from inventory; it does not define
+  separate test identities or duplicate setup
+- the DUT test plan remains the single source of truth for setup and expected
+  checks
+- the current default execution policy is `serial`
+- the current configured baseline has one DUT test
+- `verify-default repeat` still repeats independently per worker when the suite
+  has more than one configured task
 - `verify-default repeat-until-fail` remains supported as a compatibility alias
   for the same behavior
 - when a worker fails because an external instrument is unstable, unrelated
@@ -52,36 +54,21 @@ Current execution model:
 
 Current default sequence:
 
-1. `esp32c6_golden_gpio`
-   - board: `esp32c6_devkit`
-   - test: `tests/plans/esp32c6_gpio_signature_with_meter.json`
-   - evidence: UART + meter-backed `instrument.signature`
-2. `rp2040_golden_gpio_signature`
-   - board: `rp2040_pico`
-   - test: `tests/plans/rp2040_gpio_signature.json`
-   - control instrument instance: `esp32jtag_rp2040_lab`
-   - evidence: logic-analyzer `gpio.signal`
-3. `stm32f103_golden_gpio_signature`
+1. `stm32f103_gpio_signature`
    - board: `stm32f103`
    - test: `tests/plans/stm32f103_gpio_signature.json`
-   - control instrument instance: `esp32jtag_stm32_golden`
    - evidence: logic-analyzer `gpio.signal`
 
 Current validated baseline:
 
-- default verification passed `10/10`
-- STM32F401 golden GPIO passed `10/10`
-- STM32F103 golden GPIO passed `10/10`
-- STM32F401 direct post-flash `+5s` stability benchmark passed `20/20`
+- default verification passed on the current single configured DUT test
+- latest validated default-verification run:
+  - `2026-03-13_18-22-08_stm32f103_stm32f103_gpio_signature`
 
-Known-good comparison artifacts:
+Known-good comparison artifact:
 
-- ESP32-C6:
-  - `runs/2026-03-09_14-57-25_esp32c6_devkit_esp32c6_gpio_signature_with_meter/artifacts/evidence.json`
-- RP2040:
-  - `runs/2026-03-09_14-58-12_rp2040_pico_gpio_signature/artifacts/evidence.json`
 - STM32F103:
-  - `runs/2026-03-09_14-58-42_stm32f103_gpio_signature/artifacts/evidence.json`
+  - `runs/2026-03-13_18-22-08_stm32f103_stm32f103_gpio_signature/artifacts/evidence.json`
 
 Legacy note:
 

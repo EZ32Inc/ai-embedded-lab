@@ -77,9 +77,7 @@ What is currently solid in this path:
 
 Current default verification sequence:
 
-1. `esp32c6_golden_gpio`
-2. `rp2040_golden_gpio_signature`
-3. `stm32f103_golden_gpio_signature`
+1. `stm32f103_gpio_signature`
 
 Source:
 
@@ -87,7 +85,7 @@ Source:
 
 Current status:
 
-- default verification is functioning correctly across all three configured paths, but the ESP32-C6 worker can still fail intermittently because of bench-side meter instability
+- default verification is functioning correctly on the single configured DUT test and now uses the DUT test identity directly rather than a separate default-verification alias
 
 ## Current Workflow Maturity
 

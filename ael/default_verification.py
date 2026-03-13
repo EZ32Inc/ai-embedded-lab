@@ -143,7 +143,6 @@ def preset_payload(name: str) -> Dict[str, Any]:
             "mode": "single_run",
             "board": "rp2040_pico",
             "test": "tests/plans/rp2040_gpio_signature.json",
-            "instrument_instance": "esp32jtag_rp2040_lab",
         }
     if key in ("esp32s3_then_rp2040", "esp32s3_gpio_then_rp2040"):
         return {
@@ -153,16 +152,12 @@ def preset_payload(name: str) -> Dict[str, Any]:
             "stop_on_fail": True,
             "steps": [
                 {
-                    "name": "esp32s3_golden_gpio",
                     "board": "esp32s3_devkit",
                     "test": "tests/plans/esp32s3_gpio_signature_with_meter.json",
-                    "instrument_instance": "esp32jtag_stm32_golden",
                 },
                 {
-                    "name": "rp2040_golden_gpio_signature",
                     "board": "rp2040_pico",
                     "test": "tests/plans/rp2040_gpio_signature.json",
-                    "instrument_instance": "esp32jtag_rp2040_lab",
                 },
             ],
         }
@@ -601,6 +596,7 @@ def _run_parallel_suite_once(
         "mode": "sequence",
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
         "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": 1},
+        "selected_dut_tests": [task.name for task in suite.tasks],
         "workers": workers,
         "results": results,
     }
@@ -632,6 +628,7 @@ def _run_serial_suite_once(
         "mode": "sequence",
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
         "execution_policy": {"kind": suite.execution_policy.get("kind", "serial"), "iterations_per_worker": 1},
+        "selected_dut_tests": [task.name for task in suite.tasks],
         "results": results,
     }
 
@@ -664,6 +661,7 @@ def _run_parallel_repeat_until_fail(
         "mode": "repeat_until_fail",
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
         "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": limit, "stop_each_worker_on_failure": True},
+        "selected_dut_tests": [task.name for task in suite.tasks],
         "requested_iterations_per_worker": limit,
         "workers": workers,
         "results": results,
@@ -731,12 +729,13 @@ def run_default_setting(
     if mode == "preflight_only":
         code, result = _run_preflight_only(repo_root, setting)
         results.append({"name": "preflight_only", "code": code, "ok": code == 0, "result": result})
-        return code, {"ok": code == 0, "mode": mode, "results": results}
+        return code, {"ok": code == 0, "mode": mode, "selected_dut_tests": [], "results": results}
 
     if mode == "single_run":
         code, result = _run_single(repo_root, setting, output_mode)
-        results.append({"name": "single_run", "code": code, "ok": code == 0, "result": result})
-        return code, {"ok": code == 0, "mode": mode, "results": results}
+        selected_test = _canonical_test_name(_resolve_path(repo_root, setting.get("test")))
+        results.append({"name": selected_test, "code": code, "ok": code == 0, "result": result})
+        return code, {"ok": code == 0, "mode": mode, "selected_dut_tests": [selected_test], "results": results}
 
     if mode == "sequence":
         ok, error = _validate_sequence_steps(repo_root, setting)

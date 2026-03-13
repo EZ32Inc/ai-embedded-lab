@@ -1,41 +1,26 @@
-# Default Verification Baseline Anchor
+# Default Verification Baseline
 
-This document records the currently stable baseline after the STM32 BMDA flash fix.
+Default verification now selects DUT tests only. The DUT test plan remains the single source of truth for:
 
-## Bound instrument instances
+- test identity
+- bench setup and connections
+- control instrument selection
+- expected checks
 
-- `rp2040_pico` -> `esp32jtag_rp2040_lab`
-  - endpoint: `192.168.2.63:4242`
-- `stm32f103` -> `esp32jtag_stm32_golden`
-  - endpoint: `192.168.2.99:4242`
-- `stm32f401rct6` -> `esp32jtag_stm32_golden`
-  - endpoint: `192.168.2.99:4242`
+## Current configured step
 
-Instrument type:
+- DUT: `stm32f103`
+- DUT test: `stm32f103_gpio_signature`
+- Plan: `tests/plans/stm32f103_gpio_signature.json`
 
-- `esp32jtag`
+## Current validated result
 
-## Expected evidence shape
+- default verification run:
+  - run id: `2026-03-13_18-22-08_stm32f103_stm32f103_gpio_signature`
+  - result: `PASS`
 
-- `esp32c6_golden_gpio`
-  - `uart.verify`
-  - `instrument.signature`
-- `rp2040_golden_gpio_signature`
-  - `gpio.signal`
-- `stm32f103_golden_gpio_signature`
-  - `gpio.signal`
+## Notes
 
-## Repeatability results
-
-- default verification: `10/10`
-- STM32F401 golden GPIO: `10/10`
-- STM32F103 golden GPIO: `10/10`
-
-## Known-good run artifacts
-
-- ESP32-C6 evidence:
-  - `runs/2026-03-09_14-57-25_esp32c6_devkit_esp32c6_gpio_signature_with_meter/artifacts/evidence.json`
-- RP2040 evidence:
-  - `runs/2026-03-09_14-58-12_rp2040_pico_gpio_signature/artifacts/evidence.json`
-- STM32F103 evidence:
-  - `runs/2026-03-09_14-58-42_stm32f103_gpio_signature/artifacts/evidence.json`
+- Default verification does not define its own test names anymore.
+- Default verification does not define a second setup for the same test.
+- If setup changes are needed, update the DUT test plan, not the default verification config.

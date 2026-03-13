@@ -59,14 +59,12 @@ A task is one named verification unit inside the suite.
 A task binds together:
 - board identity
 - action type, usually `single_run`
-- task-specific configuration such as test path, probe override, or instrument instance
+- the DUT test reference, primarily `board` plus `test`
 
 Operational meaning:
-- one task typically corresponds to one board-specific golden-path verification job
+- one task corresponds to one DUT test selected from inventory
 - examples in the current default suite include:
-  - `esp32c6_golden_gpio`
-  - `rp2040_golden_gpio_signature`
-  - `stm32f103_golden_gpio_signature`
+  - `stm32f103_gpio_signature`
 
 ### Worker
 

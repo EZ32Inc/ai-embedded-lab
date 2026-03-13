@@ -682,6 +682,7 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
 
     assert code == 6
     assert payload["execution_policy"] == {"kind": "parallel", "iterations_per_worker": 1}
+    assert payload["selected_dut_tests"] == ["rp2040_gpio_signature", "stm32f103_gpio_signature"]
     assert len(payload["workers"]) == 2
     assert len(payload["results"]) == 2
     assert any(not item["ok"] for item in payload["results"])
@@ -704,6 +705,25 @@ def test_sequence_setting_materializes_suite_and_tasks():
     assert suite.execution_policy["kind"] == "parallel"
     assert [task.name for task in suite.tasks] == ["rp2040_gpio_signature", "stm32f103_gpio_signature"]
     assert [task.board for task in suite.tasks] == ["rp2040_pico", "stm32f103"]
+
+
+def test_presets_emit_dut_test_selectors_only():
+    rp2040 = default_verification.preset_payload("rp2040_only")
+    assert rp2040["board"] == "rp2040_pico"
+    assert rp2040["test"] == "tests/plans/rp2040_gpio_signature.json"
+    assert "instrument_instance" not in rp2040
+
+    seq = default_verification.preset_payload("esp32s3_then_rp2040")
+    assert seq["steps"] == [
+        {
+            "board": "esp32s3_devkit",
+            "test": "tests/plans/esp32s3_gpio_signature_with_meter.json",
+        },
+        {
+            "board": "rp2040_pico",
+            "test": "tests/plans/rp2040_gpio_signature.json",
+        },
+    ]
 
 
 def test_sequence_setting_rejects_alias_name_and_setup_override():
