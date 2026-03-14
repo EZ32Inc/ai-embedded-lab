@@ -31,6 +31,15 @@ Current DUTs and tests:
   - stm32f401_gpio_signature
   - stm32f401_gpio_smoke
   - stm32f401_led_blink
+- stm32f411ceu6
+  - stm32f411_adc_banner
+  - stm32f411_capture_banner
+  - stm32f411_exti_banner
+  - stm32f411_gpio_loopback_banner
+  - stm32f411_gpio_signature
+  - stm32f411_pwm_banner
+  - stm32f411_spi_banner
+  - stm32f411_uart_loopback_banner
 
 MCUs with tests:
 - esp32c3
@@ -39,6 +48,7 @@ MCUs with tests:
 - rp2040
 - stm32f103c8t6
 - stm32f401rct6
+- stm32f411ceu6
 
 ## Retrieval Path
 

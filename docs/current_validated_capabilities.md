@@ -126,6 +126,8 @@ Current status:
   - `stm32f411_capture_banner`
 - latest full suite rerun:
   - all `8/8` STM32F411 tests passed on live hardware on `2026-03-14`
+- repeatability evidence:
+  - the full suite passed again in the follow-on repeat batch, upgrading the first-wave STM32F411 paths to `repeat-pass`
 
 ## Current Workflow Maturity
 
