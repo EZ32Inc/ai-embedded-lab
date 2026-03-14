@@ -99,7 +99,8 @@ Recommended flow:
 11. Continue to `run` and `check` when the path is ready.
 12. After first success, emit the validation summary.
 13. After first success, emit the last-known-good setup.
-14. Write lessons back into the reusable skill/workflow/spec layer.
+14. Perform new-board closeout validation.
+15. Write lessons back into the reusable skill/workflow/spec layer.
 
 This flow should align with [new_board_bringup_and_validation_flow.md](/nvme1t/work/codex/ai-embedded-lab/docs/new_board_bringup_and_validation_flow.md).
 
@@ -117,6 +118,7 @@ At minimum, this skill should produce:
 - recommended next step
 - validation summary after first successful run
 - last-known-good setup after first successful validation
+- closeout validation summary once the board is being finalized
 
 The plan-stage readiness summary should explicitly show:
 
@@ -141,6 +143,23 @@ Successful execution of this skill means:
 - the next safe step is obvious
 - the path can move from `plan` toward first validation without chaotic ad hoc behavior
 - after first pass, a clear validation summary and last-known-good setup exist
+- before closeout, the cleaned full suite has been rerun and the representative
+  default-verification decision has been made explicitly
+
+## Closeout Validation Rule
+
+When the new board is no longer only exploratory and the path is being cleaned
+up for normal use, this skill should require:
+
+1. cleanup of temporary bring-up diagnostics
+2. a rerun of the cleaned full board suite on live hardware
+3. a decision about whether one representative DUT-backed test should be added
+   to default verification
+4. if added, a live default-verification run proving that the new step works
+   inside the baseline sequence
+
+The representative default-verification test should usually be the board's
+lowest-risk validated baseline, not the whole new suite.
 
 Success is not just “`plan` passed”.
 

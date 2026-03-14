@@ -135,6 +135,34 @@ Write back:
 - what was learned
 - what should be done differently next time
 
+## Phase 8: New-board closeout validation
+
+Once the first-pass board suite is materially working, perform one explicit
+closeout cycle before treating the board as integrated.
+
+Required actions:
+
+1. remove or isolate temporary diagnostics used only for bring-up
+2. rerun the cleaned full board suite on live hardware
+3. register the board as a DUT if it is intended to be a normal inventory DUT
+4. decide whether one representative DUT-backed test should be added to default
+   verification
+5. if added, run live default verification to prove the new step resolves and
+   executes correctly in the baseline flow
+
+Recommended default-verification choice:
+
+- one representative low-risk baseline test
+- usually the board-specific `gpio_signature`-style test when available
+- not the full new suite by default
+
+Required outputs:
+
+- full suite rerun result
+- DUT registration result
+- default-verification inclusion decision
+- if included, live default-verification evidence
+
 Write-back targets include:
 
 - policy/spec docs

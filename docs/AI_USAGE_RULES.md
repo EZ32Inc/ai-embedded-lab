@@ -188,6 +188,16 @@ Rules:
    - what failed
    - what was inferred
    - what was learned
+7. After a first-pass new-board suite becomes stable, do the closeout
+   validations explicitly:
+   - rerun the cleaned full board suite on live hardware
+   - decide whether one representative DUT-backed test should enter default
+     verification
+   - if you add that test to default verification, prove it by running the live
+     default-verification flow
+8. Prefer the representative default-verification candidate to be the lowest-risk
+   validated baseline for that board, usually the board-specific
+   `gpio_signature`-style test, not the whole new suite.
 
 
 ## Stage Questions
@@ -237,6 +247,31 @@ Rules:
    conclusion is allowed.
 4. Only bench-reachable runs should be used for DUT, probe, instrument, or
    suite health judgments.
+
+## New Board Closeout Rule
+
+When a brand-new board has reached first-pass validation and cleanup is being
+finalized, do not stop at "the individual tests passed once."
+
+Required closeout sequence:
+
+1. Remove or isolate temporary diagnostics used only for bring-up.
+2. Rerun the cleaned full board suite on live hardware.
+3. Register the board as a DUT in inventory if it is intended to be a normal
+   AEL DUT.
+4. Decide whether a representative DUT-backed baseline test should be added to
+   default verification.
+5. If added, run live default verification to prove that the new step resolves,
+   executes, and reports correctly inside the existing baseline flow.
+
+Rationale:
+
+- This catches cleanup regressions that are easy to miss if only ad hoc single
+  tests were used during bring-up.
+- It proves the board is integrated into AEL as a DUT, not only as a local
+  experimental path.
+- It keeps default verification anchored to one representative low-risk DUT test
+  per new board rather than expanding to the whole board suite by default.
 
 Interpretation:
 

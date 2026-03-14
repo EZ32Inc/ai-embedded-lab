@@ -35,7 +35,8 @@ The recommended new-board bring-up flow is:
 10. `check`
 11. Validation summary
 12. Last-known-good setup
-13. Lesson capture and write-back
+13. New-board closeout validation
+14. Lesson capture and write-back
 
 These stages should be treated as explicit product stages, not as ad hoc operator behavior.
 
@@ -257,6 +258,34 @@ After the first end-to-end pass, AEL should emit a concise validation summary in
 - known cleanup items or caveats
 
 This is the first strong proof that the board is not only configured, but actually usable in the AEL flow.
+
+## New-Board Closeout Validation
+
+After the first board suite is materially working, AEL should perform one more
+explicit closeout pass before treating the board as integrated.
+
+Required closeout actions:
+
+- remove or isolate temporary diagnostics used only for bring-up
+- rerun the cleaned full board suite on live hardware
+- register the board as a DUT in inventory if it is intended to be a normal DUT
+- decide whether one representative DUT-backed test should enter default
+  verification
+- if added, run live default verification to prove the new step resolves and
+  executes in the baseline flow
+
+Recommended default-verification choice:
+
+- use one representative low-risk validated baseline test
+- prefer the board-specific `gpio_signature`-style DUT test when available
+- do not add the entire new suite to default verification by default
+
+Required closeout output:
+
+- full suite rerun result
+- representative default-verification decision
+- if added, live default-verification evidence
+- updated bring-up closeout note
 
 ## Lesson Capture And Write-Back
 
