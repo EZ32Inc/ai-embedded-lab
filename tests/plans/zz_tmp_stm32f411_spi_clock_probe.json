@@ -1,0 +1,17 @@
+{
+  "name": "zz_tmp_stm32f411_spi_clock_probe",
+  "board": "stm32f411ceu6",
+  "pin": "pb13",
+  "duration_s": 1.0,
+  "min_freq_hz": 1000.0,
+  "max_freq_hz": 100000.0,
+  "duty_min": 0.1,
+  "duty_max": 0.9,
+  "min_edges": 20,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f411_spi_clock_probe",
+    "artifact_stem": "stm32f411_spi_clock_probe_app",
+    "build_dir": "artifacts/build_stm32f411_spi_clock_probe"
+  }
+}

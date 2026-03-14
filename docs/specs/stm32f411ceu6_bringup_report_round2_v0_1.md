@@ -70,7 +70,11 @@
 | `stm32f411_pwm_banner` | pass | `2026-03-14_07-28-10_stm32f411ceu6_stm32f411_pwm_banner` | `PA8 -> PA6` PWM self-check succeeded on live hardware. |
 | `stm32f411_exti_banner` | pass | `2026-03-14_07-28-33_stm32f411ceu6_stm32f411_exti_banner` | `PA8 -> PA6` EXTI self-check succeeded on live hardware. |
 | `stm32f411_capture_banner` | pass | `2026-03-14_07-28-54_stm32f411ceu6_stm32f411_capture_banner` | `PA8 -> PA6` capture self-check succeeded on live hardware. |
-| `stm32f411_spi_banner` | fail | `2026-03-14_07-16-29_stm32f411ceu6_stm32f411_spi_banner` | build/flash succeeded, but `PA2` proof stayed low and the SPI path still needs focused debug. Bench mapping remains `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`. |
+| `stm32f411_spi_banner` | fail | `2026-03-14_07-16-29_stm32f411ceu6_stm32f411_spi_banner` | Initial SPI attempt. Build/flash succeeded, but `PA2` proof stayed low before the later bench-solder fix and plan retuning. |
+| `zz_tmp_stm32f411_spi_pa3_diag` | pass | `2026-03-14_08-22-42_stm32f411ceu6_zz_tmp_stm32f411_spi_pa3_diag` | Temporary diagnostic. `PA3 -> P0.1` toggled at about `24 Hz`, proving the firmware reaches the SPI transfer path and returns from `spi2_transfer()`. |
+| `zz_tmp_stm32f411_spi_clock_probe` | pass | `2026-03-14_09-13-56_stm32f411ceu6_zz_tmp_stm32f411_spi_clock_probe` | Temporary diagnostic after solder repair. Continuous SPI2 traffic produced strong activity on `PB13 -> P0.2`, proving external SCK is visible. |
+| `zz_tmp_stm32f411_pb13_gpio_probe` | pass | `2026-03-14_09-13-13_stm32f411ceu6_zz_tmp_stm32f411_pb13_gpio_probe` | Temporary diagnostic after solder repair. Direct GPIO toggling of `PB13` was visible on `P0.2`, proving the bench path is good. |
+| `stm32f411_spi_banner` | pass | `2026-03-14_09-15-31_stm32f411ceu6_stm32f411_spi_banner` | Passed after fixing the `PB13/PB14` solder path and retuning the SPI proof window to the measured F411 range. |
 
 ## Result classification
 
@@ -81,12 +85,14 @@
   - `stm32f411_pwm_banner`
   - `stm32f411_exti_banner`
   - `stm32f411_capture_banner`
-- failed:
   - `stm32f411_spi_banner`
+- resolved during round:
+  - initial SPI failure on `stm32f411_spi_banner`
+  - initial lack of visible `PB13 -> P0.2`
 - partial:
   - F411 self-check proof signals were initially measured near `24 Hz`, not the F103-like `50 Hz` window used in the first draft plans
 - blocked:
-  - none; the SPI issue is a real test failure, not a bench-unreachable block
+  - none
 
 ## Inferred assumptions
 
@@ -98,6 +104,22 @@
     - high
   - action taken:
     - retuned F411 self-check plan windows from `35..70 Hz` to `15..35 Hz`
+- inference:
+  - the SPI firmware control flow progresses past transfer launch and return
+  - why it was inferred:
+    - the temporary `PA3 -> P0.1` diagnostic toggled repeatedly during the SPI diagnostic run
+  - confidence:
+    - medium
+  - action taken:
+    - stopped treating the SPI issue as a total firmware dead path
+- inference:
+  - the initial SPI failure was caused by a real board interconnect issue on the `PB13/PB14` path, not by a fundamental F411 SPI implementation defect
+  - why it was inferred:
+    - after the solder repair, direct `PB13` GPIO probing and continuous SPI clock probing both passed, and the real SPI banner then passed after proof-window retuning
+  - confidence:
+    - high
+  - action taken:
+    - kept the implementation, repaired the physical connection, and aligned the SPI proof window to the measured F411 cadence
 
 ## Rejected paths
 
@@ -109,6 +131,14 @@
   - treating the SPI failure as another proof-window issue
   - why it was rejected:
     - the SPI proof stayed low even though the generic F411 self-check pattern was already validated elsewhere
+- rejected path:
+  - assuming that the SPI path is fully working because `PA3` toggles
+  - why it was rejected:
+    - `PA3` only proves the software transfer path is reached; it does not prove external `PB13` clock visibility or stable loopback success
+- rejected path:
+  - rewriting the F411 SPI implementation before first resolving the physical `PB13/PB14` path
+  - why it was rejected:
+    - the direct `PB13` GPIO probe gave a cleaner hardware/wiring verdict than speculative SPI register changes
 
 ## Lessons learned
 
@@ -117,18 +147,20 @@
   - one fixed proof-pin strategy on `PA2` works for the F411 self-check family
 - what failed:
   - the first draft proof windows assumed F103-like proof frequency and caused false verify failures
-  - the SPI path still did not assert the proof signal
+  - the initial SPI runs were confounded by an actual solder/connectivity fault on `PB13/PB14`
 - what was learned:
   - methodology reuse is portable; proof timing is not
   - F411 plans should record the measured proof range rather than inherit F103 thresholds
   - the current bench wiring remains `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`
+  - temporary direct pin probes are the fastest way to separate bench faults from peripheral-config faults
+  - once the physical `PB13/PB14` issue was fixed, the SPI implementation and loopback path behaved as expected
 
 ## Recommended next step
 
 - next safest implementation step:
-  - rerun `stm32f411_spi_banner` only after manual GPIO/LA confirmation of the proof path if needed
-  - then isolate the SPI path by checking whether `PB13 -> P0.2` can be driven directly as GPIO on this board/bench
+  - clean up the temporary SPI debug targets/plans now that the root cause is understood
+  - keep the SPI proof window at the measured F411 range rather than the earlier F103-like default
 - next safest validation step:
-  - keep the bench mapping at `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`
+  - rerun the full F411 suite after SPI cleanup to confirm the board is now fully stable
 - current overall status:
-  - F411 bring-up is materially established with `7/8` first-pass tests implemented and `6/7` new peripheral/self-check tests passing, plus the previously validated GPIO signature baseline
+  - F411 bring-up round 2 is effectively complete: the GPIO signature baseline and all first-pass self-check tests now pass on live hardware

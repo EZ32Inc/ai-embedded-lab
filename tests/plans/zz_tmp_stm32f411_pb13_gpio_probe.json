@@ -1,0 +1,17 @@
+{
+  "name": "zz_tmp_stm32f411_pb13_gpio_probe",
+  "board": "stm32f411ceu6",
+  "pin": "pb13",
+  "duration_s": 1.0,
+  "min_freq_hz": 500.0,
+  "max_freq_hz": 200000.0,
+  "duty_min": 0.1,
+  "duty_max": 0.9,
+  "min_edges": 20,
+  "max_edges": 60000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f411_pb13_gpio_probe",
+    "artifact_stem": "stm32f411_pb13_gpio_probe_app",
+    "build_dir": "artifacts/build_stm32f411_pb13_gpio_probe"
+  }
+}

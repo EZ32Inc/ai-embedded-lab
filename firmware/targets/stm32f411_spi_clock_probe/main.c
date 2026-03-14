@@ -47,7 +47,10 @@ static void spi2_init(void) {
     gpio_set_af(GPIOB, 14u, 5u);
     gpio_set_af(GPIOB, 15u, 5u);
 
-    SPI2->CR1 = SPI_CR1_MSTR | SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;
+    /* APB1 @ 16 MHz, BR=/256 -> SCK about 62.5 kHz for manual/LA capture. */
+    SPI2->CR1 = SPI_CR1_MSTR
+        | SPI_CR1_BR_0 | SPI_CR1_BR_1 | SPI_CR1_BR_2
+        | SPI_CR1_SSI | SPI_CR1_SSM | SPI_CR1_SPE;
 }
 
 static uint8_t spi2_transfer(uint8_t value, uint8_t *out) {
@@ -77,11 +80,8 @@ static uint8_t spi2_transfer(uint8_t value, uint8_t *out) {
 }
 
 int main(void) {
-    uint32_t phase_ms = 0u;
     uint32_t led_ms = 0u;
-    uint8_t phase_high = 0u;
-    uint8_t spi_good = 0u;
-    uint8_t tx_seed = 0x55u;
+    uint8_t tx = 0x55u;
 
     spi2_init();
     GPIOA->ODR &= ~((1u << 2) | (1u << 3));
@@ -89,42 +89,28 @@ int main(void) {
     systick_init_1khz();
 
     while (1) {
-        if (systick_poll_1ms() == 0u) {
-            continue;
-        }
+        uint8_t rx = 0u;
+        uint8_t ok = spi2_transfer(tx, &rx);
 
-        phase_ms += 1u;
-        led_ms += 1u;
-
-        if (phase_ms >= 10u) {
-            uint8_t rx = 0u;
-            uint8_t expected;
-            uint8_t ok;
-
-            phase_ms = 0u;
-            phase_high ^= 1u;
-            expected = (uint8_t)(phase_high != 0u ? tx_seed : (uint8_t)~tx_seed);
-            ok = spi2_transfer(expected, &rx);
-            spi_good = (uint8_t)(ok != 0u && rx == expected);
-
-            if (ok != 0u && phase_high != 0u) {
-                GPIOA->ODR |= (1u << 3);
-            } else {
-                GPIOA->ODR &= ~(1u << 3);
-            }
-
-            if (spi_good != 0u && phase_high != 0u) {
-                GPIOA->ODR |= (1u << 2);
+        if (ok != 0u) {
+            GPIOA->ODR ^= (1u << 3);
+            if (rx == tx) {
+                GPIOA->ODR ^= (1u << 2);
             } else {
                 GPIOA->ODR &= ~(1u << 2);
             }
-
-            tx_seed = (uint8_t)(tx_seed + 0x13u);
+        } else {
+            GPIOA->ODR &= ~((1u << 2) | (1u << 3));
         }
 
-        if (led_ms >= (spi_good != 0u ? 500u : 250u)) {
-            led_ms = 0u;
-            GPIOC->ODR ^= (1u << 13);
+        tx = (uint8_t)(tx + 0x3Du);
+
+        if (systick_poll_1ms() != 0u) {
+            led_ms += 1u;
+            if (led_ms >= 250u) {
+                led_ms = 0u;
+                GPIOC->ODR ^= (1u << 13);
+            }
         }
     }
 }
