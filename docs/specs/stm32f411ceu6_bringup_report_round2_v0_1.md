@@ -70,7 +70,7 @@
 | `stm32f411_pwm_banner` | pass | `2026-03-14_07-28-10_stm32f411ceu6_stm32f411_pwm_banner` | `PA8 -> PA6` PWM self-check succeeded on live hardware. |
 | `stm32f411_exti_banner` | pass | `2026-03-14_07-28-33_stm32f411ceu6_stm32f411_exti_banner` | `PA8 -> PA6` EXTI self-check succeeded on live hardware. |
 | `stm32f411_capture_banner` | pass | `2026-03-14_07-28-54_stm32f411ceu6_stm32f411_capture_banner` | `PA8 -> PA6` capture self-check succeeded on live hardware. |
-| `stm32f411_spi_banner` | fail | `2026-03-14_07-16-29_stm32f411ceu6_stm32f411_spi_banner` | build/flash succeeded, but `PA2` proof stayed low and a temporary direct probe of `PB13` also saw no SCK activity on `P0.2`. |
+| `stm32f411_spi_banner` | fail | `2026-03-14_07-16-29_stm32f411ceu6_stm32f411_spi_banner` | build/flash succeeded, but `PA2` proof stayed low and the SPI path still needs focused debug. Bench mapping remains `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`. |
 
 ## Result classification
 
@@ -108,7 +108,7 @@
 - rejected path:
   - treating the SPI failure as another proof-window issue
   - why it was rejected:
-    - `PB13` direct probing also showed no observed SPI clock activity
+    - the SPI proof stayed low even though the generic F411 self-check pattern was already validated elsewhere
 
 ## Lessons learned
 
@@ -117,17 +117,18 @@
   - one fixed proof-pin strategy on `PA2` works for the F411 self-check family
 - what failed:
   - the first draft proof windows assumed F103-like proof frequency and caused false verify failures
-  - SPI2 on `PB13/PB14/PB15` is not yet producing observable SCK activity on this bench/board state
+  - the SPI path still did not assert the proof signal
 - what was learned:
   - methodology reuse is portable; proof timing is not
   - F411 plans should record the measured proof range rather than inherit F103 thresholds
-  - the remaining SPI issue is specifically in the SPI path, not in the generic F411 board setup
+  - the current bench wiring remains `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`
 
 ## Recommended next step
 
 - next safest implementation step:
-  - isolate the F411 SPI path by checking whether `PB13 -> P0.2` can be driven directly as GPIO on this board/bench, then verify the SPI2 pin mux/runtime behavior from there
+  - rerun `stm32f411_spi_banner` only after manual GPIO/LA confirmation of the proof path if needed
+  - then isolate the SPI path by checking whether `PB13 -> P0.2` can be driven directly as GPIO on this board/bench
 - next safest validation step:
-  - rerun `stm32f411_spi_banner` after the SPI2/PB13 observation issue is resolved
+  - keep the bench mapping at `PA2 -> P0.0`, `PA3 -> P0.1`, `PB13 -> P0.2`
 - current overall status:
   - F411 bring-up is materially established with `7/8` first-pass tests implemented and `6/7` new peripheral/self-check tests passing, plus the previously validated GPIO signature baseline

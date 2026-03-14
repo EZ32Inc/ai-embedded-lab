@@ -176,9 +176,11 @@ in the repo.
 Recommended first AEL candidate groups:
 
 - proof pins:
-  - `PA2`
-  - `PA3`
+  - `PA2 -> P0.0`
+  - `PA3 -> P0.1`
   - only these two should be always-connected initially
+- SPI observation:
+  - `PB13 -> P0.2`
 - UART loopback:
   - `PA9 -> PA10`
 - SPI loopback:

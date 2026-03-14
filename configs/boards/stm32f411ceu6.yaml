@@ -31,7 +31,7 @@ board:
     signal:
       pin: sig
       resolved_to: P0.0
-      description: Provisional primary proof capture on PA2
+      description: Primary proof capture on PA2
     aux:
       pin: pb13
       resolved_to: P0.2

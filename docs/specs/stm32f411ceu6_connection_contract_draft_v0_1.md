@@ -49,7 +49,7 @@ overloading this one-setup contract.
 
 - target board is `STM32F411CEU6 WeAct Black Pill V2.0`
 - control instrument instance is `esp32jtag_stm32f411`
-- control instrument endpoint is `192.168.2.102:4242`
+- control instrument endpoint is `192.168.2.103:4242`
 - onboard LED is connected to `PC13`
 - SPI2 pin function from official STM32CubeF4 examples:
   - `PB13 = SPI2_SCK`
