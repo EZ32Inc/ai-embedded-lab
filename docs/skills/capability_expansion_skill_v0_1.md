@@ -41,6 +41,8 @@ This skill is not intended for:
 ## Decision Rules
 - prefer reuse of the current stable anchor fixture
 - preserve already-proven paths unless there is a strong reason to change them
+- preserve already-proven fixture paths by default; changing them requires a concrete reason tied to the current bounded proof
+- prefer adding one internal self-check loopback over changing the existing external proof path
 - prefer one blocker, one path, one proof
 - prefer one unified external observe path when practical
 - keep external instruments and wiring minimal
@@ -56,6 +58,7 @@ Stop and do not broaden if:
 - pinmux/peripheral correctness is uncertain
 - the path requires broad runtime/framework changes
 - the path requires broad new hardware setup rather than a small fixture delta
+- the path would repurpose the current proof line without a strong reason
 
 ## Repo Interaction
 This skill should produce or update only the minimum useful artifact set, typically:
@@ -64,6 +67,13 @@ This skill should produce or update only the minimum useful artifact set, typica
 - one test/plan definition
 - one validation command list
 - one regression framing note
+
+## Transferable Method Summary
+- preserve already-proven fixture paths unless the current bounded proof cannot be achieved without changing them
+- prefer DUT-internal self-check first
+- export one machine-checkable pass/fail result on a stable external proof line
+- add one bounded capability path at a time
+- capture the real result before selecting the next path
 
 ## How It Applies To Current STM32F103 Work
 Current STM32F103 anchor facts:

@@ -59,9 +59,10 @@ Purpose:
 - type: object
 - required
 - should contain:
-  - run id or run path
-  - summary metrics
-  - optional notes on strongest confirming artifact
+  - `run_id`
+  - `run_path`
+  - `summary_metrics`
+  - `strongest_artifact`
 
 ### `conclusion`
 - type: string
@@ -86,10 +87,20 @@ Purpose:
 - type: string
 - optional
 - how this result affects anchor confidence
+- state explicitly whether anchor confidence changed or did not change
 
 ### `notes`
 - type: array of strings
 - optional
+
+### Closeout alignment
+- closeout notes that accompany a record should use this section order:
+  1. fixture/wiring
+  2. proof method
+  3. run evidence
+  4. what this proves
+  5. what this does not prove
+  6. anchor impact
 
 ## Classification vocabulary
 

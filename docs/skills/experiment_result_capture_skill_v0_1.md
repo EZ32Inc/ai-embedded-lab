@@ -46,6 +46,11 @@ To upgrade a path from proposal/readiness to execution evidence, require:
 - enough evidence to say what actually passed or failed
 - explicit statement of what the result proves and does not prove
 
+Classification upgrade thresholds:
+- one successful bounded live run upgrades the path to `live-pass`
+- repeated successful bounded live runs upgrade the path to `repeat-pass`
+- any anchor-confidence change must be stated explicitly in the result record or closeout
+
 Repeat-pass claims require:
 - more than one successful live run
 - or one bounded repeat batch with consistent behavior
@@ -83,6 +88,15 @@ Raw run artifacts remain in:
 Durable project-memory upgrades belong in:
 - `docs/specs/...`
 - machine-readable result records/templates
+
+## Standard Closeout Order
+Use this order for closeout notes:
+1. fixture/wiring
+2. proof method
+3. run evidence
+4. what this proves
+5. what this does not prove
+6. anchor impact
 
 ## How It Upgrades Project Memory
 This skill is the bridge between:

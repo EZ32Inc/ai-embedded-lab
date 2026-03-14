@@ -2,75 +2,37 @@
 
 ## Current board role
 - primary sample-board capability anchor for bounded capability-demo expansion
+- central index of record for the completed bounded STM32F103 self-check phase
 
-## Already-proven paths
+## Phase state
+- the current bounded STM32F103 self-check phase is complete
 
-### GPIO golden
-- status: `repeat-pass`
-- meaning:
-  - stable core STM32 baseline path
+## Capability index
 
-### UART bridge path
-- status: `live-pass`
-- meaning:
-  - bounded generated UART execution proof
-  - proven locally, daemonized same-host, and remote-host through the USB-UART bridge path
+| Demo/path name | Status | Proof method | Result record | Closeout |
+| --- | --- | --- | --- | --- |
+| `stm32f103_gpio_signature` | `repeat-pass` | external GPIO signature observed on the STM32 golden path | baseline run history under `runs/...` | documented as the stable core STM32 baseline path in this anchor note |
+| `stm32f103_uart_banner` | `live-pass` | USB-UART bridge path with bounded UART banner verification | bridge run history under `runs/...` | bridge path closeout/history already recorded in the existing UART bridge notes |
+| `stm32f103_uart_loopback_banner` | `live-pass` | `PA9 -> PA10` internal UART loopback, result encoded onto `PA4` | [stm32f103_uart_loopback_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_uart_loopback_self_check_result_2026-03-13.json) | [stm32f103_uart_loopback_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_uart_loopback_self_check_closeout_v0_1.md) |
+| `stm32f103_adc_banner` | `repeat-pass` | `PA1 -> PA0` ADC closed-loop, ADC-validated result encoded onto `PA4` | [stm32f103_adc_loopback_health_note_2026-03-12.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_adc_loopback_health_note_2026-03-12.md) | [stm32f103_adc_loopback_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_adc_loopback_closeout_v0_1.md) |
+| `stm32f103_spi_banner` | `live-pass` | `PA7 -> PA6` internal SPI loopback on `PA5/PA6/PA7`, result encoded onto `PA4` | [stm32f103_spi_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_spi_self_check_result_2026-03-13.json) | [stm32f103_spi_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_spi_self_check_closeout_v0_1.md) |
+| `stm32f103_pwm_banner` | `live-pass` | `PA8 -> PB8` internal PWM loopback, result encoded onto `PA4` | [stm32f103_pwm_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_pwm_self_check_result_2026-03-13.json) | [stm32f103_pwm_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_pwm_self_check_closeout_v0_1.md) |
+| `stm32f103_gpio_loopback_banner` | `live-pass` | `PA8 -> PB8` internal GPIO loopback, result encoded onto `PA4` | [stm32f103_gpio_loopback_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_gpio_loopback_self_check_result_2026-03-13.json) | [stm32f103_gpio_loopback_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_gpio_loopback_self_check_closeout_v0_1.md) |
+| `stm32f103_exti_banner` | `live-pass` | `PA8 -> PB8` internal EXTI self-check, result encoded onto `PA4` | [stm32f103_exti_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_exti_self_check_result_2026-03-13.json) | [stm32f103_exti_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_exti_self_check_closeout_v0_1.md) |
+| `stm32f103_capture_banner` | `live-pass` | `PA8 -> PB8` internal capture/timing self-check, result encoded onto `PA4` | [stm32f103_capture_self_check_result_2026-03-13.json](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_capture_self_check_result_2026-03-13.json) | [stm32f103_capture_self_check_closeout_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/stm32f103_capture_self_check_closeout_v0_1.md) |
 
-### UART loopback self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated unified-board UART execution proof
-  - `PA9 -> PA10`
-  - internal UART self-check on the unified fixture
-  - result encoded onto `PA4`
-
-### ADC closed-loop path
-- status: `repeat-pass`
-- meaning:
-  - bounded generated ADC execution proof
-  - `PA1 -> PA0`
-  - ADC-validated result encoded onto `PA4`
-  - repeated `5/5 PASS`
-
-### SPI self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated SPI execution proof
-  - `PA7 -> PA6`
-  - internal SPI self-check on `PA5/PA6/PA7`
-  - result encoded onto `PA4`
-
-### PWM self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated PWM execution proof
-  - `PA8 -> PB8`
-  - internal PWM self-check on the unified timing loopback
-  - result encoded onto `PA4`
-
-### GPIO loopback self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated GPIO loopback execution proof
-  - `PA8 -> PB8`
-  - internal GPIO self-check on the unified timing loopback
-  - result encoded onto `PA4`
-
-### EXTI self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated EXTI execution proof
-  - `PA8 -> PB8`
-  - internal EXTI self-check on the unified timing loopback
-  - result encoded onto `PA4`
-
-### Capture/timing self-check path
-- status: `live-pass`
-- meaning:
-  - bounded generated capture/timing execution proof
-  - `PA8 -> PB8`
-  - internal timing/capture self-check on the unified timing loopback
-  - result encoded onto `PA4`
+## Summary
+- GPIO golden remains the stable core STM32 baseline path
+- UART is now proven in two bounded forms:
+  - USB-UART bridge path
+  - unified-board `PA9 -> PA10` loopback self-check
+- the unified-board self-check set is proven for:
+  - ADC
+  - SPI
+  - PWM
+  - GPIO loopback
+  - EXTI
+  - capture/timing
 
 ## Accepted immediate next path
 - stop and review before adding another capability path on this fixture
@@ -91,24 +53,12 @@
 - I2C:
   - reserved/exploratory only for now
 
-## Real-pass vs design-confirmed
+## Status boundary
 
-### Real-pass / repeat-pass
-- `stm32f103_gpio_signature`
-- `stm32f103_uart_bridge_banner`
-- `stm32f103_uart_loopback_banner`
-- `stm32f103_adc_banner`
-- `stm32f103_spi_banner`
-- `stm32f103_pwm_banner`
-- `stm32f103_gpio_loopback_banner`
-- `stm32f103_exti_banner`
-- `stm32f103_capture_banner`
-
-### Design-confirmed / next to execute
-- none required before the next anchor review
+- all currently accepted bounded STM32F103 self-check paths listed above are `live-pass` or `repeat-pass`
+- no additional STM32F103 self-check path is required before the next anchor review or next-board migration decision
 
 ## What should happen next
-- do a bounded STM32 capability-anchor review before adding the next capability path
-- decide whether the next move should be:
-  - one more self-check on the same fixture
-  - or a new external-path / family direction
+- use this note as the reference index during method-layer refinement
+- preserve the completed STM32F103 phase as a stop point
+- decide the next board migration step only after the method-layer refinement pass is complete

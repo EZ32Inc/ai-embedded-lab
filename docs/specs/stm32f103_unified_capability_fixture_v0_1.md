@@ -6,6 +6,19 @@ Purpose:
 ## Board role
 - primary sample-board capability anchor
 
+## Wiring classification
+
+| Wiring / pin role | Role | Presence | Observation model | Fixture status |
+| --- | --- | --- | --- | --- |
+| `PA4 -> P0.0` | unified machine-checkable proof output | always-present | externally observed | preserved |
+| `PA5 -> P0.1` | auxiliary observe for selected demos | optional | externally observed | optional |
+| `PC13 -> LED` | coarse visual status/debug | always-present | externally observed by human only | preserved |
+| `PA1 -> PA0` | ADC closed-loop source to ADC input | always-present | internal-only self-check loopback | preserved |
+| `PA9 -> PA10` | USART1 TX/RX loopback | always-present | internal-only self-check loopback | preserved |
+| `PA7 -> PA6` | SPI MOSI/MISO loopback | always-present for the unified capability fixture | internal-only self-check loopback | preserved |
+| `PA8 -> PB8` | timing-class loopback for PWM/GPIO/EXTI/capture | always-present for the unified capability fixture | internal-only self-check loopback | preserved |
+| `GND -> probe GND` | common reference ground | always-present | externally required support wiring | preserved |
+
 ## Always-preserved external observe path
 - `PA4 -> P0.0`
 - optional auxiliary observe:
@@ -75,4 +88,7 @@ For unified self-check demos:
 - preserve already-proven paths when adding the next bounded capability demo
 - prefer minimal extra wiring
 - prefer DUT-internal self-check plus `PA4` as the external machine-checkable result
+- keep working pins and observe pins separated:
+  - working pins perform the protocol/self-check on the DUT
+  - `PA4` remains the default externally observed proof line
 - do not require `PA6 -> P0.2` or `PA7 -> P0.3` for the unified capability fixture

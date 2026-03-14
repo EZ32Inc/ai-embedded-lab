@@ -153,6 +153,9 @@ Purpose:
 - project memory updated
 - next-step decision exists
 
+## Mandatory stage-gate
+- no next capability path starts until result capture and anchor status update are complete for the current path
+
 ## How This Applies To Current STM32F103 SPI Work
 - Stage 1:
   - choose SPI self-check as the next bounded path
