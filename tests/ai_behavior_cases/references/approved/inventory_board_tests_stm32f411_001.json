@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "Current tests for `stm32f411ceu6` from inventory are:\n\n- `stm32f411_adc_banner`\n- `stm32f411_capture_banner`\n- `stm32f411_exti_banner`\n- `stm32f411_gpio_loopback_banner`\n- `stm32f411_gpio_signature`\n- `stm32f411_pwm_banner`\n- `stm32f411_spi_banner`\n- `stm32f411_uart_loopback_banner`\n\nThis is the current DUT-backed STM32F411 suite from `python3 -m ael inventory list`, not an inferred list from repo search.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "inventory_board_tests_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "inventory_question",
+    "user_question": "What tests exist for stm32f411ceu6?"
+  }
+}

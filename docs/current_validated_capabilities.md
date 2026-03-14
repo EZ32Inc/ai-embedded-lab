@@ -97,7 +97,6 @@ Current default verification sequence:
 3. `stm32f103_gpio_signature`
 4. `stm32f103_uart_banner`
 5. `stm32f411_gpio_signature`
-5. `stm32f411_gpio_signature`
 
 Source:
 
@@ -106,6 +105,9 @@ Source:
 Current status:
 
 - default verification is functioning correctly as a five-step DUT-backed orchestration path and now includes `stm32f411_gpio_signature`
+- baseline interpretation rule:
+  - distinguish configuration correctness from current bench health
+  - the five-step baseline definition is correct even when one current bench path is degraded
 - latest live run with the five-step configuration passed on:
   - `rp2040_gpio_signature`
   - `stm32f103_gpio_signature`

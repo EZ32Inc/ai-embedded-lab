@@ -40,6 +40,29 @@
     - "no invented extra tests"
   notes: "Useful because STM32 coverage is currently pack-linked rather than fully board-plan-specific."
 
+- case_id: inventory_board_tests_stm32f411_001
+  case_type: organic
+  intent_type: inventory_question
+  user_question: "What tests exist for stm32f411ceu6?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "DUT id stm32f411ceu6"
+    - "available test name stm32f411_gpio_signature"
+    - "available test name stm32f411_uart_loopback_banner"
+    - "clear indication that coverage comes through the current repo-native inventory path"
+  forbidden_failure_modes:
+    - "omitting the stm32f411ceu6 DUT from the current inventory answer"
+    - "missing the current eight-test stm32f411ceu6 suite"
+    - "answering from stale memory instead of current inventory"
+  judge_rubric:
+    - "retrieval path used first is inventory list"
+    - "board-specific test coverage is identified correctly"
+    - "response reflects the current eight-test stm32f411ceu6 suite"
+    - "no invented extra tests"
+  notes: "Board-specific F411 inventory retrieval case after repeat-pass integration."
+
 - case_id: describe_test_stm32f401_001
   case_type: organic
   intent_type: test_detail_question
@@ -62,6 +85,29 @@
     - "limitations are not hidden or overstated"
     - "answer stays grounded in current repo state"
   notes: "Directly grounded in recent STM32F401 workflow."
+
+- case_id: describe_test_stm32f411_001
+  case_type: organic
+  intent_type: test_detail_question
+  user_question: "Please show me stm32f411ceu6 GPIO signature connections and what will be tested."
+  expected_retrieval_path:
+    - "python3 -m ael inventory describe-test --board stm32f411ceu6 --test tests/plans/stm32f411_gpio_signature.json"
+  must_use_formal_path: true
+  required_output_elements:
+    - "probe identity ESP32JTAG"
+    - "connections including SWD, RESET, PA2, PA3, PB13, and LED"
+    - "expected signal checks including the two-signal GPIO signature behavior"
+    - "current validation scope of the stm32f411 GPIO signature path"
+  forbidden_failure_modes:
+    - "using ad hoc repo reconstruction as the primary path"
+    - "omitting the current PA2/PA3/PB13 wiring summary"
+    - "claiming broader peripheral coverage than the GPIO signature test actually validates"
+  judge_rubric:
+    - "retrieval path used first is inventory describe-test"
+    - "connections and expected checks are correctly summarized"
+    - "limitations are not hidden or overstated"
+    - "answer stays grounded in current repo state"
+  notes: "Directly grounded in current STM32F411 GPIO signature workflow."
 
 - case_id: explain_stage_plan_stm32f401_001
   case_type: organic

@@ -19,6 +19,18 @@ Use this when:
 - you want a fast representative F411 bench-health check
 - you want the same low-risk F411 baseline that is suitable for default verification
 
+## Full F411 suite pack/helper
+
+Use either:
+
+- `packs/stm32f411_full_suite.json`
+- `tools/run_stm32f411_full_suite.sh`
+
+Use this when:
+
+- you want the whole validated F411 suite in one invocation
+- you want repeat board-health runs without rebuilding a shell loop by hand
+
 ## Representative default-verification role
 
 Current default-verification representative:

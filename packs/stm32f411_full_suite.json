@@ -1,0 +1,14 @@
+{
+  "name": "stm32f411_full_suite",
+  "board": "stm32f411ceu6",
+  "tests": [
+    "tests/plans/stm32f411_gpio_signature.json",
+    "tests/plans/stm32f411_uart_loopback_banner.json",
+    "tests/plans/stm32f411_adc_banner.json",
+    "tests/plans/stm32f411_spi_banner.json",
+    "tests/plans/stm32f411_gpio_loopback_banner.json",
+    "tests/plans/stm32f411_pwm_banner.json",
+    "tests/plans/stm32f411_exti_banner.json",
+    "tests/plans/stm32f411_capture_banner.json"
+  ]
+}

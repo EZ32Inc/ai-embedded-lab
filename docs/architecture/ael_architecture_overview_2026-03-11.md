@@ -23,6 +23,8 @@ It is designed to give AI agents and humans a structured way to:
 - runs build / flash / observe / verify steps
 - captures artifacts and evidence
 - supports both one-off runs and repeated default verification on real benches
+- now includes a fully integrated STM32F411 DUT path with both per-board suite
+  validation and a representative default-verification baseline step
 
 In repo terms, AEL is not just a generic test framework.
 It is an execution system for real embedded-lab work:
@@ -40,6 +42,7 @@ It already contains:
 - workflow archive support
 - DUT asset support
 - default verification as a suite/task/worker execution model
+- a repeat-validated STM32F411 capability anchor and board-health suite
 
 ## Current Phase
 
