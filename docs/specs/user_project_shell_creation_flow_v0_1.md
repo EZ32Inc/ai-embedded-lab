@@ -129,6 +129,7 @@ Recommended fields:
 - `project_name`
 - `project_type`
 - `domain`
+- `project_user`
 - `user_goal`
 - `target_mcu`
 - `closest_mature_ael_path`
@@ -145,6 +146,7 @@ Recommended fields:
 - optional:
   - `tool_branch`
   - `system_change_status`
+  - `motivated_by_user_goal`
 
 This is enough for v0.1.
 
@@ -174,6 +176,7 @@ project_id: stm32f411_first_example
 project_name: STM32F411 first example project
 project_type: user_project
 domain: user_project_domain
+project_user: local_user
 user_goal: Create a first example project for a board using stm32f411ceu6
 target_mcu: stm32f411ceu6
 closest_mature_ael_path: stm32f411ceu6
@@ -197,6 +200,7 @@ unresolved_items:
 current_blocker: ""
 last_action: created_project_shell
 next_recommended_action: clarify setup, wiring, validation approach, and desired first example
+motivated_by_user_goal: Create a first example project for a board using stm32f411ceu6
 key_refs:
   - projects/stm32f411_first_example/README.md
   - docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md

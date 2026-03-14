@@ -22,6 +22,7 @@ database.
 Recommended project-local fields:
 
 - `domain`
+- `project_user`
 - `system_refs`
 - `cross_domain_links`
 
@@ -29,6 +30,7 @@ Optional fields:
 
 - `tool_branch`
 - `system_change_status`
+- `motivated_by_user_goal`
 
 ## Field Meaning
 
@@ -52,6 +54,17 @@ Example:
 - setup/connection contract
 - bring-up preparation note
 
+### `project_user`
+
+Use:
+
+- `project_user`
+
+This is the preferred lightweight user field for v0.1.
+
+It identifies the user context associated with the project without implying a
+full ownership or permission model.
+
 ### `cross_domain_links`
 
 Record the specific reason the project is linked to system-domain work.
@@ -66,6 +79,13 @@ cross_domain_links:
 ```
 
 This keeps the link explainable without creating a heavier data model.
+
+Relevant system-domain or cross-domain notes may also use:
+
+- `for_project_user`
+- `motivated_by_user_goal`
+
+when they need to explain why a system change exists.
 
 ### `tool_branch`
 
@@ -83,6 +103,14 @@ Optional field describing how a related system change should be interpreted:
 - `integrated`
 
 Use this only when it adds real clarity.
+
+### `motivated_by_user_goal`
+
+Optional project-local or note-level field describing the concrete user goal
+that motivated a related system change or linkage.
+
+This helps keep user-project intent and system evolution connected without a
+larger project-management model.
 
 ## Canonical vs Branch-Specific Guidance
 
@@ -108,3 +136,10 @@ For v0.1, cross-domain links should be represented as:
 
 This is enough to keep the distinction explicit without building a new
 management system.
+
+The user concept should remain lightweight:
+
+- use `project_user`
+- optionally use `for_project_user`
+- optionally use `motivated_by_user_goal`
+- do not introduce an account or permission system here

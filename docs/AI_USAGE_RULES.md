@@ -223,6 +223,7 @@ Rules:
 - keep `default verification` as a system-owned baseline object
 - keep board/capability notes as the technical authority
 - record lightweight cross-domain links when the project is anchored to current system capabilities
+- use `project_user` rather than `project_owner`
 - do not design a heavy project-management system for this v0.1 case
 
 If branch-specific AEL tool changes matter to the project, record them lightly:
@@ -231,6 +232,20 @@ If branch-specific AEL tool changes matter to the project, record them lightly:
 - `system_change_status`
 
 Do not introduce a broad branch-tracking subsystem for this v0.1 flow.
+
+The v0.1 user concept is:
+
+- single-user primary
+- user-aware
+- trusted shared environment
+- Git-based collaboration when multiple trusted users are involved
+
+Do not implement:
+
+- accounts
+- auth
+- permissions
+- collaboration infrastructure
 
 Worked example:
 

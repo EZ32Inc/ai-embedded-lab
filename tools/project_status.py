@@ -34,6 +34,7 @@ def main() -> int:
     print(f"project_id: {payload.get('project_id', '')}")
     print(f"project_name: {payload.get('project_name', '')}")
     print(f"domain: {payload.get('domain', '')}")
+    print(f"project_user: {payload.get('project_user', '')}")
     print(f"status: {payload.get('status', '')}")
     print(f"target_mcu: {payload.get('target_mcu', '')}")
     print(f"closest_mature_ael_path: {payload.get('closest_mature_ael_path', '')}")

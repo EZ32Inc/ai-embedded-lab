@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "The stored motivating user goal for `stm32f411_first_example` is:\n\n- `Create a first example project for a board using stm32f411ceu6`\n\nThis is a project-local user goal.\n\nIt can also be used as a lightweight cross-domain explanation when related system changes need to record why they were made.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_project_motivated_goal_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "workflow_question",
+    "user_question": "What user goal motivated this stm32f411 first-example project?"
+  }
+}

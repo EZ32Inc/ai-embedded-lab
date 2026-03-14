@@ -2,6 +2,7 @@ project_id: {{PROJECT_ID}}
 project_name: {{PROJECT_NAME}}
 project_type: user_project
 domain: user_project_domain
+project_user: {{PROJECT_USER}}
 user_goal: {{USER_GOAL}}
 target_mcu: {{TARGET_MCU}}
 closest_mature_ael_path: {{MATURE_PATH}}
@@ -25,6 +26,7 @@ last_action: created_project_shell
 next_recommended_action: {{NEXT_RECOMMENDED_ACTION}}
 tool_branch: ""
 system_change_status: integrated
+motivated_by_user_goal: {{USER_GOAL}}
 key_refs:
   - projects/{{PROJECT_ID}}/README.md
   - {{KEY_REF_1}}

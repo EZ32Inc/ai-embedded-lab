@@ -7,6 +7,7 @@
 - target MCU: `stm32f411ceu6`
 - closest mature AEL path: `stm32f411ceu6`
 - domain: `user_project_domain`
+- project user: `local_user`
 
 ## Cross-Domain Link
 

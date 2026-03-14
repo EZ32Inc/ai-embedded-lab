@@ -27,6 +27,7 @@ def main() -> int:
     p.add_argument("--user-goal", required=True)
     p.add_argument("--target-mcu", required=True)
     p.add_argument("--mature-path", required=True)
+    p.add_argument("--project-user", default="local_user")
     p.add_argument("--confirmed-fact", default="")
     p.add_argument("--assumption", default="")
     p.add_argument("--unresolved-item", action="append", default=[])
@@ -62,6 +63,7 @@ def main() -> int:
 project_name: {args.project_name}
 project_type: user_project
 domain: user_project_domain
+project_user: {args.project_user}
 user_goal: {args.user_goal}
 target_mcu: {args.target_mcu}
 closest_mature_ael_path: {args.mature_path}
@@ -85,6 +87,7 @@ last_action: created_project_shell
 next_recommended_action: {next_action}
 tool_branch: {args.tool_branch}
 system_change_status: {args.system_change_status}
+motivated_by_user_goal: {args.user_goal}
 key_refs:
   - projects/{project_id}/README.md
 """
@@ -101,6 +104,7 @@ key_refs:
 - target MCU: `{args.target_mcu}`
 - closest mature AEL path: `{args.mature_path}`
 - domain: `user_project_domain`
+- project user: `{args.project_user}`
 
 ## Cross-Domain Links
 
@@ -136,6 +140,7 @@ key_refs:
 - target MCU: `{args.target_mcu}`
 - closest mature AEL path: `{args.mature_path}`
 - domain: `user_project_domain`
+- project user: `{args.project_user}`
 
 ## Cross-Domain Link
 

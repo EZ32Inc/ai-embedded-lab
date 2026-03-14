@@ -297,6 +297,53 @@ This means:
 - file trees become secondary,
 - domain-aware summaries become the first organizing layer.
 
+## 10.1 Lightweight user concept in v0.1
+
+The user concept should remain lightweight in v0.1.
+
+AEL should be:
+
+- single-user primary
+- user-aware
+
+The `user` concept should exist mainly as a semantic hook for:
+
+- associating a user project with a user context
+- linking system-domain changes to the motivating project or user goal
+- future extension toward multi-user support
+
+It should not become:
+
+- an account system
+- an authentication system
+- a permission model
+- a collaboration platform
+
+Preferred wording for v0.1:
+
+- use `project_user`
+- do not use `project_owner`
+
+### Collaboration model
+
+For v0.1, multi-user collaboration should remain primarily Git-based.
+
+If multiple trusted users collaborate, normal Git branch/review workflows remain
+the main collaboration mechanism.
+
+AEL does not need to duplicate this with a separate collaboration system in
+v0.1.
+
+### Trust model
+
+For v0.1, AEL may assume a trusted shared environment.
+
+That means:
+
+- users with repo access can see shared work
+- AEL does not need to enforce visibility or access boundaries
+- the user concept is organizational, not security-enforcing
+
 ---
 
 ## 11. Practical v0.1 implications
@@ -319,6 +366,10 @@ For example:
 - `projects/<project_id>/README.md`
 - `projects/<project_id>/session_notes.md`
 
+These may also include lightweight user-aware fields such as:
+
+- `project_user`
+
 ### Keep the distinction explicit
 
 When recording or summarizing work, AEL should know whether a change belongs to:
@@ -327,7 +378,32 @@ When recording or summarizing work, AEL should know whether a change belongs to:
 - `user_project_domain`
 - `cross_domain_link`
 
+When relevant, AEL should also support lightweight fields such as:
+
+- `for_project_user`
+- `motivated_by_user_goal`
+
 This can begin as a lightweight convention rather than a heavy formal system.
+
+### What to implement now
+
+Implement now:
+
+- lightweight `project_user` in project metadata
+- optional `for_project_user` and `motivated_by_user_goal` in relevant
+  system-domain or cross-domain notes when they add clarity
+- user-aware question answering
+
+### What to defer
+
+Defer:
+
+- accounts
+- auth
+- permissions
+- broad collaboration logic
+- user-isolated workspace mechanics
+- private/shared visibility infrastructure
 
 ---
 
@@ -366,4 +442,3 @@ This is one of AEL’s defining advantages in the AI era:
 > the tool itself becomes an evolvable, branchable, validated part of the engineering workflow, not just a fixed external environment.
 
 That should now be treated as a core AEL design principle.
-

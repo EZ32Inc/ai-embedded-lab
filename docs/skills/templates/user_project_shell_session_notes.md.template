@@ -7,6 +7,7 @@
 - target MCU: `{{TARGET_MCU}}`
 - closest mature AEL path: `{{MATURE_PATH}}`
 - domain: `user_project_domain`
+- project user: `{{PROJECT_USER}}`
 
 ## Cross-Domain Link
 

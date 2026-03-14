@@ -339,3 +339,66 @@
     - "response explains why the project is linked to it"
     - "response keeps project and system domains distinct"
   notes: "Cross-domain link answer case for the first concrete user-project shell."
+
+- case_id: user_project_user_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "What user is this stm32f411 first-example project for?"
+  expected_retrieval_path:
+    - "projects/stm32f411_first_example/project.yaml"
+  must_use_formal_path: false
+  required_output_elements:
+    - "project_user local_user"
+    - "explicit statement that this is a lightweight semantic user association"
+    - "explicit statement that this is not a full ownership/permission model"
+  forbidden_failure_modes:
+    - "using project_owner language"
+    - "treating the field as an auth or permission concept"
+    - "omitting the current local_user value"
+  judge_rubric:
+    - "response identifies local_user correctly"
+    - "response explains the lightweight user concept correctly"
+    - "response keeps the model lightweight"
+  notes: "User-aware project question for the v0.1 shell model."
+
+- case_id: user_project_motivated_goal_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "What user goal motivated this stm32f411 first-example project?"
+  expected_retrieval_path:
+    - "projects/stm32f411_first_example/project.yaml"
+  must_use_formal_path: false
+  required_output_elements:
+    - "motivated_by_user_goal"
+    - "the concrete first-example stm32f411 goal"
+    - "brief relation between project-local goal and cross-domain/system linkage"
+  forbidden_failure_modes:
+    - "omitting motivated_by_user_goal"
+    - "inventing a different goal"
+    - "treating the goal as a system baseline objective"
+  judge_rubric:
+    - "response identifies the stored goal correctly"
+    - "response explains its project-local meaning correctly"
+    - "response keeps system and project roles distinct"
+  notes: "Motivation-link question for the v0.1 user concept."
+
+- case_id: user_projects_current_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "What projects do I currently have?"
+  expected_retrieval_path:
+    - "tools/list_user_projects.py"
+  must_use_formal_path: false
+  required_output_elements:
+    - "current project id stm32f411_first_example"
+    - "current project user local_user"
+    - "current target mcu stm32f411ceu6"
+  forbidden_failure_modes:
+    - "omitting the checked-in user project shell"
+    - "answering from pure memory without using current project files"
+    - "mixing system baseline objects into the project list"
+  judge_rubric:
+    - "response identifies the current user project shell"
+    - "response stays in the user-project domain"
+    - "response reflects the lightweight current project listing correctly"
+  notes: "Current-projects question for the lightweight user-project layer."

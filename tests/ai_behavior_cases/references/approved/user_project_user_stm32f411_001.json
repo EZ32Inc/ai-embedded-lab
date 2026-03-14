@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "The current `stm32f411_first_example` project is for:\n\n- `local_user`\n\nThis is a lightweight semantic user association through `project_user`.\n\nIt is not:\n\n- an ownership model\n- an auth concept\n- a permission system\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_project_user_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "workflow_question",
+    "user_question": "What user is this stm32f411 first-example project for?"
+  }
+}

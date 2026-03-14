@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "Current user projects are:\n\n- `stm32f411_first_example`\n  - user: `local_user`\n  - target MCU: `stm32f411ceu6`\n  - status: `shell_created`\n  - mature path: `stm32f411ceu6`\n\nThis is a user-project listing, not a system baseline or DUT inventory answer.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_projects_current_001",
+    "case_type": "organic",
+    "intent_type": "workflow_question",
+    "user_question": "What projects do I currently have?"
+  }
+}
