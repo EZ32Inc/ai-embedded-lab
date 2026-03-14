@@ -159,6 +159,31 @@
     - "important caveats and operator action remain visible"
   notes: "Covers the current guarded failure mode when the ESP32 meter is unreachable before the default baseline can proceed."
 
+- case_id: default_verification_review_003
+  case_type: organic
+  intent_type: default_verification_review
+  user_question: "What is currently covered and is the default verification baseline healthy?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+    - "python3 -m ael verify-default run"
+  allow_retrieval_failure: true
+  must_use_formal_path: true
+  required_output_elements:
+    - "current default verification sequence or covered baseline paths"
+    - "current coverage summary"
+    - "baseline health assessment"
+    - "important caveats or weak points"
+  forbidden_failure_modes:
+    - "omitting stm32f411_gpio_signature from the current default-verification sequence"
+    - "claiming the whole baseline is healthy when the current run still shows the esp32c6 flash/serial-path failure"
+    - "answering only from stale memory without current repo retrieval"
+  judge_rubric:
+    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "current covered baseline paths include the current F411 representative step"
+    - "health assessment distinguishes the healthy F411 integration from the separate esp32c6 baseline issue"
+    - "important caveats remain visible"
+  notes: "Current live baseline case after F411 default-verification integration."
+
 - case_id: dut_instance_disambiguation_001
   case_type: organic
   intent_type: workflow_question

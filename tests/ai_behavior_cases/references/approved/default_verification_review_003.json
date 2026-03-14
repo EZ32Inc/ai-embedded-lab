@@ -1,0 +1,47 @@
+{
+  "approved_answer_draft": "Current default verification baseline:\n\n- `esp32c6_gpio_signature_with_meter`\n  - board: `esp32c6_devkit`\n  - validation style: meter-backed GPIO golden test\n  - current run result: `FAIL` at flash because no serial port was available\n- `rp2040_gpio_signature`\n  - board: `rp2040_pico`\n  - validation style: probe-based GPIO signature test\n  - current run result: `PASS`\n- `stm32f103_gpio_signature`\n  - board: `stm32f103_gpio`\n  - validation style: probe-based GPIO signature test\n  - current run result: `PASS`\n- `stm32f103_uart_banner`\n  - board: `stm32f103_uart`\n  - validation style: UART banner plus GPIO proof\n  - current run result: `PASS`\n- `stm32f411_gpio_signature`\n  - board: `stm32f411ceu6`\n  - validation style: probe-based GPIO signature test\n  - current run result: `PASS`\n\nCurrent coverage summary:\n\n- the current configured default baseline has five DUT-backed steps\n- STM32F411 is now included through the representative low-risk baseline step `stm32f411_gpio_signature`\n- in the latest live run, RP2040, STM32F103 GPIO, STM32F103 UART, and STM32F411 all passed\n\nBaseline health assessment:\n\n- the baseline is not fully healthy at the moment because the ESP32-C6 step still has an active flash/serial-path problem\n- the STM32F411 default-verification integration itself is healthy and passed in the live baseline flow\n\nImportant caveats:\n\n- this reflects the current default baseline and current bench state, not every AEL path\n- the current unhealthy point is the ESP32-C6 flash serial path, not the new STM32F411 step\n- STM32F411 is intentionally represented by one low-risk baseline test in default verification, not the full eight-test board suite\n",
+  "approved_at": "2026-03-14T10:20:00+00:00",
+  "approved_from": "manual_add_for_current_f411_default_verification_case",
+  "case": {
+    "case_id": "default_verification_review_003",
+    "case_type": "organic",
+    "expected_retrieval_path": [
+      "python3 -m ael inventory list",
+      "python3 -m ael verify-default run"
+    ],
+    "forbidden_failure_modes": [
+      "omitting stm32f411_gpio_signature from the current default-verification sequence",
+      "claiming the whole baseline is healthy when the current run still shows the esp32c6 flash/serial-path failure",
+      "answering only from stale memory without current repo retrieval"
+    ],
+    "intent_type": "default_verification_review",
+    "judge_rubric": [
+      "response is grounded in current repo-native inventory state and a current default-verification run",
+      "current covered baseline paths include the current F411 representative step",
+      "health assessment distinguishes the healthy F411 integration from the separate esp32c6 baseline issue",
+      "important caveats remain visible"
+    ],
+    "must_use_formal_path": true,
+    "notes": "Current live baseline case after F411 default-verification integration.",
+    "required_output_elements": [
+      "current default verification sequence or covered baseline paths",
+      "current coverage summary",
+      "baseline health assessment",
+      "important caveats or weak points"
+    ],
+    "user_question": "What is currently covered and is the default verification baseline healthy?"
+  },
+  "generated_at": "2026-03-14T10:20:00+00:00",
+  "git_commit": "e55cf0bb7f3e6f0b9f5e4e8b4e4c89a0d9b5e7c1",
+  "question": "What is currently covered and is the default verification baseline healthy?",
+  "retrieval": [
+    {
+      "command": "python3 -m ael inventory list"
+    },
+    {
+      "command": "python3 -m ael verify-default run"
+    }
+  ],
+  "status": "approved",
+  "source_case_file": "/nvme1t/work/codex/ai-embedded-lab/tests/ai_behavior_cases/organic_cases.yaml"
+}
