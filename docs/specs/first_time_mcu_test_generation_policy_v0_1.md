@@ -219,6 +219,18 @@ Before approving first-time MCU code generation, confirm:
 - result capture template exists
 - lesson write-back path is defined
 
+Before declaring first-time MCU/board bring-up materially complete, also
+confirm:
+
+- the validated per-board suite has been rerun after cleanup/fixes
+- there is an explicit decision about whether the board should contribute a
+  representative baseline step to default verification
+- if yes, exactly one low-risk hardware-validated representative step was added
+- live default verification was run to prove the new step resolves and executes
+- the board is registered as a formal DUT-backed capability
+- a closeout note captures the final suite result, default-verification
+  decision, and remaining caveats
+
 ## Relationship to existing documents
 
 - [dut_target_generation_policy_v0_1.md](/nvme1t/work/codex/ai-embedded-lab/docs/specs/dut_target_generation_policy_v0_1.md)
