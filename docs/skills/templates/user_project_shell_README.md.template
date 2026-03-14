@@ -1,0 +1,37 @@
+# {{PROJECT_NAME}}
+
+## User Goal
+
+{{USER_GOAL}}
+
+## Current Status
+
+- project shell created
+- target MCU: `{{TARGET_MCU}}`
+- closest mature AEL path: `{{MATURE_PATH}}`
+
+## Confirmed Facts
+
+- {{CONFIRMED_FACT_1}}
+
+## Assumptions
+
+- {{ASSUMPTION_1}}
+
+## Unresolved Items
+
+- {{UNRESOLVED_ITEM_1}}
+- {{UNRESOLVED_ITEM_2}}
+
+## Best Next Questions
+
+- What exact setup/wiring is available for this board?
+- What first example should be generated?
+- What validation approach should be used first?
+
+## Key References
+
+- [project.yaml](/nvme1t/work/codex/ai-embedded-lab/projects/{{PROJECT_ID}}/project.yaml)
+- [session_notes.md](/nvme1t/work/codex/ai-embedded-lab/projects/{{PROJECT_ID}}/session_notes.md)
+- [{{KEY_REF_LABEL_1}}](/nvme1t/work/codex/ai-embedded-lab/{{KEY_REF_REL_1}})
+- [{{KEY_REF_LABEL_2}}](/nvme1t/work/codex/ai-embedded-lab/{{KEY_REF_REL_2}})

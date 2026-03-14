@@ -1,0 +1,21 @@
+project_id: {{PROJECT_ID}}
+project_name: {{PROJECT_NAME}}
+project_type: user_project
+user_goal: {{USER_GOAL}}
+target_mcu: {{TARGET_MCU}}
+closest_mature_ael_path: {{MATURE_PATH}}
+status: shell_created
+confirmed_facts:
+  - {{CONFIRMED_FACT_1}}
+assumptions:
+  - {{ASSUMPTION_1}}
+unresolved_items:
+  - {{UNRESOLVED_ITEM_1}}
+  - {{UNRESOLVED_ITEM_2}}
+current_blocker: ""
+last_action: created_project_shell
+next_recommended_action: {{NEXT_RECOMMENDED_ACTION}}
+key_refs:
+  - projects/{{PROJECT_ID}}/README.md
+  - {{KEY_REF_1}}
+  - {{KEY_REF_2}}

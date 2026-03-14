@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "For this request, the first v0.1 AEL action should be to create a lightweight empty-shell user project, not to generate firmware immediately.\n\nRecommended first response:\n\n- create a project shell under `projects/`\n- record the user goal\n- anchor the project to the current mature `stm32f411ceu6` path\n- record:\n  - confirmed fact: the user has a board using `stm32f411ceu6`\n  - assumptions: the board is close enough to the mature AEL `stm32f411ceu6` path for a shell-first workflow\n  - unresolved items: exact setup/wiring and what first example the user wants\n- then ask or propose the next setup/validation questions before code generation\n\nThe first response should not jump directly to firmware generation.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_project_create_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "user_project_create",
+    "user_question": "I have a board using stm32f411ceu6. Please create a first example project for me."
+  }
+}

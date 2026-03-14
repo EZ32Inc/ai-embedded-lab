@@ -199,6 +199,40 @@ Rules:
    validated baseline for that board, usually the board-specific
    `gpio_signature`-style test, not the whole new suite.
 
+## User Project Creation For Supported Boards
+
+When the user asks to create a first project for a board that is already
+supported by AEL, or is highly similar to a mature supported path, do not jump
+straight into code generation.
+
+For v0.1, do this instead:
+
+1. create a lightweight empty-shell user project
+2. record the user goal
+3. resolve the closest mature existing board/capability path
+4. record:
+   - confirmed facts
+   - assumptions
+   - unresolved items
+5. present the best next setup/validation questions
+6. only after setup and intent are clarified should code generation be proposed
+
+Rules:
+
+- treat the project shell as a lightweight user-facing context layer
+- keep `default verification` as a system-owned baseline object
+- keep board/capability notes as the technical authority
+- do not design a heavy project-management system for this v0.1 case
+
+Worked example:
+
+- user says: "I have a board using `stm32f411ceu6`. Please create a first
+  example project for me."
+- the first response should create the project shell and anchor it to the
+  mature `stm32f411ceu6` path
+- it should not generate firmware immediately unless the user explicitly asks
+  to skip setup clarification
+
 
 ## Stage Questions
 

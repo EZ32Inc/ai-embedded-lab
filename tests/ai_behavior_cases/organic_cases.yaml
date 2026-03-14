@@ -251,3 +251,49 @@
     - "response explains that same-DUT tests remain serialized"
     - "response keeps the recommendation grounded in current inventory-aware workflow"
   notes: "Protects against silently collapsing multiple physical DUTs of the same board family into one inventory identity."
+
+- case_id: user_project_create_stm32f411_001
+  case_type: organic
+  intent_type: user_project_create
+  user_question: "I have a board using stm32f411ceu6. Please create a first example project for me."
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "empty-shell project creation, not immediate code generation"
+    - "closest mature existing path stm32f411ceu6"
+    - "confirmed facts, assumptions, and unresolved items"
+    - "best next setup/validation questions"
+  forbidden_failure_modes:
+    - "jumping straight into firmware generation as the first response"
+    - "treating the user-project shell as a replacement for board/capability authority"
+    - "ignoring the current mature stm32f411ceu6 path"
+  judge_rubric:
+    - "response creates or proposes a lightweight project shell first"
+    - "response anchors the new project to the mature stm32f411ceu6 path"
+    - "response distinguishes confirmed facts from assumptions"
+    - "response surfaces the next setup/validation questions before code generation"
+  notes: "Concrete first user-project creation case for a mature supported board."
+
+- case_id: user_project_next_questions_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "What should we clarify before generating code for this stm32f411ceu6 first-example project?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+    - "python3 -m ael inventory describe-test --board stm32f411ceu6 --test tests/plans/stm32f411_gpio_signature.json"
+  must_use_formal_path: true
+  required_output_elements:
+    - "setup/wiring clarification"
+    - "validation approach clarification"
+    - "desired first-example clarification"
+    - "reference to the current mature stm32f411ceu6 path"
+  forbidden_failure_modes:
+    - "jumping directly to code generation"
+    - "omitting setup/wiring discussion"
+    - "answering without grounding in the mature current stm32f411ceu6 path"
+  judge_rubric:
+    - "response identifies the right setup questions before generation"
+    - "response points to mature F411 setup/capability information"
+    - "response keeps generation as the next stage, not the current one"
+  notes: "Protects the shell-first then setup-discussion then generation flow."

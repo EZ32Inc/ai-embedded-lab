@@ -633,6 +633,11 @@ Review whether the initial question/state layer is already sufficient before int
 ### Step 8
 Only after the first review, decide whether any additional file-system organization is actually needed.
 
+### Step 9
+For the first concrete user-project case, implement a lightweight shell-first
+flow for a mature supported board such as `stm32f411ceu6` before attempting a
+broader project-management layer.
+
 ---
 
 ## 18. Review Questions for Codex

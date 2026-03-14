@@ -1,0 +1,25 @@
+# {{PROJECT_NAME}} Session Notes
+
+## Initial Creation
+
+- project shell created
+- user goal: {{USER_GOAL}}
+- target MCU: `{{TARGET_MCU}}`
+- closest mature AEL path: `{{MATURE_PATH}}`
+
+## Confirmed Facts
+
+- {{CONFIRMED_FACT_1}}
+
+## Assumptions
+
+- {{ASSUMPTION_1}}
+
+## Unresolved Items
+
+- {{UNRESOLVED_ITEM_1}}
+- {{UNRESOLVED_ITEM_2}}
+
+## Recommended Next Step
+
+- {{NEXT_RECOMMENDED_ACTION}}
