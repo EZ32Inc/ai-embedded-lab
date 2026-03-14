@@ -1,5 +1,5 @@
 board:
-  name: STM32F411CEU6
+  name: STM32F411CEU6 WeAct Black Pill V2.0
   target: stm32f411ceu6
   instrument_instance: esp32jtag_stm32_golden
   clock_hz: 16000000
@@ -8,7 +8,7 @@ board:
     project_dir: firmware/targets/stm32f411ceu6
     artifact_stem: stm32f411_app
   firmware:
-    description: Toggle PA2-PA4 fast and blink PC13 using an ST-backed STM32F411xE CMSIS target
+    description: Provisional STM32F411CEU6 WeAct Black Pill target with PA2/PA3 proof pins and PC13 LED
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
@@ -23,29 +23,19 @@ board:
       - "detach"
   observe_map:
     sig: P0.0
-    pa4: P0.0
+    pa2: P0.0
     pa3: P0.1
-    pa2: P0.2
-    pc13: P0.3
-    led: P0.3
+    led: LED
   verification_views:
     signal:
       pin: sig
       resolved_to: P0.0
-      description: Provisional GPIO signature capture on PA4
-    led:
-      pin: led
-      resolved_to: P0.3
-      description: Provisional machine-observed PC13 blink
+      description: Provisional primary proof capture on PA2
   bench_connections:
-    - from: PA4
+    - from: PA2
       to: P0.0
     - from: PA3
       to: P0.1
-    - from: PA2
-      to: P0.2
-    - from: PC13
-      to: P0.3
     - from: PC13
       to: LED
     - from: GND
@@ -53,7 +43,15 @@ board:
   safe_pins:
     - PA2
     - PA3
-    - PA4
+    - PA6
+    - PA8
+    - PA9
+    - PA10
+    - PB0
+    - PB1
+    - PB13
+    - PB14
+    - PB15
     - PC13
   default_wiring:
     swd: "P3"
