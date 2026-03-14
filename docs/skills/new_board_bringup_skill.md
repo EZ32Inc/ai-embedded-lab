@@ -13,6 +13,16 @@ Its job is to make:
 
 It is a workflow skill specification, not a runtime feature.
 
+## Core source rule
+
+For first-time MCU support:
+
+- peripheral implementation should come primarily from official vendor sources
+- test methodology should come primarily from previously validated AEL patterns
+
+This skill should never treat an older target's register-level implementation
+as automatically portable just because the validation method is reusable.
+
 ## Why This Skill Matters
 
 This is one of the strongest current AEL skill candidates because:
@@ -77,15 +87,19 @@ The skill should always distinguish between:
 Recommended flow:
 
 1. Identify the board and the nearest existing reference path.
-2. Create or clarify the minimum coherent board/test/asset/firmware path needed.
-3. Run or prepare `plan` as the first execution checkpoint.
-4. Emit the structured plan-stage readiness summary.
-5. Surface unresolved items and the user inputs still needed.
-6. Accept user corrections and reprint the updated setup clearly.
-7. Continue to `pre-flight` when the setup is specific enough.
-8. Continue to `run` and `check` when the path is ready.
-9. After first success, emit the validation summary.
-10. After first success, emit the last-known-good setup.
+2. Anchor implementation facts to official vendor sources.
+3. Select the nearest validated AEL methodology pattern.
+4. Perform a pre-generation drift review.
+5. Create or clarify the minimum coherent board/test/asset/firmware path needed.
+6. Run or prepare `plan` as the first execution checkpoint.
+7. Emit the structured plan-stage readiness summary.
+8. Surface unresolved items and the user inputs still needed.
+9. Accept user corrections and reprint the updated setup clearly.
+10. Continue to `pre-flight` when the setup is specific enough.
+11. Continue to `run` and `check` when the path is ready.
+12. After first success, emit the validation summary.
+13. After first success, emit the last-known-good setup.
+14. Write lessons back into the reusable skill/workflow/spec layer.
 
 This flow should align with [new_board_bringup_and_validation_flow.md](/nvme1t/work/codex/ai-embedded-lab/docs/new_board_bringup_and_validation_flow.md).
 

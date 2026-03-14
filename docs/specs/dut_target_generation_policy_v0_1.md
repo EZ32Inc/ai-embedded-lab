@@ -13,17 +13,22 @@ goal is to make the source basis, assumptions, and validation state explicit.
 
 Targets should be created in this order of preference:
 
-1. `verified_local_first`
-   - Reuse a locally validated AEL target as the behavioral and structural
-     baseline when a close family/device match already exists.
-   - This is the preferred starting point for process hardening because it keeps
-     behavior anchored to known-good local results.
+1. `official_source_first_time_required`
+   - For first-time support of a new MCU family, new MCU line, or new board on
+     an MCU that AEL has not previously supported, peripheral implementation
+     must be anchored first in official vendor sources.
+   - This includes datasheet/reference-manual review, official SDK/CMSIS
+     support, official startup/system files, and official example families.
+   - Existing AEL code may still inform methodology, file layout, and naming,
+     but it must not be the primary source of device truth.
 
-2. `official_source_second`
-   - When official vendor device-support sources are available and materially
-     improve correctness, build the new target around them.
-   - This is required for formal official-source pilots and should be preferred
-     once the local baseline is understood.
+2. `verified_local_methodology_second`
+   - Reuse a locally validated AEL target as the behavioral or methodological
+     baseline when a close match exists.
+   - This reuse is strongest for validation structure, evidence shape, and test
+     methodology.
+   - For first-time MCU support, verified local targets should not override
+     official-source-derived implementation facts.
 
 3. `provisional_fallback`
    - If no verified local baseline or clean official source path is available,
@@ -92,6 +97,20 @@ Generated targets must keep these concerns distinct:
   - LED pin
   - bench wiring
   - probe selection
+
+For first-time MCU support, a fourth separation is also required:
+
+- methodology source
+  - which validated AEL test pattern is being reused
+  - why that pattern is relevant
+  - what parts are not portable implementation details
+
+## First-time MCU rule
+
+For first-time support of a new MCU/board, peripheral implementation must be
+anchored primarily in official vendor documentation, SDKs, and official
+examples, while test methodology, validation structure, and connection strategy
+should be derived primarily from previously validated AEL patterns.
 
 ## Catalog requirement
 

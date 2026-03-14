@@ -5,7 +5,7 @@
 Add or expand STM32-family examples by combining:
 
 - official STM32 source support for device/runtime facts
-- the closest validated local AEL STM32 example/target shape
+- the closest validated local AEL STM32 test methodology
 
 This skill is for generated example paths, not only raw target bring-up.
 
@@ -21,11 +21,13 @@ For STM32-family generated examples, prefer:
 
 1. official STM32 source support for device facts, startup/runtime basis, and
    memory/linker facts
-2. the closest validated local AEL STM32 example as the structural reference
+2. the closest validated local AEL STM32 example as the methodology reference
 3. official STM32 examples only as structural references when they materially
    help
 
 Do not use board-example assumptions from ST packages as AEL board policy.
+Do not treat an older STM32 target's register-level implementation as portable
+to a first-time STM32 MCU unless official sources justify it.
 
 ## Inputs
 
@@ -46,12 +48,12 @@ Do not use board-example assumptions from ST packages as AEL board policy.
 
 ## Procedure
 
-1. Identify the closest local STM32 AEL example first.
-2. Confirm the official STM32 source basis that should govern:
+1. Confirm the official STM32 source basis that should govern:
    - startup/runtime facts
    - device headers
    - memory/linker facts
-3. Reuse the local AEL STM32 example as the main structural reference.
+2. Identify the closest local STM32 AEL example for methodology reuse.
+3. Perform a package/family drift check before code generation.
 4. Keep AEL-owned behavior explicit:
    - UART ready banners
    - GPIO signature behavior

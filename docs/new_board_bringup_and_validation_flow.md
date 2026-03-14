@@ -24,15 +24,18 @@ It is based partly on lessons learned from the recent real ESP32-C3 success path
 The recommended new-board bring-up flow is:
 
 1. Board introduction
-2. Minimal asset and config creation
-3. `plan`
-4. Plan-stage readiness summary
-5. User correction and confirmation loop
-6. `pre-flight`
-7. `run`
-8. `check`
-9. Validation summary
-10. Last-known-good setup
+2. Official-source anchoring and methodology mapping
+3. Pre-generation drift check
+4. Minimal asset and config creation
+5. `plan`
+6. Plan-stage readiness summary
+7. User correction and confirmation loop
+8. `pre-flight`
+9. `run`
+10. `check`
+11. Validation summary
+12. Last-known-good setup
+13. Lesson capture and write-back
 
 These stages should be treated as explicit product stages, not as ad hoc operator behavior.
 
@@ -56,9 +59,39 @@ Required output:
 - known unknowns
 - recommended next action
 
-### 2. Minimal Asset And Config Creation
+### 2. Official-Source Anchoring And Methodology Mapping
+
+At first-time MCU bring-up, AEL should record:
+
+- official vendor documents and SDK support selected
+- official example families selected as implementation references
+- validated AEL tests selected as methodology references
+- which reused local details are methodology only, not implementation truth
+
+### 3. Pre-Generation Drift Check
+
+Before generation, AEL should surface likely drift in:
+
+- family/runtime support
+- package pinout
+- peripheral instances
+- alternate-function mapping
+- clocking
+- memory layout
+- bench setup assumptions
+
+### 4. Minimal Asset And Config Creation
 
 The first board addition should create the minimum needed path so the board can enter the AEL flow coherently.
+
+Before minimal asset creation for a first-time MCU/board, AEL should explicitly
+separate:
+
+- implementation source
+- test methodology source
+
+Peripheral implementation should come primarily from official vendor sources.
+Previously validated AEL paths should be reused primarily for methodology.
 
 This usually includes:
 
@@ -74,7 +107,7 @@ Required output:
 - any values copied from a similar board
 - assumptions still not confirmed on real hardware
 
-### 3. `plan`
+### 5. `plan`
 
 `plan` is the first execution checkpoint.
 
@@ -87,7 +120,7 @@ Required output:
 - whether execution stopped at `plan` intentionally
 - artifact location for the generated run plan
 
-### 4. Plan-Stage Readiness Summary
+### 6. Plan-Stage Readiness Summary
 
 For a newly added board, a successful `plan` stage must be followed by a structured readiness summary.
 
@@ -224,6 +257,22 @@ After the first end-to-end pass, AEL should emit a concise validation summary in
 - known cleanup items or caveats
 
 This is the first strong proof that the board is not only configured, but actually usable in the AEL flow.
+
+## Lesson Capture And Write-Back
+
+After a first-time MCU bring-up round, AEL should record:
+
+- what succeeded
+- what failed
+- what was inferred
+- what was learned
+
+These lessons should be written back into the reusable layer:
+
+- skills
+- workflow docs
+- policy/spec docs
+- target-specific preparation notes
 
 ## Last-Known-Good Setup
 

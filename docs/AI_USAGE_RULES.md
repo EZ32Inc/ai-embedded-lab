@@ -150,6 +150,45 @@ Rules:
 - Same DUT instance should remain serialized through the existing `dut:<id>` resource lock.
 - Independent DUT instances should get distinct board ids and board configs.
 
+## First-Time MCU Support
+
+When extending AEL to a brand-new MCU or board that AEL has not previously
+supported, do not treat existing repo code as the primary implementation basis.
+
+First separate:
+
+- peripheral implementation source
+- test methodology source
+
+Rules:
+
+1. Peripheral implementation must be anchored first in official vendor sources.
+   This includes:
+   - datasheet
+   - reference manual
+   - official SDK/CMSIS support
+   - official startup/system files
+   - official vendor examples
+2. Previously validated AEL tests should be reused primarily for methodology:
+   - validation structure
+   - staged flow
+   - banner/proof patterns
+   - connection strategy
+3. Do not copy old MCU code blindly.
+4. Do not assume register-level implementation details are portable across MCU
+   lines.
+5. Before generation, explicitly call out:
+   - confirmed facts
+   - inferred assumptions
+   - unresolved drift
+   - official sources selected
+   - AEL methodology sources selected
+6. After each meaningful round, record:
+   - what succeeded
+   - what failed
+   - what was inferred
+   - what was learned
+
 
 ## Stage Questions
 
