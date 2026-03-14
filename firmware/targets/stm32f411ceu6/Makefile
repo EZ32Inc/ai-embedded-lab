@@ -22,9 +22,11 @@ $(BUILD_DIR):
 	mkdir -p $(BUILD_DIR)/vendor/st
 
 $(BUILD_DIR)/%.o: %.c | $(BUILD_DIR)
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/%.o: %.s | $(BUILD_DIR)
+	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(OUT_ELF): $(OBJS)

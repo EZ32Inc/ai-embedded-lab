@@ -48,6 +48,8 @@ overloading this one-setup contract.
 ## Confirmed facts
 
 - target board is `STM32F411CEU6 WeAct Black Pill V2.0`
+- control instrument instance is `esp32jtag_stm32f411`
+- control instrument endpoint is `192.168.2.102:4242`
 - onboard LED is connected to `PC13`
 - SPI2 pin function from official STM32CubeF4 examples:
   - `PB13 = SPI2_SCK`
@@ -78,15 +80,19 @@ These should remain connected for most tests.
 - `GND -> probe GND`
 - `PA2 -> P0.0` as `MAIN_PROOF_PIN`
 - `PA3 -> P0.1` as `SECONDARY_PROOF_PIN`
+- `PB13 -> P0.2` as `AUX_PROOF_PIN_1`
 - `PC13 -> LED`
 
 Status of this fixed wiring proposal:
 
 - `PA2/PA3` are the confirmed always-connected proof pins for the current draft
-- `P0.2` and `P0.3` should remain unconnected in the initial setup
+- `PB13 -> P0.2` is now also connected for direct observation
+- `P0.3` remains unconnected in the initial setup
 - `PA2/PA3` are officially valid USART2 pins, so using them as permanent proof
   pins conflicts with using `USART2` for UART tests on the same one-setup
   contract
+- `PB13` keeps SPI clock directly observable without consuming the UART or ADC
+  pins
 
 ## Reusable jumper pairs
 
@@ -170,7 +176,8 @@ Reason:
 - `SECONDARY_PROOF_PIN`
   - second observed signal for GPIO signature or ratio checks
 - `AUX_PROOF_PIN_1`
-  - optional additional observed signal, currently unassigned
+  - `PB13` observed on `P0.2`
+  - preferred auxiliary observed signal for SPI-related debug and future checks
 - `AUX_PROOF_PIN_2`
   - optional additional observed signal, currently unassigned
 
@@ -244,8 +251,9 @@ Before final STM32F411 test generation:
 1. identify the exact physical STM32F411 board/module used by AEL
 2. confirm whether the EEPROM footprint is populated on that board
 3. keep `PA2/PA3` as the initial always-connected proof pins
-4. keep `PB1 -> PB0` as the ADC pair
-5. keep `PB13/PB14/PB15` as the SPI2 group
-6. keep `PA9/PA10` as the UART pair
-7. keep `PA8/PA6` as the shared loopback pair for PWM / EXTI / capture
-8. update the board config and test plans only after those pins are frozen
+4. keep `PB13 -> P0.2` as the auxiliary observed SPI clock pin
+5. keep `PB1 -> PB0` as the ADC pair
+6. keep `PB13/PB14/PB15` as the SPI2 group
+7. keep `PA9/PA10` as the UART pair
+8. keep `PA8/PA6` as the shared loopback pair for PWM / EXTI / capture
+9. update the board config and test plans only after those pins are frozen

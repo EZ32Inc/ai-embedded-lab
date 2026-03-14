@@ -1,7 +1,7 @@
 board:
   name: STM32F411CEU6 WeAct Black Pill V2.0
   target: stm32f411ceu6
-  instrument_instance: esp32jtag_stm32_golden
+  instrument_instance: esp32jtag_stm32f411
   clock_hz: 16000000
   build:
     type: arm_debug
@@ -25,17 +25,24 @@ board:
     sig: P0.0
     pa2: P0.0
     pa3: P0.1
+    pb13: P0.2
     led: LED
   verification_views:
     signal:
       pin: sig
       resolved_to: P0.0
       description: Provisional primary proof capture on PA2
+    aux:
+      pin: pb13
+      resolved_to: P0.2
+      description: Auxiliary observed SPI clock pin on PB13
   bench_connections:
     - from: PA2
       to: P0.0
     - from: PA3
       to: P0.1
+    - from: PB13
+      to: P0.2
     - from: PC13
       to: LED
     - from: GND
