@@ -1,0 +1,43 @@
+{
+  "name": "stm32f411_capture_banner",
+  "board": "stm32f411ceu6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 15.0,
+  "max_freq_hz": 35.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f411_capture",
+    "artifact_stem": "stm32f411_capture_app",
+    "build_dir": "artifacts/build_stm32f411_capture_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      {
+        "role": "TIM1_CH1_SOURCE",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "Firmware drives a 50 Hz source on PA8 for the timing/capture self-check."
+      },
+      {
+        "role": "TIM3_CH1_CAPTURE_INPUT",
+        "dut_signal": "PA6",
+        "direction": "input",
+        "notes": "Firmware captures rising edges on PA6 through a manual PA8 -> PA6 loopback and exports success on PA2."
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "CAPTURE_LOOPBACK",
+        "dut_signal": "PA6",
+        "kind": "digital_loopback",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Execution contract: physically connect PA8 to PA6 so the DUT can validate timing capture internally. AEL should observe PA2, not PA8/PA6, for the bounded proof."
+      }
+    ]
+  }
+}

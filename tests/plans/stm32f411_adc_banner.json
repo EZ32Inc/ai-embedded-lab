@@ -1,0 +1,42 @@
+{
+  "name": "stm32f411_adc_banner",
+  "board": "stm32f411ceu6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 15.0,
+  "max_freq_hz": 35.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f411_adc",
+    "artifact_stem": "stm32f411_adc_app",
+    "build_dir": "artifacts/build_stm32f411_adc_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      {
+        "role": "ADC1_IN8",
+        "dut_signal": "PB0/ADC1_IN8",
+        "direction": "input"
+      },
+      {
+        "role": "ADC_LOOPBACK_SOURCE",
+        "dut_signal": "PB1",
+        "direction": "output",
+        "notes": "Firmware drives PB1 at about 50 Hz and samples PB0/ADC1_IN8 through a physical loopback jumper."
+      }
+    ],
+    "external_inputs": [
+      {
+        "source": "PB1_LOOPBACK",
+        "dut_signal": "PB0/ADC1_IN8",
+        "kind": "analog_in",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Execution contract: physically connect PB1 to PB0 so the DUT can self-drive a square wave into ADC1_IN8 during runtime validation."
+      }
+    ]
+  }
+}

@@ -98,18 +98,18 @@
 
 | test | implementation basis | methodology basis | result | notes |
 | --- | --- | --- | --- | --- |
-| `stm32f411_gpio_signature` | `firmware/targets/stm32f411ceu6` using ST CMSIS/startup/system sources | `stm32f103_gpio_signature` | blocked | Real bench preflight could not reach `esp32jtag_stm32f411 @ 192.168.2.102:4242`; no DUT-level validation happened |
+| `stm32f411_gpio_signature` | `firmware/targets/stm32f411ceu6` using ST CMSIS/startup/system sources | `stm32f103_gpio_signature` | pass | First probe endpoint attempt at `192.168.2.102` was blocked in preflight. After correcting the probe instance to `192.168.2.103` and fixing the nested-build-dir Makefile issue, the live run passed as `2026-03-14_06-48-30_stm32f411ceu6_stm32f411_gpio_signature`. |
 
 ## Results summary
 
 - passed:
-  - none in this round yet
+  - `stm32f411_gpio_signature`
 - failed:
-  - none in this round yet
+  - none in this round
 - partial:
-  - minimal GPIO signature plan and firmware path were created and resolved locally
+  - first run attempt revealed the stale `.102` probe endpoint and the nested-build-dir Makefile gap
 - blocked:
-  - first live run blocked in preflight because `192.168.2.102` was unreachable
+  - no remaining blockers for the GPIO signature path after the probe endpoint was corrected to `.103`
 
 ## Inferred assumptions
 
@@ -136,20 +136,22 @@
 - what succeeded:
   - the bench contract was frozen before code generation
 - what failed:
-  - first hardware validation could not start because the F411 probe endpoint was unreachable
+  - the first attempt used an outdated probe endpoint (`192.168.2.102`) and failed preflight
+  - the first corrected `.103` attempt exposed a build-system gap when using nested artifact directories
 - what was learned:
   - direct-observation GPIO is still the safest first F411 validation step
-  - the current blocker is bench reachability, not a proven firmware or plan defect
+  - the live bench probe instance for STM32F411 is `esp32jtag_stm32f411 @ 192.168.2.103:4242`
+  - F411 target Makefiles must create nested object directories under custom build paths
 - what should be written back into skills/workflows/specs:
   - first-round reports must separate bench-unreachable blocks from DUT/test failures
 
 ## Recommended next step
 
 - next safest implementation step:
-  - keep the current `stm32f411_gpio_signature` implementation unchanged until the probe path is reachable
+  - expand from the validated GPIO signature path into UART, ADC, SPI, and the shared-loopback family using the frozen F411 connection contract
 - next safest validation step:
-  - restore reachability of `esp32jtag_stm32f411 @ 192.168.2.102:4242`
-  - then rerun `stm32f411_gpio_signature`
+  - keep `esp32jtag_stm32f411 @ 192.168.2.103:4242` as the active probe endpoint
+  - continue the staged peripheral bring-up sequence on live hardware
 - user or bench facts still needed:
   - whether the F411 probe is powered and on the expected network
   - whether the EEPROM footprint is populated
