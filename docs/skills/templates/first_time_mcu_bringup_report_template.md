@@ -86,3 +86,12 @@
 - next safest implementation step:
 - next safest validation step:
 - user or bench facts still needed:
+
+## Closeout validation
+
+- cleaned full per-board suite rerun result:
+- representative default-verification decision:
+- if added to default verification, exact DUT-backed step selected:
+- live default-verification evidence:
+- DUT registration result:
+- closeout note path:

@@ -98,6 +98,12 @@ Use this order for closeout notes:
 5. what this does not prove
 6. anchor impact
 
+For new-board bring-up closeout notes, also include:
+7. cleaned full-suite rerun result
+8. DUT registration result
+9. representative default-verification decision
+10. if added, live default-verification evidence
+
 ## How It Upgrades Project Memory
 This skill is the bridge between:
 - raw run evidence
