@@ -667,7 +667,7 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
         "execution_policy": {"kind": "parallel"},
         "steps": [
             {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
-            {"board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
+            {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -694,7 +694,7 @@ def test_serial_default_verification_prints_selected_dut_tests(tmp_path, capsys)
         "mode": "sequence",
         "execution_policy": {"kind": "serial"},
         "steps": [
-            {"board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
+            {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -714,7 +714,7 @@ def test_sequence_setting_materializes_suite_and_tasks():
         "execution_policy": {"kind": "parallel"},
         "steps": [
             {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
-            {"board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
+            {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 
@@ -723,7 +723,7 @@ def test_sequence_setting_materializes_suite_and_tasks():
     assert suite.name == "default_verification"
     assert suite.execution_policy["kind"] == "parallel"
     assert [task.name for task in suite.tasks] == ["rp2040_gpio_signature", "stm32f103_gpio_signature"]
-    assert [task.board for task in suite.tasks] == ["rp2040_pico", "stm32f103"]
+    assert [task.board for task in suite.tasks] == ["rp2040_pico", "stm32f103_gpio"]
 
 
 def test_presets_emit_dut_test_selectors_only():
@@ -752,7 +752,7 @@ def test_sequence_setting_rejects_alias_name_and_setup_override():
         "steps": [
             {
                 "name": "stm32_alias",
-                "board": "stm32f103",
+                "board": "stm32f103_gpio",
                 "test": "tests/plans/stm32f103_gpio_signature.json",
                 "instrument_instance": "esp32jtag_stm32_golden",
             }
@@ -773,7 +773,7 @@ def test_sequence_setting_rejects_non_dut_test_reference(tmp_path):
         "mode": "sequence",
         "steps": [
             {
-                "board": "stm32f103",
+                "board": "stm32f103_gpio",
                 "test": str(stray),
             }
         ],
@@ -1047,7 +1047,7 @@ def test_parallel_suite_waits_for_other_workers_after_one_failure(tmp_path):
         "execution_policy": {"kind": "parallel"},
         "steps": [
             {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
-            {"board": "stm32f103", "test": "tests/plans/stm32f103_gpio_signature.json"},
+            {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
         ],
     }
 

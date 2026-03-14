@@ -1,20 +1,19 @@
-id: stm32f103
+id: stm32f103_uart
 mcu: stm32f103c8t6
 family: stm32f1
-description: STM32F103C8T6 Bluepill waveform + LED
+description: STM32F103C8T6 Bluepill UART bridge bench DUT
 build:
   type: cmake
   project_dir: firmware
 flash:
   method: gdb_swd
-default_packs:
-  - packs/smoke_stm32.json
 tags:
   - stm32
   - stm32f1
   - bluepill
+  - uart_bench
 verified:
   status: true
   verified_on:
     bench_id: default
-  date: 2026-02-28
+  date: 2026-03-13

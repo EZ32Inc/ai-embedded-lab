@@ -77,7 +77,10 @@ What is currently solid in this path:
 
 Current default verification sequence:
 
-1. `stm32f103_gpio_signature`
+1. `esp32c6_gpio_signature_with_meter`
+2. `rp2040_gpio_signature`
+3. `stm32f103_gpio_signature`
+4. `stm32f103_uart_banner`
 
 Source:
 
@@ -85,7 +88,7 @@ Source:
 
 Current status:
 
-- default verification is functioning correctly on the single configured DUT test and now uses the DUT test identity directly rather than a separate default-verification alias
+- default verification is functioning correctly on four configured DUT tests and now uses DUT-instance-backed test identities directly rather than a separate default-verification alias
 
 ## Current Workflow Maturity
 

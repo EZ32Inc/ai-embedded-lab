@@ -129,6 +129,27 @@ Separate:
 - inferred implementation detail
 - missing contract data
 
+## DUT Instance Disambiguation
+
+When adding a new test for a board family that already exists in AEL, do not assume it uses the existing DUT automatically.
+
+First classify it explicitly as one of:
+
+- `same_dut_instance`
+- `independent_dut_instance`
+
+Ask or confirm:
+
+1. Is this new test using the same physical DUT instance as the existing tests, or a separate physical DUT instance?
+2. If it is the same DUT instance, does it require a different setup state, wiring state, or dedicated instrument assignment?
+3. If it is a separate DUT instance, what is the new DUT instance id?
+
+Rules:
+
+- Same board family does not imply same DUT instance.
+- Same DUT instance should remain serialized through the existing `dut:<id>` resource lock.
+- Independent DUT instances should get distinct board ids and board configs.
+
 
 ## Stage Questions
 

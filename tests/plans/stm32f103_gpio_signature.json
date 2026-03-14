@@ -1,6 +1,6 @@
 {
   "name": "stm32f103_gpio_signature",
-  "board": "stm32f103",
+  "board": "stm32f103_gpio",
   "build": {
     "project_dir": "firmware/targets/stm32f103_gpio_signature",
     "artifact_stem": "stm32f103_gpio_signature_app",

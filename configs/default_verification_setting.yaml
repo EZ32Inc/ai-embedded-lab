@@ -13,8 +13,12 @@
       "test": "tests/plans/rp2040_gpio_signature.json"
     },
     {
-      "board": "stm32f103",
+      "board": "stm32f103_gpio",
       "test": "tests/plans/stm32f103_gpio_signature.json"
+    },
+    {
+      "board": "stm32f103_uart",
+      "test": "tests/plans/stm32f103_uart_banner.json"
     }
   ],
   "stop_on_fail": false,

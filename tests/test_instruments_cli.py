@@ -70,7 +70,7 @@ def test_run_cli_defers_control_instrument_selection_when_not_explicit(monkeypat
     monkeypatch.setattr(ael_main, "run_cli", _fake_run_cli)
     monkeypatch.setattr(
         "sys.argv",
-        ["ael", "run", "--board", "stm32f103", "--test", "tests/plans/stm32f103_uart_banner.json"],
+        ["ael", "run", "--board", "stm32f103_uart", "--test", "tests/plans/stm32f103_uart_banner.json"],
     )
 
     with pytest.raises(SystemExit) as exc:
@@ -78,7 +78,7 @@ def test_run_cli_defers_control_instrument_selection_when_not_explicit(monkeypat
 
     assert exc.value.code == 0
     assert captured["probe_path"] is None
-    assert captured["board_id"] == "stm32f103"
+    assert captured["board_id"] == "stm32f103_uart"
     assert captured["test_path"] == "tests/plans/stm32f103_uart_banner.json"
 
 
@@ -102,7 +102,7 @@ def test_run_cli_uses_explicit_control_instrument_override(monkeypatch):
             "ael",
             "run",
             "--board",
-            "stm32f103",
+            "stm32f103_uart",
             "--test",
             "tests/plans/stm32f103_uart_banner.json",
             "--control-instrument",

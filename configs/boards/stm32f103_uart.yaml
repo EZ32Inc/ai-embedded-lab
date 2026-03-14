@@ -1,7 +1,7 @@
 board:
-  name: STM32F103 Bluepill
+  name: STM32F103 Bluepill UART Bench
   target: stm32f103c8t6
-  instrument_instance: esp32jtag_stm32_golden
+  instrument_instance: esp32jtag_stm32_uart
   clock_hz: 8000000
   build:
     type: arm_debug

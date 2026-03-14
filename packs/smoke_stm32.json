@@ -1,6 +1,6 @@
 {
   "name": "smoke_stm32",
-  "board": "stm32f103",
+  "board": "stm32f103_gpio",
   "tests": [
     "tests/plans/stm32f103_gpio_signature.json"
   ]

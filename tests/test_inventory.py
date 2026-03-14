@@ -25,7 +25,7 @@ def test_build_inventory_includes_key_duts_and_mcus():
 
 def test_build_inventory_includes_pack_linked_stm32_test_and_no_missing_smoke_ref():
     payload = inventory.build_inventory(REPO_ROOT)
-    stm32 = next(item for item in payload["duts"] if item["dut_id"] == "stm32f103")
+    stm32 = next(item for item in payload["duts"] if item["dut_id"] == "stm32f103_gpio")
     assert any(test["name"] == "stm32f103_gpio_signature" and any(source["via"] == "pack" for source in test["sources"]) for test in stm32["tests"])
     rp2040 = next(item for item in payload["duts"] if item["dut_id"] == "rp2040_pico")
     assert not any(test["path"] == "tests/plans/uart_banner.json" for test in rp2040["tests"])
@@ -52,6 +52,7 @@ def test_inventory_text_render_omits_generic_section():
     text = inventory.render_text(payload)
     assert "generic_tests" not in text
     assert "stm32f103_gpio_signature" in text
+    assert "stm32f103_uart_banner" in text
     assert "rp2040_gpio_signature" in text
 
 
@@ -80,7 +81,7 @@ def test_build_instrument_instance_inventory_includes_references():
     meter = next(item for item in payload["instruments"] if item["id"] == "esp32s3_dev_c_meter")
     assert payload["summary"]["control_instrument_instance_count"] >= 1
     assert probe["kind"] == "control_instrument_instance"
-    assert "stm32f103" in probe["referenced_by"]["boards"]
+    assert "stm32f103_gpio" in probe["referenced_by"]["boards"]
     assert "stm32f401rct6" in probe["referenced_by"]["boards"]
     assert "esp32c6_gpio_signature_with_meter.json" in " ".join(meter["referenced_by"]["plans"])
     assert probe["metadata_validation_errors"] == []
@@ -213,7 +214,7 @@ def test_describe_test_for_generated_rp2040_adc_contract():
 
 
 def test_describe_test_for_generated_stm32_spi_contract():
-    payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
+    payload = inventory.describe_test("stm32f103_gpio", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
     assert payload["ok"] is True
     bench_setup = payload["connection_setup"]["bench_setup"]
     assert "serial_console" not in bench_setup
@@ -221,17 +222,17 @@ def test_describe_test_for_generated_stm32_spi_contract():
     assert any(conn["from"] == "SPI1_SCK" and conn["to"] == "PA5" for conn in payload["connections"])
     assert any(conn["from"] == "SPI_LOOPBACK" and conn["to"] == "PA6/SPI1_MISO" for conn in payload["connections"])
     rendered = inventory.render_connection_text(
-        inventory.describe_connection("stm32f103", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
+        inventory.describe_connection("stm32f103_gpio", "tests/plans/stm32f103_spi_banner.json", REPO_ROOT)
     )
     assert "SPI1_SCK -> PA5" in rendered
     assert "SPI_LOOPBACK -> PA6/SPI1_MISO" in rendered
 
 
 def test_describe_test_for_generated_stm32_uart_dual_instrument_contract():
-    payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_uart_banner.json", REPO_ROOT)
+    payload = inventory.describe_test("stm32f103_uart", "tests/plans/stm32f103_uart_banner.json", REPO_ROOT)
     assert payload["ok"] is True
-    assert payload["selected_dut"]["id"] == "stm32f103"
-    assert payload["selected_board_profile"]["id"] == "stm32f103"
+    assert payload["selected_dut"]["id"] == "stm32f103_uart"
+    assert payload["selected_board_profile"]["id"] == "stm32f103_uart"
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_uart"
     bench_setup = payload["connection_setup"]["bench_setup"]
     assert bench_setup["serial_console"]["port"] == "/dev/ttyUSB0"
@@ -314,7 +315,7 @@ def test_inventory_diff_connection_cli_text_output():
 
 
 def test_describe_test_for_stm32f103_gpio_signature_multi_signal_contract():
-    payload = inventory.describe_test("stm32f103", "tests/plans/stm32f103_gpio_signature.json", REPO_ROOT)
+    payload = inventory.describe_test("stm32f103_gpio", "tests/plans/stm32f103_gpio_signature.json", REPO_ROOT)
     assert payload["ok"] is True
     checks = payload["expected_checks"]
     assert any(check["type"] == "signal" and check["pin"] == "pa4" for check in checks)

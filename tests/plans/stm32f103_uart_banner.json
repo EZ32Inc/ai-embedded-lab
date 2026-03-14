@@ -1,6 +1,6 @@
 {
   "name": "stm32f103_uart_banner",
-  "board": "stm32f103",
+  "board": "stm32f103_uart",
   "pin": "sig",
   "duration_s": 1.0,
   "expected_hz": 2.5,

@@ -8,6 +8,7 @@ This catalog exists to make those behaviors testable and repeatable across versi
 
 Historical approved references can remain in the repo as archival evidence. They should be labeled as historical when they no longer represent the current live inventory or runtime output.
 Approved references should prefer canonical DUT test names over orchestration aliases unless the reference is intentionally preserving historical wording.
+When a new test targets an existing board family, the AI should explicitly disambiguate whether it belongs to the same physical DUT instance or to a new DUT instance before proposing inventory/config changes.
 
 The goal is not exact text matching. The goal is to define whether the AI:
 

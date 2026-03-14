@@ -23,8 +23,10 @@ Current DUTs and tests:
   - recovery_demo_signal_fail_after_recovery
   - recovery_demo_signal_fail_first
   - recovery_demo_uart_fail_first
-- stm32f103
+- stm32f103_gpio
   - stm32f103_gpio_signature
+- stm32f103_uart
+  - stm32f103_uart_banner
 - stm32f401rct6
   - stm32f401_gpio_signature
   - stm32f401_gpio_smoke

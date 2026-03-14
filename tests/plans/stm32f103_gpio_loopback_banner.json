@@ -1,6 +1,6 @@
 {
   "name": "stm32f103_gpio_loopback_banner",
-  "board": "stm32f103",
+  "board": "stm32f103_gpio",
   "pin": "sig",
   "duration_s": 1.0,
   "min_freq_hz": 35.0,

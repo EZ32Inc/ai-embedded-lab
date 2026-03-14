@@ -54,15 +54,17 @@ Expected behavior:
 
 Useful commands:
 ```bash
-python3 -m ael inventory describe-test --board stm32f103 --test tests/plans/stm32f103_gpio_signature.json
-python3 -m ael explain-stage --board stm32f103 --test tests/plans/stm32f103_gpio_signature.json --stage plan
-python3 -m ael run --board stm32f103 --test tests/plans/stm32f103_gpio_signature.json
-python3 -m ael run --board stm32f103 --test tests/plans/stm32f103_gpio_loopback_banner.json
+python3 -m ael inventory describe-test --board stm32f103_gpio --test tests/plans/stm32f103_gpio_signature.json
+python3 -m ael explain-stage --board stm32f103_gpio --test tests/plans/stm32f103_gpio_signature.json --stage plan
+python3 -m ael run --board stm32f103_gpio --test tests/plans/stm32f103_gpio_signature.json
+python3 -m ael run --board stm32f103_gpio --test tests/plans/stm32f103_gpio_loopback_banner.json
+python3 -m ael inventory describe-test --board stm32f103_uart --test tests/plans/stm32f103_uart_banner.json
+python3 -m ael run --board stm32f103_uart --test tests/plans/stm32f103_uart_banner.json
 ```
 
 Latest known-good golden GPIO run:
-- run id: `2026-03-13_15-47-59_stm32f103_stm32f103_gpio_signature`
-- artifact: `runs/2026-03-13_15-47-59_stm32f103_stm32f103_gpio_signature/result.json`
+- run id: `2026-03-13_19-19-14_stm32f103_gpio_stm32f103_gpio_signature`
+- artifact: `runs/2026-03-13_19-19-14_stm32f103_gpio_stm32f103_gpio_signature/result.json`
 
 Notes:
 - BMDA/GDB flash for STM32F103 is intentionally not wrapped in the generic tee logger.

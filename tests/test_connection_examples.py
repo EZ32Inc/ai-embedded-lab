@@ -31,7 +31,7 @@ def test_meter_backed_live_plans_explicitly_confirm_ground_when_required():
 
 def test_probe_observed_live_boards_explicitly_include_ground_in_bench_connections():
     boards_dir = REPO_ROOT / "configs" / "boards"
-    for board_name in ("rp2040_pico", "stm32f103", "stm32f401rct6"):
+    for board_name in ("rp2040_pico", "stm32f103_gpio", "stm32f103_uart", "stm32f401rct6"):
         text = (boards_dir / f"{board_name}.yaml").read_text(encoding="utf-8")
         assert "from: GND" in text, f"{board_name} missing explicit GND bench connection"
 
@@ -39,7 +39,7 @@ def test_probe_observed_live_boards_explicitly_include_ground_in_bench_connectio
 def test_live_signal_boards_have_no_semantic_conn_a_warnings_for_gpio_signature():
     plan_by_board = {
         "rp2040_pico": "rp2040_gpio_signature.json",
-        "stm32f103": "stm32f103_gpio_signature.json",
+        "stm32f103_gpio": "stm32f103_gpio_signature.json",
     }
     for board_name, plan_name in plan_by_board.items():
         test_payload = _load_json(REPO_ROOT / "tests" / "plans" / plan_name)

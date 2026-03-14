@@ -92,6 +92,15 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     assert any(item['capability'] == 'measure.voltage' and item['surface'] == 'primary' for item in payload['selected']['capability_surface_plan'])
 
 
+def test_explain_plan_for_stm32_uart_instance_uses_uart_bench_profile():
+    payload = stage_explain.explain_stage('stm32f103_uart', 'tests/plans/stm32f103_uart_banner.json', 'plan', REPO_ROOT)
+    assert payload['ok'] is True
+    assert payload["selected"]["selected_dut"]["id"] == "stm32f103_uart"
+    assert payload["selected"]["selected_board_profile"]["id"] == "stm32f103_uart"
+    assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/stm32f103_uart.yaml"
+    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_uart'
+
+
 def test_render_text_includes_communication_blocks_readably():
     text = stage_explain.render_text(
         {

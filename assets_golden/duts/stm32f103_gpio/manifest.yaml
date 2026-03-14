@@ -1,0 +1,21 @@
+id: stm32f103_gpio
+mcu: stm32f103c8t6
+family: stm32f1
+description: STM32F103C8T6 Bluepill GPIO/signature bench DUT
+build:
+  type: cmake
+  project_dir: firmware
+flash:
+  method: gdb_swd
+default_packs:
+  - packs/smoke_stm32.json
+tags:
+  - stm32
+  - stm32f1
+  - bluepill
+  - gpio_bench
+verified:
+  status: true
+  verified_on:
+    bench_id: default
+  date: 2026-03-13
