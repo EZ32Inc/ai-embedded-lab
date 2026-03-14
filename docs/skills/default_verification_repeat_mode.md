@@ -21,6 +21,13 @@ This document is about:
 - `python3 -m ael verify-default repeat-until-fail --limit N`
 - outer shell loops around `verify-default run`
 
+Live-bench validity rule:
+
+- do not do sandbox trial runs first for real-bench `verify-default` commands
+- if bench access is blocked before the suite reaches real hardware, classify
+  the run as `INVALID`
+- do not mix `INVALID` runs into pass/fail reliability judgments
+
 ## 3. Background
 
 The default verification suite is now a parallel suite of independent workers.
@@ -92,11 +99,13 @@ Collect these before explaining repeat behavior:
 - `verify-default run`:
   - one suite pass
   - each worker runs once
+  - `INVALID` if the bench was not actually reachable
 
 - `verify-default repeat --limit N`:
   - preferred repeated-run mode
   - each worker repeats independently
   - fast workers can advance without waiting for slow unrelated workers
+  - count only bench-reachable runs when judging stability
 
 - `verify-default repeat-until-fail --limit N`:
   - compatibility alias for the same worker-level repeat behavior
@@ -104,6 +113,7 @@ Collect these before explaining repeat behavior:
 - outer shell loop around `verify-default run`:
   - repeats the full suite process
   - not the preferred model when each board should keep progressing on its own
+  - each suite iteration is meaningful only if it had valid bench access
 
 ## 8. Recommended Output Format
 
@@ -113,6 +123,10 @@ When explaining repeat behavior, report:
   - `single_suite_run`
   - `worker_level_repeat`
   - `outer_suite_loop`
+- validity classification:
+  - `PASS`
+  - `FAIL`
+  - `INVALID`
 - whether worker progression was independent
 - whether any delay came from real shared resources
 - next recommended command if the current mode was not the desired one

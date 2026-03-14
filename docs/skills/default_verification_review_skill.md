@@ -10,6 +10,7 @@ Its job is to:
 - summarize pass or fail state without forcing the user to parse raw logs
 - surface important caveats or weak points
 - communicate current baseline confidence clearly
+- distinguish real failures from invalid non-bench runs
 
 It is a workflow and reporting skill specification, not a runtime feature.
 
@@ -71,6 +72,7 @@ This skill should keep separate:
 
 - overall baseline health
 - per-step success or failure
+- invalid runs with no real bench access
 - known caveats or weak points
 - current coverage gaps
 
@@ -82,10 +84,12 @@ Recommended flow:
 2. Inspect the executed sequence and per-step results.
 3. Identify which board, test, and instrument paths were exercised.
 4. Summarize the pass or fail state for each step.
-5. Summarize the overall baseline health.
-6. Identify caveats, warnings, weak points, or partial limitations.
-7. Restate the current baseline confidence in practical terms.
-8. Present the recommended next interpretation or safe next action.
+5. Classify any sandbox-blocked or network-policy-blocked live-bench attempt as
+   `INVALID`.
+6. Summarize the overall baseline health.
+7. Identify caveats, warnings, weak points, or partial limitations.
+8. Restate the current baseline confidence in practical terms.
+9. Present the recommended next interpretation or safe next action.
 
 The output should stay concise, but it must be useful for deciding whether the current baseline is healthy enough to proceed.
 
@@ -97,6 +101,7 @@ At minimum, this skill should produce:
 - per-step result summary
 - which board, test, and instrument paths were exercised
 - overall baseline health assessment
+- explicit distinction between `FAIL` and `INVALID` where relevant
 - important caveats or known weak points
 - recommended next interpretation or next safe action
 
@@ -115,6 +120,7 @@ Successful execution of this skill means:
 - the user can quickly understand whether the current baseline is healthy
 - the default verification sequence is clearly restated
 - pass/fail is summarized without forcing the user to parse raw logs
+- invalid non-bench attempts are not misreported as hardware failures
 - caveats and weak points are not hidden
 - the result is useful for deciding whether to proceed with more changes
 

@@ -207,3 +207,39 @@ When interpreting repeated default-verification requests, use worker-level repea
   - `python3 -m ael verify-default repeat --limit N`
 - Do not use an outer shell loop around `python3 -m ael verify-default run` unless the user explicitly asks for suite-round serialization.
 - Treat outer shell loops as a special case for round-by-round suite pacing, not the normal repeated baseline behavior.
+
+## Live Bench Execution
+
+Commands that touch live bench resources must be run with escalated permissions
+from the start.
+
+This includes commands that access:
+
+- real instrument endpoints
+- DUT network endpoints
+- probe APIs
+- serial bridge daemons
+- hardware verification flows
+
+Examples:
+
+- `python3 -m ael verify-default run`
+- `python3 -m ael verify-default repeat --limit N`
+- `python3 -m ael run --board <board_id> --test <test_path>`
+- live bridge/probe smoke commands against real bench endpoints
+
+Rules:
+
+1. Do not perform sandbox trial runs first for live-bench commands.
+2. If a sandboxed live-bench command fails due to network restriction or bench
+   access policy, classify it as `INVALID`, not `FAIL`.
+3. `INVALID` means the command did not have valid bench access and no hardware
+   conclusion is allowed.
+4. Only bench-reachable runs should be used for DUT, probe, instrument, or
+   suite health judgments.
+
+Interpretation:
+
+- `PASS`: the real bench was reached and validation succeeded.
+- `FAIL`: the real bench was reached and validation failed.
+- `INVALID`: the real bench was not actually reached.

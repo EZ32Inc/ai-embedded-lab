@@ -12,6 +12,12 @@ Stress it with:
 python3 -m ael verify-default repeat --limit 20
 ```
 
+For real bench execution, prefer:
+
+```bash
+tools/run_live_bench.sh python3 -m ael verify-default run
+```
+
 Health-hardening note:
 
 - repeat-mode health output is intended to show bounded repeatability evidence
@@ -22,6 +28,16 @@ Health-hardening note:
   - expected Local Instrument Interface path counts:
     - `control_instrument_native_api`
     - `meter_native_api`
+
+Live-bench validity:
+
+- `verify-default` is a live-bench command when it is intended to touch real
+  DUTs and instruments
+- do not do a sandbox trial run first for such commands
+- if a run is blocked by sandbox/network policy before reaching the bench,
+  classify it as `INVALID`, not `FAIL`
+- `INVALID` runs must not be counted as DUT, probe, instrument, or suite
+  failures
 
 Preferred repeated-run mode:
 
@@ -51,6 +67,10 @@ Current execution model:
 - default verification currently retries transient instrument transport/API
   failures once, but fails fast for clearly unreachable instruments and does
   not auto-retry verify-stage instrument mismatches
+- summaries and operator interpretation should distinguish:
+  - `PASS`: real bench reached and validation passed
+  - `FAIL`: real bench reached and validation failed
+  - `INVALID`: real bench not reached
 
 Current default sequence:
 
