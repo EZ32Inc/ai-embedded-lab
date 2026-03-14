@@ -73,6 +73,13 @@ Instead, v0.1 proposes four things:
 3. a minimal state/data model to support them,
 4. simple retrieve/write guidelines for AI.
 
+Important v0.1 implementation note:
+
+- v0.1 should be **derived-state first**
+- it should not assume that AEL already has a committed, first-class stored state layer for all project questions
+- in many cases, the first useful state object may be derived from current config, inventory output, current capability docs, and recent closeout/repeat notes
+- only after that proves useful should AEL decide whether additional committed state objects are needed
+
 ---
 
 ## 4. Design Principles
@@ -249,6 +256,18 @@ Recommended answer structure:
 - Best next recommended action
 - Key references (if needed)
 
+Health/result interpretation should distinguish:
+
+- `PASS`
+- `FAIL`
+- `INVALID`
+
+Where:
+
+- `PASS` means the intended live validation completed successfully,
+- `FAIL` means the intended live validation ran and found a real failing condition,
+- `INVALID` means the attempted run did not produce a valid bench verdict, for example because of sandbox/network blocking, unreachable live bench infrastructure, or a broken execution context before the intended validation could occur.
+
 ### 9.2 “What is the current blocker?”
 
 Recommended answer structure:
@@ -314,12 +333,15 @@ At minimum, support these object types:
 
 1. **System-owned baseline object**
    - example: `default verification`
+   - current AEL reality: this already has strong natural authority sources in config, runtime, and review docs
 
 2. **Board/capability object**
    - example: `stm32f411ceu6`
+   - current AEL reality: this is already partly represented by DUT inventory, capability notes, bring-up reports, and repeat-validation notes
 
 3. **User project object**
    - example: a future `ProjectXYZ`
+   - current AEL reality: this is future-facing and should not be over-modeled in v0.1
 
 ### 10.2 Minimal state fields
 
@@ -337,6 +359,13 @@ Recommended minimal fields:
 - `key_refs`
 
 Optional later fields may be added, but these are enough for v0.1.
+
+Important scope note:
+
+- for v0.1, AEL should prioritize the first two object types:
+  - system baseline object
+  - board/capability object
+- user project objects are still valuable, but they are the least mature part of the current repo reality and should remain future-facing in the first implementation
 
 ### 10.3 Relationship between state and the file system
 
@@ -356,7 +385,32 @@ This keeps v0.1 practical:
 - existing repo assets remain usable,
 - and the exact file layout can keep evolving while the question/state layer is reviewed.
 
-### 10.4 Example conceptual state object
+### 10.4 Derived-state first
+
+In current AEL, the most realistic first implementation is often a **derived state object**, not a newly invented stored state file.
+
+Examples:
+
+- a `default verification` state object can be derived from:
+  - current default-verification config,
+  - runtime/default-verification code paths,
+  - recent default-verification review docs,
+  - current validated capability summary
+- a board/capability state object can be derived from:
+  - DUT inventory,
+  - `inventory describe-test`,
+  - capability anchor notes,
+  - bring-up reports,
+  - repeat-validation notes
+
+This keeps v0.1 aligned with current repo reality:
+
+- answer quality can improve before a new storage layer exists,
+- authority remains visible,
+- duplication is minimized,
+- and AEL can defer creating committed state files unless they prove clearly useful.
+
+### 10.5 Example conceptual state object
 
 ```json
 {
@@ -377,7 +431,7 @@ This keeps v0.1 practical:
   "next_recommended_action": "stabilize esp32c6 flash/serial path and rerun default verification",
   "key_refs": [
     "configs/default_verification_setting.yaml",
-    "docs/specs/default_verification_baseline.md"
+    "docs/default_verification_baseline.md"
   ]
 }
 ```
@@ -416,11 +470,28 @@ The intent is to make files easier to use by placing a lightweight AI-first ques
 
 To keep the system lightweight and stable, AI should use simple source-priority rules.
 
+### 12.0 Compact authority map for high-frequency questions
+
+Recommended current authority map:
+
+| Question | Primary authority | Secondary authority |
+| --- | --- | --- |
+| What DUTs/tests exist right now? | `python3 -m ael inventory list` | current DUT inventory AI references |
+| What are the connections/setup for test X? | `python3 -m ael inventory describe-test --board <board> --test <test>` | board config + test plan |
+| What is included in default verification right now? | `configs/default_verification_setting.yaml` | `python3 -m ael verify-default run` and default-verification docs |
+| Is board X already part of default verification? | `configs/default_verification_setting.yaml` | current default-verification review docs |
+| What is the current status of board X? | current capability anchor / bring-up closeout / repeat-validation note | DUT inventory and describe-test |
+| What was the last successful run? | most recent closeout / repeat-validation / result note | run artifacts under `runs/` |
+| What is the current blocker? | latest closeout / repeat note / current validated capability summary | latest run evidence and operator notes |
+
+This table should stay lightweight.
+It is meant to make current authority obvious, not to define a large permanent ontology.
+
 ### 12.1 For current-state questions
 
 Recommended priority:
 
-1. structured state object
+1. derived or stored state object, if one exists and is current
 2. current config/current active status docs
 3. most recent summary/closeout/repeat note
 4. git history / older historical docs
@@ -459,6 +530,8 @@ AI may update fields such as:
 - `validated_tests`
 - `next_recommended_action`
 
+If no committed state object exists yet, AI may instead update the narrative or closeout layer that currently serves as the effective state authority.
+
 ### 13.2 Summary/note documents
 
 AI may write or update:
@@ -490,6 +563,12 @@ Instead:
 - but they should not be forced into the exact same role.
 
 This is a natural-growth model, not a replace-everything model.
+
+Current repo reality:
+
+- `default verification` already behaves like a real system-owned baseline object
+- board/capability objects are already partly real through DUT inventory plus closeout/capability notes
+- user project objects are not yet equally mature and should not drive the first v0.1 implementation
 
 ---
 
