@@ -128,9 +128,12 @@ Recommended fields:
 - `project_id`
 - `project_name`
 - `project_type`
+- `domain`
 - `user_goal`
 - `target_mcu`
 - `closest_mature_ael_path`
+- `system_refs`
+- `cross_domain_links`
 - `status`
 - `confirmed_facts`
 - `assumptions`
@@ -139,6 +142,9 @@ Recommended fields:
 - `last_action`
 - `next_recommended_action`
 - `key_refs`
+- optional:
+  - `tool_branch`
+  - `system_change_status`
 
 This is enough for v0.1.
 
@@ -167,9 +173,18 @@ Example `project.yaml`:
 project_id: stm32f411_first_example
 project_name: STM32F411 first example project
 project_type: user_project
+domain: user_project_domain
 user_goal: Create a first example project for a board using stm32f411ceu6
 target_mcu: stm32f411ceu6
 closest_mature_ael_path: stm32f411ceu6
+system_refs:
+  - docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md
+  - docs/specs/stm32f411ceu6_connection_contract_draft_v0_1.md
+  - docs/specs/stm32f411ceu6_capability_anchor_status_v0_1.md
+cross_domain_links:
+  - type: mature_capability_anchor
+    target: stm32f411ceu6
+    reason: project is anchored to the current mature F411 capability path
 status: shell_created
 confirmed_facts:
   - User has a board using stm32f411ceu6
@@ -298,6 +313,32 @@ For this worked example:
 
 - `stm32f411ceu6` capability status remains authoritative for what is mature
 - the project shell is only the user-facing working context
+
+## Branch-Specific System Variants
+
+Some AEL system changes may exist only in a project/tool branch.
+
+In v0.1, represent that lightly:
+
+- keep branch-specific tool changes out of the core project summary unless they matter to the project directly
+- when they do matter, record them in project metadata and notes rather than introducing a branch database
+
+Recommended optional fields:
+
+- `tool_branch`
+- `system_change_status`
+
+Suggested values for `system_change_status`:
+
+- `local_variant`
+- `candidate_for_integration`
+- `integrated`
+
+Use these lightly:
+
+- `local_variant` for project-specific tool helpers or diagnostics
+- `candidate_for_integration` for branch-local changes that may be worth upstreaming
+- `integrated` once the relevant system change is already part of canonical AEL
 
 ## What To Implement Now
 

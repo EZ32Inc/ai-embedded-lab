@@ -297,3 +297,45 @@
     - "response points to mature F411 setup/capability information"
     - "response keeps generation as the next stage, not the current one"
   notes: "Protects the shell-first then setup-discussion then generation flow."
+
+- case_id: user_project_domain_split_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "For this stm32f411 first-example project, what belongs to the system domain versus the user project domain?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: false
+  required_output_elements:
+    - "system-domain items such as default verification and stm32f411 capability support"
+    - "user-project-domain items such as project goal, assumptions, unresolved items, and next step"
+    - "explicit distinction between the two domains"
+  forbidden_failure_modes:
+    - "mixing the project shell into the system baseline"
+    - "treating default verification as a user project"
+    - "failing to distinguish project-local state from system capability state"
+  judge_rubric:
+    - "response clearly separates system domain from user project domain"
+    - "response keeps default verification in the system domain"
+    - "response keeps project goal and project-local notes in the user project domain"
+  notes: "Domain-aware answer case for the first concrete user-project scenario."
+
+- case_id: user_project_cross_domain_link_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "What system path is this stm32f411 first-example project linked to, and why?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: false
+  required_output_elements:
+    - "link to the mature stm32f411ceu6 system capability path"
+    - "reason the project is linked to that path"
+    - "brief distinction between project-local context and system authority"
+  forbidden_failure_modes:
+    - "omitting the stm32f411ceu6 mature-path linkage"
+    - "claiming the project itself is the system capability anchor"
+    - "answering as if there were no cross-domain relationship"
+  judge_rubric:
+    - "response identifies the mature stm32f411ceu6 system path"
+    - "response explains why the project is linked to it"
+    - "response keeps project and system domains distinct"
+  notes: "Cross-domain link answer case for the first concrete user-project shell."

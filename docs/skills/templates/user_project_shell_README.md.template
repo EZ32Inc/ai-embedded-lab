@@ -9,6 +9,12 @@
 - project shell created
 - target MCU: `{{TARGET_MCU}}`
 - closest mature AEL path: `{{MATURE_PATH}}`
+- domain: `user_project_domain`
+
+## Cross-Domain Links
+
+- mature capability anchor: `{{MATURE_PATH}}`
+- reason: {{CROSS_DOMAIN_REASON}}
 
 ## Confirmed Facts
 

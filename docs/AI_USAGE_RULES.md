@@ -222,7 +222,15 @@ Rules:
 - treat the project shell as a lightweight user-facing context layer
 - keep `default verification` as a system-owned baseline object
 - keep board/capability notes as the technical authority
+- record lightweight cross-domain links when the project is anchored to current system capabilities
 - do not design a heavy project-management system for this v0.1 case
+
+If branch-specific AEL tool changes matter to the project, record them lightly:
+
+- `tool_branch`
+- `system_change_status`
+
+Do not introduce a broad branch-tracking subsystem for this v0.1 flow.
 
 Worked example:
 

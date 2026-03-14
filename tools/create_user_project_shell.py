@@ -30,6 +30,10 @@ def main() -> int:
     p.add_argument("--confirmed-fact", default="")
     p.add_argument("--assumption", default="")
     p.add_argument("--unresolved-item", action="append", default=[])
+    p.add_argument("--system-ref", action="append", default=[])
+    p.add_argument("--cross-domain-reason", default="")
+    p.add_argument("--tool-branch", default="")
+    p.add_argument("--system-change-status", default="integrated")
     p.add_argument("--output-root", default="projects")
     args = p.parse_args()
 
@@ -47,13 +51,27 @@ def main() -> int:
         f"The user's board is close enough to the current mature {args.mature_path} path to begin from a shell-first workflow"
     )
     next_action = "clarify setup, wiring, validation approach, and desired first example"
+    system_refs = list(args.system_ref or [])
+    while len(system_refs) < 2:
+        system_refs.append("")
+    cross_domain_reason = args.cross_domain_reason or (
+        f"project is anchored to the current mature {args.mature_path} capability path"
+    )
 
     project_yaml = f"""project_id: {project_id}
 project_name: {args.project_name}
 project_type: user_project
+domain: user_project_domain
 user_goal: {args.user_goal}
 target_mcu: {args.target_mcu}
 closest_mature_ael_path: {args.mature_path}
+system_refs:
+  - {system_refs[0]}
+  - {system_refs[1]}
+cross_domain_links:
+  - type: mature_capability_anchor
+    target: {args.mature_path}
+    reason: {cross_domain_reason}
 status: shell_created
 confirmed_facts:
   - {confirmed_fact}
@@ -65,6 +83,8 @@ unresolved_items:
 current_blocker: ""
 last_action: created_project_shell
 next_recommended_action: {next_action}
+tool_branch: {args.tool_branch}
+system_change_status: {args.system_change_status}
 key_refs:
   - projects/{project_id}/README.md
 """
@@ -80,6 +100,12 @@ key_refs:
 - project shell created
 - target MCU: `{args.target_mcu}`
 - closest mature AEL path: `{args.mature_path}`
+- domain: `user_project_domain`
+
+## Cross-Domain Links
+
+- mature capability anchor: `{args.mature_path}`
+- reason: {cross_domain_reason}
 
 ## Confirmed Facts
 
@@ -109,6 +135,12 @@ key_refs:
 - user goal: {args.user_goal}
 - target MCU: `{args.target_mcu}`
 - closest mature AEL path: `{args.mature_path}`
+- domain: `user_project_domain`
+
+## Cross-Domain Link
+
+- mature capability anchor: `{args.mature_path}`
+- reason: {cross_domain_reason}
 
 ## Confirmed Facts
 

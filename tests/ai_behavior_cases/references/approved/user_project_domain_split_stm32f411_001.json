@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "For the `stm32f411` first-example scenario:\n\nSystem domain includes:\n\n- `default verification`\n- current `stm32f411ceu6` DUT capability support\n- the F411 capability anchor note\n- inventory/runtime authorities\n- system setup and validation knowledge that already exists in AEL\n\nUser project domain includes:\n\n- the specific `stm32f411_first_example` project shell\n- the user goal\n- project-local confirmed facts, assumptions, and unresolved items\n- project-local notes and next step\n\nThese two domains should stay distinct.\nThe project may point to the mature F411 system path, but it should not be treated as the system capability anchor itself.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_project_domain_split_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "workflow_question",
+    "user_question": "For this stm32f411 first-example project, what belongs to the system domain versus the user project domain?"
+  }
+}

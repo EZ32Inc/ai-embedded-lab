@@ -1,0 +1,11 @@
+{
+  "approved_answer_draft": "This project is linked to the mature system path:\n\n- `stm32f411ceu6`\n\nWhy:\n\n- the project shell is intentionally anchored to the current mature F411 capability path\n- that gives the project a known setup/validation reference point\n- the project can reuse current F411 capability knowledge without becoming the system capability object itself\n\nThe project remains user-project-local context.\nThe mature `stm32f411ceu6` path remains the system-domain authority.\n",
+  "approved_at": "2026-03-14T00:00:00Z",
+  "approved_from": "manual_current_repo_state",
+  "case_input": {
+    "case_id": "user_project_cross_domain_link_stm32f411_001",
+    "case_type": "organic",
+    "intent_type": "workflow_question",
+    "user_question": "What system path is this stm32f411 first-example project linked to, and why?"
+  }
+}

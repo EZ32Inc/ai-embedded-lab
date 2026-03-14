@@ -22,8 +22,9 @@ For v0.1, do this instead:
 2. record the user goal
 3. resolve the closest mature AEL board/capability path
 4. record confirmed facts, assumptions, and unresolved items
-5. present the best next setup/validation questions
-6. only after that discuss generation, build, flash, and verify
+5. record lightweight cross-domain links to the mature system path
+6. present the best next setup/validation questions
+7. only after that discuss generation, build, flash, and verify
 
 ## Trigger / When To Use
 
@@ -48,6 +49,8 @@ At minimum, this skill should produce:
 - `README.md`
 - `session_notes.md`
 - selected mature board/capability anchor
+- domain marker showing this is user-project work
+- lightweight cross-domain links to the system domain
 - confirmed facts
 - assumptions
 - unresolved items
@@ -71,6 +74,7 @@ The skill should:
 - `default verification` remains a system-owned baseline object
 - board/capability notes remain the technical authority
 - the user project is only a lightweight user-facing working context
+- branch-specific tool variants may be recorded lightly as project metadata when relevant, but do not require a new subsystem
 
 ## Summary
 
