@@ -25,14 +25,21 @@ Default verification now selects DUT tests only. The DUT test plan remains the s
 - DUT test: `stm32f103_uart_banner`
 - Plan: `tests/plans/stm32f103_uart_banner.json`
 
+- DUT: `stm32f411ceu6`
+- DUT test: `stm32f411_gpio_signature`
+- Plan: `tests/plans/stm32f411_gpio_signature.json`
+
 ## Current validated result
 
-- default verification run:
-  - `2026-03-13_19-43-04_esp32c6_devkit_esp32c6_gpio_signature_with_meter` -> `PASS`
-  - `2026-03-13_19-44-57_stm32f103_gpio_stm32f103_gpio_signature` -> `PASS`
-  - `2026-03-13_19-45-37_stm32f103_uart_stm32f103_uart_banner` -> `PASS`
-- current non-code blocker:
-  - `rp2040_gpio_signature` is presently blocked by RP2040 probe/Wi-Fi reachability on `192.168.2.63`
+- latest live default-verification run with the current five-step config:
+  - `esp32c6_gpio_signature_with_meter` -> `FAIL`
+    - reason: flash stage reported `no serial port found`
+  - `2026-03-14_09-27-35_rp2040_pico_rp2040_gpio_signature` -> `PASS`
+  - `2026-03-14_09-27-58_stm32f103_gpio_stm32f103_gpio_signature` -> `PASS`
+  - `2026-03-14_09-28-28_stm32f103_uart_stm32f103_uart_banner` -> `PASS`
+  - `2026-03-14_09-29-06_stm32f411ceu6_stm32f411_gpio_signature` -> `PASS`
+- current non-code nuance:
+  - the baseline configuration is valid, but the ESP32-C6 path can still fail when its flash serial path is unavailable
 
 ## Notes
 

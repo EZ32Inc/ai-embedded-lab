@@ -73,6 +73,21 @@ What is currently solid in this path:
 - the STM32 BMDA post-load reattach sequence is stable in repeated golden runs
 - standardized validation summary and last-known-good setup output are present
 
+### 4. STM32F411 / WeAct Black Pill Verification Path
+
+- board family: `stm32f411`
+- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
+- main control-instrument path: `esp32jtag_stm32f411` at `192.168.2.103:4242` with LA verify via `https://192.168.2.103:443`
+- current status: validated on real hardware for the GPIO signature baseline and the first self-check suite
+
+What is currently solid in this path:
+
+- pre-flight control-instrument/network/LA checks are working
+- build and flash are working
+- logic-analyzer verification is working
+- GPIO signature, UART loopback, ADC, SPI, GPIO loopback, PWM, EXTI, and capture are all validated on real hardware
+- standardized validation summary and last-known-good setup output are present
+
 ## Current Default Verification Set
 
 Current default verification sequence:
@@ -81,6 +96,8 @@ Current default verification sequence:
 2. `rp2040_gpio_signature`
 3. `stm32f103_gpio_signature`
 4. `stm32f103_uart_banner`
+5. `stm32f411_gpio_signature`
+5. `stm32f411_gpio_signature`
 
 Source:
 
@@ -88,7 +105,27 @@ Source:
 
 Current status:
 
-- default verification is functioning correctly on four configured DUT tests and now uses DUT-instance-backed test identities directly rather than a separate default-verification alias
+- default verification is functioning correctly as a five-step DUT-backed orchestration path and now includes `stm32f411_gpio_signature`
+- latest live run with the five-step configuration passed on:
+  - `rp2040_gpio_signature`
+  - `stm32f103_gpio_signature`
+  - `stm32f103_uart_banner`
+  - `stm32f411_gpio_signature`
+- the same run still hit an existing ESP32-C6 flash/serial availability problem on `esp32c6_gpio_signature_with_meter`
+
+## Current STM32F411 Bring-Up Status
+
+- GPIO signature baseline: validated
+- first self-check suite: validated
+  - `stm32f411_uart_loopback_banner`
+  - `stm32f411_adc_banner`
+  - `stm32f411_spi_banner`
+  - `stm32f411_gpio_loopback_banner`
+  - `stm32f411_pwm_banner`
+  - `stm32f411_exti_banner`
+  - `stm32f411_capture_banner`
+- latest full suite rerun:
+  - all `8/8` STM32F411 tests passed on live hardware on `2026-03-14`
 
 ## Current Workflow Maturity
 

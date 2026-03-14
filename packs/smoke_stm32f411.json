@@ -1,0 +1,7 @@
+{
+  "name": "smoke_stm32f411",
+  "board": "stm32f411ceu6",
+  "tests": [
+    "tests/plans/stm32f411_gpio_signature.json"
+  ]
+}

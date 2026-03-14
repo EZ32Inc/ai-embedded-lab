@@ -56,7 +56,7 @@ Current execution model:
 - the DUT test plan remains the single source of truth for setup and expected
   checks
 - the current default execution policy is `serial`
-- the current configured baseline has four DUT tests
+- the current configured baseline has five DUT tests
 - `verify-default repeat` still repeats independently per worker when the suite
   has more than one configured task
 - `verify-default repeat-until-fail` remains supported as a compatibility alias
@@ -90,15 +90,22 @@ Current default sequence:
    - board: `stm32f103_uart`
    - test: `tests/plans/stm32f103_uart_banner.json`
    - evidence: `uart.verify`, `gpio.signal`
+5. `stm32f411_gpio_signature`
+   - board: `stm32f411ceu6`
+   - test: `tests/plans/stm32f411_gpio_signature.json`
+   - evidence: logic-analyzer `gpio.signal`
 
 Current validated baseline:
 
-- default verification passed on the current four configured DUT tests
-- latest validated default-verification runs:
-  - `2026-03-13_19-17-59_esp32c6_devkit_esp32c6_gpio_signature_with_meter`
-  - `2026-03-13_19-18-52_rp2040_pico_rp2040_gpio_signature`
-  - `2026-03-13_19-19-14_stm32f103_gpio_stm32f103_gpio_signature`
-  - `2026-03-13_19-19-40_stm32f103_uart_stm32f103_uart_banner`
+- the configured baseline now has five DUT tests, including `stm32f411_gpio_signature`
+- latest live default-verification run with the five-step configuration:
+  - `2026-03-14_09-27-35_rp2040_pico_rp2040_gpio_signature` -> `PASS`
+  - `2026-03-14_09-27-58_stm32f103_gpio_stm32f103_gpio_signature` -> `PASS`
+  - `2026-03-14_09-28-28_stm32f103_uart_stm32f103_uart_banner` -> `PASS`
+  - `2026-03-14_09-29-06_stm32f411ceu6_stm32f411_gpio_signature` -> `PASS`
+- suite nuance:
+  - the same run reported `esp32c6_gpio_signature_with_meter` as `FAIL` at `flash` because no serial port was found
+  - that is an existing ESP32-C6 bench availability issue, not an F411 regression
 
 Known-good comparison artifact:
 
@@ -110,6 +117,8 @@ Known-good comparison artifact:
   - `runs/2026-03-13_19-19-14_stm32f103_gpio_stm32f103_gpio_signature/artifacts/evidence.json`
 - STM32F103 UART DUT:
   - `runs/2026-03-13_19-19-40_stm32f103_uart_stm32f103_uart_banner/artifacts/evidence.json`
+- STM32F411:
+  - `runs/2026-03-14_09-29-06_stm32f411ceu6_stm32f411_gpio_signature/artifacts/evidence.json`
 
 Legacy note:
 

@@ -41,7 +41,6 @@ static void spi2_init(void) {
     (void)RCC->APB1ENR;
 
     gpio_set_output(GPIOA, 2u);
-    gpio_set_output(GPIOA, 3u);
     gpio_set_output(GPIOC, 13u);
     gpio_set_af(GPIOB, 13u, 5u);
     gpio_set_af(GPIOB, 14u, 5u);
@@ -84,7 +83,7 @@ int main(void) {
     uint8_t tx_seed = 0x55u;
 
     spi2_init();
-    GPIOA->ODR &= ~((1u << 2) | (1u << 3));
+    GPIOA->ODR &= ~(1u << 2);
     GPIOC->ODR |= (1u << 13);
     systick_init_1khz();
 
@@ -106,12 +105,6 @@ int main(void) {
             expected = (uint8_t)(phase_high != 0u ? tx_seed : (uint8_t)~tx_seed);
             ok = spi2_transfer(expected, &rx);
             spi_good = (uint8_t)(ok != 0u && rx == expected);
-
-            if (ok != 0u && phase_high != 0u) {
-                GPIOA->ODR |= (1u << 3);
-            } else {
-                GPIOA->ODR &= ~(1u << 3);
-            }
 
             if (spi_good != 0u && phase_high != 0u) {
                 GPIOA->ODR |= (1u << 2);

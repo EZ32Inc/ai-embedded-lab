@@ -19,6 +19,10 @@
     {
       "board": "stm32f103_uart",
       "test": "tests/plans/stm32f103_uart_banner.json"
+    },
+    {
+      "board": "stm32f411ceu6",
+      "test": "tests/plans/stm32f411_gpio_signature.json"
     }
   ],
   "stop_on_fail": false,

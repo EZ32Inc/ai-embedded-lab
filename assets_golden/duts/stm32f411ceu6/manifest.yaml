@@ -1,0 +1,21 @@
+id: stm32f411ceu6
+mcu: stm32f411ceu6
+family: stm32f4
+description: STM32F411CEU6 WeAct Black Pill V2.0 GPIO/signature and self-check bench DUT
+build:
+  type: arm_debug
+  project_dir: firmware
+flash:
+  method: gdb_swd
+default_packs:
+  - packs/smoke_stm32f411.json
+tags:
+  - stm32
+  - stm32f4
+  - stm32f411
+  - blackpill
+verified:
+  status: true
+  verified_on:
+    bench_id: default
+  date: 2026-03-14
