@@ -158,3 +158,25 @@
     - "health assessment reflects the guarded meter-unreachable failure"
     - "important caveats and operator action remain visible"
   notes: "Covers the current guarded failure mode when the ESP32 meter is unreachable before the default baseline can proceed."
+
+- case_id: dut_instance_disambiguation_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "We already have stm32f103 tests. This new UART test is on another Bluepill. Should it go under the same DUT or a new one?"
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "explicit distinction between board family and physical DUT instance"
+    - "a confirmation question or decision point asking whether the new test uses the same DUT instance or an independent DUT instance"
+    - "the consequence of each answer on inventory/config modeling"
+  forbidden_failure_modes:
+    - "silently merging the new test into the existing DUT without confirming physical DUT identity"
+    - "assuming same MCU family implies same DUT instance"
+    - "suggesting parallel execution on the same DUT instance"
+  judge_rubric:
+    - "response explicitly asks or confirms same DUT instance versus independent DUT instance"
+    - "response distinguishes board family from DUT instance"
+    - "response explains that same-DUT tests remain serialized"
+    - "response keeps the recommendation grounded in current inventory-aware workflow"
+  notes: "Protects against silently collapsing multiple physical DUTs of the same board family into one inventory identity."

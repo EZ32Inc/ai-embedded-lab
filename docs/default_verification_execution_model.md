@@ -64,7 +64,10 @@ A task binds together:
 Operational meaning:
 - one task corresponds to one DUT test selected from inventory
 - examples in the current default suite include:
+  - `esp32c6_gpio_signature_with_meter`
+  - `rp2040_gpio_signature`
   - `stm32f103_gpio_signature`
+  - `stm32f103_uart_banner`
 
 ### Worker
 
