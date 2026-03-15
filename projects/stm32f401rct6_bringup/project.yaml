@@ -1,0 +1,45 @@
+assumptions:
+- The user's board matches the known mature stm32f401rct6 path in the AEL repo
+candidate_instrument: esp32jtag_stm32_golden
+capability_ref: stm32f401rct6
+capability_source: main
+closest_mature_ael_path: stm32f401rct6
+confirmed_facts:
+- User requested a project for stm32f401rct6
+- 'Goal: run all 8 banner experiments matching F411 suite'
+- 'Wiring confirmed: PA2→P0.0, PA3→P0.1, PB13→P0.2, PC13→LED, GND→probe GND, SWD→P3'
+- 'First test: stm32f401_gpio_signature — PA2 25Hz and PA3 12.5Hz ratio check'
+cross_domain_links:
+- reason: project is anchored to the known mature stm32f401rct6 capability path
+  target: stm32f401rct6
+  type: mature_capability_anchor
+current_blocker: ''
+domain: user_project_domain
+key_refs:
+- projects/stm32f401rct6_bringup/README.md
+last_action: created_project_shell
+maturity_confidence: high
+motivated_by_user_goal: 'Run all 8 banner experiments: GPIO signature, UART, SPI,
+  ADC, Capture, EXTI, GPIO loopback, PWM'
+next_recommended_action: reuse existing mature path — run stm32f411_gpio_signature
+  or equivalent to validate
+path_maturity: mature
+project_id: stm32f401rct6_bringup
+project_name: STM32F401RCT6 8-experiment bringup
+project_type: user_project
+project_user: local_user
+status: shell_created
+system_change_status: integrated
+system_refs:
+- docs/specs/stm32f401rct6_bringup_preparation_v0_1.md
+- docs/specs/stm32f401rct6_capability_anchor_status_v0_1.md
+target_mcu: stm32f401rct6
+tool_branch: ''
+unresolved_items:
+- 'Board variant confirmation — which exact board/variant do you have? (repo reference:
+  stm32f401rct6)'
+- Instrument confirmation — what debug/flash instrument are you using?
+- Wiring/connections confirmation — does your bench wiring match the repo bench_setup?
+- Intended first test — what should the first test demonstrate?
+user_goal: 'Run all 8 banner experiments: GPIO signature, UART, SPI, ADC, Capture,
+  EXTI, GPIO loopback, PWM'
