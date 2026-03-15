@@ -12,6 +12,10 @@ confirmed_facts:
 - 'Board confirmed: stm32f401rct6'
 - 'Test validated: stm32f401_gpio_signature (PASS)'
 - 'Instrument used: esp32jtag_stm32_golden'
+- 'Test validated: stm32f401_capture_banner (PASS)'
+- 'Test validated: stm32f401_exti_banner (PASS)'
+- 'Test validated: stm32f401_gpio_loopback_banner (PASS)'
+- 'Test validated: stm32f401_pwm_banner (PASS)'
 cross_domain_links:
 - reason: project is anchored to the known mature stm32f401rct6 capability path
   target: stm32f401rct6
@@ -20,12 +24,12 @@ current_blocker: ''
 domain: user_project_domain
 key_refs:
 - projects/stm32f401rct6_bringup/README.md
-last_action: 'run_validated: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature'
+last_action: 'run_validated: 2026-03-15_19-02-58_stm32f401rct6_stm32f401_pwm_banner'
 mature_path_reused: true
 maturity_confidence: high
 motivated_by_user_goal: 'Run all 8 banner experiments: GPIO signature, UART, SPI,
   ADC, Capture, EXTI, GPIO loopback, PWM'
-next_recommended_action: 'project validated — evidence: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature'
+next_recommended_action: 'project validated — evidence: 2026-03-15_19-02-58_stm32f401rct6_stm32f401_pwm_banner'
 path_maturity: mature
 project_id: stm32f401rct6_bringup
 project_name: STM32F401RCT6 8-experiment bringup
@@ -38,6 +42,30 @@ run_evidence:
   run_id: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature
   termination: pass
   test: stm32f401_gpio_signature
+- board: stm32f401rct6
+  instrument: esp32jtag_stm32_golden
+  ok: true
+  run_id: 2026-03-15_19-01-49_stm32f401rct6_stm32f401_capture_banner
+  termination: pass
+  test: stm32f401_capture_banner
+- board: stm32f401rct6
+  instrument: esp32jtag_stm32_golden
+  ok: true
+  run_id: 2026-03-15_19-02-12_stm32f401rct6_stm32f401_exti_banner
+  termination: pass
+  test: stm32f401_exti_banner
+- board: stm32f401rct6
+  instrument: esp32jtag_stm32_golden
+  ok: true
+  run_id: 2026-03-15_19-02-35_stm32f401rct6_stm32f401_gpio_loopback_banner
+  termination: pass
+  test: stm32f401_gpio_loopback_banner
+- board: stm32f401rct6
+  instrument: esp32jtag_stm32_golden
+  ok: true
+  run_id: 2026-03-15_19-02-58_stm32f401rct6_stm32f401_pwm_banner
+  termination: pass
+  test: stm32f401_pwm_banner
 status: validated
 system_change_status: integrated
 system_refs:

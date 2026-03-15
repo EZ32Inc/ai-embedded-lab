@@ -14,7 +14,10 @@ tags:
   - stm32f4
   - stm32f401
 verified:
-  status: false
+  status: true
   verified_on:
-    bench_id: pending_hw
-  date: 2026-03-08
+    bench_id: esp32jtag_stm32_golden
+    instrument_endpoint: 192.168.2.98:4242
+  date: 2026-03-15
+  experiments_passed: 8
+  smoke_pack: packs/smoke_stm32f401.json
