@@ -1015,6 +1015,115 @@ def _slugify(value: str) -> str:
     return "".join(out).strip("_") or "user_project"
 
 
+def _infer_family_profile(mcu_name: str) -> dict:
+    """Return build/flash profile dict inferred from MCU name prefix.
+
+    Profiles are loaded from configs/mcu_family_profiles.yaml.
+    Returns a dict with keys: family, build_type, flash_method, instrument_hint.
+    Returns an 'unknown' profile if no prefix matches.
+    """
+    import yaml as _yaml  # type: ignore
+
+    profiles_path = Path("configs") / "mcu_family_profiles.yaml"
+    profiles: list = []
+    if profiles_path.exists():
+        try:
+            raw = _yaml.safe_load(profiles_path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                profiles = raw.get("profiles") or []
+        except Exception:
+            pass
+
+    name = mcu_name.strip().lower()
+    for entry in profiles:
+        if isinstance(entry, dict) and name.startswith(str(entry.get("prefix", "")).lower()):
+            return {
+                "family": entry.get("family", "unknown"),
+                "build_type": entry.get("build_type", "PLACEHOLDER_build_type"),
+                "flash_method": entry.get("flash_method", "PLACEHOLDER_flash_method"),
+                "instrument_hint": entry.get("instrument_hint", "unknown — specify debug/flash instrument"),
+            }
+
+    return {
+        "family": "unknown",
+        "build_type": "PLACEHOLDER_build_type",
+        "flash_method": "PLACEHOLDER_flash_method",
+        "instrument_hint": "unknown — specify debug/flash instrument",
+    }
+
+
+def _bootstrap_draft_capability(
+    mcu: str,
+    mcu_slug: str,
+    repo_root: str,
+    profile: dict,
+) -> dict:
+    """Create draft capability artifacts in assets_branch/ and configs/boards/.
+
+    Creates:
+      assets_branch/duts/<mcu_slug>_draft/manifest.yaml
+      configs/boards/<mcu_slug>_draft.yaml
+
+    Returns dict with keys: dut_id, board_config_path, created (bool), error (str|None).
+    """
+    import yaml as _yaml  # type: ignore
+
+    root = Path(repo_root) if repo_root else Path(".")
+    dut_id = f"{mcu_slug}_draft"
+    dut_dir = root / "assets_branch" / "duts" / dut_id
+    board_cfg_path = root / "configs" / "boards" / f"{dut_id}.yaml"
+
+    if dut_dir.exists():
+        return {"dut_id": dut_id, "board_config_path": str(board_cfg_path), "created": False, "error": f"already exists: {dut_dir}"}
+
+    dut_dir.mkdir(parents=True, exist_ok=True)
+
+    manifest = {
+        "id": dut_id,
+        "mcu": mcu,
+        "family": profile["family"],
+        "build_type": profile["build_type"],
+        "flash_method": profile["flash_method"],
+        "lifecycle_stage": "draft",
+        "verified": {"status": False, "note": "draft — not yet verified"},
+        "capability_notes": f"Auto-bootstrapped draft for {mcu}. Fill in board-specific details before running.",
+        "board_config": f"configs/boards/{dut_id}.yaml",
+    }
+    (dut_dir / "manifest.yaml").write_text(
+        _yaml.dump(manifest, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
+
+    board_cfg = {
+        "board": {
+            "name": f"PLACEHOLDER — {mcu} (draft)",
+            "target": mcu_slug,
+            "instrument_instance": f"PLACEHOLDER — {profile['instrument_hint']}",
+            "clock_hz": "PLACEHOLDER_clock_hz",
+            "draft": True,
+            "build": {
+                "type": profile["build_type"],
+                "project_dir": f"firmware/targets/{mcu_slug}",
+                "artifact_stem": f"{mcu_slug}_app",
+            },
+            "flash": {
+                "speed_khz": "PLACEHOLDER_speed_khz",
+                "reset_strategy": "PLACEHOLDER_reset_strategy",
+            },
+            "observe_map": {"sig": "PLACEHOLDER_pin"},
+            "bench_connections": [{"from": "PLACEHOLDER_MCU_PIN", "to": "PLACEHOLDER_INSTRUMENT_CHANNEL"}],
+            "safe_pins": ["PLACEHOLDER"],
+            "default_wiring": {"swd": "PLACEHOLDER", "reset": "NC", "verify": "PLACEHOLDER"},
+        }
+    }
+    board_cfg_path.write_text(
+        _yaml.dump(board_cfg, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
+
+    return {"dut_id": dut_id, "board_config_path": str(board_cfg_path), "created": True, "error": None}
+
+
 def _project_create_shell(
     target_mcu: str,
     project_id: str,
@@ -1051,13 +1160,13 @@ def _project_create_shell(
         )
         status = "exploratory"
         next_action = "clarify board details, exact GPIO/LED pins, and available debug/flash tool before generating code"
-    else:  # unknown
+    else:  # unknown — bootstrap a draft capability in assets_branch/
         assumption = (
             f"Target MCU {target_mcu} has no known mature path in the AEL repo — "
-            "board details, wiring, LED pin, and instrument setup are all unconfirmed"
+            "draft capability scaffolded in assets_branch/; fill PLACEHOLDER fields before running"
         )
-        status = "exploratory"
-        next_action = "answer clarification questions before proceeding: board details, LED pin, GPIO, debug tool"
+        status = "draft_capability_created"
+        next_action = "fill PLACEHOLDER fields in the generated board config and DUT manifest, then advance lifecycle_stage to runnable"
 
     if is_mature:
         # Use the 4 confirmation-checklist items from known_board_clarify_first_policy_v0_1.md
@@ -1122,8 +1231,8 @@ def _project_create_shell(
                     "reason": cross_domain_reason,
                 }
             ],
-            "capability_source": "main",
-            "capability_ref": mature_path or "",
+            "capability_source": "branch" if is_unknown else "main",
+            "capability_ref": f"{_slugify(target_mcu)}_draft" if is_unknown else (mature_path or ""),
             "status": status,
             "confirmed_facts": [confirmed_fact],
             "assumptions": [assumption],
@@ -1144,6 +1253,15 @@ def _project_create_shell(
         print(f"error writing project.yaml: {exc}")
         return 1
 
+    # For unknown MCUs: bootstrap a draft capability in assets_branch/
+    bootstrap_result: dict = {}
+    if is_unknown:
+        profile = _infer_family_profile(target_mcu)
+        mcu_slug = _slugify(target_mcu)
+        bootstrap_result = _bootstrap_draft_capability(target_mcu, mcu_slug, repo_root, profile)
+        if bootstrap_result.get("error") and not bootstrap_result.get("created"):
+            print(f"  note: bootstrap skipped — {bootstrap_result['error']}")
+
     if is_mature:
         questions_section = """## Best Next Questions
 
@@ -1152,13 +1270,19 @@ def _project_create_shell(
 - What validation approach should be used first?
 """
     else:
-        questions_section = """## Required Clarifications (path not yet mature)
+        _draft_dut_id = f"{_slugify(target_mcu)}_draft"
+        questions_section = f"""## Draft Capability Created
 
-- What is the exact MCU part number?
+A draft capability scaffold has been created in `assets_branch/duts/{_draft_dut_id}/`.
+Fill in all PLACEHOLDER fields before attempting to run.
+
+## Required Fill-ins (PLACEHOLDER fields)
+
+- What is the exact MCU part number and clock speed?
 - What board is this? (official devkit, custom PCB, eval board?)
-- Where is the LED connected? Which pin?
-- Which GPIO pins should be used for toggling?
-- What debug/flash/instrument setup is available? (JTAG, SWD, USB, ST-Link, etc.)
+- Which instrument instance will be used for debug/flash?
+- Where is the LED connected? Which GPIO pins?
+- What are the bench_connections (MCU pin → instrument channel)?
 """
 
     readme = f"""# {project_name}
@@ -1257,10 +1381,33 @@ def _project_create_shell(
         print("     Confirm or correct the above — then I can prepare a runnable path")
         print("     that matches your real setup instead of only the repo reference.")
     else:
-        print("  WARNING: target MCU is not a known mature path.")
-        print("  Required clarifications before generating code or running tests:")
-        for u in unresolved:
-            print(f"    ? {u}")
+        # unknown path — show bootstrap result
+        if bootstrap_result.get("created"):
+            profile = _infer_family_profile(target_mcu)
+            print("  Draft capability bootstrapped in assets_branch/:")
+            print(f"    DUT id:        {bootstrap_result['dut_id']}")
+            print(f"    manifest:      assets_branch/duts/{bootstrap_result['dut_id']}/manifest.yaml")
+            print(f"    board config:  {bootstrap_result['board_config_path']}")
+            print(f"    lifecycle:     draft")
+            print(f"    family:        {profile['family']} ({profile['build_type']} / {profile['flash_method']})")
+            print(f"    instrument:    {profile['instrument_hint']}")
+            print("")
+            print("  PLACEHOLDER fields require manual fill-in before running:")
+            for u in unresolved:
+                print(f"    ? {u}")
+            print("")
+            print("  Next step:")
+            print(f"    1. Edit configs/boards/{bootstrap_result['dut_id']}.yaml — replace all PLACEHOLDER values")
+            print(f"    2. Edit assets_branch/duts/{bootstrap_result['dut_id']}/manifest.yaml as needed")
+            print(f"    3. When runnable, set lifecycle_stage: runnable in manifest")
+            print(f"    4. When validated, use 'ael dut promote' to move to assets_golden/")
+        else:
+            print("  Draft capability not created (already exists or error).")
+            if bootstrap_result.get("error"):
+                print(f"  reason: {bootstrap_result['error']}")
+            print("  Required clarifications before generating code or running tests:")
+            for u in unresolved:
+                print(f"    ? {u}")
     return 0
 
 
