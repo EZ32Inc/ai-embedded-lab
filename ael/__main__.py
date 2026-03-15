@@ -135,6 +135,10 @@ def main():
     dut_promote.add_argument("--as", dest="as_id", required=False)
     dut_promote.add_argument("--from", dest="from_namespace", choices=["user", "branch"], default="user", help="Source namespace: user (default) or branch")
     dut_promote.add_argument("--delete-source", action="store_true")
+    dut_set_lifecycle = dut_sub.add_parser("set-lifecycle", help="advance lifecycle_stage of a DUT in user or branch namespace")
+    dut_set_lifecycle.add_argument("--id", required=True, help="DUT id")
+    dut_set_lifecycle.add_argument("--stage", required=True, choices=["draft", "runnable", "validated", "merge_candidate", "merged_to_main"], help="target lifecycle_stage")
+    dut_set_lifecycle.add_argument("--namespace", choices=["user", "branch"], default="branch", help="Namespace containing the DUT (default: branch)")
 
     verify_default_p = sub.add_parser("verify-default")
     verify_default_sub = verify_default_p.add_subparsers(dest="verify_default_cmd", required=True)
@@ -293,6 +297,14 @@ def main():
             _print_run_gate_result(gate_ok, gate_reasons, gate_clarifications, gate_readiness, args.project, path_maturity, status)
             if not gate_ok:
                 sys.exit(1)
+            # If project uses a branch capability and no explicit --dut given, inject it
+            if (
+                not getattr(args, "dut", None)
+                and project_payload.get("capability_source") == "branch"
+                and project_payload.get("capability_ref")
+            ):
+                args.dut = project_payload["capability_ref"]
+                print(f"run: using branch capability '{args.dut}' from project {args.project}")
         if args.verbose:
             output_mode = "verbose"
         elif args.quiet:
@@ -303,7 +315,7 @@ def main():
         test_path = args.test
         pack_path = args.pack
         if args.dut:
-            dut = assets.load_dut_prefer_user(args.dut)
+            dut = assets.load_dut(args.dut, roots=["assets_branch/duts", "assets_user/duts", "assets_golden/duts"])
             if not dut:
                 print(f"DUT not found: {args.dut}")
                 sys.exit(2)
@@ -667,6 +679,9 @@ def main():
             sys.exit(code)
         if args.dut_cmd == "promote":
             code = dut_promote_cmd(args.id, args.as_id, args.delete_source, from_namespace=args.from_namespace)
+            sys.exit(code)
+        if args.dut_cmd == "set-lifecycle":
+            code = dut_set_lifecycle_cmd(args.id, args.stage, namespace=args.namespace)
             sys.exit(code)
     if args.cmd == "board":
         if args.board_cmd == "state":
@@ -1647,16 +1662,60 @@ def _project_run_gate_check(payload: dict) -> tuple[bool, list, list, str]:
     reasons: list[str] = []
     clarifications: list[str] = []
     if path_maturity == "unknown":
-        ok = False
-        readiness = "candidate_path_identified"
-        reasons.append("path_maturity is 'unknown' — no mature path found for this MCU")
-        clarifications = [
-            f"What is the exact MCU part number? (user said: {payload.get('target_mcu', '?')})",
-            "What board is this? (official devkit, custom PCB, eval board?)",
-            "Where is the LED connected? Which pin?",
-            "Which GPIO pins should be used for toggling?",
-            "What debug/flash/instrument setup is available?",
-        ]
+        cap_source = str(payload.get("capability_source") or "").strip()
+        cap_ref = str(payload.get("capability_ref") or "").strip()
+        if cap_source == "branch" and cap_ref:
+            # Check branch DUT lifecycle_stage
+            branch_manifest_path = Path("assets_branch") / "duts" / cap_ref / "manifest.yaml"
+            branch_stage = ""
+            if branch_manifest_path.exists():
+                try:
+                    import yaml as _yaml  # type: ignore
+                    bm = _yaml.safe_load(branch_manifest_path.read_text(encoding="utf-8"))
+                    branch_stage = str((bm or {}).get("lifecycle_stage") or "").strip()
+                except Exception:
+                    pass
+            if branch_stage and branch_stage in _LIFECYCLE_STAGES:
+                stage_idx = _LIFECYCLE_STAGES.index(branch_stage)
+                runnable_idx = _LIFECYCLE_STAGES.index("runnable")
+                if stage_idx >= runnable_idx:
+                    ok = True
+                    readiness = "branch_capability_runnable"
+                    reasons.append(
+                        f"branch capability '{cap_ref}' is at lifecycle_stage '{branch_stage}' — ready to run from branch"
+                    )
+                else:
+                    ok = False
+                    readiness = "branch_capability_draft"
+                    reasons.append(
+                        f"branch capability '{cap_ref}' is at lifecycle_stage '{branch_stage}' — "
+                        "fill PLACEHOLDER fields and advance to 'runnable' before running"
+                    )
+                    clarifications = [
+                        f"Edit configs/boards/{cap_ref}.yaml — replace all PLACEHOLDER values",
+                        f"Edit assets_branch/duts/{cap_ref}/manifest.yaml — fill board details",
+                        f"Run: ael dut set-lifecycle --id {cap_ref} --stage runnable",
+                    ]
+            else:
+                ok = False
+                readiness = "branch_capability_missing"
+                reasons.append(
+                    f"branch capability '{cap_ref}' not found in assets_branch/duts/ or has no lifecycle_stage"
+                )
+                clarifications = [
+                    f"Create the branch capability: ael project create --target-mcu {payload.get('target_mcu', '?')} ...",
+                ]
+        else:
+            ok = False
+            readiness = "candidate_path_identified"
+            reasons.append("path_maturity is 'unknown' — no mature path found for this MCU")
+            clarifications = [
+                f"What is the exact MCU part number? (user said: {payload.get('target_mcu', '?')})",
+                "What board is this? (official devkit, custom PCB, eval board?)",
+                "Where is the LED connected? Which pin?",
+                "Which GPIO pins should be used for toggling?",
+                "What debug/flash/instrument setup is available?",
+            ]
     elif path_maturity == "inferred":
         ok = False
         readiness = "candidate_path_identified"
@@ -2275,6 +2334,50 @@ def dut_promote_cmd(user_id, as_id=None, delete_source=False, from_namespace="us
     if delete_source:
         shutil.rmtree(src)
     print(f"DUT promote: {dst} [merged_to_main]")
+    return 0
+
+
+def dut_set_lifecycle_cmd(dut_id: str, stage: str, namespace: str = "branch") -> int:
+    """Set lifecycle_stage on a DUT manifest in assets_branch/ or assets_user/."""
+    import yaml as _yaml  # type: ignore
+
+    ns_root = "assets_branch" if namespace == "branch" else "assets_user"
+    dut_dir = Path(ns_root) / "duts" / dut_id
+    manifest_path = dut_dir / "manifest.yaml"
+
+    if not manifest_path.exists():
+        print(f"dut set-lifecycle: manifest not found: {manifest_path}")
+        return 2
+
+    try:
+        raw = _yaml.safe_load(manifest_path.read_text(encoding="utf-8"))
+        manifest = raw if isinstance(raw, dict) else {}
+    except Exception as exc:
+        print(f"dut set-lifecycle: failed to read manifest: {exc}")
+        return 3
+
+    current = str(manifest.get("lifecycle_stage") or "").strip()
+    if current == stage:
+        print(f"dut set-lifecycle: {dut_id} is already '{stage}' — no change")
+        return 0
+
+    # Enforce forward-only progression within the defined order
+    if current and current in _LIFECYCLE_STAGES and stage in _LIFECYCLE_STAGES:
+        current_idx = _LIFECYCLE_STAGES.index(current)
+        target_idx = _LIFECYCLE_STAGES.index(stage)
+        if target_idx < current_idx:
+            print(
+                f"dut set-lifecycle: rejected — cannot move backwards from '{current}' to '{stage}'. "
+                f"Use --force to override (not implemented in v0.1)."
+            )
+            return 4
+
+    manifest["lifecycle_stage"] = stage
+    manifest_path.write_text(
+        _yaml.dump(manifest, allow_unicode=True, default_flow_style=False),
+        encoding="utf-8",
+    )
+    print(f"dut set-lifecycle: {dut_id} [{namespace}] {current or '(unset)'} → {stage}")
     return 0
 
 
