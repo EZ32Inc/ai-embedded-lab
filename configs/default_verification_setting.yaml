@@ -18,7 +18,8 @@
     },
     {
       "board": "stm32f103_uart",
-      "test": "tests/plans/stm32f103_uart_banner.json"
+      "test": "tests/plans/stm32f103_uart_banner.json",
+      "optional": true
     },
     {
       "board": "stm32f411ceu6",

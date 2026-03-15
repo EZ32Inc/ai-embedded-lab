@@ -588,8 +588,9 @@ def _run_parallel_suite_once(
             workers.append(future.result().to_dict())
 
     _print_worker_totals(log_lock, workers)
+    optional_names = {task.name for task in suite.tasks if task.config.get("optional")}
     results = [item for worker in workers for item in worker.get("results", [])]
-    failed = next((item for item in results if not bool(item.get("ok", False))), None)
+    failed = next((item for item in results if not bool(item.get("ok", False)) and item.get("name") not in optional_names), None)
     code = int(failed.get("code", 0)) if isinstance(failed, dict) else 0
     ok = failed is None
     return code, {
@@ -598,6 +599,7 @@ def _run_parallel_suite_once(
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
         "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": 1},
         "selected_dut_tests": [task.name for task in suite.tasks],
+        "optional_steps": sorted(optional_names),
         "workers": workers,
         "results": results,
     }
@@ -616,14 +618,18 @@ def _run_serial_suite_once(
     print(f"default_verification: selected DUT tests: {', '.join(task.name for task in suite.tasks)}")
 
     for task in suite.tasks:
+        optional = bool(task.config.get("optional", False))
         code, result = _run_step_action(repo_root, task.step(), output_mode)
         ok = code == 0
-        results.append({"name": task.name, "board": task.board, "code": code, "ok": ok, "result": result})
+        results.append({"name": task.name, "board": task.board, "code": code, "ok": ok, "optional": optional, "result": result})
         if not ok:
-            overall_ok = False
-            last_code = code
-            if stop_on_fail:
-                break
+            if optional:
+                print(f"default_verification: {task.name} failed but is optional — not counted")
+            else:
+                overall_ok = False
+                last_code = code
+                if stop_on_fail:
+                    break
 
     return (0 if overall_ok else last_code or 1), {
         "ok": overall_ok,
@@ -653,8 +659,9 @@ def _run_parallel_repeat_until_fail(
             workers.append(future.result().to_dict())
 
     _print_worker_totals(log_lock, workers)
+    optional_names = {task.name for task in suite.tasks if task.config.get("optional")}
     results = [item for worker in workers for item in worker.get("results", [])]
-    failures = [item for item in results if not bool(item.get("ok", False))]
+    failures = [item for item in results if not bool(item.get("ok", False)) and item.get("name") not in optional_names]
     first_failure = failures[0] if failures else None
     code = int(first_failure.get("code", 0)) if isinstance(first_failure, dict) else 0
     ok = first_failure is None
@@ -664,6 +671,7 @@ def _run_parallel_repeat_until_fail(
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
         "execution_policy": {"kind": suite.execution_policy.get("kind", "parallel"), "iterations_per_worker": limit, "stop_each_worker_on_failure": True},
         "selected_dut_tests": [task.name for task in suite.tasks],
+        "optional_steps": sorted(optional_names),
         "requested_iterations_per_worker": limit,
         "workers": workers,
         "results": results,

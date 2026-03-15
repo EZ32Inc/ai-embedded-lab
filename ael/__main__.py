@@ -48,6 +48,8 @@ def main():
     run_p.add_argument("--probe", required=False, default=None, help="Legacy compatibility flag for --control-instrument")
     run_p.add_argument("--wiring", required=False)
     run_p.add_argument("--bench", required=False, help="Bench id (placeholder, not used)")
+    run_p.add_argument("--project", required=False, default=None, help="Project id to gate-check before running")
+    run_p.add_argument("--projects-root", dest="run_projects_root", default="projects", help="Root directory for projects")
     run_p.add_argument(
         "--until-stage",
         required=False,
@@ -277,6 +279,18 @@ def main():
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
     if args.cmd == "run":
+        if getattr(args, "project", None):
+            project_dir = Path(getattr(args, "run_projects_root", "projects")) / args.project
+            project_payload = _project_yaml_load(project_dir / "project.yaml")
+            if not project_payload:
+                print(f"run-gate error: project not found: {project_dir / 'project.yaml'}")
+                sys.exit(2)
+            gate_ok, gate_reasons, gate_clarifications, gate_readiness = _project_run_gate_check(project_payload)
+            path_maturity = str(project_payload.get("path_maturity", "mature")).strip()
+            status = str(project_payload.get("status", "")).strip()
+            _print_run_gate_result(gate_ok, gate_reasons, gate_clarifications, gate_readiness, args.project, path_maturity, status)
+            if not gate_ok:
+                sys.exit(1)
         if args.verbose:
             output_mode = "verbose"
         elif args.quiet:
@@ -1356,6 +1370,7 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     # For each step, find the most recent run result
     validated: list[dict] = []
     failing: list[dict] = []
+    optional_failing: list[dict] = []
     last_successful: dict = {}
     last_failure: dict = {}
     current_blocker = ""
@@ -1367,6 +1382,7 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         test_path = str(step.get("test", "")).strip()
         if not board or not test_path:
             continue
+        optional = bool(step.get("optional", False))
         # Derive test name from path: tests/plans/foo_bar.json -> foo_bar
         test_name = Path(test_path).stem
         step_label = f"{board}/{test_name}"
@@ -1382,9 +1398,13 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
             candidates = []
 
         if not candidates:
-            failing.append({"step": step_label, "run_id": None})
-            if not current_blocker:
-                current_blocker = f"no run found for {step_label}"
+            entry = {"step": step_label, "run_id": None, "optional": optional}
+            if optional:
+                optional_failing.append(entry)
+            else:
+                failing.append(entry)
+                if not current_blocker:
+                    current_blocker = f"no run found for {step_label}"
             continue
 
         # Load the most recent result
@@ -1398,18 +1418,22 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         run_id = candidates[0].name
 
         if ok:
-            validated.append({"step": step_label, "run_id": run_id})
+            validated.append({"step": step_label, "run_id": run_id, "optional": optional})
             if not last_successful:
                 last_successful = {"step": step_label, "run_id": run_id}
         else:
-            failing.append({"step": step_label, "run_id": run_id})
-            if not last_failure:
-                last_failure = {"step": step_label, "run_id": run_id}
-            if not current_blocker:
-                err = str(result.get("error_summary", "")).strip()
-                current_blocker = f"{step_label}: {err}" if err else step_label
+            entry = {"step": step_label, "run_id": run_id, "optional": optional}
+            if optional:
+                optional_failing.append(entry)
+            else:
+                failing.append(entry)
+                if not last_failure:
+                    last_failure = {"step": step_label, "run_id": run_id}
+                if not current_blocker:
+                    err = str(result.get("error_summary", "")).strip()
+                    current_blocker = f"{step_label}: {err}" if err else step_label
 
-    # Derive health status
+    # Derive health status (optional failures do not affect health)
     if not steps:
         health = "unknown"
     elif not validated and not failing:
@@ -1424,6 +1448,8 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     next_action = ""
     if failing:
         next_action = f"stabilize {failing[0]['step']} and rerun default verification"
+    elif optional_failing:
+        next_action = f"{len(optional_failing)} optional step(s) failing — not required for pass"
     elif health == "pass":
         next_action = "all steps passing — consider adding next board/test to suite"
 
@@ -1438,6 +1464,7 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         "last_failure": last_failure,
         "validated_tests": validated,
         "failing_tests": failing,
+        "optional_failing_tests": optional_failing,
         "next_recommended_action": next_action,
         "key_refs": [
             setting_file,
@@ -1459,6 +1486,111 @@ def _project_fmt_list(values: object) -> list:
     if not isinstance(values, list):
         return []
     return [str(v).strip() for v in values if str(v).strip()]
+
+
+def _project_run_gate_check(payload: dict) -> tuple[bool, list, list, str]:
+    """Pure gate logic: given a project payload, return (ok, reasons, clarifications, readiness)."""
+    path_maturity = str(payload.get("path_maturity", "mature")).strip()
+    ok = True
+    readiness = "confirmed_enough_to_prepare"
+    reasons: list[str] = []
+    clarifications: list[str] = []
+    if path_maturity == "unknown":
+        ok = False
+        readiness = "candidate_path_identified"
+        reasons.append("path_maturity is 'unknown' — no mature path found for this MCU")
+        clarifications = [
+            f"What is the exact MCU part number? (user said: {payload.get('target_mcu', '?')})",
+            "What board is this? (official devkit, custom PCB, eval board?)",
+            "Where is the LED connected? Which pin?",
+            "Which GPIO pins should be used for toggling?",
+            "What debug/flash/instrument setup is available?",
+        ]
+    elif path_maturity == "inferred":
+        ok = False
+        readiness = "candidate_path_identified"
+        reasons.append(
+            f"path_maturity is 'inferred' — {payload.get('target_mcu')} is not a verified match "
+            f"for {payload.get('closest_mature_ael_path', '?')}"
+        )
+        clarifications = [
+            f"Confirm the board is compatible with {payload.get('closest_mature_ael_path', '?')}",
+            "Confirm LED pin mapping matches the reference board",
+            "Confirm GPIO pins match the reference board",
+            "Confirm instrument/flash setup is compatible",
+        ]
+    else:
+        check = _mature_confirmation_check(payload)
+        readiness = check["readiness"]
+        instrument_mismatch = check.get("instrument_mismatch", False)
+        if readiness == "candidate_path_identified":
+            ok = False
+            reasons.append(
+                "path_maturity is 'mature' but no real-setup confirmations recorded — "
+                "repo path is a candidate reference only"
+            )
+            clarifications = check["missing"]
+        elif readiness == "partially_confirmed":
+            if instrument_mismatch:
+                ok = False
+                reasons.append(
+                    f"partial-match: instrument mismatch — "
+                    f"you stated {check.get('user_instrument', '?')!r}, "
+                    f"repo uses {check.get('candidate_instrument', '?')!r}. "
+                    "Target-side wiring may carry over; instrument-side bench wiring must be re-specified."
+                )
+            else:
+                ok = True
+                reasons.append(
+                    f"partially_confirmed: {len(check['confirmed'])} items confirmed — "
+                    "proceeding with caution"
+                )
+            clarifications = check["missing"]
+    return ok, reasons, clarifications, readiness
+
+
+def _print_run_gate_result(
+    ok: bool,
+    reasons: list,
+    clarifications: list,
+    readiness: str,
+    project_id: str,
+    path_maturity: str,
+    status: str,
+) -> None:
+    if ok and not clarifications:
+        print(f"gate: ok")
+        print(f"  project: {project_id}")
+        print(f"  path_maturity: {path_maturity}")
+        print(f"  readiness: {readiness}")
+        print(f"  status: {status}")
+        print(f"  safe to proceed with run: yes")
+    elif ok and clarifications:
+        print(f"gate: ok (with warnings)")
+        print(f"  project: {project_id}")
+        print(f"  path_maturity: {path_maturity}")
+        print(f"  readiness: {readiness}")
+        print(f"  status: {status}")
+        print(f"  safe to proceed with run: yes — but setup not fully confirmed")
+        for r in reasons:
+            print(f"  note: {r}")
+        print(f"  still unconfirmed:")
+        for c in clarifications:
+            print(f"    ? {c}")
+    else:
+        print(f"gate: blocked")
+        print(f"  project: {project_id}")
+        print(f"  path_maturity: {path_maturity}")
+        print(f"  readiness: {readiness}")
+        print(f"  status: {status}")
+        print(f"  safe to proceed with run: no")
+        print(f"  reasons:")
+        for r in reasons:
+            print(f"    - {r}")
+        if clarifications:
+            print(f"  required_clarifications:")
+            for c in clarifications:
+                print(f"    ? {c}")
 
 
 def _project_cmd(args) -> int:
@@ -1815,99 +1947,10 @@ def _project_cmd(args) -> int:
         if not payload:
             print(f"error: missing or unreadable: {project_dir / 'project.yaml'}")
             return 1
+        ok, reasons, clarifications, readiness = _project_run_gate_check(payload)
         path_maturity = str(payload.get("path_maturity", "mature")).strip()
         status = str(payload.get("status", "")).strip()
-        ok = True
-        readiness = "confirmed_enough_to_prepare"
-        reasons: list[str] = []
-        clarifications: list[str] = []
-        if path_maturity == "unknown":
-            ok = False
-            readiness = "candidate_path_identified"
-            reasons.append("path_maturity is 'unknown' — no mature path found for this MCU")
-            clarifications = [
-                f"What is the exact MCU part number? (user said: {payload.get('target_mcu', '?')})",
-                "What board is this? (official devkit, custom PCB, eval board?)",
-                "Where is the LED connected? Which pin?",
-                "Which GPIO pins should be used for toggling?",
-                "What debug/flash/instrument setup is available?",
-            ]
-        elif path_maturity == "inferred":
-            ok = False
-            readiness = "candidate_path_identified"
-            reasons.append(
-                f"path_maturity is 'inferred' — {payload.get('target_mcu')} is not a verified match "
-                f"for {payload.get('closest_mature_ael_path', '?')}"
-            )
-            clarifications = [
-                f"Confirm the board is compatible with {payload.get('closest_mature_ael_path', '?')}",
-                "Confirm LED pin mapping matches the reference board",
-                "Confirm GPIO pins match the reference board",
-                "Confirm instrument/flash setup is compatible",
-            ]
-        else:
-            # H3: mature path — check real-setup confirmation state (partial-match aware)
-            check = _mature_confirmation_check(payload)
-            readiness = check["readiness"]
-            instrument_mismatch = check.get("instrument_mismatch", False)
-            if readiness == "candidate_path_identified":
-                ok = False
-                reasons.append(
-                    "path_maturity is 'mature' but no real-setup confirmations recorded — "
-                    "repo path is a candidate reference only"
-                )
-                clarifications = check["missing"]
-            elif readiness == "partially_confirmed":
-                if instrument_mismatch:
-                    # Instrument mismatch is a harder block — instrument-side bench wiring is unresolved
-                    ok = False
-                    reasons.append(
-                        f"partial-match: instrument mismatch — "
-                        f"you stated {check.get('user_instrument', '?')!r}, "
-                        f"repo uses {check.get('candidate_instrument', '?')!r}. "
-                        "Target-side wiring may carry over; instrument-side bench wiring must be re-specified."
-                    )
-                else:
-                    # Allow to proceed but warn — not a hard block
-                    ok = True
-                    reasons.append(
-                        f"partially_confirmed: {len(check['confirmed'])} items confirmed — "
-                        "proceeding with caution"
-                    )
-                clarifications = check["missing"]
-        if ok and not clarifications:
-            print(f"gate: ok")
-            print(f"  project: {args.project_id}")
-            print(f"  path_maturity: {path_maturity}")
-            print(f"  readiness: {readiness}")
-            print(f"  status: {status}")
-            print(f"  safe to proceed with run: yes")
-        elif ok and clarifications:
-            print(f"gate: ok (with warnings)")
-            print(f"  project: {args.project_id}")
-            print(f"  path_maturity: {path_maturity}")
-            print(f"  readiness: {readiness}")
-            print(f"  status: {status}")
-            print(f"  safe to proceed with run: yes — but setup not fully confirmed")
-            for r in reasons:
-                print(f"  note: {r}")
-            print(f"  still unconfirmed:")
-            for c in clarifications:
-                print(f"    ? {c}")
-        else:
-            print(f"gate: blocked")
-            print(f"  project: {args.project_id}")
-            print(f"  path_maturity: {path_maturity}")
-            print(f"  readiness: {readiness}")
-            print(f"  status: {status}")
-            print(f"  safe to proceed with run: no")
-            print(f"  reasons:")
-            for r in reasons:
-                print(f"    - {r}")
-            if clarifications:
-                print(f"  required_clarifications:")
-                for c in clarifications:
-                    print(f"    ? {c}")
+        _print_run_gate_result(ok, reasons, clarifications, readiness, args.project_id, path_maturity, status)
         return 0 if ok else 1
     return 1
 
