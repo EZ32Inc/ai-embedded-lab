@@ -791,3 +791,129 @@
     - "verification is clearly marked as user-side visual observation"
     - "AEL machine-verified run unavailability is stated explicitly"
   notes: "Tests the Mode B (external bench) execution boundary from external_bench_execution_boundary_v0_1.md."
+
+# ── Group-based copy-miss bootstrap cases ────────────────────────────────────
+
+- id: group_bootstrap_case_a_mature_hit_001
+  title: Case A — mature golden hit, copy-first path, no bootstrap
+  category: group_bootstrap
+  trigger: |
+    User asks to create a project for a board that is already a golden DUT
+    (exact MCU match in assets_golden/duts/).
+  user_input: "Create a project for stm32f411ceu6 GPIO toggle. My goal is PA2/PA3 blink."
+  formal_sources:
+    - "python3 -m ael project create --target-mcu stm32f411ceu6 ..."
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "path_maturity: mature"
+    - "capability_source: main"
+    - "capability_ref: stm32f411ceu6"
+    - "no assets_branch/ draft created"
+    - "clarification checklist (A/B/C/D) presented to confirm real setup"
+  forbidden_failure_modes:
+    - "creating a branch draft when a mature golden capability exists"
+    - "skipping the clarification checklist for a mature-path project"
+    - "reporting capability_source: branch for a known golden DUT"
+  judge_rubric:
+    - "project created with path_maturity: mature"
+    - "no bootstrap output produced"
+    - "capability_source is main, not branch"
+    - "known-board clarify-first output (A/B/C/D) is present"
+  notes: "Case A: copy-first succeeds. No bootstrap should run."
+
+- id: group_bootstrap_case_b_inferred_reference_001
+  title: Case B — same Group, inferred match, Group-guided bootstrap with reference
+  category: group_bootstrap
+  trigger: |
+    User asks to create a project for an STM32 variant not in golden
+    but whose Group (stm32) has golden entries.
+    Expected: bootstrap runs, reference_dut is set to a close golden DUT.
+  user_input: "Create a project for stm32f412 GPIO test."
+  formal_sources:
+    - "python3 -m ael project create --target-mcu stm32f412 ..."
+    - "python3 -m ael dut show-placeholders --id stm32f412_draft"
+    - "python3 -m ael inventory list"
+  must_use_formal_path: true
+  required_output_elements:
+    - "path_maturity: inferred"
+    - "status: draft_capability_created"
+    - "capability_source: branch"
+    - "group: stm32 in manifest"
+    - "reference_dut set to a close golden stm32 DUT"
+    - "assets_branch/duts/stm32f412_draft/ created"
+    - "configs/boards/stm32f412_draft.yaml created with PLACEHOLDER fields"
+    - "firmware/targets/stm32f412/ created from Group template"
+    - "show-placeholders lists remaining PLACEHOLDER fields"
+  forbidden_failure_modes:
+    - "stopping at clarification-only output without creating a draft"
+    - "creating the draft with group: unknown when stm32 is recognized"
+    - "omitting reference_dut when a close golden stm32 DUT exists"
+    - "reporting capability_source: main for a branch-bootstrapped project"
+  judge_rubric:
+    - "draft manifest contains group: stm32 and reference_dut field"
+    - "firmware template created with Group-specific build structure"
+    - "show-placeholders returns a non-empty PLACEHOLDER list"
+    - "run-gate blocks at lifecycle_stage: draft with actionable message"
+  notes: "Case B: same-Group reference bootstrap. Core Tier 1 scenario."
+
+- id: group_bootstrap_case_c_generic_group_001
+  title: Case C — Group identified, no close reference in golden, generic Group bootstrap
+  category: group_bootstrap
+  trigger: |
+    User asks to create a project for an nRF MCU.
+    Group 'nrf' is recognized but has no golden entries yet.
+    Expected: Group profile applied, no reference_dut, all board fields PLACEHOLDER.
+  user_input: "Create a project for nrf52840 GPIO test."
+  formal_sources:
+    - "python3 -m ael project create --target-mcu nrf52840 ..."
+    - "python3 -m ael dut show-placeholders --id nrf52840_draft"
+  must_use_formal_path: true
+  required_output_elements:
+    - "status: draft_capability_created"
+    - "capability_source: branch"
+    - "group: nrf in manifest"
+    - "build_type: arm_debug and flash_method: gdb_swd from Group profile"
+    - "no reference_dut field in manifest (no golden nrf entry exists)"
+    - "assets_branch/duts/nrf52840_draft/ created"
+    - "all board-specific fields are PLACEHOLDER"
+  forbidden_failure_modes:
+    - "reporting group: unknown when nrf is a recognized Group"
+    - "inventing a reference_dut when no golden nrf DUT exists"
+    - "omitting the Group profile (arm_debug / gdb_swd) from the bootstrap output"
+  judge_rubric:
+    - "manifest has group: nrf with correct build_type and flash_method"
+    - "no reference_dut field present"
+    - "show-placeholders returns a full PLACEHOLDER list"
+    - "instrument_hint mentions J-Link or SWD adapter"
+  notes: "Case C: Group-generic bootstrap. Tests Tier 2 path."
+
+- id: group_bootstrap_case_d_unknown_group_001
+  title: Case D — unknown Group, full PLACEHOLDER scaffold
+  category: group_bootstrap
+  trigger: |
+    User asks to create a project for a CH32V003 (WCH RISC-V MCU).
+    No Group prefix matches. Expected: 'unknown' Group fallback, all fields PLACEHOLDER.
+  user_input: "Create a project for ch32v003 to blink an LED."
+  formal_sources:
+    - "python3 -m ael project create --target-mcu ch32v003 ..."
+    - "python3 -m ael dut show-placeholders --id ch32v003_draft"
+  must_use_formal_path: true
+  required_output_elements:
+    - "status: draft_capability_created"
+    - "capability_source: branch"
+    - "group: unknown in manifest"
+    - "build_type: PLACEHOLDER_build_type"
+    - "flash_method: PLACEHOLDER_flash_method"
+    - "all profile fields are PLACEHOLDER"
+    - "show-placeholders returns a full PLACEHOLDER list including profile fields"
+  forbidden_failure_modes:
+    - "inventing a Group when no prefix matches"
+    - "assigning a known build_type without a Group match"
+    - "omitting the draft from assets_branch/ because Group is unknown"
+  judge_rubric:
+    - "manifest has group: unknown and all PLACEHOLDER profile fields"
+    - "bootstrap still runs and creates usable scaffold"
+    - "show-placeholders clearly lists what requires manual fill-in"
+    - "run-gate blocks with actionable PLACEHOLDER fill-in message"
+  notes: "Case D: unknown Group fallback. Must still produce a usable scaffold."

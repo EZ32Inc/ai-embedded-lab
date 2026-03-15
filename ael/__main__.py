@@ -139,6 +139,9 @@ def main():
     dut_set_lifecycle.add_argument("--id", required=True, help="DUT id")
     dut_set_lifecycle.add_argument("--stage", required=True, choices=["draft", "runnable", "validated", "merge_candidate", "merged_to_main"], help="target lifecycle_stage")
     dut_set_lifecycle.add_argument("--namespace", choices=["user", "branch"], default="branch", help="Namespace containing the DUT (default: branch)")
+    dut_show_ph = dut_sub.add_parser("show-placeholders", help="list remaining PLACEHOLDER fields in a branch/user DUT")
+    dut_show_ph.add_argument("--id", required=True, help="DUT id")
+    dut_show_ph.add_argument("--namespace", choices=["user", "branch"], default="branch")
 
     verify_default_p = sub.add_parser("verify-default")
     verify_default_sub = verify_default_p.add_subparsers(dest="verify_default_cmd", required=True)
@@ -683,6 +686,9 @@ def main():
         if args.dut_cmd == "set-lifecycle":
             code = dut_set_lifecycle_cmd(args.id, args.stage, namespace=args.namespace)
             sys.exit(code)
+        if args.dut_cmd == "show-placeholders":
+            code = dut_show_placeholders_cmd(args.id, namespace=args.namespace)
+            sys.exit(code)
     if args.cmd == "board":
         if args.board_cmd == "state":
             state = _board_state(args.board_id, args.runs_root)
@@ -1071,6 +1077,44 @@ def _infer_family_profile(mcu_name: str) -> dict:
     }
 
 
+def _generate_firmware_template(mcu: str, mcu_slug: str, group: str, repo_root: str) -> dict:
+    """Copy Group firmware template into firmware/targets/<mcu_slug>/.
+
+    Templates live in configs/firmware_templates/<group>/.
+    Substitutions applied: {SLUG} -> mcu_slug, {MCU} -> mcu, {MCU_UPPER} -> mcu.upper().
+
+    Returns dict: created (bool), path (str), files (list[str]), error (str|None).
+    """
+    root = Path(repo_root) if repo_root else Path(".")
+    template_dir = root / "configs" / "firmware_templates" / group
+    target_dir = root / "firmware" / "targets" / mcu_slug
+
+    if not template_dir.exists():
+        return {"created": False, "path": str(target_dir), "files": [], "error": f"no template for group '{group}'"}
+    if target_dir.exists():
+        return {"created": False, "path": str(target_dir), "files": [], "error": f"already exists: {target_dir}"}
+
+    subs = {"{SLUG}": mcu_slug, "{MCU}": mcu, "{MCU_UPPER}": mcu.upper()}
+    created_files: list[str] = []
+
+    for src_file in template_dir.rglob("*"):
+        if not src_file.is_file():
+            continue
+        rel = src_file.relative_to(template_dir)
+        dst_file = target_dir / rel
+        dst_file.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            content = src_file.read_text(encoding="utf-8")
+            for token, value in subs.items():
+                content = content.replace(token, value)
+            dst_file.write_text(content, encoding="utf-8")
+            created_files.append(str(rel))
+        except Exception as exc:
+            return {"created": False, "path": str(target_dir), "files": created_files, "error": str(exc)}
+
+    return {"created": True, "path": str(target_dir), "files": created_files, "error": None}
+
+
 def _find_group_reference(group: str, mcu_name: str) -> dict | None:
     """Find the best golden reference DUT for a given Group and MCU name.
 
@@ -1196,6 +1240,8 @@ def _bootstrap_draft_capability(
         encoding="utf-8",
     )
 
+    fw = _generate_firmware_template(mcu, mcu_slug, profile.get("group", "unknown"), repo_root)
+
     return {
         "dut_id": dut_id,
         "board_config_path": str(board_cfg_path),
@@ -1203,6 +1249,8 @@ def _bootstrap_draft_capability(
         "error": None,
         "reference_dut_id": ref_id,
         "group": profile.get("group", "unknown"),
+        "firmware_path": fw["path"] if fw["created"] else None,
+        "firmware_files": fw["files"] if fw["created"] else [],
     }
 
 
@@ -1495,6 +1543,10 @@ Fill in all PLACEHOLDER fields before attempting to run.
             if _ref_id:
                 print(f"    reference_dut: {_ref_id}")
             print(f"    instrument:    {_profile['instrument_hint']}")
+            if bootstrap_result.get("firmware_path"):
+                print(f"    firmware:      {bootstrap_result['firmware_path']}")
+                for f in bootstrap_result.get("firmware_files", []):
+                    print(f"                   + {f}")
             print("")
             print("  PLACEHOLDER fields require manual fill-in before running:")
             for u in unresolved:
@@ -2513,6 +2565,80 @@ def dut_set_lifecycle_cmd(dut_id: str, stage: str, namespace: str = "branch") ->
     )
     print(f"dut set-lifecycle: {dut_id} [{namespace}] {current or '(unset)'} → {stage}")
     return 0
+
+
+def dut_show_placeholders_cmd(dut_id: str, namespace: str = "branch") -> int:
+    """Scan a branch/user DUT for remaining PLACEHOLDER fields and report them."""
+    import yaml as _yaml  # type: ignore
+
+    ns_root = "assets_branch" if namespace == "branch" else "assets_user"
+    dut_dir = Path(ns_root) / "duts" / dut_id
+    manifest_path = dut_dir / "manifest.yaml"
+
+    if not manifest_path.exists():
+        print(f"dut show-placeholders: manifest not found: {manifest_path}")
+        return 2
+
+    try:
+        manifest = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        print(f"dut show-placeholders: failed to read manifest: {exc}")
+        return 3
+
+    board_cfg_rel = str(manifest.get("board_config") or "")
+    board_cfg_path = Path(board_cfg_rel) if board_cfg_rel else None
+
+    def _collect_placeholders(obj, path=""):
+        """Walk a nested dict/list and collect paths whose values start with PLACEHOLDER."""
+        found = []
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                found.extend(_collect_placeholders(v, f"{path}.{k}" if path else k))
+        elif isinstance(obj, list):
+            for i, v in enumerate(obj):
+                found.extend(_collect_placeholders(v, f"{path}[{i}]"))
+        elif isinstance(obj, str) and obj.startswith("PLACEHOLDER"):
+            found.append((path, obj))
+        return found
+
+    manifest_phs = _collect_placeholders(manifest)
+    board_phs = []
+    if board_cfg_path and board_cfg_path.exists():
+        try:
+            board_raw = _yaml.safe_load(board_cfg_path.read_text(encoding="utf-8")) or {}
+            board_phs = _collect_placeholders(board_raw)
+        except Exception:
+            pass
+
+    lifecycle = str(manifest.get("lifecycle_stage") or "").strip() or "(unset)"
+    group = str(manifest.get("group") or "").strip() or "(unset)"
+    ref_dut = str(manifest.get("reference_dut") or "").strip()
+
+    print(f"DUT: {dut_id}  [{namespace}]  lifecycle={lifecycle}  group={group}")
+    if ref_dut:
+        print(f"  reference_dut: {ref_dut}")
+    print("")
+
+    total = len(manifest_phs) + len(board_phs)
+    if total == 0:
+        print("  No PLACEHOLDER fields found — ready to advance lifecycle_stage.")
+        return 0
+
+    if manifest_phs:
+        print(f"  manifest ({manifest_path}):")
+        for field, val in manifest_phs:
+            print(f"    {field}: {val}")
+    if board_phs:
+        print(f"  board config ({board_cfg_rel or 'not set'}):")
+        for field, val in board_phs:
+            print(f"    {field}: {val}")
+
+    print("")
+    print(f"  {total} PLACEHOLDER field(s) remaining.")
+    if lifecycle == "draft":
+        print("  Fill all fields above, then:")
+        print(f"    ael dut set-lifecycle --id {dut_id} --stage runnable")
+    return 1  # non-zero = placeholders remain
 
 
 def _git_describe():
