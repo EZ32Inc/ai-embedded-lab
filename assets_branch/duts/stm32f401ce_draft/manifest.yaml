@@ -1,0 +1,18 @@
+board_config: configs/boards/stm32f401ce_draft.yaml
+build_type: arm_debug
+capability_notes: 'Group-bootstrapped draft for stm32f401ce (group: stm32). Group
+  reference used: stm32f401rct6. Fill in board-specific PLACEHOLDER fields before
+  running.'
+compile_validation: passed
+compile_validation_note: arm-none-eabi-gcc cortex-m4 -mfpu=fpv4-sp-d16 -mfloat-abi=hard
+  -DSTM32F401xC; vendor from STM32CubeF4 cache
+family: stm32
+flash_method: gdb_swd
+group: stm32
+id: stm32f401ce_draft
+lifecycle_stage: draft
+mcu: stm32f401ce
+reference_dut: stm32f401rct6
+verified:
+  note: draft — not yet verified
+  status: false

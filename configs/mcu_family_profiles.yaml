@@ -1,15 +1,40 @@
 # MCU family profiles for Group-based copy-miss bootstrap.
-# Keyed by name prefix (lowercase). First match wins.
+# Keyed by name prefix (lowercase). First match wins — more specific prefixes must come first.
 #
 # Fields:
-#   prefix              - MCU name prefix for matching (case-insensitive)
-#   group               - Group id (stm32 | esp32 | rp | nrf | unknown)
-#   family              - family identifier written into DUT manifest
-#   build_type          - toolchain type (arm_debug | idf | pico | ...)
-#   flash_method        - default flash mechanism (gdb_swd | idf_esptool | ...)
-#   instrument_hint     - human-readable instrument guidance for PLACEHOLDER
+#   prefix               - MCU name prefix for matching (case-insensitive)
+#   group                - Group id (stm32 | esp32 | rp | nrf | unknown)
+#   family               - family identifier written into DUT manifest
+#   build_type           - toolchain type (arm_debug | idf | pico | ...)
+#   flash_method         - default flash mechanism (gdb_swd | idf_esptool | ...)
+#   instrument_hint      - human-readable instrument guidance for PLACEHOLDER
 #   first_test_archetype - typical first test for this Group (metadata only)
+#   preferred_reference  - golden DUT id to use as Case B reference (optional)
+#   firmware_template    - template subdir under configs/firmware_templates/ (optional)
+
 profiles:
+  # ── STM32 sub-groups (more specific first) ────────────────────────────────
+  - prefix: "stm32f4"
+    group: "stm32"
+    family: "stm32"
+    build_type: "arm_debug"
+    flash_method: "gdb_swd"
+    instrument_hint: "esp32jtag or st-link (SWD)"
+    first_test_archetype: "gpio_signature"
+    preferred_reference: "stm32f411ceu6"
+    firmware_template: "stm32_f4"
+
+  - prefix: "stm32f1"
+    group: "stm32"
+    family: "stm32"
+    build_type: "arm_debug"
+    flash_method: "gdb_swd"
+    instrument_hint: "esp32jtag or st-link (SWD)"
+    first_test_archetype: "gpio_signature"
+    preferred_reference: "stm32f103"
+    firmware_template: "stm32_f1"
+
+  # Generic STM32 fallback (no preferred_reference — use similarity scoring)
   - prefix: "stm32"
     group: "stm32"
     family: "stm32"
@@ -17,6 +42,9 @@ profiles:
     flash_method: "gdb_swd"
     instrument_hint: "esp32jtag or st-link (SWD)"
     first_test_archetype: "gpio_signature"
+    firmware_template: "stm32"
+
+  # ── RP (Raspberry Pi) ─────────────────────────────────────────────────────
   - prefix: "rp2"
     group: "rp"
     family: "rp2040"
@@ -24,6 +52,9 @@ profiles:
     flash_method: "gdb_swd"
     instrument_hint: "picoprobe or SWD adapter"
     first_test_archetype: "gpio_signature"
+    preferred_reference: "rp2040_pico"
+    firmware_template: "rp"
+
   - prefix: "rp_"
     group: "rp"
     family: "rp2040"
@@ -31,6 +62,10 @@ profiles:
     flash_method: "gdb_swd"
     instrument_hint: "picoprobe or SWD adapter"
     first_test_archetype: "gpio_signature"
+    preferred_reference: "rp2040_pico"
+    firmware_template: "rp"
+
+  # ── ESP32 ─────────────────────────────────────────────────────────────────
   - prefix: "esp32"
     group: "esp32"
     family: "esp32"
@@ -38,6 +73,9 @@ profiles:
     flash_method: "idf_esptool"
     instrument_hint: "USB/UART or ESP-PROG"
     first_test_archetype: "gpio_signature"
+    preferred_reference: "esp32c6_devkit"
+    firmware_template: "esp32"
+
   - prefix: "esp8266"
     group: "esp32"
     family: "esp8266"
@@ -45,6 +83,10 @@ profiles:
     flash_method: "idf_esptool"
     instrument_hint: "USB/UART"
     first_test_archetype: "gpio_signature"
+    preferred_reference: "esp32c6_devkit"
+    firmware_template: "esp32"
+
+  # ── Nordic nRF (Tier 2 — no golden reference yet) ────────────────────────
   - prefix: "nrf5"
     group: "nrf"
     family: "nrf5x"
@@ -52,6 +94,7 @@ profiles:
     flash_method: "gdb_swd"
     instrument_hint: "J-Link or SWD adapter"
     first_test_archetype: "gpio_signature"
+
   - prefix: "nrf9"
     group: "nrf"
     family: "nrf9x"

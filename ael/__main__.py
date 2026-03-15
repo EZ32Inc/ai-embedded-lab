@@ -142,6 +142,11 @@ def main():
     dut_show_ph = dut_sub.add_parser("show-placeholders", help="list remaining PLACEHOLDER fields in a branch/user DUT")
     dut_show_ph.add_argument("--id", required=True, help="DUT id")
     dut_show_ph.add_argument("--namespace", choices=["user", "branch"], default="branch")
+    dut_set_cv = dut_sub.add_parser("set-compile-validated", help="record compile validation result on a branch/user DUT")
+    dut_set_cv.add_argument("--id", required=True)
+    dut_set_cv.add_argument("--result", required=True, choices=["passed", "failed"])
+    dut_set_cv.add_argument("--note", default="", help="optional note (compiler version, flags used, etc.)")
+    dut_set_cv.add_argument("--namespace", choices=["user", "branch"], default="branch")
 
     verify_default_p = sub.add_parser("verify-default")
     verify_default_sub = verify_default_p.add_subparsers(dest="verify_default_cmd", required=True)
@@ -689,6 +694,9 @@ def main():
         if args.dut_cmd == "show-placeholders":
             code = dut_show_placeholders_cmd(args.id, namespace=args.namespace)
             sys.exit(code)
+        if args.dut_cmd == "set-compile-validated":
+            code = dut_set_compile_validated_cmd(args.id, args.result, note=args.note, namespace=args.namespace)
+            sys.exit(code)
     if args.cmd == "board":
         if args.board_cmd == "state":
             state = _board_state(args.board_id, args.runs_root)
@@ -1065,6 +1073,8 @@ def _infer_family_profile(mcu_name: str) -> dict:
                 "flash_method": entry.get("flash_method", "PLACEHOLDER_flash_method"),
                 "instrument_hint": entry.get("instrument_hint", "unknown — specify debug/flash instrument"),
                 "first_test_archetype": entry.get("first_test_archetype", ""),
+                "preferred_reference": entry.get("preferred_reference", ""),
+                "firmware_template": entry.get("firmware_template", ""),
             }
 
     return {
@@ -1074,6 +1084,8 @@ def _infer_family_profile(mcu_name: str) -> dict:
         "flash_method": "PLACEHOLDER_flash_method",
         "instrument_hint": "unknown — specify debug/flash instrument",
         "first_test_archetype": "",
+        "preferred_reference": "",
+        "firmware_template": "",
     }
 
 
@@ -1118,10 +1130,21 @@ def _generate_firmware_template(mcu: str, mcu_slug: str, group: str, repo_root: 
 def _find_group_reference(group: str, mcu_name: str) -> dict | None:
     """Find the best golden reference DUT for a given Group and MCU name.
 
-    Filters assets_golden/duts/ to DUTs whose inferred Group matches, then
-    scores by MCU name prefix similarity (longer common prefix = better match).
-    Returns the DUT entry dict (keys: id, path, manifest) or None if no match.
+    Checks preferred_reference from the MCU's profile first (Representative
+    Reference Skill). Falls back to MCU name prefix similarity scoring if
+    no preferred_reference is set or it is not found in golden.
+
+    Returns the DUT entry dict (keys: id, path, manifest) or None.
     """
+    # Check preferred_reference from profile first
+    profile = _infer_family_profile(mcu_name)
+    preferred = profile.get("preferred_reference", "")
+    if preferred:
+        ref = assets.load_dut(preferred, roots=["assets_golden/duts"])
+        if ref:
+            return ref
+
+    # Fallback: similarity scoring across same-Group golden DUTs
     if not group or group == "unknown":
         return None
     candidates = assets.list_duts("assets_golden/duts")
@@ -1202,6 +1225,7 @@ def _bootstrap_draft_capability(
         "build_type": profile["build_type"],
         "flash_method": profile["flash_method"],
         "lifecycle_stage": "draft",
+        "compile_validation": "not_attempted",
         "verified": {"status": False, "note": "draft — not yet verified"},
         "capability_notes": capability_notes,
         "board_config": f"configs/boards/{dut_id}.yaml",
@@ -1240,7 +1264,8 @@ def _bootstrap_draft_capability(
         encoding="utf-8",
     )
 
-    fw = _generate_firmware_template(mcu, mcu_slug, profile.get("group", "unknown"), repo_root)
+    template_key = profile.get("firmware_template") or profile.get("group", "unknown")
+    fw = _generate_firmware_template(mcu, mcu_slug, template_key, repo_root)
 
     return {
         "dut_id": dut_id,
@@ -2613,10 +2638,12 @@ def dut_show_placeholders_cmd(dut_id: str, namespace: str = "branch") -> int:
     lifecycle = str(manifest.get("lifecycle_stage") or "").strip() or "(unset)"
     group = str(manifest.get("group") or "").strip() or "(unset)"
     ref_dut = str(manifest.get("reference_dut") or "").strip()
+    compile_val = str(manifest.get("compile_validation") or "not_attempted").strip()
 
     print(f"DUT: {dut_id}  [{namespace}]  lifecycle={lifecycle}  group={group}")
     if ref_dut:
-        print(f"  reference_dut: {ref_dut}")
+        print(f"  reference_dut:     {ref_dut}")
+    print(f"  compile_validation: {compile_val}")
     print("")
 
     total = len(manifest_phs) + len(board_phs)
@@ -2639,6 +2666,46 @@ def dut_show_placeholders_cmd(dut_id: str, namespace: str = "branch") -> int:
         print("  Fill all fields above, then:")
         print(f"    ael dut set-lifecycle --id {dut_id} --stage runnable")
     return 1  # non-zero = placeholders remain
+
+
+def dut_set_compile_validated_cmd(dut_id: str, result: str, note: str = "", namespace: str = "branch") -> int:
+    """Record compile_validation result on a branch/user DUT manifest."""
+    import yaml as _yaml  # type: ignore
+
+    ns_root = "assets_branch" if namespace == "branch" else "assets_user"
+    dut_dir = Path(ns_root) / "duts" / dut_id
+    manifest_path = dut_dir / "manifest.yaml"
+
+    if not manifest_path.exists():
+        print(f"dut set-compile-validated: manifest not found: {manifest_path}")
+        return 2
+
+    try:
+        manifest = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        print(f"dut set-compile-validated: failed to read manifest: {exc}")
+        return 3
+
+    if result not in ("passed", "failed"):
+        print(f"dut set-compile-validated: invalid result '{result}'; must be passed or failed")
+        return 1
+
+    prev = manifest.get("compile_validation", "not_attempted")
+    manifest["compile_validation"] = result
+    if note:
+        manifest["compile_validation_note"] = note
+
+    try:
+        manifest_path.write_text(_yaml.dump(manifest, default_flow_style=False, allow_unicode=True), encoding="utf-8")
+    except Exception as exc:
+        print(f"dut set-compile-validated: failed to write manifest: {exc}")
+        return 4
+
+    print(f"DUT: {dut_id}  [{namespace}]")
+    print(f"  compile_validation: {prev} → {result}")
+    if note:
+        print(f"  note: {note}")
+    return 0
 
 
 def _git_describe():
