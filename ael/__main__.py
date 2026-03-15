@@ -1053,18 +1053,57 @@ def _infer_family_profile(mcu_name: str) -> dict:
     for entry in profiles:
         if isinstance(entry, dict) and name.startswith(str(entry.get("prefix", "")).lower()):
             return {
+                "group": entry.get("group", "unknown"),
                 "family": entry.get("family", "unknown"),
                 "build_type": entry.get("build_type", "PLACEHOLDER_build_type"),
                 "flash_method": entry.get("flash_method", "PLACEHOLDER_flash_method"),
                 "instrument_hint": entry.get("instrument_hint", "unknown — specify debug/flash instrument"),
+                "first_test_archetype": entry.get("first_test_archetype", ""),
             }
 
     return {
+        "group": "unknown",
         "family": "unknown",
         "build_type": "PLACEHOLDER_build_type",
         "flash_method": "PLACEHOLDER_flash_method",
         "instrument_hint": "unknown — specify debug/flash instrument",
+        "first_test_archetype": "",
     }
+
+
+def _find_group_reference(group: str, mcu_name: str) -> dict | None:
+    """Find the best golden reference DUT for a given Group and MCU name.
+
+    Filters assets_golden/duts/ to DUTs whose inferred Group matches, then
+    scores by MCU name prefix similarity (longer common prefix = better match).
+    Returns the DUT entry dict (keys: id, path, manifest) or None if no match.
+    """
+    if not group or group == "unknown":
+        return None
+    candidates = assets.list_duts("assets_golden/duts")
+    group_candidates = []
+    for entry in candidates:
+        manifest = entry.get("manifest") or {}
+        dut_mcu = str(manifest.get("mcu") or entry.get("id") or "").strip()
+        if dut_mcu and _infer_family_profile(dut_mcu).get("group") == group:
+            group_candidates.append(entry)
+    if not group_candidates:
+        return None
+
+    target = mcu_name.strip().lower()
+
+    def _prefix_common(entry):
+        ref_mcu = str((entry.get("manifest") or {}).get("mcu") or "").strip().lower()
+        count = 0
+        for a, b in zip(target, ref_mcu):
+            if a == b:
+                count += 1
+            else:
+                break
+        return count
+
+    group_candidates.sort(key=_prefix_common, reverse=True)
+    return group_candidates[0]
 
 
 def _bootstrap_draft_capability(
@@ -1072,6 +1111,7 @@ def _bootstrap_draft_capability(
     mcu_slug: str,
     repo_root: str,
     profile: dict,
+    reference_dut: dict | None = None,
 ) -> dict:
     """Create draft capability artifacts in assets_branch/ and configs/boards/.
 
@@ -1093,17 +1133,37 @@ def _bootstrap_draft_capability(
 
     dut_dir.mkdir(parents=True, exist_ok=True)
 
-    manifest = {
+    ref_id = None
+    if isinstance(reference_dut, dict):
+        ref_manifest = reference_dut.get("manifest") or {}
+        ref_id = str(reference_dut.get("id") or ref_manifest.get("id") or "").strip() or None
+
+    if ref_id:
+        capability_notes = (
+            f"Group-bootstrapped draft for {mcu} (group: {profile.get('group', 'unknown')}). "
+            f"Group reference used: {ref_id}. "
+            "Fill in board-specific PLACEHOLDER fields before running."
+        )
+    else:
+        capability_notes = (
+            f"Auto-bootstrapped draft for {mcu} (group: {profile.get('group', 'unknown')}). "
+            "Fill in board-specific details before running."
+        )
+
+    manifest: dict = {
         "id": dut_id,
         "mcu": mcu,
+        "group": profile.get("group", "unknown"),
         "family": profile["family"],
         "build_type": profile["build_type"],
         "flash_method": profile["flash_method"],
         "lifecycle_stage": "draft",
         "verified": {"status": False, "note": "draft — not yet verified"},
-        "capability_notes": f"Auto-bootstrapped draft for {mcu}. Fill in board-specific details before running.",
+        "capability_notes": capability_notes,
         "board_config": f"configs/boards/{dut_id}.yaml",
     }
+    if ref_id:
+        manifest["reference_dut"] = ref_id
     (dut_dir / "manifest.yaml").write_text(
         _yaml.dump(manifest, allow_unicode=True, default_flow_style=False),
         encoding="utf-8",
@@ -1136,7 +1196,14 @@ def _bootstrap_draft_capability(
         encoding="utf-8",
     )
 
-    return {"dut_id": dut_id, "board_config_path": str(board_cfg_path), "created": True, "error": None}
+    return {
+        "dut_id": dut_id,
+        "board_config_path": str(board_cfg_path),
+        "created": True,
+        "error": None,
+        "reference_dut_id": ref_id,
+        "group": profile.get("group", "unknown"),
+    }
 
 
 def _project_create_shell(
@@ -1170,11 +1237,11 @@ def _project_create_shell(
         next_action = "reuse existing mature path — run stm32f411_gpio_signature or equivalent to validate"
     elif is_inferred:
         assumption = (
-            f"Target MCU {target_mcu} is not an exact match but may be compatible with {mature_path} "
-            "— family-level similarity only, not verified"
+            f"Target MCU {target_mcu} is in the same Group as {mature_path} but is not an exact match — "
+            f"a draft capability will be bootstrapped using {mature_path} as a Group reference"
         )
-        status = "exploratory"
-        next_action = "clarify board details, exact GPIO/LED pins, and available debug/flash tool before generating code"
+        status = "draft_capability_created"
+        next_action = "fill PLACEHOLDER fields in the generated board config and DUT manifest, then advance lifecycle_stage to runnable"
     else:  # unknown — bootstrap a draft capability in assets_branch/
         assumption = (
             f"Target MCU {target_mcu} has no known mature path in the AEL repo — "
@@ -1246,8 +1313,8 @@ def _project_create_shell(
                     "reason": cross_domain_reason,
                 }
             ],
-            "capability_source": "branch" if is_unknown else "main",
-            "capability_ref": f"{_slugify(target_mcu)}_draft" if is_unknown else (mature_path or ""),
+            "capability_source": "branch" if (is_unknown or is_inferred) else "main",
+            "capability_ref": f"{_slugify(target_mcu)}_draft" if (is_unknown or is_inferred) else (mature_path or ""),
             "status": status,
             "confirmed_facts": [confirmed_fact],
             "assumptions": [assumption],
@@ -1268,12 +1335,22 @@ def _project_create_shell(
         print(f"error writing project.yaml: {exc}")
         return 1
 
-    # For unknown MCUs: bootstrap a draft capability in assets_branch/
+    # Bootstrap a draft capability for inferred (Case B) and unknown (Case C/D) MCUs
     bootstrap_result: dict = {}
-    if is_unknown:
+    if is_inferred or is_unknown:
         profile = _infer_family_profile(target_mcu)
         mcu_slug = _slugify(target_mcu)
-        bootstrap_result = _bootstrap_draft_capability(target_mcu, mcu_slug, repo_root, profile)
+        # Case B: inferred maturity → mature_path is the closest golden DUT; use it as reference
+        # Case B also applies when unknown but same Group has a golden entry
+        ref_entry: dict | None = None
+        if is_inferred and mature_path:
+            ref_entry = assets.load_dut(mature_path, roots=["assets_golden/duts"])
+        elif is_unknown:
+            group = profile.get("group", "unknown")
+            ref_entry = _find_group_reference(group, target_mcu)
+        bootstrap_result = _bootstrap_draft_capability(
+            target_mcu, mcu_slug, repo_root, profile, reference_dut=ref_entry
+        )
         if bootstrap_result.get("error") and not bootstrap_result.get("created"):
             print(f"  note: bootstrap skipped — {bootstrap_result['error']}")
 
@@ -1396,16 +1473,28 @@ Fill in all PLACEHOLDER fields before attempting to run.
         print("     Confirm or correct the above — then I can prepare a runnable path")
         print("     that matches your real setup instead of only the repo reference.")
     else:
-        # unknown path — show bootstrap result
+        # inferred (Case B) or unknown (Case C/D) — show bootstrap result
         if bootstrap_result.get("created"):
-            profile = _infer_family_profile(target_mcu)
-            print("  Draft capability bootstrapped in assets_branch/:")
+            _profile = _infer_family_profile(target_mcu)
+            _ref_id = bootstrap_result.get("reference_dut_id")
+            _group = bootstrap_result.get("group", _profile.get("group", "unknown"))
+            if is_inferred and _ref_id:
+                print(f"  Case B: Group '{_group}' reference found → {_ref_id}")
+                print(f"  Draft capability bootstrapped using Group reference:")
+            elif _ref_id:
+                print(f"  Group '{_group}' reference found → {_ref_id}")
+                print(f"  Draft capability bootstrapped using Group reference:")
+            else:
+                print(f"  Group '{_group}' — no close reference found, generic bootstrap:")
             print(f"    DUT id:        {bootstrap_result['dut_id']}")
             print(f"    manifest:      assets_branch/duts/{bootstrap_result['dut_id']}/manifest.yaml")
             print(f"    board config:  {bootstrap_result['board_config_path']}")
             print(f"    lifecycle:     draft")
-            print(f"    family:        {profile['family']} ({profile['build_type']} / {profile['flash_method']})")
-            print(f"    instrument:    {profile['instrument_hint']}")
+            print(f"    group:         {_group}")
+            print(f"    family:        {_profile['family']} ({_profile['build_type']} / {_profile['flash_method']})")
+            if _ref_id:
+                print(f"    reference_dut: {_ref_id}")
+            print(f"    instrument:    {_profile['instrument_hint']}")
             print("")
             print("  PLACEHOLDER fields require manual fill-in before running:")
             for u in unresolved:
@@ -1717,18 +1806,63 @@ def _project_run_gate_check(payload: dict) -> tuple[bool, list, list, str]:
                 "What debug/flash/instrument setup is available?",
             ]
     elif path_maturity == "inferred":
-        ok = False
-        readiness = "candidate_path_identified"
-        reasons.append(
-            f"path_maturity is 'inferred' — {payload.get('target_mcu')} is not a verified match "
-            f"for {payload.get('closest_mature_ael_path', '?')}"
-        )
-        clarifications = [
-            f"Confirm the board is compatible with {payload.get('closest_mature_ael_path', '?')}",
-            "Confirm LED pin mapping matches the reference board",
-            "Confirm GPIO pins match the reference board",
-            "Confirm instrument/flash setup is compatible",
-        ]
+        cap_source = str(payload.get("capability_source") or "").strip()
+        cap_ref = str(payload.get("capability_ref") or "").strip()
+        if cap_source == "branch" and cap_ref:
+            # Case B bootstrap was run — check branch DUT lifecycle_stage
+            branch_manifest_path = Path("assets_branch") / "duts" / cap_ref / "manifest.yaml"
+            branch_stage = ""
+            if branch_manifest_path.exists():
+                try:
+                    import yaml as _yaml  # type: ignore
+                    bm = _yaml.safe_load(branch_manifest_path.read_text(encoding="utf-8"))
+                    branch_stage = str((bm or {}).get("lifecycle_stage") or "").strip()
+                except Exception:
+                    pass
+            if branch_stage and branch_stage in _LIFECYCLE_STAGES:
+                stage_idx = _LIFECYCLE_STAGES.index(branch_stage)
+                runnable_idx = _LIFECYCLE_STAGES.index("runnable")
+                if stage_idx >= runnable_idx:
+                    ok = True
+                    readiness = "branch_capability_runnable"
+                    reasons.append(
+                        f"branch capability '{cap_ref}' is at lifecycle_stage '{branch_stage}' — ready to run from branch"
+                    )
+                else:
+                    ok = False
+                    readiness = "branch_capability_draft"
+                    reasons.append(
+                        f"branch capability '{cap_ref}' (Group-bootstrapped) is at lifecycle_stage '{branch_stage}' — "
+                        "fill PLACEHOLDER fields and advance to 'runnable' before running"
+                    )
+                    clarifications = [
+                        f"Edit configs/boards/{cap_ref}.yaml — replace all PLACEHOLDER values",
+                        f"Edit assets_branch/duts/{cap_ref}/manifest.yaml — fill board details",
+                        f"Run: ael dut set-lifecycle --id {cap_ref} --stage runnable",
+                    ]
+            else:
+                ok = False
+                readiness = "branch_capability_missing"
+                reasons.append(
+                    f"branch capability '{cap_ref}' not found or has no lifecycle_stage"
+                )
+                clarifications = [
+                    f"Re-create the project: ael project create --target-mcu {payload.get('target_mcu', '?')} ...",
+                ]
+        else:
+            # Legacy inferred without branch bootstrap — ask clarifications
+            ok = False
+            readiness = "candidate_path_identified"
+            reasons.append(
+                f"path_maturity is 'inferred' — {payload.get('target_mcu')} is not a verified match "
+                f"for {payload.get('closest_mature_ael_path', '?')}"
+            )
+            clarifications = [
+                f"Confirm the board is compatible with {payload.get('closest_mature_ael_path', '?')}",
+                "Confirm LED pin mapping matches the reference board",
+                "Confirm GPIO pins match the reference board",
+                "Confirm instrument/flash setup is compatible",
+            ]
     else:
         check = _mature_confirmation_check(payload)
         readiness = check["readiness"]

@@ -1,34 +1,61 @@
-# MCU family profiles for draft capability bootstrap.
+# MCU family profiles for Group-based copy-miss bootstrap.
 # Keyed by name prefix (lowercase). First match wins.
-# Fields: family, build_type, flash_method, instrument_hint
+#
+# Fields:
+#   prefix              - MCU name prefix for matching (case-insensitive)
+#   group               - Group id (stm32 | esp32 | rp | nrf | unknown)
+#   family              - family identifier written into DUT manifest
+#   build_type          - toolchain type (arm_debug | idf | pico | ...)
+#   flash_method        - default flash mechanism (gdb_swd | idf_esptool | ...)
+#   instrument_hint     - human-readable instrument guidance for PLACEHOLDER
+#   first_test_archetype - typical first test for this Group (metadata only)
 profiles:
   - prefix: "stm32"
+    group: "stm32"
     family: "stm32"
     build_type: "arm_debug"
     flash_method: "gdb_swd"
     instrument_hint: "esp32jtag or st-link (SWD)"
+    first_test_archetype: "gpio_signature"
   - prefix: "rp2"
+    group: "rp"
     family: "rp2040"
     build_type: "pico"
     flash_method: "gdb_swd"
     instrument_hint: "picoprobe or SWD adapter"
+    first_test_archetype: "gpio_signature"
   - prefix: "rp_"
+    group: "rp"
     family: "rp2040"
     build_type: "pico"
     flash_method: "gdb_swd"
     instrument_hint: "picoprobe or SWD adapter"
+    first_test_archetype: "gpio_signature"
   - prefix: "esp32"
+    group: "esp32"
     family: "esp32"
     build_type: "idf"
     flash_method: "idf_esptool"
     instrument_hint: "USB/UART or ESP-PROG"
+    first_test_archetype: "gpio_signature"
   - prefix: "esp8266"
+    group: "esp32"
     family: "esp8266"
     build_type: "idf"
     flash_method: "idf_esptool"
     instrument_hint: "USB/UART"
+    first_test_archetype: "gpio_signature"
   - prefix: "nrf5"
+    group: "nrf"
     family: "nrf5x"
     build_type: "arm_debug"
     flash_method: "gdb_swd"
     instrument_hint: "J-Link or SWD adapter"
+    first_test_archetype: "gpio_signature"
+  - prefix: "nrf9"
+    group: "nrf"
+    family: "nrf9x"
+    build_type: "arm_debug"
+    flash_method: "gdb_swd"
+    instrument_hint: "J-Link or SWD adapter"
+    first_test_archetype: "gpio_signature"
