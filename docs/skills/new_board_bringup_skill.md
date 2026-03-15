@@ -23,6 +23,12 @@ For first-time MCU support:
 This skill should never treat an older target's register-level implementation
 as automatically portable just because the validation method is reusable.
 
+**Pin verification is mandatory before writing any firmware or wiring plan.**
+See [`mcu_pin_verification_skill.md`](mcu_pin_verification_skill.md) for the
+full process. Step 2 of the Core Flow below cannot be considered complete until
+a verification table with source and confidence has been produced for all
+peripheral pins in scope.
+
 ## Why This Skill Matters
 
 This is one of the strongest current AEL skill candidates because:

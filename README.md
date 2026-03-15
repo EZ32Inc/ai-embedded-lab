@@ -1,28 +1,32 @@
-# AEL — AI Embedded Lab
+# AEL — AI-Driven Embedded Lab
 
-AEL orchestrates Instruments interacting with DUTs (real hardware running firmware) to automatically build, run and verify their behavior.
+What if embedded development could feel like **vibe coding**?
+
+Instead of manually writing firmware, reading datasheets, wiring instruments, and debugging step by step, you can describe what you want in natural language — and the system helps design experiments, generate firmware, run tests on real hardware, and analyze the results.
+
+AEL is an experimental system that brings **vibe coding to embedded systems**.
+
+It connects AI reasoning with a real embedded hardware lab. The system can generate firmware, design experiments, flash MCUs, capture signals, and verify behavior automatically.
+
+Instead of stopping at code generation, AEL allows AI and the engineer to collaborate: designing tests, debugging failures, and completing experiments using evidence from real hardware.
+
+This project explores a future where AI becomes an active engineering partner in embedded development.
 
 ---
 
-**Tell AEL what you connected. Tell it what you want.  
-It builds, flashes, runs, measures and reports — on real hardware.**
+## What AEL can do
 
-AEL turns embedded development into a **vibe coding experience**:
+AEL can automatically:
 
-Instead of manually:
+✔️ Generate firmware
+✔️ Install toolchains (if missing)
+✔️ Build projects
+✔️ Flash target MCUs
+✔️ Monitor UART logs
+✔️ Detect crashes (panic / watchdog / reboot loops)
+✔️ Capture and verify GPIO signals
 
-- building firmware  
-- flashing targets  
-- watching UART logs  
-- probing GPIO signals  
-
-You describe:
-
-- your board  
-- how it's connected  
-- what you want to verify  
-
-AEL handles the rest.
+All as part of a single automated pipeline.
 
 ---
 
@@ -43,19 +47,195 @@ And it works on **real hardware**, not simulations.
 
 ---
 
-## What AEL can do
+## How it works (Simplified)
 
-AEL can automatically:
+```
+Human → Orchestrator → Instrument → DUT (Target MCU)
+```
 
-✔️ Generate firmware  
-✔️ Install toolchains (if missing)  
-✔️ Build projects  
-✔️ Flash target MCUs  
-✔️ Monitor UART logs  
-✔️ Detect crashes (panic / watchdog / reboot loops)  
-✔️ Capture and verify GPIO signals  
+Where:
 
-All as part of a single automated pipeline.
+- **Orchestrator** orchestrates the workflow and makes decisions
+- **Instrument** provides debug access and signal capture
+- **DUT** runs real firmware and produces observable behavior
+
+---
+
+## Example
+
+Imagine:
+
+- You have an STM32 board
+- Its SWD is connected to an Instrument that supports Cortex MCU flash
+- Its GPIOs P4–P7 are connected to capture inputs
+
+You tell AEL:
+
+> Generate firmware that outputs four different frequencies on P4–P7,
+> build it, flash it, run it,
+> and verify the signals are present.
+
+AEL will:
+
+1. Generate firmware
+2. Build it
+3. Flash the target
+4. Run it
+5. Capture signal behavior
+6. Validate the result
+7. Report PASS / FAIL
+
+No manual intervention required.
+
+---
+
+## Reference Instrument: [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
+
+AEL works with programmable **Instruments** that provide:
+
+- debug access
+- signal capture
+- runtime monitoring
+
+Today, **ESP32JTAG** serves as the first fully-supported Instrument.
+
+It enables AEL to:
+
+- flash firmware
+- capture GPIO signals
+- monitor UART output
+- verify real hardware behavior
+
+AEL itself is not tied to any specific hardware. [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) is simply the first concrete implementation of the AEL Instrument concept.
+
+---
+
+## Try AEL with Two Dev Boards (No Dedicated Hardware Required)
+
+You don't need [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) to experience AEL.
+
+A minimal setup uses:
+
+- One ESP32-S3 dev board (Instrument)
+- One RP2040 or STM32 or ESP32 dev board (DUT)
+
+Total cost: under $20–$30.
+
+The first board is a WiFi-based signal instrument that captures signals from the DUT or generates stimulus signals, and communicates with the Orchestrator over WiFi.
+
+This allows AEL to build firmware, flash the target, run code, and verify signal behavior — without specialized hardware.
+
+### Example Setup
+
+Connect:
+
+- ESP32 GPIO A → RP2040 IN0
+- ESP32 GPIO B → RP2040 IN1
+- ESP32 GPIO C → RP2040 IN2
+- ESP32 GPIO D → RP2040 IN3
+- GND → GND
+
+Then tell AEL:
+
+> Generate firmware with four different output frequencies,
+> build it, flash it, run it, and verify signals.
+
+AEL will compile, flash, run, measure, and validate automatically.
+
+### Capability Comparison
+
+| Setup | Auto Build | Flash | UART Monitor | Signal Verify |
+|---|---|---|---|---|
+| ESP32 only | ✔️ | ✔️ | ✔️ | ❌ |
+| + RP2040 / STM32 | ✔️ | ✔️ | ✔️ | ✔️ |
+| ESP32JTAG | ✔️ | ✔️ | ✔️ | ✔️ (higher speed & stability) |
+
+---
+
+## Some Use Case Examples
+
+Here is an example using [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) as Instrument with an RP2040 Pico board:
+
+![image](docs/images/20260302_esp32jtag_rp2040.jpg)
+
+Another example uses two ESP32-S3 boards — one as Instrument to check GPIO levels, toggling, and target voltage; the other as DUT:
+
+![image](docs/images/20260302_two_esp32s3.jpg)
+
+A screenshot showing AEL and Codex running together on Ubuntu:
+
+![image](docs/images/Screenshot_AEL_Codex_0302.png)
+
+---
+
+## Supported Targets (v0.1)
+
+- RP2040
+- STM32F103
+- STM32F411
+- ESP32-S3
+
+And much more to come.
+
+---
+
+## Terminology
+
+An AEL lab consists of four core roles: Orchestrator, DUT, Instrument, Connections.
+
+### Orchestrator
+
+The system running AEL software. Typically a PC or server.
+
+Responsible for:
+- orchestration and decision making
+- build & flash control
+- verification logic
+
+### DUT (Device Under Test)
+
+The target system being developed or verified.
+
+Examples:
+- STM32 board
+- RP2040 Pico
+- ESP32-S3 target
+
+Runs firmware and produces behavior.
+
+### Instrument
+
+A device that interacts with the DUT.
+
+Instruments provide capabilities such as:
+
+- debug access (SWD / JTAG)
+- signal capture and generation
+- UART monitoring
+- measurement
+
+Examples:
+- [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
+- RP2040 USB GPIO meter
+- ESP32-S3 dev board (DIY instrument)
+- External lab equipment
+
+### Connections
+
+Defines how DUTs are wired to Instruments.
+
+Examples:
+
+- SWD → Instrument Port P3
+- DUT GPIO P4 → Capture IN0
+
+Connections make automation reproducible.
+
+### Together:
+
+```
+Orchestrator → Instruments → Connections → DUTs
+```
 
 ---
 
@@ -67,7 +247,7 @@ See `docs/AI_USAGE_RULES.md` for CLI design rules and deterministic execution gu
 
 ## Latest Runs Helper
 
-Use the helper script below to quickly view the newest run folders and key logs:
+Use the helper script to quickly view the newest run folders and key logs:
 
 ```bash
 tools/show_latest_runs.sh
@@ -103,253 +283,6 @@ Notes:
 - `tools/cleanup_workspce` is the compatibility alias (kept for existing usage).
 - `tools/cleanup_workspace` is the canonical wrapper.
 - `.gitkeep` placeholder files are preserved.
-- Run data is cleaned under `runs/` in this repository by default.
-
----
-
-## Supported Targets (v0.1)
-
-- RP2040  
-- STM32F103  
-- ESP32-S3  
-
-And much more to come.
-
----
-
-## Example
-
-Imagine:
-
-- You have an STM32 board  
-- Its SWD is connected to an Instrument that support Cortex MCU flash
-- Its GPIOs P4–P7 are connected to capture inputs  
-
-You tell AEL:
-
-> Generate firmware that outputs four different frequencies on P4–P7,  
-> build it, flash it, run it,  
-> and verify the signals are present.
-
-AEL will:
-
-1. Generate firmware  
-2. Build it  
-3. Flash the target  
-4. Run it  
-5. Capture signal behavior  
-6. Validate the result  
-7. Report PASS / FAIL  
-
-No manual intervention required.
-
----
-
-## Reference Instrument: [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
-
-AEL works with programmable **Instrument** that provide:
-
-- debug access  
-- signal capture  
-- runtime monitoring  
-
-Today, **ESP32JTAG** serves as the first fully-supported Instrument.
-
-It enables AEL to:
-
-- flash firmware  
-- capture GPIO signals  
-- monitor UART output  
-- verify real hardware behavior  
-
-AEL itself is not tied to any specific hardware.
-
-[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) is simply the first concrete implementation of this AEL Instrument concept.
-
----
-
-## Try AEL with Two Dev Boards (No Dedicated Hardware Required)
-
-You don’t need [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) to experience AEL.
-
-A minimal setup uses:
-
-- One ESP32-S3 dev board (Instrument)
-- One RP2040 or STM32 or ESP32 dev board (DUT)
-
-Total cost: under $20–$30.
-
-The first board is a WiFi-based signal instrument that captures signals from the DUT or generates stimulus signals, and communicates with the Orchestrator over WiFi.
-
-This allows AEL to:
-
-- build firmware  
-- flash target  
-- run code  
-- verify signal behavior  
-
-without specialized hardware.
-
----
-
-### Example Setup
-
-Connect:
-
-- ESP32 GPIO A → RP2040 IN0  
-- ESP32 GPIO B → RP2040 IN1  
-- ESP32 GPIO C → RP2040 IN2  
-- ESP32 GPIO D → RP2040 IN3  
-- GND → GND  
-
-Then tell AEL:
-
-> Generate firmware with four different output frequencies  
-> build it, flash it, run it,  
-> and verify signals.
-
-AEL will:
-
-- compile  
-- flash  
-- run  
-- measure
-- validate  
-
-automatically.
-
----
-
-### Capability Comparison
-
-| Setup | Auto Build | Flash | UART Monitor | Signal Verify |
-|---|---|---|---|---|
-| ESP32 only | ✔️ | ✔️ | ✔️ | ❌ |
-| + RP2040 / STM32 | ✔️ | ✔️ | ✔️ | ✔️ |
-| ESP32JTAG | ✔️ | ✔️ | ✔️ | ✔️ (higher speed & stability) |
-
----
-
-## How it works (Simplified)
-
-Human → Orchestrator → Instrument → DUT(Target MCU)
-
-Where:
-
-- Orchestrator orchestrates the workflow  
-- Instrument provides debug & capture  
-- DUT runs real firmware  
-
----
-
-## Some use case examples
-
-Here is example how we use [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) as Instrument and RP2040 PICO board.
-![image](docs/images/20260302_esp32jtag_rp2040.jpg)
-
-Another example is using two ESP32S3 boards, one as Instrument to check GPIO levels and toggling and target voltage of the DUT, another ESP32S3 dev board is used as DUT or the target system being developed/verified.
-![image](docs/images/20260302_two_esp32s3.jpg)
-
-This is a screenshot showing how we use AEL and Codex in Ubuntu OS:
-![image](docs/images/Screenshot_AEL_Codex_0302.png)
-
----
-
-## Quick Reality Check
-
-AEL aims to provide a web-coding-like experience for embedded development:
-
-Describe your board → AEL executes the hardware loop.
-
-Today, this intent is expressed via:
-
-- board profiles  
-- wiring configuration  
-- test packs  
-
-rather than full natural language interaction.
-
-This keeps the system deterministic and reliable while still enabling full automation.
-
-Natural-language workflows are a future direction.
-
----
-## Terminology
-
-An AEL lab consists of four core roles: Orchestrator, DUT, Instrument, Connections.
-
-### Orchestrator
-The system running AEL software.
-
-Typically a PC or server.
-
-Responsible for:
-- orchestration
-- decision making
-- build & flash control
-- verification logic
-
-### DUT (Device Under Test)
-
-The target system being developed or verified.
-
-Examples:
-- STM32 board
-- RP2040 Pico
-- ESP32-S3 target
-
-Runs firmware and produces behavior.
-
-### Instrument
-
-A device that interacts with the DUT.
-
-Instruments provide capabilities such as:
-
-- debug access (SWD / JTAG)
-- signal capture
-- signal generation
-- UART monitoring
-- measurement
-
-Examples:
-- [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)
-- RP2040 USB GPIO meter
-- Future ezLink
-- External lab equipment
-
-### Connections
-
-Defines how DUTs are wired to Instruments.
-
-Examples:
-
-- SWD → Instrument Port P3
-- DUT GPIO P4 → Capture IN0
-
-Connections make automation reproducible.
-
-### Together:
-
-Orchestrator → Instruments → Connections → DUTs
-
----
-
-## License
-
-AEL is released under the [Apache 2.0 License](https://choosealicense.com/licenses/apache-2.0/).
-
-The goal is to make it easy for developers, startups and hardware teams to experiment with AI-driven embedded workflows without legal friction.
-
-You are free to:
-
-- use it in personal projects  
-- integrate it into commercial products  
-- extend it for internal tooling  
-
-See the [Apache 2.0 LICENSE](https://choosealicense.com/licenses/apache-2.0/) file for details.
-
-Third-party components and vendor code remain under their respective original licenses.
 
 ---
 
@@ -357,76 +290,46 @@ Third-party components and vendor code remain under their respective original li
 
 Early stage but actively used in daily development.
 
-Feedback and contribution is welcome.
-----------------------------------
-v0.11-ai-loop 
+Feedback and contributions are welcome.
 
-Milestone: AI-controlled hardware validation loop (2026-03-03)
+---
 
-AEL reached an important milestone: the system successfully executed a full AI-driven hardware development loop.
+## Milestones
 
-Using Codex, the following workflow was completed autonomously:
+**v0.11-ai-loop** — AI-controlled hardware validation loop (2026-03-03)
 
-    Generate RunPlan
+AEL completed a full AI-driven hardware development loop using Codex:
 
-    Execute BUILD → LOAD → CHECK pipeline
+- Generated a RunPlan
+- Executed BUILD → LOAD → CHECK pipeline
+- Flashed firmware to real hardware
+- Captured UART logs and measured GPIO voltage
+- Verified digital signature
+- Detected a runtime failure, implemented a fix, re-ran the pipeline
+- Achieved PASS on real hardware
 
-    Flash firmware to real hardware
-
-    Capture UART logs
-
-    Measure GPIO voltage using instrument
-
-    Verify digital signature
-
-    Detect a runtime failure (UART port not set)
-
-    Implement a fix in the adapter
-
-    Re-run the full pipeline
-
-    Achieve PASS on real hardware
-
-All steps were executed through the AEL CLI and Runner architecture.
-
-Artifacts generated:
-
-    artifacts/run_plan.json
-
-    artifacts/result.json
-
-Golden test:
-
-python3 -m ael run \
-  --board esp32s3_devkit \
-  --test tests/plans/esp32s3_gpio_signature_with_meter.json \
-  --probe configs/esp32jtag.yaml
-
-This demonstrates AEL's core concept:
-
-AI can build, run, and validate embedded firmware on real hardware automatically.
-
-----------------------------------
-v0.11-autonomous-loop
-
-Milestone: AEL reached autonomous development loop (2026-03-04)
+**v0.11-autonomous-loop** — Autonomous development loop (2026-03-04)
 
 AEL completed a full autonomous repository development cycle:
 
-- execute task queue sequentially
-- implement minimal scoped changes
-- run validation after every task
-- record task status with commit traceability
-- commit each completed step
+- Executed task queue sequentially
+- Implemented minimal scoped changes
+- Ran validation after every task
+- Recorded task status with commit traceability
+- Committed each completed step
 
-Primary outputs:
+Primary outputs: AIP HTTP instrument adapter, instrument manifest loader, AIP capability mapping, evidence writer helper, instrument contract validator.
 
-- AIP HTTP instrument adapter
-- instrument manifest loader
-- AIP capability mapping in adapter registry
-- evidence writer helper
-- instrument contract validator
+---
 
-Milestone document:
+## License
 
-- `docs/milestone_v0_11_autonomous_loop.md`
+AEL is released under the [Apache 2.0 License](https://choosealicense.com/licenses/apache-2.0/).
+
+You are free to:
+
+- use it in personal projects
+- integrate it into commercial products
+- extend it for internal tooling
+
+Third-party components and vendor code remain under their respective original licenses.
