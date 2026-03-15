@@ -133,7 +133,7 @@ def main():
     dut_promote = dut_sub.add_parser("promote")
     dut_promote.add_argument("--id", required=True)
     dut_promote.add_argument("--as", dest="as_id", required=False)
-    dut_promote.add_argument("--from", dest="from_namespace", choices=["user", "branch"], default="user", help="Source namespace: user (default) or branch")
+    dut_promote.add_argument("--from", dest="from_namespace", choices=["user", "branch"], default="branch", help="Source namespace: branch (default) or user")
     dut_promote.add_argument("--delete-source", action="store_true")
     dut_set_lifecycle = dut_sub.add_parser("set-lifecycle", help="advance lifecycle_stage of a DUT in user or branch namespace")
     dut_set_lifecycle.add_argument("--id", required=True, help="DUT id")
@@ -2506,45 +2506,137 @@ def dut_create_cmd(from_golden_id, to_user_id, dest="user"):
     return 0
 
 
-def dut_promote_cmd(user_id, as_id=None, delete_source=False, from_namespace="user"):
+def dut_promote_cmd(draft_id, as_id=None, delete_source=False, from_namespace="branch"):
+    """Promote a branch/user draft DUT to assets_golden/duts/.
+
+    Structured gate checks (all must pass):
+      Gate 1 — lifecycle_stage == "merge_candidate"
+      Gate 2 — compile_validation == "passed"
+      Gate 3 — required metadata fields present (id, mcu, family, build_type, flash_method)
+      Gate 4 — no conflicting golden DUT with the same target id
+
+    Future gate criteria (not yet enforced, documented in PROMOTION.md):
+      - real bench configuration clarified
+      - instrument path verified
+      - flash procedure validated
+      - verification example executed successfully
+    """
+    import yaml as _yaml  # type: ignore
+    from datetime import datetime, timezone
+
     src_root = "assets_branch" if from_namespace == "branch" else "assets_user"
-    src = Path(src_root) / "duts" / user_id
+    src = Path(src_root) / "duts" / draft_id
     if not src.exists():
-        print(f"DUT promote: {from_namespace} id not found: {user_id}")
+        print(f"dut promote: source not found: {src}")
         return 1
+
     manifest_path = src / "manifest.yaml"
     if not manifest_path.exists():
-        print("DUT promote: manifest.yaml missing")
+        print(f"dut promote: manifest.yaml missing in {src}")
         return 2
-    manifest = assets._load_yaml(manifest_path)
-    missing = assets._validate_manifest(manifest)
-    if missing:
-        print("DUT promote: manifest missing fields: " + ", ".join(missing))
+
+    try:
+        manifest = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:
+        print(f"dut promote: failed to read manifest: {exc}")
         return 3
-    # lifecycle_stage gate
-    lifecycle = str(manifest.get("lifecycle_stage") or "").strip() if isinstance(manifest, dict) else ""
-    verified_ok = bool((manifest.get("verified") or {}).get("status")) if isinstance(manifest, dict) else False
-    if lifecycle and lifecycle not in _LIFECYCLE_PROMOTE_MIN:
-        print(f"DUT promote: blocked — lifecycle_stage is '{lifecycle}', must be 'validated' or 'merge_candidate'")
-        return 5
-    if not lifecycle and not verified_ok:
-        print("DUT promote: blocked — verified.status is false and no lifecycle_stage set")
-        return 5
-    golden_id = as_id or user_id
+
+    # ── Gate 1: lifecycle_stage must be merge_candidate ──────────────────────
+    lifecycle = str(manifest.get("lifecycle_stage") or "").strip()
+    if lifecycle != "merge_candidate":
+        print(f"dut promote: BLOCKED — Gate 1 failed")
+        print(f"  lifecycle_stage is '{lifecycle}', must be 'merge_candidate'")
+        print(f"  Use: ael dut set-lifecycle --id {draft_id} --stage merge_candidate")
+        return 10
+
+    # ── Gate 2: compile_validation must be passed ─────────────────────────────
+    compile_val = str(manifest.get("compile_validation") or "not_attempted").strip()
+    if compile_val != "passed":
+        print(f"dut promote: BLOCKED — Gate 2 failed")
+        print(f"  compile_validation is '{compile_val}', must be 'passed'")
+        print(f"  Use: ael dut set-compile-validated --id {draft_id} --result passed")
+        return 11
+
+    # ── Gate 3: required metadata fields ─────────────────────────────────────
+    _PROMOTE_REQUIRED = ["id", "mcu", "family", "build_type", "flash_method"]
+    missing_fields = [f for f in _PROMOTE_REQUIRED if not manifest.get(f)]
+    if missing_fields:
+        print(f"dut promote: BLOCKED — Gate 3 failed")
+        print(f"  Missing required metadata: {', '.join(missing_fields)}")
+        return 12
+
+    # ── Gate 4: no conflicting golden DUT ────────────────────────────────────
+    # Determine target golden id: strip _draft suffix if no --as given
+    if as_id:
+        golden_id = as_id
+    else:
+        golden_id = draft_id[:-6] if draft_id.endswith("_draft") else draft_id
     dst = Path("assets_golden") / "duts" / golden_id
     if dst.exists():
-        print(f"DUT promote: destination already exists: {dst}")
-        return 4
+        print(f"dut promote: BLOCKED — Gate 4 failed")
+        print(f"  Conflicting golden DUT already exists: {dst}")
+        print(f"  Use --as <new_id> to promote under a different id")
+        return 13
+
+    # ── All gates passed — perform promotion ─────────────────────────────────
+    print(f"dut promote: all gates passed — promoting {draft_id} → {golden_id}")
+
     assets.copy_dut_skeleton(src, dst)
+
+    # Update manifest for golden: new id, lifecycle merged_to_main, strip draft markers
     dst_manifest_path = dst / "manifest.yaml"
-    verified_status = manifest.get("verified", {}).get("status", False) if isinstance(manifest, dict) else False
-    manifest = _update_manifest_id(manifest, golden_id, verified_status=verified_status, lifecycle_stage="merged_to_main")
-    assets.save_manifest(dst_manifest_path, manifest)
-    promo_note = dst / "PROMOTION.md"
-    promo_note.write_text(f"Promoted from {from_namespace} DUT {user_id}.\n", encoding="utf-8")
+    manifest["id"] = golden_id
+    manifest["lifecycle_stage"] = "merged_to_main"
+    # Keep compile_validation as evidence; it belongs in golden record
+
+    try:
+        dst_manifest_path.write_text(
+            _yaml.dump(manifest, default_flow_style=False, allow_unicode=True),
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        print(f"dut promote: failed to write golden manifest: {exc}")
+        shutil.rmtree(dst, ignore_errors=True)
+        return 14
+
+    # Write structured PROMOTION.md
+    promoted_at = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    promo_lines = [
+        "# Promotion Record",
+        "",
+        f"source_draft:       {draft_id}",
+        f"source_namespace:   {from_namespace}",
+        f"promoted_to:        {golden_id}",
+        f"promoted_at:        {promoted_at}",
+        "",
+        "## Evidence at Promotion",
+        "",
+        f"  lifecycle_stage:    {lifecycle}",
+        f"  compile_validation: {compile_val}",
+        "",
+        "## Future Gate Criteria (not yet enforced)",
+        "",
+        "The following checks are defined for future promotion policy but were",
+        "not required at time of this promotion:",
+        "",
+        "  - real bench configuration clarified (PLACEHOLDER fields filled)",
+        "  - instrument path verified",
+        "  - flash procedure validated (board successfully flashed)",
+        "  - verification example executed successfully on real hardware",
+        "",
+        "Until the above are complete, treat this golden entry as",
+        "compile-validated draft, not bench-validated.",
+        "",
+    ]
+    (dst / "PROMOTION.md").write_text("\n".join(promo_lines), encoding="utf-8")
+
     if delete_source:
         shutil.rmtree(src)
-    print(f"DUT promote: {dst} [merged_to_main]")
+        print(f"  source deleted: {src}")
+
+    print(f"  destination:  {dst}")
+    print(f"  lifecycle:    merged_to_main")
+    print(f"  promoted_at:  {promoted_at}")
     return 0
 
 
