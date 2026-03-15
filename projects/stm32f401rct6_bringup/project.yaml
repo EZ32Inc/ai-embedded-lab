@@ -9,6 +9,9 @@ confirmed_facts:
 - 'Goal: run all 8 banner experiments matching F411 suite'
 - 'Wiring confirmed: PA2→P0.0, PA3→P0.1, PB13→P0.2, PC13→LED, GND→probe GND, SWD→P3'
 - 'First test: stm32f401_gpio_signature — PA2 25Hz and PA3 12.5Hz ratio check'
+- 'Board confirmed: stm32f401rct6'
+- 'Test validated: stm32f401_gpio_signature (PASS)'
+- 'Instrument used: esp32jtag_stm32_golden'
 cross_domain_links:
 - reason: project is anchored to the known mature stm32f401rct6 capability path
   target: stm32f401rct6
@@ -17,18 +20,25 @@ current_blocker: ''
 domain: user_project_domain
 key_refs:
 - projects/stm32f401rct6_bringup/README.md
-last_action: created_project_shell
+last_action: 'run_validated: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature'
+mature_path_reused: true
 maturity_confidence: high
 motivated_by_user_goal: 'Run all 8 banner experiments: GPIO signature, UART, SPI,
   ADC, Capture, EXTI, GPIO loopback, PWM'
-next_recommended_action: reuse existing mature path — run stm32f411_gpio_signature
-  or equivalent to validate
+next_recommended_action: 'project validated — evidence: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature'
 path_maturity: mature
 project_id: stm32f401rct6_bringup
 project_name: STM32F401RCT6 8-experiment bringup
 project_type: user_project
 project_user: local_user
-status: shell_created
+run_evidence:
+- board: stm32f401rct6
+  instrument: esp32jtag_stm32_golden
+  ok: true
+  run_id: 2026-03-15_18-57-53_stm32f401rct6_stm32f401_gpio_signature
+  termination: pass
+  test: stm32f401_gpio_signature
+status: validated
 system_change_status: integrated
 system_refs:
 - docs/specs/stm32f401rct6_bringup_preparation_v0_1.md

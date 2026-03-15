@@ -11,23 +11,23 @@
       "name": "pa2_fast",
       "pin": "pa2",
       "duration_s": 1.0,
-      "min_freq_hz": 15.0,
-      "max_freq_hz": 35.0,
+      "min_freq_hz": 150.0,
+      "max_freq_hz": 400.0,
       "duty_min": 0.35,
       "duty_max": 0.65,
-      "min_edges": 20,
-      "max_edges": 80
+      "min_edges": 50,
+      "max_edges": 2000
     },
     {
       "name": "pa3_half_rate",
       "pin": "pa3",
       "duration_s": 1.0,
-      "min_freq_hz": 7.0,
-      "max_freq_hz": 18.0,
+      "min_freq_hz": 75.0,
+      "max_freq_hz": 200.0,
       "duty_min": 0.35,
       "duty_max": 0.65,
-      "min_edges": 10,
-      "max_edges": 40
+      "min_edges": 25,
+      "max_edges": 1000
     }
   ],
   "signal_relations": [
@@ -45,13 +45,13 @@
         "role": "GPIO_SIGNATURE_FAST",
         "dut_signal": "PA2",
         "direction": "output",
-        "notes": "Firmware drives PA2 at ~25 Hz as the primary signature output."
+        "notes": "Firmware drives PA2 at ~250 Hz as the primary signature output."
       },
       {
         "role": "GPIO_SIGNATURE_HALF_RATE",
         "dut_signal": "PA3",
         "direction": "output",
-        "notes": "Firmware drives PA3 at ~12.5 Hz (half of PA2) for ratio verification."
+        "notes": "Firmware drives PA3 at ~125 Hz (half of PA2) for ratio verification."
       },
       {
         "role": "STATUS_LED",

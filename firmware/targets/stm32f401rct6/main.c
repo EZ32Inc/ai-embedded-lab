@@ -52,13 +52,13 @@ int main(void) {
         }
         tick++;
 
-        /* PA2: toggle every 20 ms → 25 Hz */
-        if (++div_pa2 >= 20u) {
+        /* PA2: toggle every 1 ms → 500 Hz (1000 edges/sec) */
+        if (++div_pa2 >= 1u) {
             div_pa2 = 0u;
             GPIOA_ODR ^= (1u << 2);
         }
-        /* PA3: toggle every 40 ms → 12.5 Hz (half of PA2) */
-        if (++div_pa3 >= 40u) {
+        /* PA3: toggle every 2 ms → 250 Hz (half of PA2) */
+        if (++div_pa3 >= 2u) {
             div_pa3 = 0u;
             GPIOA_ODR ^= (1u << 3);
         }
