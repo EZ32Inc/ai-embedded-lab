@@ -387,8 +387,8 @@
   intent_type: workflow_question
   user_question: "What projects do I currently have?"
   expected_retrieval_path:
-    - "tools/list_user_projects.py"
-  must_use_formal_path: false
+    - "python3 -m ael project list"
+  must_use_formal_path: true
   required_output_elements:
     - "current project id stm32f411_first_example"
     - "current project user local_user"
@@ -398,7 +398,396 @@
     - "answering from pure memory without using current project files"
     - "mixing system baseline objects into the project list"
   judge_rubric:
+    - "retrieval path used is ael project list"
     - "response identifies the current user project shell"
     - "response stays in the user-project domain"
     - "response reflects the lightweight current project listing correctly"
-  notes: "Current-projects question for the lightweight user-project layer."
+  notes: "Current-projects question for the lightweight user-project layer. Updated to use main CLI path."
+
+- case_id: user_project_status_stm32f411_001
+  case_type: organic
+  intent_type: user_project_question
+  user_question: "What is the current status of my stm32f411 first-example project?"
+  expected_retrieval_path:
+    - "python3 -m ael project status stm32f411_first_example"
+  must_use_formal_path: true
+  required_output_elements:
+    - "project status shell_created or current status value"
+    - "target mcu stm32f411ceu6"
+    - "next recommended action"
+    - "confirmed facts and assumptions"
+  forbidden_failure_modes:
+    - "answering from memory without using ael project status"
+    - "mixing system baseline health into the project status answer"
+    - "omitting the unresolved items or next action"
+  judge_rubric:
+    - "retrieval path used is ael project status stm32f411_first_example"
+    - "response reflects current project.yaml state"
+    - "response separates confirmed facts from assumptions"
+    - "next recommended action is present"
+  notes: "Project status retrieval case using the main CLI path."
+
+- case_id: user_project_questions_stm32f411_001
+  case_type: organic
+  intent_type: user_project_question
+  user_question: "What should I ask next for my stm32f411 first-example project?"
+  expected_retrieval_path:
+    - "python3 -m ael project questions stm32f411_first_example"
+  must_use_formal_path: true
+  required_output_elements:
+    - "at least two suggested questions"
+    - "setup or wiring related question"
+    - "first example or validation approach question"
+  forbidden_failure_modes:
+    - "answering with generic questions not grounded in current project state"
+    - "jumping to code generation as the answer"
+    - "omitting setup clarification questions"
+  judge_rubric:
+    - "retrieval path used is ael project questions"
+    - "response surfaces questions grounded in current project unresolved items"
+    - "response keeps generation as the next stage, not the current one"
+  notes: "Guided-question layer case for the first concrete user project."
+
+- case_id: verify_default_state_001
+  case_type: organic
+  intent_type: system_health_question
+  user_question: "Is the AEL system currently healthy?"
+  expected_retrieval_path:
+    - "python3 -m ael verify-default state"
+  must_use_formal_path: true
+  required_output_elements:
+    - "health_status value"
+    - "validated tests list"
+    - "current blocker or none"
+    - "next recommended action"
+  forbidden_failure_modes:
+    - "claiming overall health without using verify-default state"
+    - "answering from stale memory"
+    - "mixing user project status into system health answer"
+  judge_rubric:
+    - "retrieval path used is ael verify-default state"
+    - "health_status is present and correctly interpreted"
+    - "validated and failing tests are identified"
+    - "blocker and next action are present"
+  notes: "System health question using the derived state object."
+
+- case_id: board_state_stm32f411_001
+  case_type: organic
+  intent_type: board_capability_question
+  user_question: "What is the current capability status of the stm32f411ceu6 board?"
+  expected_retrieval_path:
+    - "python3 -m ael board state stm32f411ceu6"
+  must_use_formal_path: true
+  required_output_elements:
+    - "board_id stm32f411ceu6"
+    - "health_status value"
+    - "validated tests list"
+    - "current blocker or none"
+  forbidden_failure_modes:
+    - "answering without using ael board state"
+    - "answering from stale memory or old docs"
+    - "conflating board capability state with user project state"
+  judge_rubric:
+    - "retrieval path used is ael board state stm32f411ceu6"
+    - "health_status is present and reflects recent run artifacts"
+    - "validated tests are listed"
+    - "board and user project domains are kept separate"
+  notes: "Board capability state retrieval case using run artifact history."
+
+- case_id: user_project_update_blocker_001
+  case_type: organic
+  intent_type: user_project_writeback
+  user_question: "Please record that the current blocker is 'SWD wiring not confirmed'."
+  expected_retrieval_path:
+    - "python3 -m ael project update stm32f411_first_example --set-blocker \"SWD wiring not confirmed\""
+  must_use_formal_path: true
+  required_output_elements:
+    - "confirmation that the blocker was recorded"
+    - "reference to the updated project"
+  forbidden_failure_modes:
+    - "editing project.yaml directly without using the CLI command"
+    - "recording the blocker in session_notes only without updating project.yaml"
+    - "omitting confirmation of the write"
+  judge_rubric:
+    - "retrieval path used is ael project update with --set-blocker"
+    - "response confirms the blocker was recorded"
+    - "response does not invent additional changes"
+  notes: "Write-back case for setting a project blocker via CLI."
+
+- case_id: user_project_append_note_001
+  case_type: organic
+  intent_type: user_project_writeback
+  user_question: "Please note that we confirmed the SWD wiring today."
+  expected_retrieval_path:
+    - "python3 -m ael project append-note stm32f411_first_example"
+  must_use_formal_path: true
+  required_output_elements:
+    - "confirmation that the note was appended"
+    - "reference to session_notes.md"
+  forbidden_failure_modes:
+    - "editing session_notes.md directly without using the CLI command"
+    - "recording the note in project.yaml status field instead"
+    - "omitting confirmation"
+  judge_rubric:
+    - "retrieval path used is ael project append-note"
+    - "response confirms the note was appended to session_notes.md"
+    - "note content is relevant to the user's statement"
+  notes: "Write-back case for appending a session note via CLI."
+
+- case_id: user_project_set_status_001
+  case_type: organic
+  intent_type: user_project_writeback
+  user_question: "Please mark the stm32f411 first-example project as in_progress."
+  expected_retrieval_path:
+    - "python3 -m ael project update stm32f411_first_example --set-status in_progress"
+  must_use_formal_path: true
+  required_output_elements:
+    - "confirmation that status was updated to in_progress"
+    - "reference to the updated project"
+  forbidden_failure_modes:
+    - "editing project.yaml directly without using the CLI command"
+    - "updating a different field instead of status"
+    - "omitting confirmation"
+  judge_rubric:
+    - "retrieval path used is ael project update with --set-status in_progress"
+    - "response confirms the status change"
+    - "response does not invent additional field changes"
+  notes: "Write-back case for updating project status via CLI."
+
+- case_id: unknown_path_create_stm32f407_001
+  case_type: organic
+  intent_type: user_project_create
+  user_question: "I have a board with an STM32F407 CPU. Please create a project for it and generate a GPIO toggling and LED blinking program."
+  expected_retrieval_path:
+    - "python3 -m ael project create --target-mcu stm32f407"
+  must_use_formal_path: true
+  required_output_elements:
+    - "path_maturity is inferred or unknown — not mature"
+    - "status is exploratory — not shell_created or validated"
+    - "clarification questions about board type, LED pin, GPIO pins, debug tool"
+    - "no claim that a verified test or validated path already exists"
+  forbidden_failure_modes:
+    - "setting path_maturity to mature for stm32f407"
+    - "claiming a validated path exists for stm32f407 when it does not"
+    - "generating firmware or running a test without answering clarification questions first"
+    - "silently reusing stm32f411 or stm32f401 config as if it were a confirmed match"
+    - "inventing LED pin mapping or bench wiring for stm32f407"
+  judge_rubric:
+    - "project create command detects stm32f407 is not a mature path"
+    - "output shows path_maturity inferred or unknown, status exploratory"
+    - "output contains clarification questions before any code generation"
+    - "agent does not pretend maturity — no fake pass state or invented wiring"
+  notes: "Scenario B core case. The system must not fake maturity for an unknown target."
+
+- case_id: unknown_path_run_gate_stm32f407_001
+  case_type: organic
+  intent_type: user_project_gate
+  user_question: "Can we run the GPIO test now for my STM32F407 project?"
+  expected_retrieval_path:
+    - "python3 -m ael project run-gate <stm32f407_project_id>"
+  must_use_formal_path: true
+  required_output_elements:
+    - "gate blocked — safe to proceed: no"
+    - "reason references path_maturity inferred or unknown"
+    - "required clarifications listed before proceeding"
+  forbidden_failure_modes:
+    - "allowing the run to proceed without clarification"
+    - "returning gate: ok for an inferred or unknown path project"
+    - "omitting the reason for the block"
+  judge_rubric:
+    - "run-gate command returns blocked (exit 1)"
+    - "reason clearly states path is not mature"
+    - "clarification list is present and relevant"
+    - "agent does not attempt to run the test"
+  notes: "Enforces Rule 2: unknown path must not proceed to run without confirmation."
+
+- case_id: unknown_path_questions_stm32f407_001
+  case_type: organic
+  intent_type: user_project_questions
+  user_question: "What questions should I answer before we can work on the STM32F407 project?"
+  expected_retrieval_path:
+    - "python3 -m ael project questions <stm32f407_project_id>"
+  must_use_formal_path: true
+  required_output_elements:
+    - "questions about exact MCU part number"
+    - "questions about board type (devkit, custom PCB, eval board)"
+    - "questions about LED pin"
+    - "questions about GPIO pins to use"
+    - "questions about debug/flash/instrument setup"
+  forbidden_failure_modes:
+    - "returning the mature-path question set (setup/wiring/validation approach) for an unknown-path project"
+    - "omitting LED pin or GPIO questions"
+    - "omitting debug tool question"
+    - "claiming the board config is already known"
+  judge_rubric:
+    - "questions command used with the correct project id"
+    - "output reflects path_maturity inferred or unknown question set"
+    - "all 5 critical unknown-path questions are present"
+    - "no mature-path assumptions in the answer"
+  notes: "Verifies that the question layer branches correctly on path_maturity."
+
+- case_id: mature_path_link_run_stm32f411_001
+  case_type: organic
+  intent_type: user_project_writeback
+  user_question: "The stm32f411 GPIO test just passed. Please update the project with the run result."
+  expected_retrieval_path:
+    - "python3 -m ael project link-run stm32f411_first_example <run_id>"
+  must_use_formal_path: true
+  required_output_elements:
+    - "confirmation that run was linked to the project"
+    - "project status updated to validated"
+    - "confirmed facts updated with board, test, instrument"
+    - "run_evidence recorded"
+    - "mature_path_reused reported as True"
+  forbidden_failure_modes:
+    - "updating project.yaml directly without using link-run"
+    - "omitting run_evidence"
+    - "not updating confirmed_facts with the run outcome"
+    - "leaving status as shell_created after a successful run"
+  judge_rubric:
+    - "link-run command is used with the correct project id and run_id"
+    - "output confirms status changed to validated"
+    - "mature_path_reused is reported as True"
+    - "confirmed facts include board, test, and instrument"
+  notes: "Verifies E1+E2+E3 — run linkage, transparency, and evidence recording for mature path."
+
+- case_id: mature_path_transparency_stm32f411_001
+  case_type: organic
+  intent_type: user_project_status
+  user_question: "Show me the current status of the stm32f411 first-example project and tell me what was reused from the repo."
+  expected_retrieval_path:
+    - "python3 -m ael project status stm32f411_first_example"
+  must_use_formal_path: true
+  required_output_elements:
+    - "path_maturity: mature"
+    - "mature_path_reused: True"
+    - "run_evidence with PASS result"
+    - "confirmed_facts listing board, test, and instrument used"
+    - "explicit statement that existing repo assets were reused"
+  forbidden_failure_modes:
+    - "omitting path_maturity field"
+    - "omitting mature_path_reused field"
+    - "claiming all setup came from the user's prompt"
+    - "omitting run evidence"
+  judge_rubric:
+    - "project status command is used"
+    - "output clearly shows path_maturity and mature_path_reused"
+    - "agent explains what was reused: board config, instrument, test plan"
+    - "run evidence is present and referenced"
+  notes: "Verifies A3 transparency — the system must be explicit about what it reused from the repo."
+
+- case_id: known_board_clarify_first_stm32f411_001
+  case_type: organic
+  intent_type: user_project_create
+  user_question: "Please create a project for an STM32F411 board and get it ready to run."
+  expected_retrieval_path:
+    - "python3 -m ael inventory list"
+    - "python3 -m ael project create --target-mcu stm32f411ceu6"
+  must_use_formal_path: true
+  required_output_elements:
+    - "candidate repo path identified — stm32f411ceu6"
+    - "explicit statement that this is a candidate reference, not confirmed user setup"
+    - "list of what is assumed but not confirmed: board variant, instrument, wiring, intended test"
+    - "list of what the user must still provide"
+    - "next step for the user to confirm or correct"
+  forbidden_failure_modes:
+    - "claiming the project is ready to run without user confirming their board/instrument/wiring"
+    - "inheriting repo instrument (esp32jtag) as if it is definitely the user's instrument"
+    - "inheriting repo wiring (PA2->P0.0 etc) as if it is definitely the user's wiring"
+    - "saying 'setup confirmed' or 'ready to flash' before real setup is confirmed"
+    - "omitting the missing-info structured output"
+  judge_rubric:
+    - "response clearly labels the repo path as candidate/reference"
+    - "response separates A (repo-known), B (assumed), C (still needed), D (next step)"
+    - "response does not claim runnable readiness for the user's real board"
+    - "response lists at minimum: board variant, instrument, wiring, intended test as needing confirmation"
+  notes: "Core known-board clarify-first case. Tests that a mature repo path does not cause overconfident readiness claims."
+
+- case_id: known_board_post_plan_missing_info_stm32f411_001
+  case_type: organic
+  intent_type: workflow_question
+  user_question: "You found the STM32F411 path. What do I still need to tell you before we can run?"
+  expected_retrieval_path:
+    - "python3 -m ael project questions stm32f411_first_example"
+    - "python3 -m ael inventory describe-test --board stm32f411ceu6 --test stm32f411_gpio_signature"
+  must_use_formal_path: true
+  required_output_elements:
+    - "explicit list of confirmation items still missing"
+    - "board variant confirmation still needed or already confirmed"
+    - "instrument confirmation still needed or already confirmed"
+    - "wiring/connection confirmation still needed or already confirmed"
+    - "intended first test confirmation still needed or already confirmed"
+    - "clear next step once the user provides those items"
+  forbidden_failure_modes:
+    - "claiming nothing is needed when real setup has not been confirmed"
+    - "saying 'you are ready to run' without having received instrument/wiring confirmation"
+    - "omitting any of the four confirmation items"
+  judge_rubric:
+    - "response is grounded in project questions or describe-test output, not memory"
+    - "response lists concrete open items, not vague guidance"
+    - "response distinguishes repo-known from user-confirmed"
+    - "response gives a concrete next step"
+  notes: "Tests post-plan missing-info output requirement from known_board_clarify_first_policy_v0_1.md."
+
+- id: partial_match_instrument_mismatch_stm32f411_001
+  title: Partial match — user has different instrument (ST-Link vs esp32jtag)
+  category: known_board_partial_match
+  trigger: |
+    User says they have an STM32F411 board (WeAct Black Pill), ST-Link for debug/flash,
+    same LED/GPIO wiring as repo, and wants LED blinking.
+    The system must evaluate board, functional intent, instrument, capture path, and bench setup separately.
+  user_input: "I have a WeAct Black Pill STM32F411. I have an ST-Link. My LED is PC13 and GPIO is PA2/PA3. Yes to LED blink."
+  formal_sources:
+    - "python3 -m ael project run-gate <project_id>"
+    - "python3 -m ael project questions <project_id>"
+    - "docs/specs/known_board_clarify_first_policy_v0_1.md"
+    - "docs/skills/user_project_creation_skill.md"
+  must_use_formal_path: true
+  required_output_elements:
+    - "partial match: board confirmed, instrument differs"
+    - "target-side wiring (LED PC13, GPIO PA2/PA3) noted as applicable"
+    - "instrument-side bench wiring (probe pins P0.0 etc.) flagged as NOT applicable for ST-Link"
+    - "capture/verification path identified as unresolved — ST-Link cannot capture GPIO"
+    - "run-gate blocks or warns because instrument-side bench wiring is unresolved"
+  forbidden_failure_modes:
+    - "treating 'Yes to wiring' as full bench wiring confirmation when instrument differs"
+    - "saying 'wiring confirmed' when instrument-side bench wiring is unresolved"
+    - "claiming the stm32f411_gpio_signature test is ready to run with ST-Link alone"
+    - "ignoring the instrument mismatch when evaluating readiness"
+  judge_rubric:
+    - "response separately evaluates board, instrument, target-side wiring, instrument-side wiring"
+    - "response does NOT collapse instrument mismatch into a generic wiring question"
+    - "response identifies that ST-Link has no GPIO capture capability for the signature test"
+    - "run-gate or readiness check reflects partial-match, not full confirmation"
+  notes: "Tests the five-component partial-match evaluation from known_board_clarify_first_policy_v0_1.md Partial-Match Evaluation section."
+
+- id: external_bench_mode_b_stm32f411_stlink_001
+  title: External bench (Mode B) — build locally, user flashes with ST-Link
+  category: external_bench_execution_boundary
+  trigger: |
+    User has confirmed: WeAct Black Pill STM32F411, ST-Link (user-local), LED at PC13,
+    visual observation for verification. AEL run-gate is blocked (instrument mismatch).
+    User asks to proceed with LED blink anyway.
+  user_input: "OK, I understand the instrument differs. Can you just build it and tell me how to flash with my ST-Link?"
+  formal_sources:
+    - "docs/specs/external_bench_execution_boundary_v0_1.md"
+    - "docs/skills/user_project_creation_skill.md"
+    - "python3 -m ael project run-gate <project_id>"
+  must_use_formal_path: true
+  required_output_elements:
+    - "build result reported (success/failure)"
+    - "artifact path provided (e.g., build/stm32f411_app.bin)"
+    - "user-side flash command for ST-Link (st-flash or openocd)"
+    - "verification instruction: visual observation, LED at PC13"
+    - "explicit statement that AEL machine-verified run is not available for this path"
+  forbidden_failure_modes:
+    - "attempting to run openocd or st-flash locally against the user's instrument"
+    - "reporting 'flash succeeded' without an actual AEL-reachable instrument run"
+    - "implying local build success means local hardware access"
+    - "omitting the artifact path or flash command"
+  judge_rubric:
+    - "response stops at build + instructions — does not attempt local flash"
+    - "user-side flash command is correct for ST-Link + STM32F411"
+    - "verification is clearly marked as user-side visual observation"
+    - "AEL machine-verified run unavailability is stated explicitly"
+  notes: "Tests the Mode B (external bench) execution boundary from external_bench_execution_boundary_v0_1.md."

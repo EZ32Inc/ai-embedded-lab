@@ -94,7 +94,71 @@ Primary sources:
 - `python3 -m ael instruments doctor --id <id>`
 - `python3 -m ael connection doctor --board <board> --test <test>`
 - `python3 -m ael verify-default run`
+- `python3 -m ael verify-default state` — derived state object (health, blocker, validated tests)
+- `python3 -m ael board state <board_id>` — per-board capability state
 - run artifacts in `runs/`
+
+### User project truth
+
+What a user's own project currently declares about its status, goals, and blockers.
+
+Examples:
+
+- user project list and status
+- current project blocker
+- next recommended action for a project
+- confirmed facts vs assumptions vs unresolved items
+- session notes and stopping summaries
+
+Primary sources:
+
+- `python3 -m ael project list`
+- `python3 -m ael project status <id>`
+- `python3 -m ael project questions <id>`
+- `projects/<id>/project.yaml`
+- `projects/<id>/session_notes.md`
+
+Write-back sources (AI may update these):
+
+- `python3 -m ael project update <id> --set-blocker/--set-status/--set-next-action/...`
+- `python3 -m ael project append-note <id> <text>`
+
+Create:
+
+- `python3 -m ael project create --target-mcu <mcu>`
+
+Domain rule: user project answers must remain separate from system-domain answers.
+See `docs/skills/user_project_answering_skill.md`.
+
+### Known-board setup confirmation
+
+When a user requests a project or experiment for a known board, repo facts
+(board config, instrument profile, test plan, bench_setup) are reference
+starting points only — they are NOT confirmed facts about the user's real setup.
+
+The agent must:
+
+- identify the candidate repo path and say so explicitly
+- treat it as a reference/candidate until the user confirms their real setup
+- output a structured section showing what is known, what is assumed, what is
+  still needed, and what the next step is
+
+The agent must NOT:
+
+- state that the user's board is ready to run solely because a repo path exists
+- inherit repo instrument/wiring as if they are definitely the user's real setup
+- omit the missing-info output after identifying a candidate path
+
+When the user's instrument is external / user-local (not reachable from the
+current AEL machine), the agent must NOT attempt to run flash or debug tools
+against it. The correct response stops at: build locally → report artifact →
+provide user-side flash commands → provide verification instructions.
+
+Policy and response structure:
+`docs/specs/known_board_clarify_first_policy_v0_1.md`
+
+Execution boundary for external-bench paths:
+`docs/specs/external_bench_execution_boundary_v0_1.md`
 
 ## Source Priority
 

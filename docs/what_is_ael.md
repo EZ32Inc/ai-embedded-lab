@@ -81,12 +81,44 @@ Primary current source:
 
 - `python3 -m ael explain-stage --board <board> --test <test> --stage <stage>`
 
+### User Projects
+
+User projects are lightweight working contexts for a user's own goal — separate from the AEL system baseline.
+
+Examples:
+
+- a first example project for `stm32f411ceu6`
+- a project-local setup discussion, assumptions, and next steps
+
+Location:
+
+- `projects/<project_id>/project.yaml`
+- `projects/<project_id>/README.md`
+- `projects/<project_id>/session_notes.md`
+
+The user project domain is distinct from the system domain (`default verification`, board capabilities).
+Cross-domain links record which system path a project is anchored to.
+
 ## Commands That Show Current Formal Information
 
 System and board/test setup:
 
 - `python3 -m ael inventory describe-test --board <board> --test <test>`
 - `python3 -m ael inventory describe-connection --board <board> --test <test>`
+
+User project management:
+
+- `python3 -m ael project create --target-mcu <mcu>`
+- `python3 -m ael project list`
+- `python3 -m ael project status <id>`
+- `python3 -m ael project questions <id>`
+- `python3 -m ael project update <id> --set-blocker/--set-status/--set-next-action/...`
+- `python3 -m ael project append-note <id> <text>`
+
+Board and system state:
+
+- `python3 -m ael board state <board_id>`
+- `python3 -m ael verify-default state`
 
 Instrument information:
 

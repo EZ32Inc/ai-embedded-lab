@@ -30,3 +30,15 @@
 ## Recommended Next Step
 
 - clarify setup, wiring, validation approach, and desired first example
+
+## 2026-03-14 20:55
+
+User confirmed SWD wiring. Next: clarify desired example.
+
+## 2026-03-14 21:29
+
+User goal: LED blinking (PC13) and GPIO toggling (PA2/PA3). Using stm32f411_gpio_signature test which covers both. Matched to mature AEL path stm32f411ceu6 + instrument esp32jtag_stm32f411.
+
+## 2026-03-14 21:29
+
+PASS: stm32f411_gpio_signature run 2026-03-14_21-29-20. Build OK (Cortex-M4 gcc). Flash OK (SWD via esp32jtag, 5s settle). Verify OK: PA2 fast toggle captured (>100 edges/1s), PC13 LED blinking (operator-visible). Project status set to validated.

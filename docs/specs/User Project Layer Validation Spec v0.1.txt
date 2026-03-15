@@ -1,0 +1,243 @@
+# User Project Layer Validation Spec v0.1
+## Mature-Path and Unknown-Path Acceptance Scenarios
+
+## Purpose
+
+This document defines the next-step validation method for the user project layer.
+
+The goal is not to add more abstract features first. The goal is to validate whether the current project-layer design can support the most common real user request pattern:
+
+> "I have a target board. Please create a project and generate a GPIO toggling / LED blinking example for it, then start working on it."
+
+We will validate this through two representative scenarios:
+
+1. **Known mature path**: STM32F411
+2. **Unknown / not-yet-mature path**: STM32F407
+
+If both scenarios behave correctly, then the first practical version of the user/project workflow can be considered valid.
+
+---
+
+## Validation Strategy
+
+We will follow the same method that has worked well so far:
+
+1. Define the architecture and behavioral rules clearly first
+2. Choose a very concrete and realistic user goal
+3. Let the system try to complete that goal end-to-end
+4. Inspect what it did
+5. Convert observed problems into rules, constraints, and implementation improvements
+
+This validation is therefore not just a feature test.  
+It is a behavioral acceptance test for the user-facing project workflow.
+
+---
+
+# Scenario A: Mature Path Validation
+## STM32F411
+
+### User Prompt
+
+> I have a board with an STM32F411 CPU. Please create a project for it and generate a GPIO toggling and LED blinking program. Start working on it now.
+
+---
+
+## Expected Behavior
+
+For STM32F411, the system is expected to recognize that this is an already-known mature path, or at least a path with enough existing repo knowledge to proceed directly.
+
+The desired behavior is:
+
+1. Identify the known target path correctly
+2. Create or update the corresponding user project
+3. Reuse existing validated setup, wiring, instrument path, and verification assets where applicable
+4. Build, flash, and verify the example when the current environment supports it
+5. Update project state based on actual execution results
+6. Clearly indicate that an existing mature path was reused
+
+---
+
+## What Must Be Verified
+
+### A1. Project-layer behavior
+- A project is created or updated correctly
+- The goal is recorded clearly
+- Project status is updated consistently
+- Notes / README / state files remain coherent
+
+### A2. Execution-layer connection
+- The system does not stop at project creation only
+- It can connect project intent to existing implementation and validation assets
+- It can build / flash / verify when the environment already supports the target
+
+### A3. Transparency
+- The system should make it clear that it is using an existing mature path
+- It should not silently pretend that all board details came from the user's prompt
+- It should distinguish between:
+  - repo-known facts
+  - reused mature-path assumptions
+  - user-provided information
+
+### A4. Result quality
+- The produced test/example is actually relevant to the user request
+- GPIO toggling is verified in a machine-observable way when possible
+- LED blinking is only claimed if the LED path is actually known and validated
+- Final state/result should be tied to real run evidence, not only generated text
+
+---
+
+## Acceptance Criteria for Scenario A
+
+Scenario A is considered successful if:
+
+- the system can take a common user request and drive it through the mature STM32F411 path;
+- the project layer and execution layer are connected end-to-end;
+- the resulting status reflects real execution;
+- the system behaves transparently about what it reused from the repo.
+
+---
+
+# Scenario B: Unknown-Path Validation
+## STM32F407
+
+### User Prompt
+
+> I have a board with an STM32F407 CPU. Please create a project for it and generate a GPIO toggling and LED blinking program. Start working on it now.
+
+---
+
+## Expected Behavior
+
+For STM32F407, the system is **not** expected to behave like STM32F411 unless the repo truly contains an equivalent mature path.
+
+The desired behavior is controlled exploration, not silent imitation.
+
+The system should:
+
+1. Recognize that the target is not yet a known mature path
+2. Avoid pretending that mature setup, board mapping, LED pin, or verification data already exist
+3. Ask for the minimum critical missing information
+4. Create an exploratory or inferred project shell if appropriate
+5. Reuse only generic family-level knowledge that is legitimately available
+6. Clearly distinguish verified facts from inferred references and missing information
+
+---
+
+## What Must Be Verified
+
+### B1. No fake maturity
+- The system must not act as if STM32F407 already has a known validated path if it does not
+- It must not invent:
+  - verified tests
+  - board LED mapping
+  - bench wiring
+  - instrument setup
+  - historical pass state
+
+### B2. Controlled clarification
+If the request is not sufficiently specified, the system should ask the most important missing questions, such as:
+
+- What board is this?
+- Is it an official development board or a custom board?
+- Do you have a schematic, board page, pinout, or documentation?
+- Where is the LED connected?
+- Which GPIO should be used for toggling?
+- What flashing/debug/instrument setup is available?
+
+The system should not ask unnecessary questions.  
+It should ask the minimum set needed to continue safely.
+
+### B3. Safe project creation
+If a project is created before all details are known, it should be created in a controlled mode such as exploratory / inferred / needs-board-info, rather than being presented as fully validated.
+
+### B4. Correct reuse boundary
+The system may reuse generic STM32 knowledge if available, but must not present it as board-specific truth.
+
+For example:
+- generic bring-up guidance may be acceptable
+- family-level GPIO example structure may be acceptable
+- assumed LED pin mappings are not acceptable without support
+
+---
+
+## Acceptance Criteria for Scenario B
+
+Scenario B is considered successful if:
+
+- the system recognizes that the path is not yet mature;
+- it does not silently copy the F411 pattern and pretend success;
+- it asks for the right missing information;
+- it creates a controlled exploratory project state if needed;
+- it stays honest about what is known, inferred, and missing.
+
+---
+
+# Core Behavioral Rule
+
+The system should follow this rule:
+
+## Rule 1: Mature path may proceed directly
+If the repo and runtime environment provide enough information to uniquely identify a mature path, the system may proceed directly.
+
+However, it should still be transparent that it is reusing existing validated assets.
+
+## Rule 2: Unknown path must not pretend maturity
+If the target cannot be uniquely mapped to a mature path, the system must not silently continue as if all board-level details are already known.
+
+Instead, it must enter clarification and/or exploratory project creation mode.
+
+---
+
+# Why These Two Scenarios Matter
+
+STM32F411 and STM32F407 together form the minimum practical validation pair for the user project layer:
+
+- **STM32F411** tests whether the system can correctly reuse and execute a mature path
+- **STM32F407** tests whether the system can safely handle an incomplete or not-yet-supported path
+
+If both are handled correctly, then the first real version of the user/project workflow is on solid ground.
+
+---
+
+# Next Implementation Focus
+
+The next work should therefore be organized around these two validation goals:
+
+## Track A: Mature-path polish
+Use STM32F411 to inspect:
+- status transitions
+- project state coherence
+- reuse transparency
+- execution linkage
+- result reporting quality
+
+## Track B: Unknown-path rule enforcement
+Use STM32F407 to define and enforce:
+- clarification rules
+- exploratory project creation behavior
+- verified vs inferred vs missing distinctions
+- safe reuse boundaries
+
+---
+
+# Deliverable Expectation
+
+After running these two scenarios, the implementation should produce:
+
+1. a clear record of what happened in each case;
+2. a list of gaps or incorrect behaviors found;
+3. concrete rules/spec updates derived from those observations;
+4. implementation updates that improve the user project workflow.
+
+---
+
+# Summary
+
+This is not a generic project-management feature exercise.
+
+This is a focused validation of whether the user project layer can support the most common real user request pattern under two critical conditions:
+
+- when the target is already known;
+- when the target is not yet known.
+
+If both cases are handled correctly, the first step of the user-facing project workflow can be considered proven.

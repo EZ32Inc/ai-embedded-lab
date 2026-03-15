@@ -1,33 +1,43 @@
+assumptions:
+- The user board is close enough to the current mature stm32f411ceu6 AEL path to begin
+  from a shell-first workflow
+closest_mature_ael_path: stm32f411ceu6
+confirmed_facts:
+- User has a board using stm32f411ceu6
+- 'Board confirmed: stm32f411ceu6'
+- 'Test validated: stm32f411_gpio_signature (PASS)'
+- 'Instrument used: esp32jtag_stm32f411'
+cross_domain_links:
+- reason: project is anchored to the current mature F411 capability path
+  target: stm32f411ceu6
+  type: mature_capability_anchor
+current_blocker: none
+domain: user_project_domain
+key_refs:
+- projects/stm32f411_first_example/README.md
+- docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md
+- docs/specs/stm32f411ceu6_connection_contract_draft_v0_1.md
+last_action: 'run_validated: 2026-03-14_21-29-20_stm32f411ceu6_stm32f411_gpio_signature'
+mature_path_reused: true
+motivated_by_user_goal: Create a first example project for a board using stm32f411ceu6
+next_recommended_action: 'project validated — evidence: 2026-03-14_21-29-20_stm32f411ceu6_stm32f411_gpio_signature'
 project_id: stm32f411_first_example
 project_name: STM32F411 first example project
 project_type: user_project
-domain: user_project_domain
 project_user: local_user
-user_goal: Create a first example project for a board using stm32f411ceu6
-target_mcu: stm32f411ceu6
-closest_mature_ael_path: stm32f411ceu6
-system_refs:
-  - docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md
-  - docs/specs/stm32f411ceu6_capability_anchor_status_v0_1.md
-cross_domain_links:
-  - type: mature_capability_anchor
-    target: stm32f411ceu6
-    reason: project is anchored to the current mature F411 capability path
-status: shell_created
-confirmed_facts:
-  - User has a board using stm32f411ceu6
-assumptions:
-  - The user board is close enough to the current mature stm32f411ceu6 AEL path to begin from a shell-first workflow
-unresolved_items:
-  - Exact setup and wiring to be used for this board
-  - What first example should be generated first
-current_blocker: ""
-last_action: created_project_shell
-next_recommended_action: clarify setup, wiring, validation approach, and desired first example
-tool_branch: ""
+run_evidence:
+- board: stm32f411ceu6
+  instrument: esp32jtag_stm32f411
+  ok: true
+  run_id: 2026-03-14_21-29-20_stm32f411ceu6_stm32f411_gpio_signature
+  termination: pass
+  test: stm32f411_gpio_signature
+status: validated
 system_change_status: integrated
-motivated_by_user_goal: Create a first example project for a board using stm32f411ceu6
-key_refs:
-  - projects/stm32f411_first_example/README.md
-  - docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md
-  - docs/specs/stm32f411ceu6_connection_contract_draft_v0_1.md
+system_refs:
+- docs/specs/stm32f411ceu6_bringup_preparation_v0_1.md
+- docs/specs/stm32f411ceu6_capability_anchor_status_v0_1.md
+target_mcu: stm32f411ceu6
+tool_branch: ''
+unresolved_items: []
+user_goal: Create a first example project for a board using stm32f411ceu6

@@ -437,7 +437,12 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
     if not path.is_absolute():
         path = root / path
     if not path.exists():
-        return {"ok": False, "error": f"test not found: {test_path}"}
+        # Try resolving as a bare test name → tests/plans/<name>.json
+        candidate = root / "tests" / "plans" / (Path(test_path).stem + ".json")
+        if candidate.exists():
+            path = candidate
+        else:
+            return {"ok": False, "error": f"test not found: {test_path}"}
 
     payload = _load_json(path)
     board_cfg = _load_board_cfg(root, board_id)
