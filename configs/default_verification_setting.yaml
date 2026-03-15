@@ -13,17 +13,12 @@
       "test": "tests/plans/rp2040_gpio_signature.json"
     },
     {
-      "board": "stm32f103_gpio",
-      "test": "tests/plans/stm32f103_gpio_signature.json"
-    },
-    {
-      "board": "stm32f103_uart",
-      "test": "tests/plans/stm32f103_uart_banner.json",
-      "optional": true
-    },
-    {
       "board": "stm32f411ceu6",
       "test": "tests/plans/stm32f411_gpio_signature.json"
+    },
+    {
+      "board": "stm32f401rct6",
+      "test": "tests/plans/stm32f401_gpio_signature.json"
     }
   ],
   "stop_on_fail": false,
