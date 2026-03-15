@@ -289,6 +289,10 @@ def main():
     project_run_gate_p = project_sub.add_parser("run-gate", help="check if a project is safe to proceed with a run")
     project_run_gate_p.add_argument("project_id")
     project_run_gate_p.add_argument("--projects-root", default="projects")
+    project_answering_p = project_sub.add_parser("answering-context", help="emit full answering context for a user project (AI skill entry point)")
+    project_answering_p.add_argument("project_id")
+    project_answering_p.add_argument("--projects-root", default="projects")
+    project_answering_p.add_argument("--notes-lines", type=int, default=80, help="max lines of session_notes.md to include (0=all)")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -983,6 +987,39 @@ def _mature_confirmation_check(payload: dict) -> dict:
         "user_instrument": user_instrument,
         "candidate_instrument": candidate_instrument,
     }
+
+
+def _resolve_board_alias(name: str, repo_root: str) -> str | None:
+    """Look up a board alias in configs/known_boards.yaml.
+
+    Returns the canonical DUT id if the name matches any alias (case-insensitive),
+    or None if not found.  Exact alias match wins; partial substring match is not
+    performed to avoid false positives.
+    """
+    cfg_path = Path(repo_root) / "configs" / "known_boards.yaml"
+    if not cfg_path.exists():
+        return None
+    try:
+        import yaml as _yaml  # type: ignore
+        raw = _yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    if not isinstance(raw, dict):
+        return None
+    name_lower = name.strip().lower()
+    for entry in raw.get("boards", []):
+        if not isinstance(entry, dict):
+            continue
+        # Check dut_id and mcu fields as implicit aliases
+        if name_lower in (
+            str(entry.get("dut_id", "")).lower(),
+            str(entry.get("mcu", "")).lower(),
+        ):
+            return str(entry["dut_id"])
+        for alias in entry.get("aliases", []):
+            if name_lower == str(alias).strip().lower():
+                return str(entry["dut_id"])
+    return None
 
 
 def _resolve_maturity(target_mcu: str, repo_root: str) -> dict:
@@ -2145,6 +2182,11 @@ def _project_cmd(args) -> int:
             # Explicit override — trust the caller
             maturity = {"mature": True, "dut_id": args.mature_path, "confidence": "high", "path_maturity": "mature"}
         else:
+            # Try board alias resolution first (known_boards.yaml)
+            alias_dut = _resolve_board_alias(mcu, repo_root)
+            if alias_dut:
+                print(f"  board alias resolved: '{mcu}' → canonical DUT '{alias_dut}'")
+                mcu = alias_dut
             maturity = _resolve_maturity(mcu, repo_root)
         mature_path = args.mature_path or (maturity["dut_id"] or mcu)
         project_id = _slugify(args.project_id or f"{mcu}_project")
@@ -2373,6 +2415,70 @@ def _project_cmd(args) -> int:
         status = str(payload.get("status", "")).strip()
         _print_run_gate_result(ok, reasons, clarifications, readiness, args.project_id, path_maturity, status)
         return 0 if ok else 1
+    if args.project_cmd == "answering-context":
+        project_dir = root / args.project_id
+        payload = _project_yaml_load(project_dir / "project.yaml")
+        if not payload:
+            print(f"error: project not found: {project_dir / 'project.yaml'}")
+            return 1
+        notes_path = project_dir / "session_notes.md"
+        notes_text = ""
+        if notes_path.exists():
+            try:
+                lines = notes_path.read_text(encoding="utf-8").splitlines()
+                limit = args.notes_lines
+                if limit and len(lines) > limit:
+                    lines = lines[-limit:]
+                    notes_text = f"[last {limit} lines of session_notes.md]\n" + "\n".join(lines)
+                else:
+                    notes_text = "\n".join(lines)
+            except Exception:
+                notes_text = "(session_notes.md unreadable)"
+
+        # Compact answering context per user_project_answering_skill.md
+        print("# User Project Answering Context")
+        print(f"# Source: projects/{args.project_id}/project.yaml + session_notes.md")
+        print(f"# Domain: user_project_domain (distinct from system-domain)")
+        print("")
+        print(f"project_id:               {payload.get('project_id', '')}")
+        print(f"project_name:             {payload.get('project_name', '')}")
+        print(f"project_user:             {payload.get('project_user', '')}")
+        print(f"status:                   {payload.get('status', '')}")
+        print(f"target_mcu:               {payload.get('target_mcu', '')}")
+        print(f"closest_mature_ael_path:  {payload.get('closest_mature_ael_path', '')}")
+        print(f"path_maturity:            {payload.get('path_maturity', '')} (confidence: {payload.get('maturity_confidence', '')})")
+        print(f"current_blocker:          {payload.get('current_blocker', '') or 'none'}")
+        print(f"last_action:              {payload.get('last_action', '')}")
+        print(f"next_recommended_action:  {payload.get('next_recommended_action', '')}")
+        print("")
+        confirmed = payload.get("confirmed_facts") or []
+        print("confirmed_facts:")
+        for f in confirmed:
+            print(f"  - {f}")
+        assumptions = payload.get("assumptions") or []
+        print("assumptions:")
+        for a in assumptions:
+            print(f"  - {a}")
+        unresolved = payload.get("unresolved_items") or []
+        print("unresolved_items:")
+        for u in unresolved:
+            print(f"  - {u}")
+        run_evidence = payload.get("run_evidence") or []
+        if run_evidence:
+            print("run_evidence:")
+            for ev in run_evidence:
+                ok_str = "PASS" if ev.get("ok") else "FAIL"
+                print(f"  - {ev.get('run_id', '?')} [{ok_str}] board={ev.get('board', '')} test={ev.get('test', '')}")
+        cross = payload.get("cross_domain_links") or []
+        if cross:
+            print("cross_domain_links:")
+            for lnk in cross:
+                print(f"  - type={lnk.get('type', '')} target={lnk.get('target', '')} | {lnk.get('reason', '')}")
+        if notes_text:
+            print("")
+            print("# --- session_notes.md ---")
+            print(notes_text)
+        return 0
     return 1
 
 

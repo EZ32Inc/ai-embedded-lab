@@ -1,0 +1,123 @@
+# Known board alias registry for AEL.
+#
+# Maps common board names and aliases to their canonical AEL DUT id.
+# Used by `ael project create` to recognize known board names in --target-mcu
+# and apply the known-board clarify-first policy (known_board_clarify_first_policy_v0_1.md).
+#
+# Fields:
+#   dut_id      - canonical AEL golden DUT id (must match assets_golden/duts/<id>)
+#   board_name  - human-readable canonical board name
+#   mcu         - primary MCU part number
+#   aliases     - list of alternative names (case-insensitive matching)
+#   notes       - optional notes about board variants or differences
+
+boards:
+
+  # ── STM32F4xx ──────────────────────────────────────────────────────────────
+  - dut_id: stm32f411ceu6
+    board_name: WeAct Black Pill V2.0 (STM32F411CEU6)
+    mcu: stm32f411ceu6
+    aliases:
+      - black pill
+      - blackpill
+      - black_pill
+      - weact black pill
+      - weact blackpill
+      - stm32f411
+      - stm32f411ce
+      - stm32f411ceu6
+      - stm32 black pill
+    notes: >
+      WeAct Black Pill V2.0. LED on PC13 (active-high). GPIO signature uses PA2/PA3.
+      Instrument reference: esp32jtag. Bench wiring: PA2→P0.0, PA3→P0.1, SWD→P3.
+
+  - dut_id: stm32f401rct6
+    board_name: STM32F401RCT6 board
+    mcu: stm32f401rct6
+    aliases:
+      - stm32f401
+      - stm32f401rc
+      - stm32f401rct6
+      - nucleo f401
+      - nucleo-f401
+    notes: >
+      STM32F401RCT6 golden reference board. Cortex-M4, 256K flash, 64K RAM.
+
+  # ── STM32F1xx ──────────────────────────────────────────────────────────────
+  - dut_id: stm32f103
+    board_name: STM32F103 Blue Pill
+    mcu: stm32f103
+    aliases:
+      - blue pill
+      - bluepill
+      - blue_pill
+      - stm32f103
+      - stm32f103c8
+      - stm32f103c8t6
+      - stm32 blue pill
+    notes: >
+      Generic STM32F103C8T6 "Blue Pill" clone. LED on PC13 (active-low). Cortex-M3.
+      Primary golden reference for stm32f1xx family.
+
+  # ── Raspberry Pi (RP) ──────────────────────────────────────────────────────
+  - dut_id: rp2040_pico
+    board_name: Raspberry Pi Pico (RP2040)
+    mcu: rp2040
+    aliases:
+      - raspberry pi pico
+      - rpi pico
+      - pico
+      - rp2040
+      - rp2040 pico
+      - pi pico
+    notes: >
+      Official Raspberry Pi Pico. LED on GPIO25. Cortex-M0+ dual-core.
+      Flash via picoprobe (SWD). GPIO signature uses GPIO2/GPIO3.
+
+  - dut_id: rp2350_pico2
+    board_name: Raspberry Pi Pico 2 (RP2350)
+    mcu: rp2350
+    aliases:
+      - raspberry pi pico 2
+      - pico 2
+      - rp2350
+      - rp2350 pico2
+      - pico2
+    notes: >
+      Official Raspberry Pi Pico 2. RP2350 dual-core Cortex-M33.
+
+  # ── ESP32 ──────────────────────────────────────────────────────────────────
+  - dut_id: esp32c6_devkit
+    board_name: ESP32-C6 DevKit
+    mcu: esp32c6
+    aliases:
+      - esp32c6
+      - esp32-c6
+      - esp32 c6
+      - esp32c6 devkit
+      - esp32-c6-devkit
+    notes: >
+      Official Espressif ESP32-C6 DevKit. RISC-V, Wi-Fi 6, Bluetooth 5.
+      Flash via USB/UART (esptool). GPIO signature uses GPIO4/GPIO5.
+
+  - dut_id: esp32c3_devkit
+    board_name: ESP32-C3 DevKit
+    mcu: esp32c3
+    aliases:
+      - esp32c3
+      - esp32-c3
+      - esp32 c3
+      - esp32c3 devkit
+    notes: >
+      Official Espressif ESP32-C3 DevKit. RISC-V single-core.
+
+  - dut_id: esp32s3_devkit
+    board_name: ESP32-S3 DevKit
+    mcu: esp32s3
+    aliases:
+      - esp32s3
+      - esp32-s3
+      - esp32 s3
+      - esp32s3 devkit
+    notes: >
+      Official Espressif ESP32-S3 DevKit. Xtensa LX7 dual-core, USB-OTG.
