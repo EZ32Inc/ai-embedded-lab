@@ -129,9 +129,11 @@ def main():
     dut_create = dut_sub.add_parser("create")
     dut_create.add_argument("--from-golden", required=True)
     dut_create.add_argument("--to", required=True)
+    dut_create.add_argument("--dest", choices=["user", "branch"], default="user", help="Destination namespace: user (default) or branch")
     dut_promote = dut_sub.add_parser("promote")
     dut_promote.add_argument("--id", required=True)
     dut_promote.add_argument("--as", dest="as_id", required=False)
+    dut_promote.add_argument("--from", dest="from_namespace", choices=["user", "branch"], default="user", help="Source namespace: user (default) or branch")
     dut_promote.add_argument("--delete-source", action="store_true")
 
     verify_default_p = sub.add_parser("verify-default")
@@ -661,10 +663,10 @@ def main():
         sys.exit(0 if payload.get("toggling") else 1)
     if args.cmd == "dut":
         if args.dut_cmd == "create":
-            code = dut_create_cmd(args.from_golden, args.to)
+            code = dut_create_cmd(args.from_golden, args.to, dest=args.dest)
             sys.exit(code)
         if args.dut_cmd == "promote":
-            code = dut_promote_cmd(args.id, args.as_id, args.delete_source)
+            code = dut_promote_cmd(args.id, args.as_id, args.delete_source, from_namespace=args.from_namespace)
             sys.exit(code)
     if args.cmd == "board":
         if args.board_cmd == "state":
@@ -1120,6 +1122,8 @@ def _project_create_shell(
                     "reason": cross_domain_reason,
                 }
             ],
+            "capability_source": "main",
+            "capability_ref": mature_path or "",
             "status": status,
             "confirmed_facts": [confirmed_fact],
             "assumptions": [assumption],
@@ -2045,7 +2049,11 @@ def run_doctor(probe_path, board_path, test_path):
     return 0 if result["ok"] else 1
 
 
-def _update_manifest_id(manifest, new_id, verified_status=None):
+_LIFECYCLE_STAGES = ["draft", "runnable", "validated", "merge_candidate", "merged_to_main"]
+_LIFECYCLE_PROMOTE_MIN = {"validated", "merge_candidate"}
+
+
+def _update_manifest_id(manifest, new_id, verified_status=None, lifecycle_stage=None):
     if not isinstance(manifest, dict):
         manifest = {}
     manifest["id"] = new_id
@@ -2053,12 +2061,15 @@ def _update_manifest_id(manifest, new_id, verified_status=None):
         verified = manifest.get("verified") if isinstance(manifest.get("verified"), dict) else {}
         verified["status"] = bool(verified_status)
         manifest["verified"] = verified
+    if lifecycle_stage is not None:
+        manifest["lifecycle_stage"] = lifecycle_stage
     return manifest
 
 
-def dut_create_cmd(from_golden_id, to_user_id):
+def dut_create_cmd(from_golden_id, to_user_id, dest="user"):
     src = Path("assets_golden") / "duts" / from_golden_id
-    dst = Path("assets_user") / "duts" / to_user_id
+    dest_root = "assets_branch" if dest == "branch" else "assets_user"
+    dst = Path(dest_root) / "duts" / to_user_id
     if not src.exists():
         print(f"DUT create: golden id not found: {from_golden_id}")
         return 1
@@ -2068,19 +2079,21 @@ def dut_create_cmd(from_golden_id, to_user_id):
     assets.copy_dut_skeleton(src, dst)
     manifest_path = dst / "manifest.yaml"
     manifest = assets._load_yaml(manifest_path) if manifest_path.exists() else {}
-    manifest = _update_manifest_id(manifest, to_user_id, verified_status=False)
+    lifecycle = "draft" if dest == "branch" else None
+    manifest = _update_manifest_id(manifest, to_user_id, verified_status=False, lifecycle_stage=lifecycle)
     assets.save_manifest(manifest_path, manifest)
     notes_path = dst / "notes.md"
     if not notes_path.exists():
         notes_path.write_text(f"Created from golden {from_golden_id}\n", encoding="utf-8")
-    print(f"DUT create: {dst}")
+    print(f"DUT create: {dst}" + (" [branch]" if dest == "branch" else ""))
     return 0
 
 
-def dut_promote_cmd(user_id, as_id=None, delete_source=False):
-    src = Path("assets_user") / "duts" / user_id
+def dut_promote_cmd(user_id, as_id=None, delete_source=False, from_namespace="user"):
+    src_root = "assets_branch" if from_namespace == "branch" else "assets_user"
+    src = Path(src_root) / "duts" / user_id
     if not src.exists():
-        print(f"DUT promote: user id not found: {user_id}")
+        print(f"DUT promote: {from_namespace} id not found: {user_id}")
         return 1
     manifest_path = src / "manifest.yaml"
     if not manifest_path.exists():
@@ -2091,6 +2104,15 @@ def dut_promote_cmd(user_id, as_id=None, delete_source=False):
     if missing:
         print("DUT promote: manifest missing fields: " + ", ".join(missing))
         return 3
+    # lifecycle_stage gate
+    lifecycle = str(manifest.get("lifecycle_stage") or "").strip() if isinstance(manifest, dict) else ""
+    verified_ok = bool((manifest.get("verified") or {}).get("status")) if isinstance(manifest, dict) else False
+    if lifecycle and lifecycle not in _LIFECYCLE_PROMOTE_MIN:
+        print(f"DUT promote: blocked — lifecycle_stage is '{lifecycle}', must be 'validated' or 'merge_candidate'")
+        return 5
+    if not lifecycle and not verified_ok:
+        print("DUT promote: blocked — verified.status is false and no lifecycle_stage set")
+        return 5
     golden_id = as_id or user_id
     dst = Path("assets_golden") / "duts" / golden_id
     if dst.exists():
@@ -2099,13 +2121,13 @@ def dut_promote_cmd(user_id, as_id=None, delete_source=False):
     assets.copy_dut_skeleton(src, dst)
     dst_manifest_path = dst / "manifest.yaml"
     verified_status = manifest.get("verified", {}).get("status", False) if isinstance(manifest, dict) else False
-    manifest = _update_manifest_id(manifest, golden_id, verified_status=verified_status)
+    manifest = _update_manifest_id(manifest, golden_id, verified_status=verified_status, lifecycle_stage="merged_to_main")
     assets.save_manifest(dst_manifest_path, manifest)
     promo_note = dst / "PROMOTION.md"
-    promo_note.write_text(f"Promoted from user DUT {user_id}.\n", encoding="utf-8")
+    promo_note.write_text(f"Promoted from {from_namespace} DUT {user_id}.\n", encoding="utf-8")
     if delete_source:
         shutil.rmtree(src)
-    print(f"DUT promote: {dst}")
+    print(f"DUT promote: {dst} [merged_to_main]")
     return 0
 
 

@@ -74,6 +74,11 @@ def _load_pack_index(repo_root: Path) -> List[Dict[str, Any]]:
                 pack_dirs.append(path)
 
     seen = set()
+    for root in (repo_root / "assets_branch" / "duts",):
+        if root.exists():
+            for path in root.glob("*/packs"):
+                pack_dirs.append(path)
+
     for pack_dir in pack_dirs:
         if not pack_dir.exists():
             continue
@@ -352,7 +357,11 @@ def build_inventory(repo_root: Path | None = None) -> Dict[str, Any]:
 
     dut_entries: List[Dict[str, Any]] = []
     all_duts = []
-    for source_name, source_root in (("golden", root / "assets_golden" / "duts"), ("user", root / "assets_user" / "duts")):
+    for source_name, source_root in (
+        ("golden", root / "assets_golden" / "duts"),
+        ("user", root / "assets_user" / "duts"),
+        ("branch", root / "assets_branch" / "duts"),
+    ):
         if not source_root.exists():
             continue
         for entry in assets.list_duts(source_root):
@@ -405,6 +414,7 @@ def build_inventory(repo_root: Path | None = None) -> Dict[str, Any]:
                     "family": manifest.get("family"),
                     "description": manifest.get("description"),
                     "source": source_name,
+                    "lifecycle_stage": str(manifest.get("lifecycle_stage") or "").strip() or None,
                     "board_config": board_config.relative_to(root).as_posix() if board_config.exists() else None,
                     "verified_status": bool((manifest.get("verified") or {}).get("status")) if isinstance(manifest.get("verified"), dict) else None,
                     "tests": tests,
@@ -692,7 +702,11 @@ def render_text(inventory: Dict[str, Any]) -> str:
     lines.append("mcus_with_tests: " + ", ".join(summary.get("mcus_with_tests") or []))
     lines.append("")
     for dut in inventory.get("duts") or []:
-        lines.append(f"{dut['dut_id']} ({dut.get('mcu')})")
+        source = dut.get("source") or "golden"
+        lifecycle = dut.get("lifecycle_stage")
+        source_tag = f" [{source}]" if source != "golden" else ""
+        lifecycle_tag = f" stage={lifecycle}" if lifecycle else ""
+        lines.append(f"{dut['dut_id']} ({dut.get('mcu')}){source_tag}{lifecycle_tag}")
         tests = dut.get("tests") or []
         if not tests:
             lines.append("  tests: none")
