@@ -1,0 +1,33 @@
+{
+  "name": "stm32f401_capture_banner",
+  "board": "stm32f401rct6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 15.0,
+  "max_freq_hz": 35.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f401_capture",
+    "artifact_stem": "stm32f401_capture_app",
+    "build_dir": "artifacts/build_stm32f401_capture_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "TIM1_CH1_SOURCE",      "dut_signal": "PA8", "direction": "output", "notes": "50 Hz source for capture self-check." },
+      { "role": "TIM3_CH1_CAPTURE_INPUT", "dut_signal": "PA6", "direction": "input", "notes": "Capture input via PA8→PA6 loopback." }
+    ],
+    "external_inputs": [
+      {
+        "source": "CAPTURE_LOOPBACK",
+        "dut_signal": "PA6",
+        "kind": "digital_loopback",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Physically connect PA8 to PA6. Firmware exports capture-valid status on PA2."
+      }
+    ]
+  }
+}

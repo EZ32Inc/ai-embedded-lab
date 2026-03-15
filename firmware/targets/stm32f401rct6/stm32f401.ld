@@ -20,8 +20,9 @@ SECTIONS
     _etext = .;
   } > FLASH
 
-  .data : AT ( _etext )
+  .data :
   {
+    _sidata = LOADADDR(.data);
     _sdata = .;
     *(.data*)
     _edata = .;

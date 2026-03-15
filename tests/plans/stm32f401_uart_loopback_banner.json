@@ -1,0 +1,33 @@
+{
+  "name": "stm32f401_uart_loopback_banner",
+  "board": "stm32f401rct6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 15.0,
+  "max_freq_hz": 35.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f401_uart_loopback",
+    "artifact_stem": "stm32f401_uart_loopback_app",
+    "build_dir": "artifacts/build_stm32f401_uart_loopback_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "USART1_TX", "dut_signal": "PA9",  "direction": "output" },
+      { "role": "USART1_RX", "dut_signal": "PA10", "direction": "input"  }
+    ],
+    "external_inputs": [
+      {
+        "source": "UART_LOOPBACK",
+        "dut_signal": "PA10/USART1_RX",
+        "kind": "digital_loopback",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Physically connect PA9/USART1_TX to PA10/USART1_RX. Firmware exports UART-valid status on PA2."
+      }
+    ]
+  }
+}

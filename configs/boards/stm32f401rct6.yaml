@@ -8,10 +8,11 @@ board:
     project_dir: firmware/targets/stm32f401rct6
     artifact_stem: stm32f401_app
   firmware:
-    description: Toggle PA2-PA4 fast, blink PC13 at 0.5 s intervals
+    description: STM32F401RCT6 GPIO signature and banner experiment suite
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
+    post_load_settle_s: 5.0
     target_id: 1
     gdb_launch_cmds:
       - "file {firmware}"
@@ -22,29 +23,26 @@ board:
       - "detach"
   observe_map:
     sig: P0.0
-    pa4: P0.0
+    pa2: P0.0
     pa3: P0.1
-    pa2: P0.2
-    pc13: P0.3
-    led: P0.3
+    pb13: P0.2
+    led: LED
   verification_views:
     signal:
       pin: sig
       resolved_to: P0.0
-      description: Generic GPIO signature capture on PA4
-    led:
-      pin: led
-      resolved_to: P0.3
-      description: Machine-observed PC13 LED blink on P0.3
+      description: Primary proof capture on PA2
+    aux:
+      pin: pb13
+      resolved_to: P0.2
+      description: Auxiliary observed SPI clock pin on PB13
   bench_connections:
-    - from: PA4
+    - from: PA2
       to: P0.0
     - from: PA3
       to: P0.1
-    - from: PA2
+    - from: PB13
       to: P0.2
-    - from: PC13
-      to: P0.3
     - from: PC13
       to: LED
     - from: GND
@@ -52,7 +50,15 @@ board:
   safe_pins:
     - PA2
     - PA3
-    - PA4
+    - PA6
+    - PA8
+    - PA9
+    - PA10
+    - PB0
+    - PB1
+    - PB13
+    - PB14
+    - PB15
     - PC13
   default_wiring:
     swd: "P3"

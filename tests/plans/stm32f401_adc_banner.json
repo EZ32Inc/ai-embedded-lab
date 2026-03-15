@@ -1,0 +1,33 @@
+{
+  "name": "stm32f401_adc_banner",
+  "board": "stm32f401rct6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 15.0,
+  "max_freq_hz": 35.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32f401_adc",
+    "artifact_stem": "stm32f401_adc_app",
+    "build_dir": "artifacts/build_stm32f401_adc_banner"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "ADC1_IN8",         "dut_signal": "PB0/ADC1_IN8", "direction": "input"  },
+      { "role": "ADC_LOOPBACK_SOURCE", "dut_signal": "PB1",        "direction": "output", "notes": "Firmware drives PB1 and samples PB0 through loopback." }
+    ],
+    "external_inputs": [
+      {
+        "source": "PB1_LOOPBACK",
+        "dut_signal": "PB0/ADC1_IN8",
+        "kind": "analog_in",
+        "required": true,
+        "status": "manual_loopback_required",
+        "notes": "Physically connect PB1 to PB0. Firmware exports ADC-valid status on PA2."
+      }
+    ]
+  }
+}

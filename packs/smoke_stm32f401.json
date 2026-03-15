@@ -2,6 +2,13 @@
   "name": "smoke_stm32f401",
   "board": "stm32f401rct6",
   "tests": [
-    "tests/plans/stm32f401_gpio_signature.json"
+    "tests/plans/stm32f401_gpio_signature.json",
+    "tests/plans/stm32f401_uart_loopback_banner.json",
+    "tests/plans/stm32f401_spi_banner.json",
+    "tests/plans/stm32f401_adc_banner.json",
+    "tests/plans/stm32f401_capture_banner.json",
+    "tests/plans/stm32f401_exti_banner.json",
+    "tests/plans/stm32f401_gpio_loopback_banner.json",
+    "tests/plans/stm32f401_pwm_banner.json"
   ]
 }

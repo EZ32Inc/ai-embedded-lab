@@ -1,12 +1,64 @@
 {
   "name": "stm32f401_gpio_signature",
   "board": "stm32f401rct6",
-  "pin": "sig",
-  "min_freq_hz": 200.0,
-  "max_freq_hz": 100000.0,
-  "duty_min": 0.4,
-  "duty_max": 0.6,
-  "duration_s": 1.0,
-  "min_edges": 2,
-  "max_edges": 20000
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6",
+    "artifact_stem": "stm32f401_app",
+    "build_dir": "artifacts/build_stm32f401_gpio_signature"
+  },
+  "signal_checks": [
+    {
+      "name": "pa2_fast",
+      "pin": "pa2",
+      "duration_s": 1.0,
+      "min_freq_hz": 15.0,
+      "max_freq_hz": 35.0,
+      "duty_min": 0.35,
+      "duty_max": 0.65,
+      "min_edges": 20,
+      "max_edges": 80
+    },
+    {
+      "name": "pa3_half_rate",
+      "pin": "pa3",
+      "duration_s": 1.0,
+      "min_freq_hz": 7.0,
+      "max_freq_hz": 18.0,
+      "duty_min": 0.35,
+      "duty_max": 0.65,
+      "min_edges": 10,
+      "max_edges": 40
+    }
+  ],
+  "signal_relations": [
+    {
+      "type": "frequency_ratio",
+      "numerator": "pa2_fast",
+      "denominator": "pa3_half_rate",
+      "min_ratio": 1.8,
+      "max_ratio": 2.2
+    }
+  ],
+  "bench_setup": {
+    "peripheral_signals": [
+      {
+        "role": "GPIO_SIGNATURE_FAST",
+        "dut_signal": "PA2",
+        "direction": "output",
+        "notes": "Firmware drives PA2 at ~25 Hz as the primary signature output."
+      },
+      {
+        "role": "GPIO_SIGNATURE_HALF_RATE",
+        "dut_signal": "PA3",
+        "direction": "output",
+        "notes": "Firmware drives PA3 at ~12.5 Hz (half of PA2) for ratio verification."
+      },
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "PC13",
+        "direction": "output",
+        "notes": "Operator-visible heartbeat LED."
+      }
+    ]
+  }
 }
