@@ -15,6 +15,10 @@ tags:
   - stm32f401
 verified:
   status: true
+  verification_suite: stm32f401_basic
+  tests: 8
+  sequential_pass: true
+  latest_run_id: 2026-03-15_19-07-28_stm32f401rct6_stm32f401_pwm_banner
   verified_on:
     bench_id: esp32jtag_stm32_golden
     instrument_endpoint: 192.168.2.98:4242
