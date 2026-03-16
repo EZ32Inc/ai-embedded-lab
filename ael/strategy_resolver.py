@@ -444,6 +444,21 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
 
     observe_map = board_cfg.get("observe_map", {}) if isinstance(board_cfg, dict) else {}
     raw_signal_checks = test_raw.get("signal_checks", []) if isinstance(test_raw, dict) else []
+
+    # When the test plan has no signal checks and no top-level pin, skip signal
+    # capture entirely and return a noop step.  This is used by debug-path-only
+    # tests (e.g. minimal_runtime_mailbox) whose result comes from the mailbox,
+    # not from GPIO observation.
+    test_pin_early = test_raw.get("pin") if isinstance(test_raw, dict) else None
+    if (isinstance(raw_signal_checks, list) and len(raw_signal_checks) == 0
+            and not test_pin_early
+            and not is_meter_digital_verify_test(test_raw, board_cfg)):
+        return {
+            "name": "check_signal",
+            "type": "check.noop",
+            "inputs": {"note": "no signal checks — skipped (mailbox-only test)"},
+        }
+
     signal_checks = []
     if isinstance(raw_signal_checks, list):
         for index, item in enumerate(raw_signal_checks):
@@ -514,3 +529,45 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
         step["retry_budget"] = 0
         step["rewind_anchor"] = "check_signal"
     return step
+
+
+def build_mailbox_verify_step(
+    test_raw: Dict[str, Any] | Any,
+    probe_cfg: Dict[str, Any] | Any,
+    artifacts_dir: Path,
+) -> Dict[str, Any] | None:
+    """Return a check.mailbox_verify step if the test plan declares mailbox_verify.
+
+    The test plan may use either:
+      "mailbox_verify": true               — use all defaults
+      "mailbox_verify": {"settle_s": 3}    — override specific fields
+
+    Returns None if no mailbox_verify config is present, so the caller can
+    skip appending the step without further checks.
+    """
+    if not isinstance(test_raw, dict):
+        return None
+    mb_cfg = test_raw.get("mailbox_verify")
+    if not mb_cfg:
+        return None
+    if mb_cfg is True:
+        mb_cfg = {}
+    if not isinstance(mb_cfg, dict):
+        return None
+
+    probe = probe_cfg if isinstance(probe_cfg, dict) else {}
+    probe_ip   = probe.get("ip", "")
+    probe_port = int(probe.get("gdb_port", 4242))
+
+    return {
+        "name": "check_mailbox",
+        "type": "check.mailbox_verify",
+        "inputs": {
+            "probe_ip":   probe_ip,
+            "probe_port": probe_port,
+            "target_id":  int(mb_cfg.get("target_id", 1)),
+            "addr":       str(mb_cfg.get("addr", "0x20007F00")),
+            "settle_s":   float(mb_cfg.get("settle_s", 0.0)),
+            "out_json":   str(artifacts_dir / "mailbox_verify.json"),
+        },
+    }

@@ -1666,6 +1666,14 @@ def run_pipeline(
     )
     plan_steps.append(verify_step)
 
+    mailbox_step = strategy_resolver.build_mailbox_verify_step(
+        test_raw=test_raw,
+        probe_cfg=probe_cfg,
+        artifacts_dir=Path(run_paths.artifacts_dir),
+    )
+    if mailbox_step is not None:
+        plan_steps.append(mailbox_step)
+
     plan = {
         "version": "runplan/0.1",
         "plan_id": run_paths.run_id,

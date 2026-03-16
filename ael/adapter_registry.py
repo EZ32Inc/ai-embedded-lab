@@ -10,6 +10,7 @@ from ael.adapters import (
     build_cmake,
     build_idf,
     build_stm32,
+    check_mailbox_verify,
     control_reset_serial,
     flash_bmda_gdbmi,
     flash_idf,
@@ -1094,6 +1095,11 @@ class _NoopCheckAdapter:
         return {"ok": True, "result": payload}
 
 
+class _MailboxVerifyAdapter:
+    def execute(self, step, plan, ctx):
+        return check_mailbox_verify.execute(step, plan, ctx)
+
+
 class _InstrumentAipHttpAdapter:
     def __init__(self, capability: str | None = None):
         self._capability = capability
@@ -1146,6 +1152,7 @@ class AdapterRegistry:
             "check.signal_verify": _SignalVerifyAdapter(),
             "check.instrument_selftest": _InstrumentSelftestAdapter(self._instrument_backends),
             "check.noop": _NoopCheckAdapter(),
+            "check.mailbox_verify": _MailboxVerifyAdapter(),
             "instrument.aip_http": _InstrumentAipHttpAdapter(),
             "instrument.aip_http.measure.voltage": self._capability_map["measure.voltage"],
             "instrument.aip_http.measure.digital": self._capability_map["measure.digital"],
