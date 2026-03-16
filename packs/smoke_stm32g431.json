@@ -1,0 +1,15 @@
+{
+  "name": "smoke_stm32g431",
+  "board": "stm32g431cbu6",
+  "tests": [
+    "tests/plans/stm32g431_minimal_runtime_mailbox.json",
+    "tests/plans/stm32g431_gpio_signature.json",
+    "tests/plans/stm32g431_uart_loopback.json",
+    "tests/plans/stm32g431_spi.json",
+    "tests/plans/stm32g431_adc.json",
+    "tests/plans/stm32g431_capture.json",
+    "tests/plans/stm32g431_exti.json",
+    "tests/plans/stm32g431_gpio_loopback.json",
+    "tests/plans/stm32g431_pwm.json"
+  ]
+}

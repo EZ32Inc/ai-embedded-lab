@@ -1,0 +1,25 @@
+{
+  "name": "stm32g431_minimal_runtime_mailbox",
+  "board": "stm32g431cbu6",
+  "build": {
+    "project_dir": "firmware/targets/stm32g431_minimal_runtime_mailbox",
+    "artifact_stem": "stm32g431_minimal_runtime_mailbox_app",
+    "build_dir": "artifacts/build_stm32g431_minimal_runtime_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 3.0,
+    "addr": "0x20007F00"
+  },
+  "bench_setup": {
+    "notes": "Debug-path-only test. No GPIO signal checks. Pass/fail result is read from the AEL debug mailbox at 0x20007F00 via SWD using tools/read_mailbox.py. Requires only SWDIO, SWCLK, and GND — no loopback wiring, no external instruments.",
+    "peripheral_signals": [
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "Visual indicator only. Steady on = PASS. Rapid blink = FAIL. Not measured by AEL."
+      }
+    ]
+  }
+}

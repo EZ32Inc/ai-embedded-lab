@@ -1,0 +1,25 @@
+{
+  "name": "stm32g431_exti",
+  "board": "stm32g431cbu6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 30.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.3,
+  "duty_max": 0.7,
+  "min_edges": 5,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32g431_exti",
+    "artifact_stem": "stm32g431_exti_app",
+    "build_dir": "artifacts/build_stm32g431_exti"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "EXTI_DRIVE", "dut_signal": "PA8", "direction": "output",
+        "notes": "GPIO output toggles 100Hz into PA6 via loopback wire PA8→PA6." },
+      { "role": "EXTI6_INPUT", "dut_signal": "PA6", "direction": "input",
+        "notes": "EXTI line 6 (polled). PA2 toggles ~50Hz when >=10 edges/100ms window detected." }
+    ]
+  }
+}

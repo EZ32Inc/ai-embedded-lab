@@ -1,0 +1,25 @@
+{
+  "name": "stm32g431_pwm",
+  "board": "stm32g431cbu6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 30.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.3,
+  "duty_max": 0.7,
+  "min_edges": 5,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32g431_pwm",
+    "artifact_stem": "stm32g431_pwm_app",
+    "build_dir": "artifacts/build_stm32g431_pwm"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "TIM1_PWM_OUT", "dut_signal": "PA8", "direction": "output",
+        "notes": "TIM1_CH1 AF6, 50Hz 50% duty. PA8→PA6 loopback wire." },
+      { "role": "PWM_SENSE",    "dut_signal": "PA6", "direction": "input",
+        "notes": "GPIO input samples PWM. PA2 toggles ~50Hz when both levels seen in 100ms window." }
+    ]
+  }
+}

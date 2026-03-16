@@ -1,0 +1,25 @@
+{
+  "name": "stm32g431_adc",
+  "board": "stm32g431cbu6",
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_freq_hz": 30.0,
+  "max_freq_hz": 70.0,
+  "duty_min": 0.3,
+  "duty_max": 0.7,
+  "min_edges": 5,
+  "max_edges": 20000,
+  "build": {
+    "project_dir": "firmware/targets/stm32g431_adc",
+    "artifact_stem": "stm32g431_adc_app",
+    "build_dir": "artifacts/build_stm32g431_adc"
+  },
+  "bench_setup": {
+    "peripheral_signals": [
+      { "role": "ADC_DRIVE",  "dut_signal": "PB1", "direction": "output",
+        "notes": "GPIO output drives known voltage (0 or 3.3V) via loopback wire PB1→PB0." },
+      { "role": "ADC1_IN15",  "dut_signal": "PB0", "direction": "input",
+        "notes": "ADC1 channel 15 (analog). PA2 toggles ~50Hz when ADC tracks PB1 level." }
+    ]
+  }
+}
