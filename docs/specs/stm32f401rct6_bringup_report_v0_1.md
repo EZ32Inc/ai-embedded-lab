@@ -64,19 +64,21 @@ PC13 → LED    心跳 LED
 **经验：** 连线表初稿完成后，需要逐一对应实验中每个外设的关键信号，
 确认所有需要观测的引脚都已连线，不能只考虑状态输出引脚。
 
-### 2.3 Board-side Loopback 分组
+### 2.3 Board-side Loopback
 
-8 个实验分为两类物理接线：
+所有板上短接线在实验开始前**一次性全部接好**，8 个实验全程使用同一套物理接线，
+中间没有任何换线操作：
 
-| 实验 | 板上短接线 |
-|------|-----------|
-| UART loopback | PA9 → PA10 |
-| SPI | PB15 → PB14 |
-| ADC | PB1 → PB0 |
-| Capture / EXTI / GPIO loopback / PWM | PA8 → PA6（共用一根） |
+| 短接线 | 用于实验 |
+|--------|---------|
+| PA9 → PA10 | UART loopback |
+| PB15 → PB14 | SPI |
+| PB1 → PB0 | ADC |
+| PA8 → PA6 | Capture、EXTI、GPIO loopback、PWM |
 
-**设计考虑：** 实验 5–8 共用同一根 PA8→PA6 跳线，
-用户只需在实验 4 结束后接上一次，后续 4 个实验连续跑不需要换线。
+**重要原则：** bench 连线是一次性设置，不是按实验切换的。
+设计实验套件时，应确保所有实验的连线需求可以同时满足，
+让用户接好一次后直接跑完整套。
 
 ---
 
@@ -251,10 +253,5 @@ experiments 5–8：PA8 → PA6 短接保持
 Banner 模式的核心是：固件内部自测完成，通过 PA2 的频率/占空比编码输出 PASS/FAIL。
 只要 PA2 信号正常，就代表所有内部测试通过。这是一套可复用的固件架构模式。
 
-### S4：多实验共用跳线规划 Skill
-设计 8 个实验时，提前分析哪些实验可以共用同一根跳线，
-减少用户换线次数，降低操作失误概率。
-本次：实验 5–8 共用 PA8→PA6，用户只需接一次。
-
-### S5：GPIO Signal Threshold Skill（已完成）
+### S4：GPIO Signal Threshold Skill（已完成）
 见 `docs/skills/gpio_signal_threshold_skill.md`。
