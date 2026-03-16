@@ -1,0 +1,31 @@
+{
+  "name": "stm32h750_adc_dac_loopback",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_adc_dac_loopback",
+    "artifact_stem": "stm32h750_adc_dac_loopback_app",
+    "build_dir": "artifacts/build_stm32h750_adc_dac_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "Step 2 ADC/DAC loopback. DAC1_OUT1 (PA4) drives ≈1.65V mid-rail; ADC1_INP0 (PA0) reads back. Accepts 0x600..0xA00 (±25%). On FAIL: error_code bitmask: bit0=DAC_TIMEOUT, bit1=ADC_VREG, bit2=ADC_CAL, bit3=ADC_RDY, bit4=ADC_EOC, bit5=ADC_RANGE. On RANGE fail: detail0 holds raw ADC reading. ADC kernel clock = per_ck (HSI 64MHz) / 2 = 32MHz via RCC_D2CCIP1R.",
+    "peripheral_signals": [
+      {
+        "role": "DAC1_OUT1",
+        "dut_signal": "PA4",
+        "direction": "output",
+        "notes": "DAC channel 1 analog output. Wire: PA4 → PA0."
+      },
+      {
+        "role": "ADC1_INP0",
+        "dut_signal": "PA0",
+        "direction": "input",
+        "notes": "ADC1 channel 0 analog input. Wire: PA4 → PA0."
+      }
+    ]
+  }
+}

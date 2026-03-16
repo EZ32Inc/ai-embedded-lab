@@ -187,6 +187,8 @@ Boards that have completed full bring-up and sequential verification on real har
 |-------|-----|--------|-------------|--------|-----|
 | STM32F411CEU6 (Black Pill) | STM32F411 | STM32F4 | 8 | verified | [docs/boards/stm32f411ceu6.md](docs/boards/stm32f411ceu6.md) |
 | STM32F401RCT6 | STM32F401 | STM32F4 | 8 | verified | [docs/boards/stm32f401rct6.md](docs/boards/stm32f401rct6.md) |
+| STM32G431CBU6 | STM32G431 | STM32G4 | 9 | verified | — |
+| STM32H750VBT6 YD | STM32H750 | STM32H7 | 7 | verified | — |
 | RP2040 Pico | RP2040 | RP2 | — | verified | — |
 | ESP32-C6 DevKit | ESP32-C6 | ESP32 | — | verified | — |
 

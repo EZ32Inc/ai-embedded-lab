@@ -1,0 +1,31 @@
+{
+  "name": "stm32h750_gpio_loopback",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_gpio_loopback",
+    "artifact_stem": "stm32h750_gpio_loopback_app",
+    "build_dir": "artifacts/build_stm32h750_gpio_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "GPIO loopback test. PB8 drives 5 high/low cycles; PB9 reads back each state. On FAIL: error_code bit0=ERR_HIGH (PB8=H → PB9 read L), bit1=ERR_LOW (PB8=L → PB9 read H). detail0 = correct read count (0..10). On PASS detail0 starts at 10 and increments each ms.",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_OUT",
+        "dut_signal": "PB8",
+        "direction": "output",
+        "notes": "GPIO loopback driver, output push-pull. Wire: PB8 → PB9."
+      },
+      {
+        "role": "GPIO_IN",
+        "dut_signal": "PB9",
+        "direction": "input",
+        "notes": "GPIO loopback receiver, input floating. Wire: PB8 → PB9."
+      }
+    ]
+  }
+}

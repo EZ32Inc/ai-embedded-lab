@@ -1,0 +1,31 @@
+{
+  "name": "stm32h750_pwm_capture",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_pwm_capture",
+    "artifact_stem": "stm32h750_pwm_capture_app",
+    "build_dir": "artifacts/build_stm32h750_pwm_capture"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "Software PWM period measurement. PB8 (GPIO output) generates 1 kHz 50% square wave via TIM2 spin_us; PB9 (GPIO input) reads bench wire PB8→PB9. GPIOB_IDR polling detects rising edges; TIM2 free-running at 1 MHz timestamps them. Period accepted 900..1100 us (±10%). On FAIL: error_code bit0=ERR_CAP1, bit1=ERR_CAP2, bit2=ERR_PERIOD; detail0=measured period. On PASS detail0 starts at measured period (~1000) and increments each ms.",
+    "peripheral_signals": [
+      {
+        "role": "TIM4_CH3_PWM",
+        "dut_signal": "PB8",
+        "direction": "output",
+        "notes": "GPIO output push-pull, software 1 kHz 50% duty wave. Wire: PB8 → PB9."
+      },
+      {
+        "role": "TIM4_CH4_CAP",
+        "dut_signal": "PB9",
+        "direction": "input",
+        "notes": "GPIO input floating, polled via GPIOB_IDR. Wire: PB8 → PB9."
+      }
+    ]
+  }
+}

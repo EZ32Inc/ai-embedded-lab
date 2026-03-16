@@ -20,7 +20,9 @@
  */
 
 #define AEL_MAILBOX_MAGIC    0xAE100001u
-#define AEL_MAILBOX_ADDR     0x20007F00u
+#ifndef AEL_MAILBOX_ADDR
+#define AEL_MAILBOX_ADDR     0x20007F00u   /* default: STM32G431CBU6 SRAM end-256 */
+#endif
 
 #define AEL_STATUS_EMPTY     0u
 #define AEL_STATUS_RUNNING   1u

@@ -1,0 +1,13 @@
+{
+  "name": "smoke_stm32h750",
+  "board": "stm32h750vbt6",
+  "tests": [
+    "tests/plans/stm32h750_minimal_runtime_mailbox.json",
+    "tests/plans/stm32h750_wiring_verify.json",
+    "tests/plans/stm32h750_adc_dac_loopback.json",
+    "tests/plans/stm32h750_gpio_loopback.json",
+    "tests/plans/stm32h750_uart_loopback.json",
+    "tests/plans/stm32h750_exti_trigger.json",
+    "tests/plans/stm32h750_pwm_capture.json"
+  ]
+}

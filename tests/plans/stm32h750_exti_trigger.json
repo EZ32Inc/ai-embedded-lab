@@ -1,0 +1,31 @@
+{
+  "name": "stm32h750_exti_trigger",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_exti_trigger",
+    "artifact_stem": "stm32h750_exti_trigger_app",
+    "build_dir": "artifacts/build_stm32h750_exti_trigger"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "EXTI rising-edge trigger test. PB8 generates 10 rising edges; EXTI9 (connected to PB9 via SYSCFG) detects each edge by polling EXTI_RPR1. On FAIL: error_code bit0=ERR_EXTI_INIT (fewer than 10 edges detected), detail0 = actual edge count. On PASS detail0 starts at 10 and increments each ms.",
+    "peripheral_signals": [
+      {
+        "role": "EXTI_TRIGGER",
+        "dut_signal": "PB8",
+        "direction": "output",
+        "notes": "Rising-edge generator, output push-pull. Wire: PB8 → PB9."
+      },
+      {
+        "role": "EXTI_INPUT",
+        "dut_signal": "PB9",
+        "direction": "input",
+        "notes": "EXTI9 input, input floating, PORTB selected via SYSCFG_EXTICR3. Wire: PB8 → PB9."
+      }
+    ]
+  }
+}

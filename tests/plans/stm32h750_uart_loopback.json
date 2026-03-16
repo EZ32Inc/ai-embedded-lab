@@ -1,0 +1,31 @@
+{
+  "name": "stm32h750_uart_loopback",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_uart_loopback",
+    "artifact_stem": "stm32h750_uart_loopback_app",
+    "build_dir": "artifacts/build_stm32h750_uart_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "UART loopback test. USART1 sends {0x55, 0xAA, 0x12, 0x34} and reads back each byte over PA9→PA10 loopback at 115200 8N1. On FAIL: error_code bits 0-3 indicate which byte mismatched or timed out. detail0 = matched byte count. On PASS detail0 starts at 4 and increments each ms.",
+    "peripheral_signals": [
+      {
+        "role": "USART1_TX",
+        "dut_signal": "PA9",
+        "direction": "output",
+        "notes": "USART1 TX, AF7, 115200 8N1. Wire: PA9 → PA10."
+      },
+      {
+        "role": "USART1_RX",
+        "dut_signal": "PA10",
+        "direction": "input",
+        "notes": "USART1 RX, AF7. Wire: PA9 → PA10."
+      }
+    ]
+  }
+}

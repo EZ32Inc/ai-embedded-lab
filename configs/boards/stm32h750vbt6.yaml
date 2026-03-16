@@ -1,0 +1,22 @@
+board:
+  name: STM32H750VBT6 YD
+  target: stm32h750vbt6
+  instrument_instance: esp32jtag_h750_bench
+  clock_hz: 64000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32h750_minimal_runtime_mailbox
+    artifact_stem: stm32h750_minimal_runtime_mailbox_app
+  flash:
+    speed_khz: 1000
+    reset_strategy: connect_under_reset
+    post_load_settle_s: 5.0
+    target_id: 1
+    reset_available: false
+    gdb_launch_cmds:
+      - "monitor a"
+      - "file {firmware}"
+      - "attach {target_id}"
+      - "load"
+      - "set *(unsigned int*)0xE000EDF0 = 0xA05F0001"
+      - "detach"

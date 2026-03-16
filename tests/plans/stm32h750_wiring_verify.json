@@ -1,0 +1,43 @@
+{
+  "name": "stm32h750_wiring_verify",
+  "board": "stm32h750vbt6",
+  "build": {
+    "project_dir": "firmware/targets/stm32h750_wiring_verify",
+    "artifact_stem": "stm32h750_wiring_verify_app",
+    "build_dir": "artifacts/build_stm32h750_wiring_verify"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x38000000"
+  },
+  "bench_setup": {
+    "notes": "Step 1 wiring verify. Firmware runs GPIO and UART loopback tests internally. Pass/fail and per-wire error bitmask read from mailbox at SRAM4 (0x38000000) via SWD. On FAIL: error_code bitmask: bit0=GPIO_HIGH, bit1=GPIO_LOW, bit2=UART. ADC/DAC (PA4→PA0) tested separately in stm32h750_adc_read.",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_OUT",
+        "dut_signal": "PB8",
+        "direction": "output",
+        "notes": "GPIO loopback driver. Wire: PB8 → PB9."
+      },
+      {
+        "role": "GPIO_IN",
+        "dut_signal": "PB9",
+        "direction": "input",
+        "notes": "GPIO loopback receiver. Wire: PB8 → PB9."
+      },
+      {
+        "role": "USART1_TX",
+        "dut_signal": "PA9",
+        "direction": "output",
+        "notes": "USART1 TX, AF7, 115200 8N1. Wire: PA9 → PA10."
+      },
+      {
+        "role": "USART1_RX",
+        "dut_signal": "PA10",
+        "direction": "input",
+        "notes": "USART1 RX, AF7. Wire: PA9 → PA10."
+      }
+    ]
+  }
+}
