@@ -1,0 +1,75 @@
+project_id: stm32g431_bringup
+project_name: STM32G431CBU6 bring-up
+project_type: user_project
+project_user: local_user
+target_mcu: stm32g431cbu6
+domain: user_project_domain
+status: runnable
+user_goal: 8-experiment validation suite matching F4 pattern
+
+confirmed_facts:
+  - key: board_identity
+    value: STM32G431CBU6, WeAct STM32G431CxTx CoreBoard V1.0, QFP48 (LQFP48)
+    source: user_confirmed
+
+  - key: led_pin
+    value: PA8, active-high
+    source: user_confirmed
+
+  - key: instrument_instance
+    value: esp32jtag_g431_bench
+    source: user_confirmed
+
+  - key: instrument_endpoint
+    value: "192.168.2.62:4242"
+    source: user_confirmed
+
+  - key: wiring_pa2_to_p0_0
+    value: confirmed
+    source: user_confirmed
+
+  - key: wiring_pa3_to_p0_1
+    value: confirmed
+    source: user_confirmed
+
+  - key: wiring_pb3_to_p0_2
+    value: confirmed
+    source: user_confirmed
+
+  - key: wiring_pa8_to_led
+    value: confirmed
+    source: user_confirmed
+
+  - key: wiring_swd_to_p3
+    value: confirmed
+    source: user_confirmed
+
+  - key: loopback_pa9_pa10
+    value: confirmed (USART1 TX→RX)
+    source: user_confirmed
+
+  - key: loopback_pb5_pb4
+    value: confirmed (SPI1 MOSI→MISO)
+    source: user_confirmed
+
+  - key: loopback_pb1_pb0
+    value: confirmed (ADC source→input)
+    source: user_confirmed
+
+  - key: loopback_pa8_pa6
+    value: confirmed (Capture/EXTI/GPIO/PWM output→input)
+    source: user_confirmed
+
+  - key: mcu_family
+    value: STM32G4, GPIO on AHB2 (0x48000000), RCC AHB2ENR at 0x4002104C
+    source: verified
+
+  - key: available_pins
+    value: "PA0-PA12, PA15, PB3-PB15 on connectors"
+    source: user_confirmed
+
+system_refs:
+  - configs/boards/stm32g431cbu6.yaml
+  - firmware/targets/stm32g431cbu6/
+  - tests/plans/stm32g431_gpio_signature.json
+  - assets_golden/duts/stm32g431cbu6/

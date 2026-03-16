@@ -1,0 +1,27 @@
+id: stm32g431cbu6
+mcu: stm32g431cbu6
+family: stm32g4
+description: STM32G431CBU6 GPIO waveform + LED (WeAct Black Pill style)
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32g431cbu6
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32g4
+  - stm32g431
+default_packs:
+  - packs/smoke_stm32g431.json
+verified:
+  status: true
+  verification_suite: smoke_stm32g431
+  tests: 8
+  sequential_pass: true
+  latest_run_id: 2026-03-16_14-16-44_stm32g431cbu6_stm32g431_pwm
+  verified_on:
+    bench_id: esp32jtag_g431_bench
+    instrument_endpoint: 192.168.2.62:4242
+  date: 2026-03-16
+  experiments_passed: 8
+  smoke_pack: packs/smoke_stm32g431.json

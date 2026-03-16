@@ -1,0 +1,14 @@
+board_config: configs/boards/stm32g431cbu6_draft.yaml
+build_type: arm_debug
+capability_notes: 'Auto-bootstrapped draft for stm32g431cbu6 (group: stm32). Fill
+  in board-specific details before running.'
+compile_validation: not_attempted
+family: stm32
+flash_method: gdb_swd
+group: stm32
+id: stm32g431cbu6_draft
+lifecycle_stage: draft
+mcu: stm32g431cbu6
+verified:
+  note: draft — not yet verified
+  status: false

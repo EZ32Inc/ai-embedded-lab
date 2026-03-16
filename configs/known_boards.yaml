@@ -43,6 +43,20 @@ boards:
     notes: >
       STM32F401RCT6 golden reference board. Cortex-M4, 256K flash, 64K RAM.
 
+  - dut_id: stm32g431cbu6
+    board_name: STM32G431CBU6 (WeAct Black Pill style)
+    mcu: stm32g431cbu6
+    aliases:
+      - stm32g431
+      - stm32g431cb
+      - stm32g431cbu6
+      - g431
+      - stm32g4
+    notes: >
+      STM32G431CBU6 QFP48 (LQFP48), WeAct CoreBoard V1.0. Cortex-M4, 128K flash, 32K RAM.
+      LED on PA8 (active-high). GPIO bus on AHB2 (0x48000000) — different from STM32F4 AHB1.
+      GPIO signature uses PA2/PA3. Instrument: esp32jtag_stm32_golden.
+
   # ── STM32F1xx ──────────────────────────────────────────────────────────────
   - dut_id: stm32f103
     board_name: STM32F103 Blue Pill

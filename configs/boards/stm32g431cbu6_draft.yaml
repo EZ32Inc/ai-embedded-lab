@@ -1,0 +1,24 @@
+board:
+  bench_connections:
+  - from: PLACEHOLDER_MCU_PIN
+    to: PLACEHOLDER_INSTRUMENT_CHANNEL
+  build:
+    artifact_stem: stm32g431cbu6_app
+    project_dir: firmware/targets/stm32g431cbu6
+    type: arm_debug
+  clock_hz: PLACEHOLDER_clock_hz
+  default_wiring:
+    reset: NC
+    swd: PLACEHOLDER
+    verify: PLACEHOLDER
+  draft: true
+  flash:
+    reset_strategy: PLACEHOLDER_reset_strategy
+    speed_khz: PLACEHOLDER_speed_khz
+  instrument_instance: PLACEHOLDER — esp32jtag or st-link (SWD)
+  name: PLACEHOLDER — stm32g431cbu6 (draft)
+  observe_map:
+    sig: PLACEHOLDER_pin
+  safe_pins:
+  - PLACEHOLDER
+  target: stm32g431cbu6

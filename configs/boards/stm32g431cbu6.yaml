@@ -1,52 +1,55 @@
 board:
   name: STM32G431CBU6
   target: stm32g431cbu6
-  instrument_instance: esp32jtag_stm32_golden
+  instrument_instance: esp32jtag_g431_bench
   clock_hz: 16000000
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32g431cbu6
     artifact_stem: stm32g431_app
   firmware:
-    description: Toggle PA2-PA4 fast, blink PC13 at 0.5 s intervals (provisional bring-up pattern)
+    description: PA2 ~250Hz primary signal, PA3 ~125Hz secondary, PA8 LED active-high 1Hz blink
   flash:
     speed_khz: 1000
     reset_strategy: connect_under_reset
-    post_load_settle_s: 5.0
+    post_load_settle_s: 20.0
     target_id: 1
+    reset_available: false
     gdb_launch_cmds:
-      - "file {firmware}"
       - "monitor a"
+      - "file {firmware}"
       - "attach {target_id}"
       - "load"
-      - "attach {target_id}"
+      - "set *(unsigned int*)0xE000EDF0 = 0xA05F0001"
       - "detach"
   observe_map:
-    sig: P0.0
-    pa4: P0.0
-    pa3: P0.1
-    pa2: P0.2
-    pc13: P0.3
-    led: P0.3
+    sig: P0.3
+    pa2: P0.3
+    pa3: P0.0
+    pa4: P0.2
+    pb3: P0.1
+    spi_sck: P0.1
+    led: LED
+    pa8: LED
   verification_views:
     signal:
       pin: sig
-      resolved_to: P0.0
-      description: Provisional GPIO signature capture on PA4
+      resolved_to: P0.3
+      description: GPIO signature capture on PA2 (~250Hz primary signal)
     led:
       pin: led
-      resolved_to: P0.3
-      description: Provisional machine-observed PC13 blink
+      resolved_to: LED
+      description: Operator-visible PA8 LED blink (1Hz, active-high)
   bench_connections:
-    - from: PA4
-      to: P0.0
-    - from: PA3
-      to: P0.1
     - from: PA2
-      to: P0.2
-    - from: PC13
       to: P0.3
-    - from: PC13
+    - from: PA3
+      to: P0.0
+    - from: PA4
+      to: P0.2
+    - from: PB3
+      to: P0.1
+    - from: PA8
       to: LED
     - from: GND
       to: probe GND
@@ -54,8 +57,9 @@ board:
     - PA2
     - PA3
     - PA4
-    - PC13
+    - PA8
+    - PB3
   default_wiring:
     swd: "P3"
     reset: "NC"
-    verify: "P0.0"
+    verify: "P0.3"
