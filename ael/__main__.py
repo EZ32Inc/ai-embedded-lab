@@ -293,6 +293,11 @@ def main():
     project_answering_p.add_argument("project_id")
     project_answering_p.add_argument("--projects-root", default="projects")
     project_answering_p.add_argument("--notes-lines", type=int, default=80, help="max lines of session_notes.md to include (0=all)")
+    project_intake_p = project_sub.add_parser("intake", help="interactive reality clarification: confirm bench setup and write confirmed_facts")
+    project_intake_p.add_argument("project_id")
+    project_intake_p.add_argument("--projects-root", default="projects")
+    project_intake_p.add_argument("--boards-root", default="configs/boards")
+    project_intake_p.add_argument("--non-interactive", action="store_true", help="print gaps only, do not prompt (for scripting)")
 
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
@@ -2479,7 +2484,184 @@ def _project_cmd(args) -> int:
             print("# --- session_notes.md ---")
             print(notes_text)
         return 0
+    if args.project_cmd == "intake":
+        return _project_intake(args)
     return 1
+
+
+def _project_intake(args) -> int:
+    """Interactive bench reality clarification.
+
+    Shows the user the reference setup for their board, asks them to confirm
+    or correct each item, then writes the answers into confirmed_facts.
+    """
+    import yaml as _yaml  # type: ignore
+
+    root = Path(args.projects_root)
+    project_dir = root / args.project_id
+    yaml_path = project_dir / "project.yaml"
+    payload = _project_yaml_load(yaml_path)
+    if not payload:
+        print(f"error: project not found: {yaml_path}")
+        return 1
+
+    # Load board config for reference setup
+    boards_root = Path(args.boards_root)
+    dut_id = payload.get("closest_mature_ael_path") or payload.get("target_mcu") or ""
+    board_cfg: dict = {}
+    board_yaml = boards_root / f"{dut_id}.yaml"
+    if board_yaml.exists():
+        try:
+            board_cfg = _yaml.safe_load(board_yaml.read_text(encoding="utf-8")) or {}
+        except Exception:
+            board_cfg = {}
+    board_section = board_cfg.get("board") or {}
+
+    facts: list = list(payload.get("confirmed_facts") or [])
+    facts_lower = " ".join(facts).lower()
+
+    def _already_confirmed(keyword: str) -> bool:
+        return keyword.lower() in facts_lower
+
+    new_facts: list = []
+    non_interactive: bool = getattr(args, "non_interactive", False)
+
+    def _ask(prompt: str, default: str = "") -> str:
+        if non_interactive:
+            return ""
+        hint = f" [{default}]" if default else ""
+        try:
+            answer = input(f"{prompt}{hint}: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("")
+            return ""
+        return answer if answer else default
+
+    print(f"\nintake: project={args.project_id}  board={dut_id or '(unknown)'}")
+    print("-" * 60)
+
+    # ── Category 1: Board identity ────────────────────────────────
+    print("\n[1/5] Board identity")
+    if _already_confirmed("board confirmed"):
+        print("  ✓ board already confirmed")
+    else:
+        ref_board = board_section.get("name") or dut_id
+        answer = _ask(f"  Is your board '{ref_board}'? (yes / describe difference)", "yes")
+        if answer.lower() in ("yes", "y", ""):
+            new_facts.append(f"Board confirmed: {ref_board}")
+        else:
+            new_facts.append(f"Board (user-specified): {answer}")
+
+    # ── Category 2: Instrument ────────────────────────────────────
+    print("\n[2/5] Instrument")
+    if _already_confirmed("instrument"):
+        print("  ✓ instrument already confirmed")
+    else:
+        ref_instr = board_section.get("instrument_instance") or payload.get("candidate_instrument") or ""
+        answer = _ask(f"  Instrument instance: is it '{ref_instr}'? (yes / enter actual)", ref_instr)
+        instr_name = answer if answer.lower() not in ("yes", "y") else ref_instr
+        new_facts.append(f"Instrument confirmed: {instr_name}")
+        # Ask for IP
+        ip_answer = _ask("  Instrument IP (leave blank to skip)", "")
+        if ip_answer:
+            new_facts.append(f"Instrument endpoint: {ip_answer}")
+
+    # ── Category 3: Wiring ────────────────────────────────────────
+    print("\n[3/5] Bench wiring (DUT → instrument)")
+    if _already_confirmed("wiring confirmed"):
+        print("  ✓ wiring already confirmed")
+    else:
+        bench_connections = board_section.get("bench_connections") or []
+        if bench_connections:
+            print("  Reference wiring:")
+            wiring_parts = []
+            for conn in bench_connections:
+                line = f"    {conn.get('from', '?')} → {conn.get('to', '?')}"
+                print(line)
+                wiring_parts.append(f"{conn.get('from','?')}→{conn.get('to','?')}")
+            answer = _ask("  Does your bench match this wiring? (yes / describe differences)", "yes")
+            if answer.lower() in ("yes", "y", ""):
+                new_facts.append("Wiring confirmed: " + ", ".join(wiring_parts))
+            else:
+                new_facts.append(f"Wiring (user-specified): {answer}")
+        else:
+            answer = _ask("  Describe your DUT→instrument wiring (e.g. PA2→P0.0, PA3→P0.1)", "")
+            if answer:
+                new_facts.append(f"Wiring confirmed: {answer}")
+
+    # ── Category 4: Loopbacks ─────────────────────────────────────
+    print("\n[4/5] Board-side loopback wires")
+    if _already_confirmed("loopback"):
+        print("  ✓ loopbacks already confirmed")
+    else:
+        # Load loopback info from DUT docs if available
+        dut_docs = Path("assets_golden") / "duts" / dut_id / "docs.md"
+        loopback_hint = ""
+        if dut_docs.exists():
+            txt = dut_docs.read_text(encoding="utf-8")
+            # Extract loopback lines
+            lines = [l.strip() for l in txt.splitlines() if "→" in l and ("loopback" in l.lower() or "pa9" in l.lower() or "pb" in l.lower())]
+            if lines:
+                loopback_hint = "; ".join(lines[:4])
+        if loopback_hint:
+            print(f"  Reference loopbacks: {loopback_hint}")
+        answer = _ask("  Are all required loopback wires in place? (yes / describe)", "yes")
+        if answer.lower() in ("yes", "y", ""):
+            fact = "Loopbacks confirmed: all in place"
+            if loopback_hint:
+                fact += f" ({loopback_hint})"
+            new_facts.append(fact)
+        else:
+            new_facts.append(f"Loopbacks (user-specified): {answer}")
+
+    # ── Category 5: First experiment ─────────────────────────────
+    print("\n[5/5] First experiment")
+    if _already_confirmed("first test") or _already_confirmed("test confirmed"):
+        print("  ✓ first test already confirmed")
+    else:
+        default_pack = ""
+        manifest_path = Path("assets_golden") / "duts" / dut_id / "manifest.yaml"
+        if manifest_path.exists():
+            try:
+                mfst = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+                packs = mfst.get("default_packs") or []
+                if packs:
+                    default_pack = packs[0]
+            except Exception:
+                pass
+        answer = _ask(f"  What is the first test to run? (default: gpio_signature)", "gpio_signature")
+        new_facts.append(f"First test confirmed: {answer}")
+
+    # ── Write back ────────────────────────────────────────────────
+    print("\n" + "-" * 60)
+    # Filter out facts with empty values (can happen in non-interactive mode)
+    new_facts = [f for f in new_facts if not f.endswith(": ") and not f.endswith(":")]
+    if not new_facts:
+        print("intake: all items already confirmed — no changes needed")
+        return 0
+
+    print(f"intake: writing {len(new_facts)} new confirmed_fact(s):")
+    for f in new_facts:
+        print(f"  + {f}")
+
+    if non_interactive:
+        print("(dry-run: --non-interactive, not writing)")
+        return 0
+
+    for f in new_facts:
+        if f not in facts:
+            facts.append(f)
+    payload["confirmed_facts"] = facts
+
+    try:
+        yaml_path.write_text(_yaml.dump(payload, allow_unicode=True, default_flow_style=False), encoding="utf-8")
+    except Exception as exc:
+        print(f"error writing {yaml_path}: {exc}")
+        return 1
+
+    print(f"intake: saved → {yaml_path}")
+    print(f"intake: total confirmed_facts: {len(facts)}")
+    return 0
 
 
 def _check_tools(tools):
