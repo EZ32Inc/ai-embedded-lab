@@ -1,0 +1,207 @@
+# Memo: Next Development Focus — User Workflow & Interaction
+
+## Context
+
+The core AEL technical loop is now proven:
+
+- AI writes firmware
+- firmware is flashed to real hardware
+- tests run on real boards
+- results are verified automatically
+
+The recent milestone:
+
+- **9-program bring-up pack fully passes**
+- `minimal_runtime_mailbox` added
+- debug mailbox verify integrated into pipeline
+
+This means the **technical validation loop is stable**.
+
+The next development stage should therefore focus on **making the system easier to use**, especially for new users.
+
+---
+
+# Priority Decision
+
+Next work should proceed in this order:
+
+1. **B — Improve user workflow / interaction**
+2. **A — Improve instrument infrastructure**
+3. **Architecture review after both are stabilized**
+
+This order balances usability, reliability, and long-term system design.
+
+---
+
+# Phase 1: Improve User Workflow (Priority B)
+
+The system is technically powerful but must become easier for users to operate.
+
+Key goals:
+
+- simplify onboarding
+- clarify system behavior
+- make test results understandable
+- reduce user guesswork
+
+The system should guide the user instead of requiring them to read documentation first.
+
+---
+
+## Most Important UI Improvement: System-Asks-Questions Model
+
+The system should **actively ask clarification questions** rather than assuming the user provides perfect input.
+
+Example interaction model:
+
+
+What board are you using?
+Which MCU is on the board?
+Which instrument is connected?
+How are the pins wired?
+
+
+Instead of requiring a full configuration upfront, the system should **progressively clarify reality**.
+
+Benefits:
+
+- reduces user errors
+- improves reproducibility
+- makes the system usable by new users
+- avoids incorrect assumptions about wiring or instruments
+
+This aligns with the AEL philosophy:
+
+> The system should discover reality rather than assume it.
+
+---
+
+# Phase 1 Supporting Improvements
+
+## 1 Onboarding Flow
+
+A new user should be able to begin with a simple prompt such as:
+
+
+I have an STM32 board connected to ESP32JTAG.
+
+
+The system then guides the user through:
+
+
+MCU identification
+instrument detection
+connection confirmation
+initial bring-up tests
+
+
+---
+
+## 2 Demo / Tutorial Examples
+
+Simple demos should demonstrate the workflow clearly.
+
+Example:
+
+
+ESP32JTAG + STM32 board
+Run minimal_runtime_mailbox
+Run GPIO verification
+Observe automatic validation
+
+
+These examples are important for user adoption and demonstration.
+
+---
+
+## 3 Clearer Test Result Reporting
+
+Test outputs should be understandable even to new users.
+
+Instead of:
+
+
+PASS: stm32g431_spi
+
+
+Prefer:
+
+
+SPI loopback test passed
+Sent byte: 0x55
+Received byte: 0x55
+
+
+This improves usability and helps debugging.
+
+---
+
+# Phase 2: Instrument Infrastructure (Priority A)
+
+After workflow improvements stabilize, the next focus should be strengthening the **instrument layer**.
+
+Key areas:
+
+- instrument identity and detection
+- connection stability
+- reconnection handling
+- instrument health checks
+- capability description
+- multi-instrument management
+
+Goal:
+
+Move instruments from **"working devices"** to **reliable platform infrastructure**.
+
+---
+
+# Phase 3: Architecture Review
+
+After workflow and instrument layers improve, conduct a full architecture review.
+
+Purpose:
+
+- identify missing core components
+- unify interfaces where needed
+- simplify system structure
+- determine the next development priorities
+
+This acts as an **architecture checkpoint** before expanding system scope.
+
+---
+
+# Development Strategy Summary
+
+
+Phase 1
+Improve user workflow and interaction
+
+Phase 2
+Strengthen instrument infrastructure
+
+Phase 3
+Architecture review and system refinement
+
+Phase 4
+Expand board and platform coverage
+
+
+---
+
+# Key Insight
+
+The next stage is not about adding more features, but about improving **how users interact with the system**.
+
+AEL should evolve from:
+
+
+Powerful engineering tool
+
+
+into:
+
+
+Guided AI-driven engineering platform
+
+
+The **system asking the right questions** is the most important step toward that goal.
