@@ -1,0 +1,41 @@
+{
+  "name": "stm32f407_spi_loopback",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_spi_loopback",
+    "artifact_stem": "stm32f407_spi_loopback_app",
+    "build_dir": "artifacts/build_stm32f407_spi_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "SPI loopback: SPI2 master sends {0xA5, 0x5A, 0xF0, 0x0F} on PB15 (MOSI, AF5), echoes back on PB14 (MISO, AF5). PB13=SCK (no loopback needed). 8-bit mode 0, /256 divider (~62 kHz at 16 MHz HSI). PASS after all 4 bytes matched. detail0 = matched count (0→4, then increments). FAIL: error_code 0x1x=timeout on byte x, 0x2x=mismatch on byte x (detail0=received byte).",
+    "peripheral_signals": [
+      {
+        "role": "SPI2_MOSI",
+        "dut_signal": "PB15",
+        "direction": "output",
+        "notes": "SPI2 MOSI, AF5. Wire: PB15 → PB14."
+      },
+      {
+        "role": "SPI2_MISO",
+        "dut_signal": "PB14",
+        "direction": "input",
+        "notes": "SPI2 MISO, AF5. Wire: PB15 → PB14."
+      },
+      {
+        "role": "SPI2_SCK",
+        "dut_signal": "PB13",
+        "direction": "output",
+        "notes": "SPI2 SCK, AF5. No loopback needed — output only."
+      }
+    ]
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "stm32f407_adc_loopback",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_adc_loopback",
+    "artifact_stem": "stm32f407_adc_loopback_app",
+    "build_dir": "artifacts/build_stm32f407_adc_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "ADC loopback: PC0 (GPIO output) drives high/low, PC1 (ADC1_IN11, analog) reads back via wire. 5 successful high+low cycles required for PASS. Thresholds: high > 3000 counts, low < 500 counts (12-bit, 3.3V). detail0 = pass_count. FAIL: error_code=0x01 (high read too low, detail0=ADC value) or 0x02 (low read too high, detail0=ADC value). ADC1 classic F4 register map, PCLK2/2=8MHz clock, 480-cycle sample time.",
+    "peripheral_signals": [
+      {
+        "role": "ADC_DRIVER",
+        "dut_signal": "PC0",
+        "direction": "output",
+        "notes": "GPIO output push-pull. Drives 3.3V (high) or 0V (low). Wire: PC0 → PC1."
+      },
+      {
+        "role": "ADC_IN",
+        "dut_signal": "PC1",
+        "direction": "input",
+        "notes": "ADC1_IN11, analog mode, no pull. Wire: PC0 → PC1."
+      }
+    ]
+  }
+}
