@@ -1,0 +1,4 @@
+# Compiled binaries and libraries — built locally, not committed.
+# Run scripts/build.sh to regenerate.
+bin/
+lib/

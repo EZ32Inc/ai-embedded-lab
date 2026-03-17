@@ -1,0 +1,23 @@
+board:
+  name: STM32F4 Discovery
+  target: stm32f407_discovery
+  instrument_instance: stlink_f407_discovery
+  clock_hz: 16000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f407_discovery
+    artifact_stem: stm32f407_discovery_app
+  flash:
+    speed_khz: 1000
+    reset_strategy: none
+    post_load_settle_s: 2.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "load"
+      - "monitor reset run"
+      - "disconnect"
+  default_wiring:
+    swd: "onboard"
+    reset: "NC"
+    verify: "NC"

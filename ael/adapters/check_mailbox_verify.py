@@ -38,14 +38,19 @@ def _write_json(path: str | Path, payload: dict) -> None:
     p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _gdb_read_mailbox(endpoint: str, target_id: int, addr: int) -> Dict[str, Any]:
-    """Run arm-none-eabi-gdb in batch mode and parse x/4xw output."""
+def _gdb_read_mailbox(endpoint: str, target_id: int, addr: int, skip_attach: bool = False) -> Dict[str, Any]:
+    """Run arm-none-eabi-gdb in batch mode and parse x/4xw output.
+
+    skip_attach=True: omit 'monitor a' + 'attach' (needed for st-util / non-BMDA servers).
+    """
     cmds = [
         "set pagination off",
         "set confirm off",
         f"target extended-remote {endpoint}",
-        "monitor a",
-        f"attach {target_id}",
+    ]
+    if not skip_attach:
+        cmds += ["monitor a", f"attach {target_id}"]
+    cmds += [
         f"x/4xw {addr:#010x}",
         "detach",
         "quit",
@@ -96,9 +101,10 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
     probe_ip  = inputs.get("probe_ip", "")
     probe_port = int(inputs.get("probe_port", 4242))
     target_id = int(inputs.get("target_id", 1))
-    addr_str  = inputs.get("addr", "0x20007F00")
-    settle_s  = float(inputs.get("settle_s", 0.0))
-    out_json  = inputs.get("out_json")
+    addr_str    = inputs.get("addr", "0x20007F00")
+    settle_s    = float(inputs.get("settle_s", 0.0))
+    out_json    = inputs.get("out_json")
+    skip_attach = bool(inputs.get("skip_attach", False))
 
     if not probe_ip:
         return {"ok": False, "error_summary": "check.mailbox_verify: probe_ip not set"}
@@ -108,7 +114,7 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
 
     addr     = int(addr_str, 16)
     endpoint = f"{probe_ip}:{probe_port}"
-    raw      = _gdb_read_mailbox(endpoint, target_id, addr)
+    raw      = _gdb_read_mailbox(endpoint, target_id, addr, skip_attach=skip_attach)
 
     if not raw.get("ok"):
         result = {

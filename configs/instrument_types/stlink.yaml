@@ -1,0 +1,20 @@
+instance:
+  type: stlink
+  label: ST-Link (direct integration)
+
+# ST-Link communicates via st-util GDB remote server (local or remote).
+# No web API — signal capture and GPIO observe not available.
+# Run instruments/STLinkInstrument/scripts/gdb_server.sh before ael run.
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: usb_local
+      protocol: gdb_remote
+      invocation_style: request_response
+
+gdb_cmd: "arm-none-eabi-gdb"
+
+capability_surfaces:
+  swd: gdb_remote

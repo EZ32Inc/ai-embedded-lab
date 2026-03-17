@@ -1,0 +1,22 @@
+{
+  "name": "stm32f407_timer_mailbox",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_timer_mailbox",
+    "artifact_stem": "stm32f407_timer_mailbox_app",
+    "build_dir": "artifacts/build_stm32f407_timer_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "TIM3 timer interrupt test. TIM3 fires at ~100 ms (PSC=15999, ARR=99, 16 MHz HSI). PASS after 10 interrupts (~1 s). detail0 = interrupt count, increments in ISR after PASS. No external wiring required. Exercises: RCC, TIM3 update event, NVIC, WFI.",
+    "peripheral_signals": []
+  }
+}

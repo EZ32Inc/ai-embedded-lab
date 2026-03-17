@@ -1,0 +1,35 @@
+{
+  "name": "stm32f407_uart_loopback",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_uart_loopback",
+    "artifact_stem": "stm32f407_uart_loopback_app",
+    "build_dir": "artifacts/build_stm32f407_uart_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "UART loopback: USART2 sends {0x55, 0xAA, 0x12, 0x34} on PD5 (TX, AF7) and receives echo on PD6 (RX, AF7). 115200 8N1 at 16 MHz HSI, APB1. PASS after all 4 bytes matched. detail0 = matched byte count (0→4, then increments for liveness). FAIL with error_code 0x1x=timeout on byte x, 0x2x=mismatch on byte x. Uses USART2/PD5/PD6 — PA9/PA10 on some Discovery revisions are wired to ST-Link UART bridge.",
+    "peripheral_signals": [
+      {
+        "role": "USART2_TX",
+        "dut_signal": "PD5",
+        "direction": "output",
+        "notes": "USART2 TX, AF7, 115200 8N1. Wire: PD5 → PD6."
+      },
+      {
+        "role": "USART2_RX",
+        "dut_signal": "PD6",
+        "direction": "input",
+        "notes": "USART2 RX, AF7. Wire: PD5 → PD6."
+      }
+    ]
+  }
+}

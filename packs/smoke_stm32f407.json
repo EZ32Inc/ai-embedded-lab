@@ -1,0 +1,12 @@
+{
+  "name": "smoke_stm32f407",
+  "board": "stm32f407_discovery",
+  "notes": "STM32F407 Discovery validation pack — 5 tests via STLinkInstrument (st-util GDB server). All verification via AEL mailbox read over SWD/GDB (skip_attach=true). Loopback wiring required for tests 2, 3, 5. See bench_setup.notes in each plan.",
+  "tests": [
+    "tests/plans/stm32f407_mailbox.json",
+    "tests/plans/stm32f407_timer_mailbox.json",
+    "tests/plans/stm32f407_gpio_loopback.json",
+    "tests/plans/stm32f407_uart_loopback.json",
+    "tests/plans/stm32f407_exti_trigger.json"
+  ]
+}

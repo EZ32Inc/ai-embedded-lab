@@ -565,9 +565,10 @@ def build_mailbox_verify_step(
         "inputs": {
             "probe_ip":   probe_ip,
             "probe_port": probe_port,
-            "target_id":  int(mb_cfg.get("target_id", 1)),
-            "addr":       str(mb_cfg.get("addr", "0x20007F00")),
-            "settle_s":   float(mb_cfg.get("settle_s", 0.0)),
-            "out_json":   str(artifacts_dir / "mailbox_verify.json"),
+            "target_id":    int(mb_cfg.get("target_id", 1)),
+            "addr":         str(mb_cfg.get("addr", "0x20007F00")),
+            "settle_s":     float(mb_cfg.get("settle_s", 0.0)),
+            "skip_attach":  bool(mb_cfg.get("skip_attach", False)),
+            "out_json":     str(artifacts_dir / "mailbox_verify.json"),
         },
     }

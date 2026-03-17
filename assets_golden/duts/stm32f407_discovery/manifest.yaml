@@ -1,0 +1,14 @@
+id: stm32f407_discovery
+mcu: stm32f407vgt6
+family: stm32f4
+description: STM32F4 Discovery board — ST-Link direct integration
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32f407_discovery
+flash:
+  method: gdb_stutil
+tags:
+  - stm32
+  - stm32f4
+  - stm32f407
+  - stlink

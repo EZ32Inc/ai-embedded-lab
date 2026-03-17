@@ -1,0 +1,35 @@
+{
+  "name": "stm32f407_gpio_loopback",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_gpio_loopback",
+    "artifact_stem": "stm32f407_gpio_loopback_app",
+    "build_dir": "artifacts/build_stm32f407_gpio_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "GPIO loopback: PB0 (output) drives high/low, PB1 (input, pull-down) reads back. 10 successful round-trip cycles required for PASS. detail0 = pass_count. FAIL if any mismatch (error_code: 0x01=high-read fail, 0x02=low-read fail).",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_OUT",
+        "dut_signal": "PB0",
+        "direction": "output",
+        "notes": "Drives high then low each cycle. Wire: PB0 → PB1."
+      },
+      {
+        "role": "GPIO_IN",
+        "dut_signal": "PB1",
+        "direction": "input",
+        "notes": "Input with pull-down. Reads back state driven by PB0. Wire: PB0 → PB1."
+      }
+    ]
+  }
+}

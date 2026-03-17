@@ -1,0 +1,35 @@
+{
+  "name": "stm32f407_exti_trigger",
+  "board": "stm32f407_discovery",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f407_exti_trigger",
+    "artifact_stem": "stm32f407_exti_trigger_app",
+    "build_dir": "artifacts/build_stm32f407_exti_trigger"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2001FC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "EXTI trigger test. PB8 (output) drives 10 rising edges. PB9 (input, pull-down) routed via SYSCFG to EXTI9, rising-edge interrupt. PASS after all 10 EXTI9_5 interrupts received. detail0 = interrupt count. FAIL with error_code=0x01 and detail0=count if timeout before all 10 edges received. Exercises: SYSCFG EXTI routing, NVIC EXTI9_5, interrupt delivery.",
+    "peripheral_signals": [
+      {
+        "role": "EXTI_DRIVER",
+        "dut_signal": "PB8",
+        "direction": "output",
+        "notes": "Drives 10 rising edges (1 ms low + 1 ms high each). Wire: PB8 → PB9."
+      },
+      {
+        "role": "EXTI_INPUT",
+        "dut_signal": "PB9",
+        "direction": "input",
+        "notes": "EXTI9 input with pull-down, SYSCFG routed to Port B. Wire: PB8 → PB9."
+      }
+    ]
+  }
+}
