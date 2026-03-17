@@ -1,0 +1,23 @@
+board:
+  name: STM32F103RCT6
+  target: stm32f103rct6
+  instrument_instance: stlink_f103_rct6
+  clock_hz: 8000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f103rct6_mailbox
+    artifact_stem: stm32f103rct6_mailbox_app
+  flash:
+    speed_khz: 1000
+    reset_strategy: none
+    post_load_settle_s: 2.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "load"
+      - "monitor reset run"
+      - "disconnect"
+  default_wiring:
+    swd: "external"
+    reset: "NC"
+    verify: "NC"

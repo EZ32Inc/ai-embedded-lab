@@ -1,0 +1,33 @@
+{
+  "name": "stm32f103rct6_gpio_loopback",
+  "board": "stm32f103rct6",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103rct6_gpio_loopback",
+    "artifact_stem": "stm32f103rct6_gpio_loopback_app",
+    "build_dir": "artifacts/build_stm32f103rct6_gpio_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2000BC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "GPIO loopback: PB0 (output push-pull) drives high/low, PB1 (input floating) reads back. 10 cycles required for PASS. FAIL: error_code=0x01 (high fail), 0x02 (low fail).",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_OUT",
+        "dut_signal": "PB0",
+        "direction": "output",
+        "notes": "GPIO output push-pull. Wire: PB0 -> PB1."
+      },
+      {
+        "role": "GPIO_IN",
+        "dut_signal": "PB1",
+        "direction": "input",
+        "notes": "GPIO input floating. Wire: PB0 -> PB1."
+      }
+    ]
+  }
+}

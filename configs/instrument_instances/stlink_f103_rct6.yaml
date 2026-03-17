@@ -1,0 +1,20 @@
+instance:
+  id: stlink_f103_rct6
+  type: stlink
+  label: ST-Link — STM32F103RCT6 (local USB, port 4243)
+
+connection:
+  ip: "127.0.0.1"
+  gdb_port: 4243
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: usb_local
+      endpoint: "127.0.0.1:4243"
+      protocol: gdb_remote
+      invocation_style: request_response
+
+capability_surfaces:
+  swd: gdb_remote

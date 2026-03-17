@@ -1,0 +1,15 @@
+{
+  "name": "smoke_stm32f103rct6",
+  "board": "stm32f103rct6",
+  "preflight": { "enabled": false },
+  "notes": "STM32F103RCT6 smoke pack via ST-Link (st-util port 4243). All verification via AEL mailbox at 0x2000BC00. Run: ael pack --pack packs/smoke_stm32f103rct6.json --board stm32f103rct6",
+  "tests": [
+    "tests/plans/stm32f103rct6_mailbox.json",
+    "tests/plans/stm32f103rct6_timer_mailbox.json",
+    "tests/plans/stm32f103rct6_gpio_loopback.json",
+    "tests/plans/stm32f103rct6_uart_loopback.json",
+    "tests/plans/stm32f103rct6_exti_trigger.json",
+    "tests/plans/stm32f103rct6_adc_loopback.json",
+    "tests/plans/stm32f103rct6_spi_loopback.json"
+  ]
+}

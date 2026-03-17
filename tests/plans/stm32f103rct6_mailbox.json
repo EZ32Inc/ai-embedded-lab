@@ -1,0 +1,20 @@
+{
+  "name": "stm32f103rct6_mailbox",
+  "board": "stm32f103rct6",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103rct6_mailbox",
+    "artifact_stem": "stm32f103rct6_mailbox_app",
+    "build_dir": "artifacts/build_stm32f103rct6_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2000BC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "Basic mailbox test: firmware writes PASS immediately, detail0 increments in idle loop. No wiring required.",
+    "peripheral_signals": []
+  }
+}

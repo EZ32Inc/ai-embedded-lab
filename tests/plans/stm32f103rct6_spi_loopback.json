@@ -1,0 +1,39 @@
+{
+  "name": "stm32f103rct6_spi_loopback",
+  "board": "stm32f103rct6",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103rct6_spi_loopback",
+    "artifact_stem": "stm32f103rct6_spi_loopback_app",
+    "build_dir": "artifacts/build_stm32f103rct6_spi_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2000BC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "SPI2 loopback: PB13=SCK (AF PP), PB14=MISO (input float), PB15=MOSI (AF PP). Master, 8-bit, mode 0, /256 (~31kHz at 8MHz APB1). Sends {0xA5,0x5A,0xF0,0x0F}. Wire PB15->PB14. FAIL: 0x1x=timeout, 0x2x=mismatch (detail0=rx byte).",
+    "peripheral_signals": [
+      {
+        "role": "SPI2_MOSI",
+        "dut_signal": "PB15",
+        "direction": "output",
+        "notes": "SPI2 MOSI, AF push-pull. Wire: PB15 -> PB14."
+      },
+      {
+        "role": "SPI2_MISO",
+        "dut_signal": "PB14",
+        "direction": "input",
+        "notes": "SPI2 MISO, input floating. Wire: PB15 -> PB14."
+      },
+      {
+        "role": "SPI2_SCK",
+        "dut_signal": "PB13",
+        "direction": "output",
+        "notes": "SPI2 SCK, AF push-pull. No loopback needed."
+      }
+    ]
+  }
+}

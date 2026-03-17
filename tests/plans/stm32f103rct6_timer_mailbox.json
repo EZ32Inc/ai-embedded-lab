@@ -1,0 +1,20 @@
+{
+  "name": "stm32f103rct6_timer_mailbox",
+  "board": "stm32f103rct6",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103rct6_timer_mailbox",
+    "artifact_stem": "stm32f103rct6_timer_mailbox_app",
+    "build_dir": "artifacts/build_stm32f103rct6_timer_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2000BC00",
+    "skip_attach": true
+  },
+  "bench_setup": {
+    "notes": "TIM2 interrupt test: PSC=7999, ARR=99 -> 100ms/interrupt at 8MHz HSI. PASS after 10 interrupts (~1s). detail0 = interrupt count. No wiring required.",
+    "peripheral_signals": []
+  }
+}
