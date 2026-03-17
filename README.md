@@ -8,6 +8,26 @@ AEL is an experimental system that brings **vibe coding to embedded systems**.
 
 It connects AI reasoning with a real embedded hardware lab. The system can generate firmware, design experiments, flash MCUs, capture signals, and verify behavior automatically.
 
+---
+
+## 🤖 Natural-Language-First Usage
+
+AEL is designed to be driven by AI. Instead of running manual commands, you describe your goal to the AEL Agent (Gemini CLI or Codex).
+
+### Example 1: New Hardware Bring-up
+**User:** "I have a STM32F411 Black Pill and an ST-Link. Can you help me run a smoke test?"
+**AEL Agent:** "I can use ST-Link as the flashing/debug interface for your F411. I'll generate a minimal smoke test, flash it, and verify startup via a mailbox signal. Shall I proceed?"
+
+### Example 2: Feature Validation
+**User:** "Generate firmware for my RP2040 that toggles GPIO 16 at 1kHz, then verify the frequency."
+**AEL Agent:** "I will generate the RP2040 firmware, build it, flash it to your Pico, and then use the connected Instrument to capture and verify the 1kHz signal on GPIO 16. I'll report the actual measured frequency back to you."
+
+### Example 3: Debugging
+**User:** "My UART loopback test is failing on the G431. Can you investigate?"
+**AEL Agent:** "I'll check the UART configuration in the firmware, verify the physical loopback connections using the 'Connection Doctor', and then re-run the test with additional debug logging enabled."
+
+---
+
 Instead of stopping at code generation, AEL allows AI and the engineer to collaborate: designing tests, debugging failures, and completing experiments using evidence from real hardware.
 
 This project explores a future where AI becomes an active engineering partner in embedded development.

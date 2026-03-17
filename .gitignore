@@ -6,7 +6,6 @@ __pycache__/
 
 # Runtime outputs
 runs/
-workflow_archive/
 pack_runs/
 
 # Build and generated artifacts
