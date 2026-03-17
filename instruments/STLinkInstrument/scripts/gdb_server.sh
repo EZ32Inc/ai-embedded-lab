@@ -28,7 +28,7 @@ EXTRA_ARGS=()
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --port) PORT="$2"; shift 2 ;;
+        --port|-p) PORT="$2"; shift 2 ;;
         --multi) EXTRA_ARGS+=("--multi"); shift ;;
         *) echo "[gdb_server] Unknown argument: $1"; exit 1 ;;
     esac
@@ -36,4 +36,4 @@ done
 
 echo "[gdb_server] Using: $ST_UTIL"
 echo "[gdb_server] Listening on port: $PORT"
-exec "$ST_UTIL" --port "$PORT" "${EXTRA_ARGS[@]}"
+exec "$ST_UTIL" "${EXTRA_ARGS[@]}"   # st-util 1.8.x listens on 4242 by default
