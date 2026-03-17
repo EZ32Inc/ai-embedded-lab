@@ -11,7 +11,7 @@
   "mailbox_verify": {
     "settle_s": 4.0,
     "addr": "0x2000BC00",
-    "skip_attach": true
+    "skip_attach": false
   },
   "bench_setup": {
     "notes": "SPI2 loopback: PB13=SCK (AF PP), PB14=MISO (input float), PB15=MOSI (AF PP). Master, 8-bit, mode 0, /256 (~31kHz at 8MHz APB1). Sends {0xA5,0x5A,0xF0,0x0F}. Wire PB15->PB14. FAIL: 0x1x=timeout, 0x2x=mismatch (detail0=rx byte).",

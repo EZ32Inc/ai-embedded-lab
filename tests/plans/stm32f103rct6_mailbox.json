@@ -11,7 +11,7 @@
   "mailbox_verify": {
     "settle_s": 4.0,
     "addr": "0x2000BC00",
-    "skip_attach": true
+    "skip_attach": false
   },
   "bench_setup": {
     "notes": "Basic mailbox test: firmware writes PASS immediately, detail0 increments in idle loop. No wiring required.",

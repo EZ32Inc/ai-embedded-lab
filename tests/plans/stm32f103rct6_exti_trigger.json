@@ -9,9 +9,9 @@
   },
   "signal_checks": [],
   "mailbox_verify": {
-    "settle_s": 4.0,
+    "settle_s": 60.0,
     "addr": "0x2000BC00",
-    "skip_attach": true
+    "skip_attach": false
   },
   "bench_setup": {
     "notes": "EXTI trigger: PB8 (output) drives 10 rising edges, PB9 -> EXTI9_5 IRQ23. PASS after 10 interrupts. detail0 = interrupt count. AFIO_EXTICR3[7:4]=0x1 routes PB9 to EXTI9.",

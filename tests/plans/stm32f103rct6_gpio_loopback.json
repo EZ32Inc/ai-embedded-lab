@@ -9,9 +9,9 @@
   },
   "signal_checks": [],
   "mailbox_verify": {
-    "settle_s": 4.0,
+    "settle_s": 30.0,
     "addr": "0x2000BC00",
-    "skip_attach": true
+    "skip_attach": false
   },
   "bench_setup": {
     "notes": "GPIO loopback: PB0 (output push-pull) drives high/low, PB1 (input floating) reads back. 10 cycles required for PASS. FAIL: error_code=0x01 (high fail), 0x02 (low fail).",

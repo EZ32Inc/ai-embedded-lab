@@ -49,7 +49,7 @@ def _gdb_read_mailbox(endpoint: str, target_id: int, addr: int, skip_attach: boo
         f"target extended-remote {endpoint}",
     ]
     if not skip_attach:
-        cmds += ["monitor a", f"attach {target_id}"]
+        cmds += ["monitor swdp_scan", f"attach {target_id}"]
     cmds += [
         f"x/4xw {addr:#010x}",
         "detach",
