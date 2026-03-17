@@ -1,0 +1,27 @@
+id: stm32h750vbt6
+mcu: stm32h750vbt6
+family: stm32h7
+description: STM32H750VBT6 YD board
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32h750_minimal_runtime_mailbox
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32h7
+  - stm32h750
+default_packs:
+  - packs/smoke_stm32h750.json
+verified:
+  status: true
+  verification_suite: smoke_stm32h750
+  tests: 7
+  sequential_pass: true
+  latest_run_id: 2026-03-16_20-10-03_stm32h750vbt6_stm32h750_pwm_capture
+  verified_on:
+    bench_id: esp32jtag_h750_bench
+    instrument_endpoint: 192.168.2.106:4242
+  date: 2026-03-16
+  experiments_passed: 7
+  smoke_pack: packs/smoke_stm32h750.json

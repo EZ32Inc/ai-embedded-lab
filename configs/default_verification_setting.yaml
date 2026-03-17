@@ -19,6 +19,14 @@
     {
       "board": "stm32f401rct6",
       "test": "tests/plans/stm32f401_gpio_signature.json"
+    },
+    {
+      "board": "stm32g431cbu6",
+      "test": "tests/plans/stm32g431_gpio_signature.json"
+    },
+    {
+      "board": "stm32h750vbt6",
+      "test": "tests/plans/stm32h750_wiring_verify.json"
     }
   ],
   "stop_on_fail": false,
