@@ -103,6 +103,48 @@ These boards established the reference bring-up template used for all subsequent
 
 ---
 
+### STM32F407 Discovery — Smoke Pack Baseline (7/7 PASS, ST-Link)
+
+AEL includes a fully validated STM32F407 Discovery smoke pack using ST-Link (st-util).
+
+**Run:**
+
+```bash
+python3 -m ael pack --pack packs/smoke_stm32f407.json --board stm32f407_discovery
+```
+
+**Coverage — 7 tests:**
+
+- mailbox (basic run verification)
+- timer interrupt (TIM3)
+- GPIO loopback (PB0 → PB1)
+- UART loopback (USART2 PD5 → PD6)
+- EXTI trigger (PB8 → PB9)
+- ADC loopback (PC0 → PC1)
+- SPI loopback (PB15 → PB14)
+
+**Wiring:**
+
+```
+PB0  -> PB1
+PD5  -> PD6
+PB8  -> PB9
+PC0  -> PC1
+PB15 -> PB14
+```
+
+**Notes:**
+
+- On STM32F4 Discovery, avoid PA9/PA10 for UART loopback — the onboard ST-Link UART bridge circuit causes interference. Use USART2 PD5/PD6 instead.
+- When using st-util, GDB `load` does not start execution automatically. The board config includes `monitor reset run` to handle this.
+
+This pack is fully validated (7/7 PASS) and serves as the regression baseline for STM32F407 + ST-Link in AEL.
+
+📄 [Baseline document](docs/methodology/smoke_stm32f407_baseline_v0_1.md)
+📄 [Smoke pack](packs/smoke_stm32f407.json)
+
+---
+
 ## What AEL can do
 
 AEL can automatically:
@@ -274,6 +316,7 @@ Boards that have completed full bring-up and sequential verification on real har
 
 | Board | MCU | Family | Experiments | Status | Doc |
 |-------|-----|--------|-------------|--------|-----|
+| STM32F407 Discovery | STM32F407 | STM32F4 | 7 | verified (ST-Link) | [docs/methodology/smoke_stm32f407_baseline_v0_1.md](docs/methodology/smoke_stm32f407_baseline_v0_1.md) |
 | STM32F411CEU6 (Black Pill) | STM32F411 | STM32F4 | 8 | verified | [docs/boards/stm32f411ceu6.md](docs/boards/stm32f411ceu6.md) |
 | STM32F401RCT6 | STM32F401 | STM32F4 | 8 | verified | [docs/boards/stm32f401rct6.md](docs/boards/stm32f401rct6.md) |
 | STM32G431CBU6 | STM32G431 | STM32G4 | 9 | verified | — |
