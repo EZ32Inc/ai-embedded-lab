@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This guide defines how an AI agent should answer factual questions about AEL formally and consistently.
+This guide defines how an AI agent should answer factual questions about AEL formally and consistently. It is a secondary layer of discipline beneath the **foundational mandates** defined in `GEMINI.md`.
 
 It is intended for:
 
@@ -15,6 +15,8 @@ It is not an architecture spec or a runtime feature. It is an answering discipli
 ## Core Rule
 
 When answering factual AEL questions, use the strongest current source available, not the most convenient source.
+
+**Foundational Routing**: Before searching the repository, always check `GEMINI.md` and consult `docs/agent_index/user_question_routing_v0_1.md` to classify the user's inquiry and select the correct response mode.
 
 Preferred order:
 
@@ -39,7 +41,9 @@ Examples:
 
 Primary sources:
 
+- `GEMINI.md` (Top-level agent mandates)
 - `docs/specs/ael_architecture_v0_2.md`
+- `docs/specs/ael_user_facing_response_policy_v0_1.md` (Interaction paradigm)
 - related current spec docs
 
 ### Config truth
