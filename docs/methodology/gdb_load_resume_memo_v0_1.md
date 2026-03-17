@@ -82,3 +82,44 @@ mailbox 读取内容：`status: PASS`，`detail0` 递增，符合预期。
 如果目标 GDB server 不支持 `monitor reset run`（极少数情况），备选方案：
 - `monitor reset` + `monitor run`（分两步）
 - `set $pc = *0x08000004`（手动设置 PC 到 reset vector）然后 `continue &`（仅限支持异步模式的 GDB）
+
+---
+
+## Board-specific note: STM32F4 Discovery PA9/PA10 不适合 UART loopback
+
+**发现时间**: STM32F407 smoke pack 开发过程中, 2026-03-17
+
+### 症状
+
+在 STM32F4 Discovery 上对 USART1 PA9(TX)→PA10(RX) 做自环测试，结果：
+- mailbox magic 有效（固件在运行）
+- error_code = 0x10（byte 0 接收超时）
+- 重新插拔跳线后问题依然存在
+
+### 根因
+
+STM32F4 Discovery MB997D/E（搭载 ST-Link/V2-A）将 **PA9/PA10 连接到板载 ST-Link 的 UART 桥接电路**。ST-Link MCU 在 PA10 上存在干扰信号，导致 USART1 RX 永远收不到自己发出的字节。
+
+### 修复
+
+改用 **USART2 on PD5(TX) → PD6(RX)**，这两个引脚无任何板载连接：
+
+```yaml
+# tests/plans/stm32f407_uart_loopback.json
+peripheral_signals:
+  - role: USART2_TX  dut_signal: PD5
+  - role: USART2_RX  dut_signal: PD6
+```
+
+```c
+/* firmware: USART2, APB1, AF7 */
+RCC_APB1ENR |= (1U << 17);   /* USART2EN */
+GPIOD_MODER |= (0xAU << 10); /* PD5/PD6 AF mode */
+GPIOD_AFRL  |= (0x77U << 20);/* PD5/PD6 = AF7 */
+```
+
+换引脚后立即 PASS，pack 5/5 稳定通过。
+
+### 适用范围
+
+仅影响 STM32F4 Discovery 板（MB997D/E 及类似版本）。其他 STM32 板上 PA9/PA10 通常是干净引脚，不受此限制。
