@@ -11,6 +11,7 @@ Current scope: probe, flash, gdb_server — callable from Python or scripts.
 from __future__ import annotations
 
 import os
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -42,6 +43,8 @@ def _tool_env(stlink_device: Optional[str] = None) -> dict:
 
     If stlink_device is given (format "BUS:ADDR", e.g. "001:086"),
     sets STLINK_DEVICE so libstlink targets that specific device.
+    Note: STLINK_DEVICE is honoured by st-util/st-flash but NOT by
+    st-info --probe (which always lists all connected devices).
     """
     env = os.environ.copy()
     lib = str(_INSTALL_LIB)
@@ -62,29 +65,156 @@ def _require_tool(name: str) -> Path:
     return tool
 
 
-def _sysfs_usb_devices() -> Path:
-    return Path("/sys/bus/usb/devices")
+# ---------------------------------------------------------------------------
+# Serial matching helpers
+# ---------------------------------------------------------------------------
+
+def _decode_sysfs_serial(raw_bytes: bytes) -> str:
+    """Convert raw sysfs serial bytes to the hex string that st-info reports.
+
+    The kernel reads USB serial descriptors (UTF-16LE) and converts them to
+    UTF-8 before writing to sysfs. Bytes ≥ 0x80 become multi-byte UTF-8
+    sequences (e.g. 0xFF → 0xC3 0xBF). Decoding the sysfs bytes as UTF-8
+    recovers the original code points, which equal the firmware serial bytes.
+    Returns uppercase hex string (e.g. "51FF6E06...").
+    """
+    stripped = raw_bytes.rstrip(b"\n")
+    try:
+        decoded = stripped.decode("utf-8", errors="replace")
+        return "".join(f"{ord(c):02X}" for c in decoded)
+    except Exception:
+        return stripped.hex().upper()
+
+
+def _match_probe_entry(sysfs_hex: str, probe_entries: list[dict]) -> Optional[dict]:
+    """Find the probe entry whose serial starts with sysfs_hex.
+
+    sysfs_hex is derived from the USB serial descriptor (may be a prefix of
+    the full firmware serial because the USB descriptor can be shorter).
+    Returns the best (longest prefix) match, or None.
+    """
+    if not sysfs_hex:
+        return None
+    best: Optional[dict] = None
+    best_len = 0
+    for entry in probe_entries:
+        fw_serial = entry.get("serial", "").upper()
+        if fw_serial.startswith(sysfs_hex.upper()):
+            if len(sysfs_hex) > best_len:
+                best = entry
+                best_len = len(sysfs_hex)
+    return best
 
 
 # ---------------------------------------------------------------------------
-# Device enumeration (sysfs + st-info per device)
+# Probe all devices (single st-info call)
+# ---------------------------------------------------------------------------
+
+def probe_all() -> dict:
+    """Run st-info --probe once and parse all detected devices.
+
+    Returns:
+      ok          — True if the command succeeded
+      count       — number of entries parsed
+      entries     — list of dicts per device:
+                      serial, version, flash, sram, chipid, dev_type
+      stdout/stderr — raw output
+    """
+    try:
+        st_info = _require_tool("st-info")
+    except RuntimeError as exc:
+        return {"ok": False, "error": str(exc), "count": 0, "entries": []}
+
+    result = subprocess.run(
+        [str(st_info), "--probe"],
+        capture_output=True,
+        text=True,
+        timeout=15,
+        env=_tool_env(),
+    )
+
+    entries = _parse_probe_output(result.stdout + result.stderr)
+    return {
+        "ok": result.returncode == 0,
+        "count": len(entries),
+        "entries": entries,
+        "stdout": result.stdout.strip(),
+        "stderr": result.stderr.strip(),
+    }
+
+
+def _parse_probe_output(text: str) -> list[dict]:
+    """Parse st-info --probe text output into a list of device dicts."""
+    entries: list[dict] = []
+    current: dict = {}
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+
+        # "Found N stlink programmers" — ignore
+        if line.lower().startswith("found"):
+            continue
+
+        # "N." starts a new device block
+        if re.match(r"^\d+\.$", line):
+            if current:
+                entries.append(current)
+            current = {}
+            continue
+
+        if ":" in line:
+            key, _, val = line.partition(":")
+            k = key.strip().lower().replace("-", "_").replace(" ", "_")
+            v = val.strip()
+            # Normalize key names
+            key_map = {
+                "version": "version",
+                "serial": "serial",
+                "flash": "flash",
+                "sram": "sram",
+                "chipid": "chipid",
+                "dev_type": "dev_type",
+            }
+            k = key_map.get(k, k)
+            current[k] = v
+
+    if current:
+        entries.append(current)
+
+    return entries
+
+
+# ---------------------------------------------------------------------------
+# Device enumeration (sysfs + single probe_all call)
 # ---------------------------------------------------------------------------
 
 def list_devices() -> list[dict]:
-    """Enumerate connected ST-Link devices via sysfs.
+    """Enumerate connected ST-Link devices and match each to its MCU.
 
-    Returns a list of dicts, each with:
-      usb_path    — sysfs path key (e.g. "1-14.4")
-      bus         — USB bus number string, zero-padded to 3 digits (e.g. "001")
-      addr        — USB device address string, zero-padded to 3 digits (e.g. "086")
-      stlink_device — "BUS:ADDR" string for STLINK_DEVICE env var
-      sysfs_serial — raw serial from sysfs (may be binary/garbled for old V2)
-      serial      — serial as reported by st-info for this device (hex string, or None)
-      product     — USB product string
-      probe_ok    — True if st-info --probe succeeded for this device
+    Strategy:
+      1. Scan sysfs for USB devices with VID:PID 0483:3748.
+      2. Run st-info --probe ONCE to get all connected targets (serial, chipid,
+         flash, sram, dev-type).
+      3. Match each sysfs device to a probe entry by decoding the USB serial
+         descriptor bytes (UTF-8) → uppercase hex → prefix match against
+         firmware serial.
+
+    Returns a list of dicts per USB device:
+      usb_path       — sysfs path key (e.g. "1-14.4")
+      bus / addr     — zero-padded USB bus/address strings
+      stlink_device  — "BUS:ADDR" for STLINK_DEVICE env var / --stlink-device
+      sysfs_serial_hex — raw sysfs serial decoded to hex
+      serial         — firmware serial from st-info (or None)
+      version        — ST-Link firmware version string (or None)
+      product        — USB product string
+      mcu_chipid     — chip ID hex string (or None)
+      mcu_dev_type   — human-readable MCU family string (or None)
+      mcu_flash_kb   — flash size in KB (or None)
+      mcu_sram_kb    — SRAM size in KB (or None)
+      probe_ok       — True if a matching probe entry was found
     """
-    base = _sysfs_usb_devices()
-    found = []
+    base = Path("/sys/bus/usb/devices")
+    sysfs_devices = []
 
     for dev_path in sorted(base.iterdir()):
         vid_file = dev_path / "idVendor"
@@ -96,8 +226,6 @@ def list_devices() -> list[dict]:
         if pid_file.read_text().strip() != _STLINK_PID:
             continue
 
-        usb_path_key = dev_path.name  # e.g. "1-14.4"
-
         busnum = (dev_path / "busnum").read_text().strip() if (dev_path / "busnum").is_file() else "?"
         devnum = (dev_path / "devnum").read_text().strip() if (dev_path / "devnum").is_file() else "?"
         try:
@@ -106,13 +234,11 @@ def list_devices() -> list[dict]:
         except ValueError:
             bus, addr = busnum, devnum
 
-        stlink_device = f"{bus}:{addr}"
-
         sysfs_serial_raw = b""
         serial_file = dev_path / "serial"
         if serial_file.is_file():
             try:
-                sysfs_serial_raw = serial_file.read_bytes().rstrip(b"\n")
+                sysfs_serial_raw = serial_file.read_bytes()
             except OSError:
                 pass
 
@@ -124,49 +250,62 @@ def list_devices() -> list[dict]:
             except OSError:
                 pass
 
-        # Probe this specific device with st-info to get its serial.
-        serial, probe_ok = _probe_serial(stlink_device)
-
-        found.append({
-            "usb_path": usb_path_key,
+        sysfs_devices.append({
+            "usb_path": dev_path.name,
             "bus": bus,
             "addr": addr,
-            "stlink_device": stlink_device,
-            "sysfs_serial_hex": sysfs_serial_raw.hex(),
-            "serial": serial,
+            "stlink_device": f"{bus}:{addr}",
+            "sysfs_serial_hex": _decode_sysfs_serial(sysfs_serial_raw),
             "product": product,
-            "probe_ok": probe_ok,
         })
 
-    return found
+    # Run probe_all once to get all MCU info.
+    probe_result = probe_all()
+    probe_entries = probe_result.get("entries", [])
 
+    # Match each sysfs device to a probe entry.
+    used_indices: set[int] = set()
+    result = []
 
-def _probe_serial(stlink_device: str) -> tuple[Optional[str], bool]:
-    """Run st-info --probe targeting a specific USB device.
+    for dev in sysfs_devices:
+        sysfs_hex = dev["sysfs_serial_hex"]
+        matched: Optional[dict] = None
+        best_len = 0
 
-    Returns (serial_string, ok). serial_string is None if not parsed.
-    """
-    try:
-        st_info = _require_tool("st-info")
-    except RuntimeError:
-        return None, False
+        for i, entry in enumerate(probe_entries):
+            if i in used_indices:
+                continue
+            fw_serial = entry.get("serial", "").upper()
+            if sysfs_hex and fw_serial.startswith(sysfs_hex.upper()):
+                if len(sysfs_hex) > best_len:
+                    matched = entry
+                    best_len = len(sysfs_hex)
+                    best_idx = i
 
-    env = _tool_env(stlink_device=stlink_device)
-    result = subprocess.run(
-        [str(st_info), "--probe"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        env=env,
-    )
-    ok = result.returncode == 0
-    serial = None
-    for line in (result.stdout + result.stderr).splitlines():
-        stripped = line.strip()
-        if stripped.startswith("serial:"):
-            serial = stripped.split(":", 1)[1].strip()
-            break
-    return serial, ok
+        if matched is not None:
+            used_indices.add(best_idx)
+
+        def _kb(raw: str) -> Optional[int]:
+            m = re.match(r"(\d+)", raw or "")
+            return int(m.group(1)) // 1024 if m else None
+
+        result.append({
+            "usb_path": dev["usb_path"],
+            "bus": dev["bus"],
+            "addr": dev["addr"],
+            "stlink_device": dev["stlink_device"],
+            "sysfs_serial_hex": sysfs_hex,
+            "serial": matched.get("serial") if matched else None,
+            "version": matched.get("version") if matched else None,
+            "product": dev["product"],
+            "mcu_chipid": matched.get("chipid") if matched else None,
+            "mcu_dev_type": matched.get("dev_type") if matched else None,
+            "mcu_flash_kb": _kb(matched.get("flash", "")) if matched else None,
+            "mcu_sram_kb": _kb(matched.get("sram", "")) if matched else None,
+            "probe_ok": matched is not None,
+        })
+
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -174,21 +313,8 @@ def _probe_serial(stlink_device: str) -> tuple[Optional[str], bool]:
 # ---------------------------------------------------------------------------
 
 def probe() -> dict:
-    """Run st-info --probe (first available device) and return parsed output."""
-    st_info = _require_tool("st-info")
-    result = subprocess.run(
-        [str(st_info), "--probe"],
-        capture_output=True,
-        text=True,
-        timeout=10,
-        env=_tool_env(),
-    )
-    return {
-        "returncode": result.returncode,
-        "stdout": result.stdout.strip(),
-        "stderr": result.stderr.strip(),
-        "ok": result.returncode == 0,
-    }
+    """Run st-info --probe (all devices) and return parsed output."""
+    return probe_all()
 
 
 def flash(firmware_path: str | Path, addr: str = "0x08000000", reset: bool = True,
@@ -220,11 +346,10 @@ def flash(firmware_path: str | Path, addr: str = "0x08000000", reset: bool = Tru
 
 def start_gdb_server(port: int = 4242, multi: bool = False,
                      stlink_device: Optional[str] = None) -> subprocess.Popen:
-    """
-    Launch st-util GDB server as a background process.
-    Returns the Popen object — caller is responsible for .terminate().
+    """Launch st-util GDB server as a background process.
 
     stlink_device: "BUS:ADDR" string (e.g. "001:086") to target a specific ST-Link.
+    Returns the Popen object — caller is responsible for .terminate().
     """
     st_util = _require_tool("st-util")
     cmd = [str(st_util), "--port", str(port)]

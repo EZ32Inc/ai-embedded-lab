@@ -52,12 +52,30 @@ def run_probe(repo_root: Path, fmt: str = "text") -> int:
     for i, d in enumerate(devices):
         fw_serial = d["serial"] or "(none)"
         usb_id = d["sysfs_serial_hex"] or "(none)"
-        status = "OK" if d["probe_ok"] else "probe failed"
         dev_id = d["stlink_device"]
+        version = d.get("version") or "?"
+
+        if d["probe_ok"]:
+            chipid = d.get("mcu_chipid") or "?"
+            dev_type = d.get("mcu_dev_type") or "unknown"
+            flash_kb = d.get("mcu_flash_kb")
+            sram_kb = d.get("mcu_sram_kb")
+            mem = ""
+            if flash_kb is not None:
+                mem += f"  Flash={flash_kb}KB"
+            if sram_kb is not None:
+                mem += f"  SRAM={sram_kb}KB"
+            mcu_line = f"{dev_type}  (chipid {chipid}){mem}"
+            status = "OK"
+        else:
+            mcu_line = "no target / not connected"
+            status = "no MCU"
+
         print(f"  [{i}] USB path:    {d['usb_path']}  →  STLINK_DEVICE={dev_id}")
+        print(f"       ST-Link:    {version}")
+        print(f"       MCU:        {mcu_line}")
         print(f"       FW serial:  {fw_serial}")
         print(f"       USB serial: {usb_id}  (unique hardware ID)")
-        print(f"       Product:    {d['product']}")
         print(f"       Status:     {status}")
         print()
 
