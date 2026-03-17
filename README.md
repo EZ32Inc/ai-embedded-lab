@@ -14,6 +14,95 @@ This project explores a future where AI becomes an active engineering partner in
 
 ---
 
+## 🚀 Latest Milestone
+
+### STM32H750 — Full Smoke Validation (7/7 PASS)
+
+AEL successfully completed full bring-up and validation on STM32H750.
+
+**All tests passed:**
+
+- minimal_runtime_mailbox
+- wiring_verify
+- adc_dac_loopback
+- gpio_loopback
+- uart_loopback
+- exti_trigger
+- pwm_capture
+
+### What this proves
+
+- Autonomous firmware generation and execution
+- Multi-domain validation (digital, analog, timing, interrupt, communication)
+- Real hardware debugging and strategy adaptation
+- Rule extraction from failures
+
+👉 This marks the first full autonomous bring-up on STM32H7-class MCU.
+
+### Key Insight
+
+The primary bottleneck has shifted from software to physical wiring.
+
+→ Next phase: reconfigurable socket + FPGA routing fabric
+
+---
+
+📄 [Full postmortem](docs/methodology/stm32h750_milestone_postmortem_v0_1.md)
+📄 [Smoke pack](packs/smoke_stm32h750.json)
+
+---
+
+### STM32G431 — Full Smoke Validation (9/9 PASS)
+
+AEL completed full bring-up and validation on STM32G431CBU6.
+
+**All tests passed:**
+
+- minimal_runtime_mailbox
+- gpio_signature
+- uart_loopback
+- spi
+- adc
+- capture
+- exti
+- gpio_loopback
+- pwm
+
+**Key fixes during bring-up:**
+
+- SPI: `CR2.FRXTH=1` required to lower RXNE threshold to 8-bit (G4 FIFO, not present on F4)
+- ADC: `ADC12_CCR.CKMODE=01` required to select synchronous clock (async default needs PLL)
+
+👉 First board to use the `minimal_runtime_mailbox` Step 0 debug-path gate as part of the pack.
+
+📄 [Full postmortem](docs/methodology/stm32g431_milestone_postmortem_v0_1.md)
+📄 [Smoke pack](packs/smoke_stm32g431.json)
+
+---
+
+### STM32F411 / STM32F401 — Verified (8/8 PASS)
+
+AEL completed full bring-up on both STM32F4-family boards.
+
+**STM32F411CEU6 (Black Pill)** and **STM32F401RCT6** — 8 experiments each:
+
+- gpio_signature
+- uart_loopback
+- spi
+- adc
+- capture
+- exti
+- gpio_loopback
+- pwm
+
+These boards established the reference bring-up template used for all subsequent targets.
+
+📄 [STM32F411 board doc](docs/boards/stm32f411ceu6.md)
+📄 [STM32F401 board doc](docs/boards/stm32f401rct6.md)
+📄 [F411 smoke pack](packs/smoke_stm32f411.json) | 📄 [F401 smoke pack](packs/smoke_stm32f401.json)
+
+---
+
 ## What AEL can do
 
 AEL can automatically:
