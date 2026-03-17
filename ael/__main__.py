@@ -123,6 +123,14 @@ def main():
     instr_meter_ready.add_argument("--ssid-suffix", default=None)
     instr_meter_ready.add_argument("--host", default=None)
     instr_meter_ready.add_argument("--port", type=int, default=None)
+    instr_usb_probe = instr_sub.add_parser(
+        "usb-probe",
+        help="Enumerate connected USB debug adapters and show selection info",
+    )
+    instr_usb_probe.add_argument(
+        "--format", choices=["json", "text"], default="text",
+        help="Output format (default: text)",
+    )
 
     dut_p = sub.add_parser("dut")
     dut_sub = dut_p.add_subparsers(dest="dut_cmd", required=True)
@@ -551,6 +559,10 @@ def main():
                 sys.exit(1)
             print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0)
+        if args.instr_cmd == "usb-probe":
+            from ael.instruments import usb_probe as _usb_probe
+            rc = _usb_probe.run_probe(Path(repo_root), fmt=args.format)
+            sys.exit(rc)
     if args.cmd == "pack":
         board_override = args.board
         if args.dut:

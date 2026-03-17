@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Start an ST-Link GDB server (st-util) for a connected STM32 target.
-# Usage: gdb_server.sh [--port 4242] [--multi]
+# Usage: gdb_server.sh [--port 4242] [--multi] [--stlink-device BUS:ADDR]
 # Environment overrides:
-#   ST_UTIL_PATH    path to st-util binary
-#   GDB_PORT        GDB server listen port (default: 4242)
+#   ST_UTIL_PATH      path to st-util binary
+#   GDB_PORT          GDB server listen port (default: 4242)
+#   STLINK_DEVICE     target a specific ST-Link: "BUS:ADDR" (e.g. 001:086)
+#                     Can also be set via --stlink-device flag.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -30,10 +32,19 @@ while [[ $# -gt 0 ]]; do
     case "$1" in
         --port|-p) PORT="$2"; shift 2 ;;
         --multi) EXTRA_ARGS+=("--multi"); shift ;;
+        --stlink-device)
+            # Set STLINK_DEVICE env var so libstlink targets this specific device.
+            # Format: BUS:ADDR (e.g. 001:086) — matches lsusb bus/device numbers.
+            export STLINK_DEVICE="$2"
+            shift 2
+            ;;
         *) echo "[gdb_server] Unknown argument: $1"; exit 1 ;;
     esac
 done
 
 echo "[gdb_server] Using: $ST_UTIL"
 echo "[gdb_server] Listening on port: $PORT"
-exec "$ST_UTIL" "${EXTRA_ARGS[@]}"   # st-util 1.8.x listens on 4242 by default
+if [[ -n "${STLINK_DEVICE:-}" ]]; then
+    echo "[gdb_server] Targeting ST-Link device: $STLINK_DEVICE"
+fi
+exec "$ST_UTIL" --listen_port "$PORT" "${EXTRA_ARGS[@]}"
