@@ -17,16 +17,30 @@ from typing import Optional
 
 # Resolve paths relative to this file.
 _INSTRUMENT_DIR = Path(__file__).resolve().parents[1]
-_BUILD_BIN = _INSTRUMENT_DIR / "upstream" / "stlink" / "build" / "bin"
+_INSTALL_BIN = _INSTRUMENT_DIR / "install" / "bin"
+_INSTALL_LIB = _INSTRUMENT_DIR / "install" / "lib"
+_BUILD_BIN = _INSTRUMENT_DIR / "upstream" / "stlink" / "build" / "bin"  # fallback
 
 
 def _find_tool(name: str) -> Optional[Path]:
-    """Return path to a stlink binary, preferring the local build."""
-    local = _BUILD_BIN / name
-    if local.is_file() and local.stat().st_mode & 0o111:
-        return local
+    """Return path to a stlink binary.
+    Priority: install/bin/ (cmake --install) > build/bin/ > system PATH.
+    """
+    for candidate in (_INSTALL_BIN / name, _BUILD_BIN / name):
+        if candidate.is_file() and candidate.stat().st_mode & 0o111:
+            return candidate
     system = shutil.which(name)
     return Path(system) if system else None
+
+
+def _tool_env() -> dict:
+    """Return env with LD_LIBRARY_PATH set to find libstlink.so."""
+    import os
+    env = os.environ.copy()
+    lib = str(_INSTALL_LIB)
+    existing = env.get("LD_LIBRARY_PATH", "")
+    env["LD_LIBRARY_PATH"] = f"{lib}:{existing}" if existing else lib
+    return env
 
 
 def _require_tool(name: str) -> Path:
@@ -51,6 +65,7 @@ def probe() -> dict:
         capture_output=True,
         text=True,
         timeout=10,
+        env=_tool_env(),
     )
     return {
         "returncode": result.returncode,
@@ -72,7 +87,7 @@ def flash(firmware_path: str | Path, addr: str = "0x08000000", reset: bool = Tru
         cmd += ["--reset"]
     cmd += ["write", str(firmware), addr]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=30, env=_tool_env())
     return {
         "returncode": result.returncode,
         "stdout": result.stdout.strip(),
@@ -91,7 +106,7 @@ def start_gdb_server(port: int = 4242, multi: bool = False) -> subprocess.Popen:
     cmd = [str(st_util), "--port", str(port)]
     if multi:
         cmd.append("--multi")
-    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    return subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=_tool_env())
 
 
 def tool_versions() -> dict:
@@ -105,7 +120,7 @@ def tool_versions() -> dict:
         try:
             r = subprocess.run(
                 [str(tool), "--version"],
-                capture_output=True, text=True, timeout=5,
+                capture_output=True, text=True, timeout=5, env=_tool_env(),
             )
             versions[name] = (r.stdout + r.stderr).strip().splitlines()[0]
         except Exception as exc:
@@ -114,8 +129,5 @@ def tool_versions() -> dict:
 
 
 def is_built() -> bool:
-    """Return True if the local build artifacts exist."""
-    return all(
-        (_BUILD_BIN / name).is_file()
-        for name in ("st-flash", "st-info", "st-util")
-    )
+    """Return True if install/bin artifacts exist (or build/bin fallback)."""
+    return all(_find_tool(name) is not None for name in ("st-flash", "st-info", "st-util"))

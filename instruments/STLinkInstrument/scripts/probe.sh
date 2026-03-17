@@ -5,7 +5,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTRUMENT_DIR="$(dirname "$SCRIPT_DIR")"
-DEFAULT_ST_INFO="$INSTRUMENT_DIR/upstream/stlink/build/bin/st-info"
+DEFAULT_ST_INFO="$INSTRUMENT_DIR/install/bin/st-info"
+export LD_LIBRARY_PATH="$INSTRUMENT_DIR/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 ST_INFO="${ST_INFO_PATH:-$DEFAULT_ST_INFO}"
 

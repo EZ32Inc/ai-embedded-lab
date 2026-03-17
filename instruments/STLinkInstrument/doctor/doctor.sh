@@ -6,7 +6,10 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTRUMENT_DIR="$(dirname "$SCRIPT_DIR")"
 STLINK_SRC="$INSTRUMENT_DIR/upstream/stlink"
-BUILD_BIN="$STLINK_SRC/build/bin"
+INSTALL_BIN="$INSTRUMENT_DIR/install/bin"
+INSTALL_LIB="$INSTRUMENT_DIR/install/lib"
+BUILD_BIN="$STLINK_SRC/build/bin"  # fallback
+export LD_LIBRARY_PATH="$INSTALL_LIB${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 PASS=0
 FAIL=0
@@ -42,10 +45,12 @@ else
     check "cmake available" 0 "install cmake"
 fi
 
-# 3. Build artifacts exist
+# 3. Build artifacts exist (prefer install/bin, fallback build/bin, then system)
 for BIN in st-flash st-info st-util; do
-    if [[ -x "$BUILD_BIN/$BIN" ]]; then
-        check "Built: $BIN" 1 "$BUILD_BIN/$BIN"
+    if [[ -x "$INSTALL_BIN/$BIN" ]]; then
+        check "Built: $BIN" 1 "$INSTALL_BIN/$BIN"
+    elif [[ -x "$BUILD_BIN/$BIN" ]]; then
+        check "Built: $BIN" 1 "$BUILD_BIN/$BIN (build dir, run build.sh to install)"
     else
         SYSTEM_BIN="$(command -v "$BIN" 2>/dev/null || true)"
         if [[ -n "$SYSTEM_BIN" ]]; then
@@ -55,6 +60,14 @@ for BIN in st-flash st-info st-util; do
         fi
     fi
 done
+
+# 3b. Chip config files present
+CHIPS_DIR="$INSTRUMENT_DIR/install/share/stlink/config/chips"
+if [[ -d "$CHIPS_DIR" && "$(ls "$CHIPS_DIR"/*.chip 2>/dev/null | wc -l)" -gt 0 ]]; then
+    check "Chip configs" 1 "$CHIPS_DIR"
+else
+    check "Chip configs" 0 "run scripts/build.sh"
+fi
 
 # 4. USB device check (ST-Link shows up as USB device)
 if command -v lsusb &>/dev/null; then
@@ -69,7 +82,8 @@ else
 fi
 
 # 5. Probe attempt (only if st-info available)
-ST_INFO_BIN="$BUILD_BIN/st-info"
+ST_INFO_BIN="$INSTALL_BIN/st-info"
+[[ ! -x "$ST_INFO_BIN" ]] && ST_INFO_BIN="$BUILD_BIN/st-info"
 if [[ ! -x "$ST_INFO_BIN" ]]; then
     ST_INFO_BIN="$(command -v st-info 2>/dev/null || true)"
 fi

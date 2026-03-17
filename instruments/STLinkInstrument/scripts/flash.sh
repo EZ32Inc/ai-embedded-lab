@@ -8,7 +8,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTRUMENT_DIR="$(dirname "$SCRIPT_DIR")"
-DEFAULT_ST_FLASH="$INSTRUMENT_DIR/upstream/stlink/build/bin/st-flash"
+DEFAULT_ST_FLASH="$INSTRUMENT_DIR/install/bin/st-flash"
+export LD_LIBRARY_PATH="$INSTRUMENT_DIR/install/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 
 ST_FLASH="${ST_FLASH_PATH:-$DEFAULT_ST_FLASH}"
 
