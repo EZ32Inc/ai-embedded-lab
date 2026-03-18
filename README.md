@@ -26,6 +26,55 @@ This is one of AEL’s main advantages: it is powerful, but still easy to use. T
 
 ---
 
+## Hardware
+
+AEL is built for real hardware — but the barrier to entry is surprisingly low.
+
+You can start with almost nothing:
+
+- **ST-Link + an STM32 MCU/board** — a standard path, often just **$10–20 USD**
+- **a single ESP32 dev board** — already enough to begin exploring AI-driven workflows
+- **ESP32 JTAG / ESP32 JTAG Plus + a target board** — a next-gen, all-in-one instrument
+
+---
+
+### From "debug probe" → to "AI instrument"
+
+Traditional tools like ST-Link do one thing well:
+→ flash and debug
+
+An ESP32-based instrument changes the model:
+
+- **Wireless (WiFi)** — no cables, AI can access it over the network
+- **Flash firmware**
+- **Capture signals at high speed (~256 MHz in supported setups)**
+- **Generate stimulus signals**
+- **Interact with hardware in real time**
+
+Instead of multiple lab tools, you get **one programmable, networked instrument**.
+
+---
+
+### Why this matters
+
+This is not just cheaper hardware.
+
+It changes how embedded systems are developed:
+
+- The instrument becomes **AI-controllable**
+- The workflow becomes **fully automated**
+- Hardware is no longer "manual-only"
+
+In many cases, a **single ESP32 device can replace an entire entry-level lab setup**.
+
+---
+
+You do not need expensive equipment to begin.
+
+AEL is designed so that **real hardware + AI** becomes accessible, programmable, and scalable.
+
+---
+
 ## 🤖 Natural-Language-First Usage
 
 AEL is designed to be driven by AI. Instead of relying on manual command-by-command operation, you describe your goal to the AEL Agent, for example through Codex or Claude Code running inside the repository.
