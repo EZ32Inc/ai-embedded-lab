@@ -1,0 +1,103 @@
+# Instrument Action Model v0.1 — lab bench configuration
+#
+# This file defines DUTs and instruments in the action model format.
+# Edit to match your actual bench wiring and instrument IPs/ports.
+#
+# Loaded automatically by ael.instruments.dispatcher (run_action).
+
+devices:
+  # -----------------------------------------------------------------
+  # DUTs
+  # -----------------------------------------------------------------
+
+  - name: stm32f407_discovery
+    role: dut
+    attached_instruments:
+      - stlink_f407
+      - usb_uart_bridge_lab
+
+  - name: stm32f103_rct6
+    role: dut
+    attached_instruments:
+      - stlink_f103
+      - esp_jtag_lab
+
+  # -----------------------------------------------------------------
+  # Instruments
+  # -----------------------------------------------------------------
+
+  - name: stlink_f407
+    role: instrument
+    driver: stlink
+    connection:
+      host: "127.0.0.1"
+      gdb_port: 4242
+    config:
+      gdb_cmd: arm-none-eabi-gdb
+      target_id: 1
+      skip_attach: true
+      gdb_launch_cmds:
+        - "file {firmware}"
+        - "load"
+        - "monitor reset run"
+        - "disconnect"
+    supports:
+      - flash
+      - reset
+      - debug_halt
+      - debug_read_memory
+    attached_to:
+      - stm32f407_discovery
+
+  - name: stlink_f103
+    role: instrument
+    driver: stlink
+    connection:
+      host: "127.0.0.1"
+      gdb_port: 4242
+    config:
+      gdb_cmd: arm-none-eabi-gdb
+      target_id: 1
+      skip_attach: false
+    supports:
+      - flash
+      - reset
+      - debug_halt
+      - debug_read_memory
+    attached_to:
+      - stm32f103_rct6
+
+  - name: esp_jtag_lab
+    role: instrument
+    driver: esp_remote_jtag
+    connection:
+      host: "192.168.2.103"
+      gdb_port: 4242
+      web_port: 9000
+    config:
+      gdb_cmd: arm-none-eabi-gdb
+      target_id: 1
+      gpio_channels:
+        ch1: 4
+        ch2: 5
+      voltage_channels:
+        vcc: 36
+    supports:
+      - flash
+      - reset
+      - gpio_measure
+      - voltage_read
+    attached_to:
+      - stm32f103_rct6
+
+  - name: usb_uart_bridge_lab
+    role: instrument
+    driver: usb_uart_bridge
+    connection:
+      serial_port: /dev/ttyUSB0
+      baud: 115200
+    supports:
+      - uart_read
+      - uart_wait_for
+    attached_to:
+      - stm32f407_discovery
