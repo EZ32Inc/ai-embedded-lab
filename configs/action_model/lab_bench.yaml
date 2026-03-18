@@ -1,7 +1,7 @@
 # Instrument Action Model v0.1 — lab bench configuration
 #
-# This file defines DUTs and instruments in the action model format.
-# Edit to match your actual bench wiring and instrument IPs/ports.
+# Single source of truth for DUT↔instrument relationships is the DUT's
+# attached_instruments list.  Instruments do not declare attached_to.
 #
 # Loaded automatically by ael.instruments.dispatcher (run_action).
 
@@ -10,22 +10,50 @@ devices:
   # DUTs
   # -----------------------------------------------------------------
 
+  - name: stm32f411_blackpill
+    role: dut
+    attached_instruments:
+      - esp_jtag_f411
+
   - name: stm32f407_discovery
     role: dut
     attached_instruments:
       - stlink_f407
       - usb_uart_bridge_lab
 
-  - name: stm32f103_rct6
-    role: dut
-    attached_instruments:
-      - stlink_f103
-      - esp_jtag_lab
-
   # -----------------------------------------------------------------
   # Instruments
   # -----------------------------------------------------------------
 
+  # ESP32JTAG box connected to STM32F411 BlackPill
+  # GPIO: PA2 → P0.0 (LA bit 0), PA3 → P0.1 (LA bit 1)
+  # Flash uses BMDA GDB over WiFi; GPIO uses HTTPS LA API on port 443
+  - name: esp_jtag_f411
+    role: instrument
+    driver: esp_remote_jtag
+    connection:
+      host: "192.168.2.103"
+      gdb_port: 4242
+      web_port: 443
+    config:
+      gdb_cmd: arm-none-eabi-gdb
+      target_id: 1
+      gdb_launch_cmds:
+        - "file {firmware}"
+        - "monitor a"
+        - "attach {target_id}"
+        - "load"
+        - "attach {target_id}"
+        - "detach"
+      gpio_channels:
+        pa2: "P0.0"
+        pa3: "P0.1"
+    supports:
+      - flash
+      - reset
+      - gpio_measure
+
+  # ST-Link V2 (st-util, local USB) connected to STM32F4 Discovery
   - name: stlink_f407
     role: instrument
     driver: stlink
@@ -46,50 +74,8 @@ devices:
       - reset
       - debug_halt
       - debug_read_memory
-    attached_to:
-      - stm32f407_discovery
 
-  - name: stlink_f103
-    role: instrument
-    driver: stlink
-    connection:
-      host: "127.0.0.1"
-      gdb_port: 4242
-    config:
-      gdb_cmd: arm-none-eabi-gdb
-      target_id: 1
-      skip_attach: false
-    supports:
-      - flash
-      - reset
-      - debug_halt
-      - debug_read_memory
-    attached_to:
-      - stm32f103_rct6
-
-  - name: esp_jtag_lab
-    role: instrument
-    driver: esp_remote_jtag
-    connection:
-      host: "192.168.2.103"
-      gdb_port: 4242
-      web_port: 9000
-    config:
-      gdb_cmd: arm-none-eabi-gdb
-      target_id: 1
-      gpio_channels:
-        ch1: 4
-        ch2: 5
-      voltage_channels:
-        vcc: 36
-    supports:
-      - flash
-      - reset
-      - gpio_measure
-      - voltage_read
-    attached_to:
-      - stm32f103_rct6
-
+  # USB-UART bridge (CH340/CP210x) for STM32F4 Discovery serial output
   - name: usb_uart_bridge_lab
     role: instrument
     driver: usb_uart_bridge
@@ -99,5 +85,3 @@ devices:
     supports:
       - uart_read
       - uart_wait_for
-    attached_to:
-      - stm32f407_discovery

@@ -24,8 +24,11 @@ YAML format expected for an instrument:
       - flash
       - reset
       - gpio_measure
-    attached_to:
-      - stm32f103_target_1
+
+Note: the `attached_to` field is NOT used by this loader.  The single source
+of truth for DUT↔instrument relationships is the DUT's `attached_instruments`
+list.  Instruments do not need to declare `attached_to`; if present it is
+silently ignored.
 
 Config files may live in any directory.  Pass a list of paths to
 InstrumentCatalog, or use load_catalog() which looks in the default

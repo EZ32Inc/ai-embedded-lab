@@ -93,15 +93,18 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
             message=f"firmware file not found: {firmware}",
         )
 
+    import contextlib
+    import io
     from ael.adapters import flash_bmda_gdbmi
 
     probe = _probe_cfg(instrument)
     fcfg = _flash_cfg(instrument, request)
 
-    logs: list[str] = []
     t0 = time.monotonic()
+    buf = io.StringIO()
     try:
-        ok = flash_bmda_gdbmi.run(probe, firmware, flash_cfg=fcfg)
+        with contextlib.redirect_stdout(buf):
+            ok = flash_bmda_gdbmi.run(probe, firmware, flash_cfg=fcfg)
     except Exception as exc:
         return make_error_result(
             action="flash",
@@ -110,9 +113,11 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
             error_code="program_failed",
             message=str(exc),
             retryable=True,
+            logs=[l for l in buf.getvalue().splitlines() if l.strip()],
         )
 
     elapsed = time.monotonic() - t0
+    logs = [l for l in buf.getvalue().splitlines() if l.strip()]
     if ok:
         return make_success_result(
             action="flash",
@@ -129,6 +134,7 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
         error_code="program_failed",
         message="ST-Link flash reported failure",
         retryable=True,
+        logs=logs,
     )
 
 

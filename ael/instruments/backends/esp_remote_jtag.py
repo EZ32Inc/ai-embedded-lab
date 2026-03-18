@@ -54,6 +54,8 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
             message="request.firmware is required",
         )
 
+    import io
+    import contextlib
     import os
     if not os.path.exists(firmware):
         return make_error_result(
@@ -76,8 +78,10 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
     }
 
     t0 = time.monotonic()
+    buf = io.StringIO()
     try:
-        ok = flash_bmda_gdbmi.run(probe, firmware, flash_cfg=fcfg)
+        with contextlib.redirect_stdout(buf):
+            ok = flash_bmda_gdbmi.run(probe, firmware, flash_cfg=fcfg)
     except Exception as exc:
         return make_error_result(
             action="flash",
@@ -86,9 +90,11 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
             error_code="program_failed",
             message=str(exc),
             retryable=True,
+            logs=[l for l in buf.getvalue().splitlines() if l.strip()],
         )
 
     elapsed = time.monotonic() - t0
+    logs = [l for l in buf.getvalue().splitlines() if l.strip()]
     if ok:
         return make_success_result(
             action="flash",
@@ -96,6 +102,7 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
             dut=context.get("dut"),
             summary=f"Flash completed via ESP JTAG in {elapsed:.1f}s",
             data={"elapsed_s": round(elapsed, 2)},
+            logs=logs,
         )
     return make_error_result(
         action="flash",
@@ -104,6 +111,7 @@ def flash(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
         error_code="program_failed",
         message="ESP JTAG flash reported failure",
         retryable=True,
+        logs=logs,
     )
 
 
@@ -149,36 +157,59 @@ def reset(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
 
 
 def gpio_measure(instrument: dict, request: dict, context: dict) -> dict[str, Any]:
+    """Measure a GPIO/digital channel via the ESP32JTAG HTTPS logic-analyser API.
+
+    gpio_channels in instrument config map logical channel names to LA pin strings
+    (e.g. "P0.0", "pa2"). The ESP32JTAG bit-samples the pin and returns edge counts,
+    frequency estimate, and duty cycle at the data top level — no raw protocol diving.
+    """
     channel = request.get("channel")
     mode = str(request.get("mode") or "toggle")
-    duration_s = float(request.get("duration_s") or 0.5)
-    duration_ms = int(duration_s * 1000)
+    duration_s = float(request.get("duration_s") or 1.0)
 
-    # Resolve channel name to GPIO pin number(s)
     cfg = instrument.get("config") or {}
     gpio_channels = cfg.get("gpio_channels") or {}
     if channel in gpio_channels:
-        pin_spec = gpio_channels[channel]
+        pin = str(gpio_channels[channel])
+    elif channel is not None:
+        pin = str(channel)
     else:
-        # Try to interpret channel as a bare pin number
-        try:
-            pin_spec = int(channel)
-        except (ValueError, TypeError):
-            return make_error_result(
-                action="gpio_measure",
-                instrument=instrument["name"],
-                dut=context.get("dut"),
-                error_code="invalid_request",
-                message=f"Unknown GPIO channel '{channel}'. Available: {list(gpio_channels)}",
-            )
+        return make_error_result(
+            action="gpio_measure",
+            instrument=instrument["name"],
+            dut=context.get("dut"),
+            error_code="invalid_request",
+            message=f"request.channel is required. Available channels: {list(gpio_channels)}",
+        )
 
-    pins = [pin_spec] if isinstance(pin_spec, int) else list(pin_spec)
+    conn = instrument.get("connection") or {}
+    probe_cfg = {
+        "ip": str(conn.get("host") or "192.168.1.50"),
+        "web_port": int(conn.get("web_port") or 443),
+        "web_user": str(cfg.get("web_user") or "admin"),
+        "web_pass": str(cfg.get("web_pass") or "admin"),
+        "web_verify_ssl": bool(cfg.get("web_verify_ssl", False)),
+        "web_suppress_ssl_warnings": True,
+    }
 
-    from ael.adapters import esp32s3_dev_c_meter_tcp as meter_tcp
-    tcp = _tcp_cfg(instrument)
+    from ael.adapters import observe_gpio_pin
+    import io
+    import contextlib
 
+    capture_out: dict = {}
+    buf = io.StringIO()
     try:
-        result = meter_tcp.measure_digital(tcp, pins=pins, duration_ms=duration_ms)
+        with contextlib.redirect_stdout(buf):
+            ok = observe_gpio_pin.run(
+                probe_cfg=probe_cfg,
+                pin=pin,
+                duration_s=duration_s,
+                expected_hz=0,
+                min_edges=0,
+                max_edges=10_000_000,
+                capture_out=capture_out,
+                verify_edges=False,
+            )
     except Exception as exc:
         return make_error_result(
             action="gpio_measure",
@@ -189,28 +220,56 @@ def gpio_measure(instrument: dict, request: dict, context: dict) -> dict[str, An
             retryable=True,
         )
 
-    if not result or result.get("type") == "error":
+    logs = [l for l in buf.getvalue().splitlines() if l.strip()]
+
+    if not ok:
         return make_error_result(
             action="gpio_measure",
             instrument=instrument["name"],
             dut=context.get("dut"),
             error_code="measurement_failed",
-            message=str(result),
+            message=f"GPIO capture failed on pin '{pin}'",
             retryable=True,
+            logs=logs,
         )
+
+    # Normalise key values to data top level — AI does not need to inspect raw capture
+    edges = int(capture_out.get("edges") or 0)
+    window_s = float(capture_out.get("window_s") or duration_s)
+    high = int(capture_out.get("high") or 0)
+    low = int(capture_out.get("low") or 0)
+    total_samples = high + low
+
+    freq_hz = round(edges / 2.0 / window_s, 2) if (window_s > 0 and edges > 0) else 0.0
+    duty = round(high / total_samples, 4) if total_samples > 0 else None
+
+    summary_parts = [f"GPIO '{channel}' (pin={pin}): {edges} edges in {window_s:.3f}s"]
+    if freq_hz > 0:
+        summary_parts.append(f"~{freq_hz:.1f} Hz")
+    if duty is not None:
+        summary_parts.append(f"duty={duty:.3f}")
+    summary = ", ".join(summary_parts)
+
+    # raw excludes the binary blob (too large), keeps numeric diagnostics
+    raw = {k: v for k, v in capture_out.items() if k != "blob"}
 
     return make_success_result(
         action="gpio_measure",
         instrument=instrument["name"],
         dut=context.get("dut"),
-        summary=f"GPIO measurement on channel '{channel}' (mode={mode})",
+        summary=summary,
         data={
             "channel": channel,
+            "pin": pin,
             "mode": mode,
-            "pins": pins,
             "duration_s": duration_s,
-            "raw": result,
+            "edges": edges,
+            "freq_hz": freq_hz,
+            "duty": duty,
+            "window_s": window_s,
+            "raw": raw,
         },
+        logs=logs,
     )
 
 
