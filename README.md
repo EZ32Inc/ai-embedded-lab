@@ -10,23 +10,37 @@ It connects AI reasoning with a real embedded hardware lab. The system can gener
 
 ---
 
-## 🤖 Natural-Language-First Usage
+## 🚀 Installation and Getting Started
 
-AEL is designed to be driven by AI. Instead of running manual commands, you describe your goal to the AEL Agent (Gemini CLI or Codex).
+AEL is intentionally simple to install and easy to use.
 
-### Example 1: New Hardware Bring-up
-**User:** "I have a STM32F411 Black Pill and an ST-Link. Can you help me run a smoke test?"
-**AEL Agent:** "I can use ST-Link as the flashing/debug interface for your F411. I'll generate a minimal smoke test, flash it, and verify startup via a mailbox signal. Shall I proceed?"
+1. Clone and set up the AEL repository.
+2. Start an AI coding agent inside the repository, such as Codex or Claude Code.
+3. Describe your goal in natural language.
 
-### Example 2: Feature Validation
-**User:** "Generate firmware for my RP2040 that toggles GPIO 16 at 1kHz, then verify the frequency."
-**AEL Agent:** "I will generate the RP2040 firmware, build it, flash it to your Pico, and then use the connected Instrument to capture and verify the 1kHz signal on GPIO 16. I'll report the actual measured frequency back to you."
+That is the basic workflow.
 
-### Example 3: Debugging
-**User:** "My UART loopback test is failing on the G431. Can you investigate?"
-**AEL Agent:** "I'll check the UART configuration in the firmware, verify the physical loopback connections using the 'Connection Doctor', and then re-run the test with additional debug logging enabled."
+You do not need to learn a large command surface before getting started. In the common case, you work inside the AEL repository with your AI agent and simply say what you want to do: bring up a board, generate firmware, run a test, investigate a failure, or validate a hardware feature. AEL provides the structure, assets, and command surface underneath, while the AI agent uses them to carry out the work.
+
+This is one of AEL’s main advantages: it is powerful, but still easy to use. The experience is not centered on memorizing commands or manually stitching together tools. Instead, you install the repository, open an AI agent in that environment, and start working through natural language.
 
 ---
+
+## 🤖 Natural-Language-First Usage
+
+AEL is designed to be driven by AI. Instead of relying on manual command-by-command operation, you describe your goal to the AEL Agent, for example through Codex or Claude Code running inside the repository.
+
+### Example 1: New Hardware Bring-up
+**User:** “I have an STM32F411 Black Pill and an ST-Link. Can you help me run a smoke test?”  
+**AEL Agent:** “I can use ST-Link as the flashing and debug interface for your F411. I’ll generate a minimal smoke test, flash it, and verify startup through a mailbox signal. Shall I proceed?”
+
+### Example 2: Feature Validation
+**User:** “Generate firmware for my RP2040 that toggles GPIO 16 at 1 kHz, then verify the frequency.”  
+**AEL Agent:** “I will generate the RP2040 firmware, build it, flash it to your Pico, and then use the connected Instrument to capture and verify the 1 kHz signal on GPIO 16. I’ll report the measured frequency back to you.”
+
+### Example 3: Debugging
+**User:** “My UART loopback test is failing on the G431. Can you investigate?”  
+**AEL Agent:** “I’ll check the UART configuration in the firmware, verify the physical loopback connections using the Connection Doctor, and then rerun the test with additional debug logging enabled.”
 
 Instead of stopping at code generation, AEL allows AI and the engineer to collaborate: designing tests, debugging failures, and completing experiments using evidence from real hardware.
 
