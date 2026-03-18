@@ -32,6 +32,7 @@ from .selection import select_instrument_for_action
 _DRIVER_BACKENDS: dict[str, str] = {
     "stlink": "ael.instruments.backends.stlink",
     "esp_remote_jtag": "ael.instruments.backends.esp_remote_jtag",
+    "esp32_jtag": "ael.instruments.backends.esp32_jtag.backend",
     "usb_uart_bridge": "ael.instruments.backends.usb_uart_bridge",
 }
 
