@@ -1,7 +1,7 @@
 board:
-  name: STM32F103RCT6
+  name: STM32F103RCT6 (ST-Link)
   target: stm32f103rct6
-  instrument_instance: esp32jtag_stm32_golden
+  instrument_instance: stlink_f103_rct6
   clock_hz: 8000000
   build:
     type: arm_debug
@@ -9,18 +9,17 @@ board:
     artifact_stem: stm32f103rct6_mailbox_app
   flash:
     speed_khz: 1000
-    reset_strategy: connect_under_reset
+    reset_strategy: none
     post_load_settle_s: 2.0
     target_id: 1
     gdb_launch_cmds:
       - "file {firmware}"
-      - "monitor swdp_scan"
-      - "attach {target_id}"
       - "load"
-      - "attach {target_id}"
-      - "detach"
+      - "monitor reset run"
+      - "disconnect"
   mailbox_verify_defaults:
-    skip_attach: false
+    skip_attach: true
+    halt_before_read: true
   default_wiring:
     swd: "external"
     reset: "NC"

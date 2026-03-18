@@ -1,6 +1,5 @@
 {
   "name": "stm32f103rct6_exti_trigger",
-  "board": "stm32f103rct6",
   "preflight": { "enabled": false },
   "build": {
     "project_dir": "firmware/targets/stm32f103rct6_exti_trigger",
@@ -10,8 +9,7 @@
   "signal_checks": [],
   "mailbox_verify": {
     "settle_s": 60.0,
-    "addr": "0x2000BC00",
-    "skip_attach": false
+    "addr": "0x2000BC00"
   },
   "bench_setup": {
     "notes": "EXTI trigger: PB8 (output) drives 10 rising edges, PB9 -> EXTI9_5 IRQ23. PASS after 10 interrupts. detail0 = interrupt count. AFIO_EXTICR3[7:4]=0x1 routes PB9 to EXTI9.",

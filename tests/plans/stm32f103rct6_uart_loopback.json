@@ -1,6 +1,5 @@
 {
   "name": "stm32f103rct6_uart_loopback",
-  "board": "stm32f103rct6",
   "preflight": { "enabled": false },
   "build": {
     "project_dir": "firmware/targets/stm32f103rct6_uart_loopback",
@@ -10,8 +9,7 @@
   "signal_checks": [],
   "mailbox_verify": {
     "settle_s": 4.0,
-    "addr": "0x2000BC00",
-    "skip_attach": false
+    "addr": "0x2000BC00"
   },
   "bench_setup": {
     "notes": "USART1 loopback: PA9 (TX, AF push-pull) -> PA10 (RX, input floating). 8MHz HSI, BRR=0x457 (~115200 baud), 8N1. Sends {0x55,0xAA,0x12,0x34}. FAIL: error_code 0x1x=timeout byte x, 0x2x=mismatch byte x. Note: PA9/PA10 safe on generic F103 boards (no ST-Link bridge conflict).",

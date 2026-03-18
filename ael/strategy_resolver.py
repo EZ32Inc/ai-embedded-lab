@@ -535,12 +535,22 @@ def build_mailbox_verify_step(
     test_raw: Dict[str, Any] | Any,
     probe_cfg: Dict[str, Any] | Any,
     artifacts_dir: Path,
+    board_raw: Dict[str, Any] | Any = None,
 ) -> Dict[str, Any] | None:
     """Return a check.mailbox_verify step if the test plan declares mailbox_verify.
 
     The test plan may use either:
       "mailbox_verify": true               — use all defaults
       "mailbox_verify": {"settle_s": 3}    — override specific fields
+
+    Board config may supply ``mailbox_verify_defaults`` under its ``board:``
+    key.  These act as instrument-specific defaults that sit between the
+    hard-coded fallbacks and the per-test-plan values, so priority is:
+
+      hard-coded defaults < board mailbox_verify_defaults < test plan values
+
+    This lets test plans stay instrument-agnostic: switching instruments only
+    requires switching board configs (or packs), not editing every test plan.
 
     Returns None if no mailbox_verify config is present, so the caller can
     skip appending the step without further checks.
@@ -555,6 +565,18 @@ def build_mailbox_verify_step(
     if not isinstance(mb_cfg, dict):
         return None
 
+    # Collect board-level mailbox_verify_defaults (instrument-specific defaults)
+    board_mb_defaults: Dict[str, Any] = {}
+    if isinstance(board_raw, dict):
+        board_section = board_raw.get("board", {})
+        if isinstance(board_section, dict):
+            bd = board_section.get("mailbox_verify_defaults", {})
+            if isinstance(bd, dict):
+                board_mb_defaults = bd
+
+    # Merge: board defaults first, then test plan values override
+    merged = {**board_mb_defaults, **mb_cfg}
+
     probe = probe_cfg if isinstance(probe_cfg, dict) else {}
     probe_ip   = probe.get("ip", "")
     probe_port = int(probe.get("gdb_port", 4242))
@@ -565,10 +587,11 @@ def build_mailbox_verify_step(
         "inputs": {
             "probe_ip":   probe_ip,
             "probe_port": probe_port,
-            "target_id":    int(mb_cfg.get("target_id", 1)),
-            "addr":         str(mb_cfg.get("addr", "0x20007F00")),
-            "settle_s":     float(mb_cfg.get("settle_s", 0.0)),
-            "skip_attach":  bool(mb_cfg.get("skip_attach", False)),
-            "out_json":     str(artifacts_dir / "mailbox_verify.json"),
+            "target_id":        int(merged.get("target_id", 1)),
+            "addr":             str(merged.get("addr", "0x20007F00")),
+            "settle_s":         float(merged.get("settle_s", 0.0)),
+            "skip_attach":      bool(merged.get("skip_attach", False)),
+            "halt_before_read": bool(merged.get("halt_before_read", False)),
+            "out_json":         str(artifacts_dir / "mailbox_verify.json"),
         },
     }

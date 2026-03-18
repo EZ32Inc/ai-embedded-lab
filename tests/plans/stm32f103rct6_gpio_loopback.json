@@ -1,6 +1,5 @@
 {
   "name": "stm32f103rct6_gpio_loopback",
-  "board": "stm32f103rct6",
   "preflight": { "enabled": false },
   "build": {
     "project_dir": "firmware/targets/stm32f103rct6_gpio_loopback",
@@ -10,8 +9,7 @@
   "signal_checks": [],
   "mailbox_verify": {
     "settle_s": 30.0,
-    "addr": "0x2000BC00",
-    "skip_attach": false
+    "addr": "0x2000BC00"
   },
   "bench_setup": {
     "notes": "GPIO loopback: PB0 (output push-pull) drives high/low, PB1 (input floating) reads back. 10 cycles required for PASS. FAIL: error_code=0x01 (high fail), 0x02 (low fail).",

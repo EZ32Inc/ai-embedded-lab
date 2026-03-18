@@ -1,6 +1,5 @@
 {
   "name": "stm32f103rct6_adc_loopback",
-  "board": "stm32f103rct6",
   "preflight": { "enabled": false },
   "build": {
     "project_dir": "firmware/targets/stm32f103rct6_adc_loopback",
@@ -10,8 +9,7 @@
   "signal_checks": [],
   "mailbox_verify": {
     "settle_s": 60.0,
-    "addr": "0x2000BC00",
-    "skip_attach": false
+    "addr": "0x2000BC00"
   },
   "bench_setup": {
     "notes": "ADC loopback: PA0 (GPIO output) drives high/low, PA1 (ADC1_IN1, analog) reads back. 5 cycles for PASS. Thresholds: high>3000, low<500 (12-bit). ADC PCLK2/2=4MHz, 239.5-cycle sample, software trigger. FAIL: error_code=0x01 (high too low), 0x02 (low too high).",

@@ -1670,6 +1670,7 @@ def run_pipeline(
         test_raw=test_raw,
         probe_cfg=probe_cfg,
         artifacts_dir=Path(run_paths.artifacts_dir),
+        board_raw=board_raw,
     )
     if mailbox_step is not None:
         plan_steps.append(mailbox_step)

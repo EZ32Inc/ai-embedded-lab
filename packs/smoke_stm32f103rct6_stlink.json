@@ -1,8 +1,8 @@
 {
-  "name": "smoke_stm32f103rct6",
-  "board": "stm32f103rct6",
+  "name": "smoke_stm32f103rct6_stlink",
+  "board": "stm32f103rct6_stlink",
   "preflight": { "enabled": false },
-  "notes": "STM32F103RCT6 smoke pack via ESP32JTAG (BMDA). All verification via AEL mailbox at 0x2000BC00. Run: ael pack --pack packs/smoke_stm32f103rct6.json --board stm32f103rct6",
+  "notes": "STM32F103RCT6 smoke pack via ST-Link (st-util port 4243). All verification via AEL mailbox at 0x2000BC00. Run: ael pack --pack packs/smoke_stm32f103rct6_stlink.json --board stm32f103rct6_stlink",
   "tests": [
     "tests/plans/stm32f103rct6_mailbox.json",
     "tests/plans/stm32f103rct6_timer_mailbox.json",

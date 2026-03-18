@@ -38,10 +38,18 @@ def _write_json(path: str | Path, payload: dict) -> None:
     p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-def _gdb_read_mailbox(endpoint: str, target_id: int, addr: int, skip_attach: bool = False) -> Dict[str, Any]:
+def _gdb_read_mailbox(
+    endpoint: str,
+    target_id: int,
+    addr: int,
+    skip_attach: bool = False,
+    halt_before_read: bool = False,
+) -> Dict[str, Any]:
     """Run arm-none-eabi-gdb in batch mode and parse x/4xw output.
 
-    skip_attach=True: omit 'monitor a' + 'attach' (needed for st-util / non-BMDA servers).
+    skip_attach=True: omit 'monitor swdp_scan' + 'attach' (for st-util / non-BMDA servers).
+    halt_before_read=True: send 'monitor halt' before the memory read.  Required when the
+        target is still running after the flash session disconnects (st-util + monitor reset run).
     """
     cmds = [
         "set pagination off",
@@ -50,6 +58,8 @@ def _gdb_read_mailbox(endpoint: str, target_id: int, addr: int, skip_attach: boo
     ]
     if not skip_attach:
         cmds += ["monitor swdp_scan", f"attach {target_id}"]
+    if halt_before_read:
+        cmds += ["monitor halt"]
     cmds += [
         f"x/4xw {addr:#010x}",
         "detach",
@@ -104,7 +114,8 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
     addr_str    = inputs.get("addr", "0x20007F00")
     settle_s    = float(inputs.get("settle_s", 0.0))
     out_json    = inputs.get("out_json")
-    skip_attach = bool(inputs.get("skip_attach", False))
+    skip_attach      = bool(inputs.get("skip_attach", False))
+    halt_before_read = bool(inputs.get("halt_before_read", False))
 
     if not probe_ip:
         return {"ok": False, "error_summary": "check.mailbox_verify: probe_ip not set"}
@@ -114,7 +125,7 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
 
     addr     = int(addr_str, 16)
     endpoint = f"{probe_ip}:{probe_port}"
-    raw      = _gdb_read_mailbox(endpoint, target_id, addr, skip_attach=skip_attach)
+    raw      = _gdb_read_mailbox(endpoint, target_id, addr, skip_attach=skip_attach, halt_before_read=halt_before_read)
 
     if not raw.get("ok"):
         result = {
