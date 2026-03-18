@@ -356,7 +356,11 @@ def resolve_load_stage(
         target = board_cfg.get("target")
         if target:
             flash_cfg["target"] = target
-            flash_cfg["build_dir"] = os.path.join(str(repo_root), "artifacts", f"build_{target}")
+            build_dir_override = board_cfg.get("build", {}).get("build_dir")
+            if build_dir_override:
+                flash_cfg["build_dir"] = os.path.join(str(repo_root), build_dir_override)
+            else:
+                flash_cfg["build_dir"] = os.path.join(str(repo_root), "artifacts", f"build_{target}")
     step = {
         "name": "load",
         "type": "load.idf_esptool" if method == "idf_esptool" else "load.gdbmi",

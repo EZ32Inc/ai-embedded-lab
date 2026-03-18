@@ -1,0 +1,16 @@
+{
+  "name": "smoke_esp32c6",
+  "board": "esp32c6_devkit",
+  "preflight": {
+    "enabled": false
+  },
+  "notes": "ESP32-C6 DevKit smoke pack — 6 tests covering GPIO signature, UART, SPI, I2C, and ADC.",
+  "tests": [
+    "tests/plans/esp32c6_gpio_signature.json",
+    "tests/plans/esp32c6_gpio_signature_with_meter.json",
+    "tests/plans/esp32c6_uart_banner.json",
+    "tests/plans/esp32c6_spi_banner.json",
+    "tests/plans/esp32c6_i2c_banner.json",
+    "tests/plans/esp32c6_adc_meter.json"
+  ]
+}
