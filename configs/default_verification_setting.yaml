@@ -23,6 +23,10 @@
     {
       "board": "stm32h750vbt6",
       "test": "tests/plans/stm32h750_wiring_verify.json"
+    },
+    {
+      "board": "stm32f407_discovery",
+      "test": "tests/plans/stm32f407_mailbox.json"
     }
   ],
   "stop_on_fail": false,
