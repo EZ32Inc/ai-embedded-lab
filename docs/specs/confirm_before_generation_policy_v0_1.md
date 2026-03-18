@@ -218,6 +218,12 @@ Do NOT use:
 
 ## Relationship To Adjacent Policies
 
+- `ael_domain_response_contract_v0_1.md`: **outer container for this policy.**
+  The domain response contract defines the four-section response structure
+  (System Domain / User Project Domain / Branch Capability / Cross-Domain Link).
+  This confirm-before-generation policy applies *within* the execution step of
+  that structure — no action in any section may be taken without first presenting
+  a plan and receiving user confirmation.
 - `known_board_clarify_first_policy_v0_1.md`: that policy requires confirmation
   of board, instrument, wiring, and intent before treating a path as ready.
   This policy adds the requirement that execution itself must be preceded by

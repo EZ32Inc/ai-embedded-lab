@@ -257,6 +257,16 @@ Wiring: PA2→P0.0, PA3→P0.1. Ready to flash.
 
 ## Relationship To Adjacent Policies
 
+- `ael_domain_response_contract_v0_1.md`: **outer container for this policy.**
+  The domain response contract defines the four-section response structure
+  (System Domain / User Project Domain / Branch Capability / Cross-Domain Link).
+  This clarify-first policy applies *within* the User Project Domain section —
+  at the point where the system identifies a candidate repo path and must
+  solicit user confirmation before treating it as the user's real setup.
+- `confirm_before_generation_policy_v0_1.md`: sequential companion.
+  Clarify-first governs the *identification* stage (is this the right path?).
+  Confirm-before-generation governs the *action* stage (are we ready to generate?).
+  Both must be satisfied before any generation or execution proceeds.
 - `user_project_creation_skill.md`: this policy adds the clarify-first rule to
   the known-board case within the project creation workflow. Also defines the
   Option B (external bench) response contract.

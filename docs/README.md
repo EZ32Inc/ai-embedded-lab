@@ -1,14 +1,132 @@
 # AEL Docs Index
 
-Core architecture and protocol references:
+AEL (AI Embedded Lab) is an AI-assisted hardware validation platform.
+It manages firmware targets, test plans, instruments, and board capabilities
+through a structured two-domain model: **system domain** (platform capabilities)
+and **user project domain** (user goals and experiments).
 
-- [AEL Architecture v0.1](./ael_architecture_v0_1.md)
-- [AEL Instrument Protocol v0.1](./ael_instrument_protocol_v0_1.md)
-- [RunPlan v0.1](./runplan_v0_1.md)
-- [AEL Core v0.1 Boundary Contract](./ael_core_v0_1_boundary_contract.md)
-- [Contributor Rules](./contributor_rules.md)
+---
 
-Additional references:
+## Quick Start — Key Commands
 
-- [AIL Instrument Guideline v0.1](./ail_instrument_guideline_v0_1.md) *(not in repo yet)*
-- [AEL Instrument Architecture v0.2](./ael_instrument_architecture_v0_2.md) *(not in repo yet)*
+```bash
+ael status                              # unified system + project overview
+ael project create --target-mcu <mcu>  # start a new user project
+ael project list                        # all user projects + domain/maturity
+ael project run-gate --id <id>          # check readiness before running
+ael run --board <board> --test <test>   # execute a test
+ael dut promote --id <id>              # promote branch capability to system main
+```
+
+Full command reference: [ael_cli_reference_v0_1.md](./ael_cli_reference_v0_1.md)
+
+---
+
+## Core Concepts
+
+### System Domain vs. User Project Domain
+
+AEL separates work into two domains:
+
+- **System domain**: platform capabilities — board configs, firmware targets,
+  test plans, default verification, validated DUTs in `assets_golden/`.
+  Changes here affect all users and future experiments.
+
+- **User project domain**: user-specific goals — projects in `projects/<id>/`,
+  each linked to a system capability (main or branch).
+
+- **Cross-domain links**: a user project may drive a new system capability.
+  When a user validates a new board, that DUT can be promoted from
+  `assets_branch/` to `assets_golden/`, entering system main.
+
+See: [ael_system_domain_and_user_project_domain_memo_v_0_1.md](./specs/ael_system_domain_and_user_project_domain_memo_v_0_1.md)
+
+### Copy-First and Branch Capabilities
+
+When a user requests a board that is **already in system main**, AEL reuses
+the existing validated capability (copy hit).
+
+When the board is **not in system main**, AEL creates a draft capability in
+`assets_branch/duts/` (copy miss → branch). The capability progresses through
+a lifecycle before it can be promoted to system main:
+
+```
+draft → runnable → validated → merge_candidate → [dut promote] → merged_to_main
+```
+
+See: [copy_first_system_branch_growth_v0_1.md](./specs/copy_first_system_branch_growth_v0_1.md)
+
+### AI Response Structure
+
+When a user makes a board/test request, AEL responds in four sections:
+
+1. **System Domain** — is the MCU in system main? copy hit or copy miss?
+2. **User Project Domain** — project to be created, `capability_source: main | branch`
+3. **Branch Capability** — lifecycle path (only when `capability_source: branch`)
+4. **Cross-Domain Link** — how this project may drive system main expansion
+
+See: [ael_domain_response_contract_v0_1.md](./specs/ael_domain_response_contract_v0_1.md)
+
+---
+
+## Spec Documents
+
+### Architecture and Domain Model
+
+| Document | Description |
+|---|---|
+| [ael_system_domain_and_user_project_domain_memo_v_0_1.md](./specs/ael_system_domain_and_user_project_domain_memo_v_0_1.md) | System domain vs. user project domain — the core AEL two-domain model |
+| [copy_first_system_branch_growth_v0_1.md](./specs/copy_first_system_branch_growth_v0_1.md) | Copy-first architecture and branch capability lifecycle |
+| [copy_first_system_branch_growth_implementation_v0_1.md](./specs/copy_first_system_branch_growth_implementation_v0_1.md) | v0.1 minimal implementation target and acceptance criteria |
+| [ael_architecture_v0_2.md](./specs/ael_architecture_v0_2.md) | Overall AEL system architecture |
+| [ael_user_concept_v0_1.md](./specs/ael_user_concept_v0_1.md) | Lightweight user concept: `project_user`, single-user primary |
+| [ael_project_lifecycle_v0_1.md](./specs/ael_project_lifecycle_v0_1.md) | User project lifecycle: Intake → Plan → Execute → Review → Closeout |
+
+### AI Behavior Policies
+
+| Document | Description |
+|---|---|
+| [ael_domain_response_contract_v0_1.md](./specs/ael_domain_response_contract_v0_1.md) | Required four-section response structure for board/test requests |
+| [known_board_clarify_first_policy_v0_1.md](./specs/known_board_clarify_first_policy_v0_1.md) | Must clarify user's real setup vs. repo candidate path before acting |
+| [confirm_before_generation_policy_v0_1.md](./specs/confirm_before_generation_policy_v0_1.md) | Plan → confirm → execute; no silent generation |
+| [ael_user_facing_response_policy_v0_1.md](./specs/ael_user_facing_response_policy_v0_1.md) | General response style and Five-Step Rule |
+
+### Instrument and Connection
+
+| Document | Description |
+|---|---|
+| [ael_instrument_spec_v0_22.md](./specs/ael_instrument_spec_v0_22.md) | Instrument role model and adapter contract |
+| [ael_connection_spec_v0_1.md](./specs/ael_connection_spec_v0_1.md) | Connection contract between AEL and instruments |
+| [shared_instrument_resource_model_v0_1.md](./specs/shared_instrument_resource_model_v0_1.md) | Shared instrument locking and session model |
+
+### Capability and Test Generation
+
+| Document | Description |
+|---|---|
+| [first_time_board_bringup_workflow_v0_1.md](./specs/first_time_board_bringup_workflow_v0_1.md) | Step-by-step first bringup for a new board |
+| [dut_target_generation_policy_v0_1.md](./specs/dut_target_generation_policy_v0_1.md) | Policy for generating new DUT targets |
+| [regression_tier_model_v0_1.md](./specs/regression_tier_model_v0_1.md) | Test tier model: smoke / regression / full suite |
+
+---
+
+## Skills
+
+Skills are reusable AI behavior modules in `docs/skills/`:
+
+| Skill | Description |
+|---|---|
+| [new_board_bringup_skill.md](./skills/new_board_bringup_skill.md) | Full bringup workflow for a new MCU/board |
+| [mcu_pin_verification_skill.md](./skills/mcu_pin_verification_skill.md) | Pin assignment verification before generation |
+| [plan_stage_readiness_summary_skill.md](./skills/plan_stage_readiness_summary_skill.md) | Summarize plan-stage readiness for a project |
+| [validation_summary_emission_skill.md](./skills/validation_summary_emission_skill.md) | Emit structured validation summary after experiments |
+
+Full skills index: [docs/skills/README.md](./skills/README.md)
+
+---
+
+## Other References
+
+- [ael_core_v0_1_boundary_contract.md](./ael_core_v0_1_boundary_contract.md) — core/adapter boundary rules
+- [contributor_rules.md](./contributor_rules.md) — contribution guidelines
+- [architecture_principles.md](./architecture_principles.md) — architectural decision principles
+- [roadmap/](./roadmap/) — next-phase planning documents

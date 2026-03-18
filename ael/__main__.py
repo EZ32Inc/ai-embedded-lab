@@ -148,6 +148,9 @@ def main():
     dut_set_lifecycle.add_argument("--stage", required=True, choices=["draft", "runnable", "validated", "merge_candidate", "merged_to_main"], help="target lifecycle_stage")
     dut_set_lifecycle.add_argument("--namespace", choices=["user", "branch"], default="branch", help="Namespace containing the DUT (default: branch)")
     dut_show_ph = dut_sub.add_parser("show-placeholders", help="list remaining PLACEHOLDER fields in a branch/user DUT")
+    dut_linked_p = dut_sub.add_parser("show-linked-projects", help="show user projects linked to a branch/user DUT")
+    dut_linked_p.add_argument("--id", required=True, help="DUT id")
+    dut_linked_p.add_argument("--projects-root", default="projects")
     dut_show_ph.add_argument("--id", required=True, help="DUT id")
     dut_show_ph.add_argument("--namespace", choices=["user", "branch"], default="branch")
     dut_set_cv = dut_sub.add_parser("set-compile-validated", help="record compile validation result on a branch/user DUT")
@@ -250,6 +253,10 @@ def main():
     la_check_p.add_argument("--expected-hz", type=float, default=1.0)
     la_check_p.add_argument("--min-edges", type=int, default=1)
 
+    status_p = sub.add_parser("status", help="unified system domain + user project domain overview")
+    status_p.add_argument("--projects-root", default="projects")
+    status_p.add_argument("--runs-root", default="runs")
+
     board_p = sub.add_parser("board", help="board/capability state")
     board_sub = board_p.add_subparsers(dest="board_cmd", required=True)
     board_state_p = board_sub.add_parser("state", help="show capability state for a board")
@@ -302,6 +309,9 @@ def main():
     project_answering_p.add_argument("--projects-root", default="projects")
     project_answering_p.add_argument("--notes-lines", type=int, default=80, help="max lines of session_notes.md to include (0=all)")
     project_intake_p = project_sub.add_parser("intake", help="interactive reality clarification: confirm bench setup and write confirmed_facts")
+    project_cross_domain_p = project_sub.add_parser("show-cross-domain-links", help="show cross-domain links for a user project")
+    project_cross_domain_p.add_argument("project_id")
+    project_cross_domain_p.add_argument("--projects-root", default="projects")
     project_intake_p.add_argument("project_id")
     project_intake_p.add_argument("--projects-root", default="projects")
     project_intake_p.add_argument("--boards-root", default="configs/boards")
@@ -718,12 +728,23 @@ def main():
         if args.dut_cmd == "set-compile-validated":
             code = dut_set_compile_validated_cmd(args.id, args.result, note=args.note, namespace=args.namespace)
             sys.exit(code)
+        if args.dut_cmd == "show-linked-projects":
+            sys.exit(dut_show_linked_projects_cmd(args.id, projects_root=args.projects_root))
+    if args.cmd == "status":
+        sys.exit(_ael_status_cmd(
+            projects_root=args.projects_root,
+            runs_root=args.runs_root,
+        ))
     if args.cmd == "board":
         if args.board_cmd == "state":
             state = _board_state(args.board_id, args.runs_root)
             if args.format == "text":
                 print(f"board_id: {state['board_id']}")
                 print(f"board_name: {state['board_name']}")
+                print(f"source: {state.get('source', 'unknown')}")
+                lc = state.get('lifecycle_stage') or ''
+                if lc:
+                    print(f"lifecycle_stage: {lc}")
                 print(f"health_status: {state['health_status']}")
                 print(f"current_blocker: {state['current_blocker'] or 'none'}")
                 print(f"next_recommended_action: {state['next_recommended_action']}")
@@ -1596,6 +1617,10 @@ Fill in all PLACEHOLDER fields before attempting to run.
         print("     ? Do your target-side connections match? (LED pin, GPIO pins on the MCU)")
         print("     ? What should the first test demonstrate? (GPIO toggle, LED blink, UART, etc.)")
         print("")
+        print("  Domain assignment:")
+        print("    domain:            user_project_domain")
+        print("    capability_source: main  (system main — repo-verified path)")
+        print("")
         print("  D. Next step:")
         print("     Confirm or correct the above — then I can prepare a runnable path")
         print("     that matches your real setup instead of only the repo reference.")
@@ -1636,6 +1661,15 @@ Fill in all PLACEHOLDER fields before attempting to run.
             print(f"    2. Edit assets_branch/duts/{bootstrap_result['dut_id']}/manifest.yaml as needed")
             print(f"    3. When runnable, set lifecycle_stage: runnable in manifest")
             print(f"    4. When validated, use 'ael dut promote' to move to assets_golden/")
+            print("")
+            print("  Domain assignment:")
+            print("    domain:            user_project_domain")
+            print("    capability_source: branch  (not yet in system main)")
+            print(f"    capability_ref:    {bootstrap_result['dut_id']}")
+            print("")
+            print("  Lifecycle path (branch → system main):")
+            print("    draft → runnable → validated → merge_candidate → [ael dut promote] → merged_to_main")
+            print("    When this project validates successfully, it becomes a system main expansion candidate.")
         else:
             print("  Draft capability not created (already exists or error).")
             if bootstrap_result.get("error"):
@@ -1646,20 +1680,176 @@ Fill in all PLACEHOLDER fields before attempting to run.
     return 0
 
 
+def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") -> int:
+    """Print unified system domain + user project domain status overview."""
+    import yaml as _yaml  # type: ignore
+
+    root = Path(".")
+
+    # ── System Domain: main (assets_golden) ──────────────────────────────────
+    golden_root = root / "assets_golden" / "duts"
+    main_duts: list[dict] = []
+    if golden_root.exists():
+        for dut_dir in sorted(golden_root.iterdir()):
+            if not dut_dir.is_dir():
+                continue
+            manifest_path = dut_dir / "manifest.yaml"
+            try:
+                mf = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                mf = {}
+            verified = bool((mf.get("verified") or {}).get("status")) if isinstance(mf.get("verified"), dict) else False
+            main_duts.append({
+                "id": dut_dir.name,
+                "mcu": str(mf.get("mcu") or "").strip(),
+                "verified": verified,
+                "lifecycle_stage": "merged_to_main",
+            })
+
+    # ── System Domain: branch (assets_branch) ────────────────────────────────
+    branch_root = root / "assets_branch" / "duts"
+    branch_duts: list[dict] = []
+    if branch_root.exists():
+        for dut_dir in sorted(branch_root.iterdir()):
+            if not dut_dir.is_dir():
+                continue
+            manifest_path = dut_dir / "manifest.yaml"
+            try:
+                mf = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+            except Exception:
+                mf = {}
+            branch_duts.append({
+                "id": dut_dir.name,
+                "mcu": str(mf.get("mcu") or "").strip(),
+                "lifecycle_stage": str(mf.get("lifecycle_stage") or "draft").strip(),
+                "group": str(mf.get("group") or "").strip(),
+                "reference_dut": str(mf.get("reference_dut") or "").strip(),
+            })
+
+    # ── Default verification quick count ─────────────────────────────────────
+    dv_summary = "(unavailable)"
+    try:
+        dv_state = _verify_default_state(
+            str(root / "configs" / "default_verification_setting.yaml"),
+            runs_root,
+        )
+        n_total = dv_state.get("configured_steps", 0)
+        n_pass = len(dv_state.get("validated_tests", []))
+        health = dv_state.get("health_status", "")
+        dv_summary = f"{n_pass}/{n_total} passing  [{health}]"
+    except Exception:
+        dv_summary = "(unavailable)"
+
+    # ── User Project Domain ───────────────────────────────────────────────────
+    proj_root = Path(projects_root)
+    projects: list[dict] = []
+    if proj_root.exists():
+        for pyaml in sorted(proj_root.glob("*/project.yaml")):
+            p = _project_yaml_load(pyaml)
+            if p:
+                projects.append(p)
+
+    # ── Cross-Domain Links ────────────────────────────────────────────────────
+    cross_links: list[dict] = []
+    for p in projects:
+        cap_src = str(p.get("capability_source") or "").strip()
+        cap_ref = str(p.get("capability_ref") or "").strip()
+        if cap_src == "branch" and cap_ref:
+            # Find lifecycle_stage of the branch DUT
+            lc = next((b["lifecycle_stage"] for b in branch_duts if b["id"] == cap_ref), "unknown")
+            cross_links.append({
+                "project_id": p.get("project_id", ""),
+                "cap_ref": cap_ref,
+                "lifecycle_stage": lc,
+            })
+
+    # promote candidates
+    promote_candidates = [b for b in branch_duts if b["lifecycle_stage"] in ("validated", "merge_candidate")]
+
+    # ── Print ─────────────────────────────────────────────────────────────────
+    print("=== System Domain ===")
+    print("")
+    print(f"system main (assets_golden/duts/):")
+    if main_duts:
+        for d in main_duts:
+            v_tag = "verified" if d["verified"] else "not verified"
+            print(f"  {d['id']:<30} [merged_to_main]  {v_tag}")
+    else:
+        print("  (none)")
+    print("")
+    print(f"branch capabilities (assets_branch/duts/):")
+    if branch_duts:
+        for d in branch_duts:
+            ref_tag = f"  ref: {d['reference_dut']}" if d["reference_dut"] else ""
+            grp_tag = f"  group: {d['group']}" if d["group"] else ""
+            print(f"  {d['id']:<30} [{d['lifecycle_stage']}]{grp_tag}{ref_tag}")
+    else:
+        print("  (none)")
+    print("")
+    print(f"promote candidates:    {', '.join(b['id'] for b in promote_candidates) if promote_candidates else '(none)'}")
+    print(f"default verification:  {dv_summary}")
+    print("")
+    print("=== User Project Domain ===")
+    print("")
+    print(f"project_count: {len(projects)}")
+    if projects:
+        for p in projects:
+            cap_src = str(p.get("capability_source") or "main").strip()
+            cap_ref = str(p.get("capability_ref") or "").strip()
+            src_tag = f"  capability_source: {cap_src}"
+            ref_tag = f"  ref: {cap_ref}" if cap_ref and cap_src == "branch" else ""
+            print(f"  {p.get('project_id',''):<35} [{p.get('status','')}]{src_tag}{ref_tag}")
+    else:
+        print("  (none)")
+    print("")
+    print("=== Cross-Domain Links ===")
+    print("")
+    if cross_links:
+        for lk in cross_links:
+            lc = lk["lifecycle_stage"]
+            promote_note = "→ promote candidate" if lc in ("validated", "merge_candidate") else f"→ lifecycle: {lc}"
+            print(f"  {lk['cap_ref']:<30} ← triggered by project: {lk['project_id']}")
+            print(f"  {'':30}   {promote_note}")
+            if lc not in ("validated", "merge_candidate", "merged_to_main"):
+                print(f"  {'':30}   next: ael dut set-lifecycle --id {lk['cap_ref']} --stage validated")
+            else:
+                print(f"  {'':30}   next: ael dut promote --id {lk['cap_ref']}")
+            print("")
+    else:
+        print("  (none)")
+    return 0
+
+
 def _board_state(board_id: str, runs_root: str) -> dict:
     """Build a capability state object for a specific board."""
+    import yaml as _yaml  # type: ignore
     runs_dir = Path(runs_root)
     board_cfg_path = Path("configs") / "boards" / f"{board_id}.yaml"
     board_name = board_id
 
     if board_cfg_path.exists():
         try:
-            import yaml as _yaml  # type: ignore
             raw = _yaml.safe_load(board_cfg_path.read_text(encoding="utf-8"))
             if isinstance(raw, dict):
                 board_name = str(raw.get("name", board_id)).strip() or board_id
         except Exception:
             pass
+
+    # Determine source domain and lifecycle_stage from DUT manifest
+    dut_source = "unknown"
+    dut_lifecycle = None
+    for ns, ns_root in (("golden", Path("assets_golden")), ("branch", Path("assets_branch")), ("user", Path("assets_user"))):
+        manifest_path = ns_root / "duts" / board_id / "manifest.yaml"
+        if manifest_path.exists():
+            try:
+                mf = _yaml.safe_load(manifest_path.read_text(encoding="utf-8")) or {}
+                dut_source = ns
+                dut_lifecycle = str(mf.get("lifecycle_stage") or "").strip() or None
+                if ns == "golden" and not dut_lifecycle:
+                    dut_lifecycle = "merged_to_main"
+            except Exception:
+                pass
+            break
 
     validated: list[str] = []
     failing: list[str] = []
@@ -1729,6 +1919,8 @@ def _board_state(board_id: str, runs_root: str) -> dict:
         "board_id": board_id,
         "board_name": board_name,
         "type": "board_capability",
+        "source": dut_source,
+        "lifecycle_stage": dut_lifecycle,
         "health_status": health,
         "validated_tests": validated,
         "failing_tests": failing,
@@ -2086,6 +2278,14 @@ def _project_cmd(args) -> int:
             print(f"  - user: {p.get('project_user', '')}")
             print(f"  - status: {p.get('status', '')}")
             print(f"  - target_mcu: {p.get('target_mcu', '')}")
+            print(f"  - domain: {p.get('domain', 'user_project_domain')}")
+            print(f"  - path_maturity: {p.get('path_maturity', '')}")
+            cap_src = p.get("capability_source", "")
+            cap_ref = p.get("capability_ref", "")
+            if cap_src:
+                print(f"  - capability_source: {cap_src}")
+            if cap_ref and cap_src == "branch":
+                print(f"  - capability_ref: {cap_ref}  [branch capability]")
             print(f"  - mature_path: {p.get('closest_mature_ael_path', '')}")
             blocker = str(p.get("current_blocker", "")).strip()
             if blocker:
@@ -2112,6 +2312,13 @@ def _project_cmd(args) -> int:
         mature_path_reused = payload.get("mature_path_reused")
         if mature_path_reused is not None:
             print(f"mature_path_reused: {mature_path_reused}")
+        cap_src = str(payload.get("capability_source", "")).strip()
+        cap_ref = str(payload.get("capability_ref", "")).strip()
+        if cap_src:
+            print(f"capability_source: {cap_src}")
+        if cap_ref:
+            tag = "  [branch capability]" if cap_src == "branch" else "  [system main]"
+            print(f"capability_ref: {cap_ref}{tag}")
         blocker = str(payload.get("current_blocker", "")).strip()
         print(f"current_blocker: {blocker or 'none'}")
         print(f"last_action: {payload.get('last_action', '')}")
@@ -2498,7 +2705,156 @@ def _project_cmd(args) -> int:
         return 0
     if args.project_cmd == "intake":
         return _project_intake(args)
+    if args.project_cmd == "show-cross-domain-links":
+        project_dir = Path(args.projects_root) / args.project_id
+        payload = _project_yaml_load(project_dir / "project.yaml")
+        if not payload:
+            print(f"error: project not found: {args.project_id}")
+            return 1
+        return _project_show_cross_domain_links(payload)
     return 1
+
+
+def _project_show_cross_domain_links(payload: dict) -> int:
+    """Print cross-domain links for a user project."""
+    import yaml as _yaml  # type: ignore
+
+    project_id = payload.get("project_id", "")
+    cap_src = str(payload.get("capability_source") or "main").strip()
+    cap_ref = str(payload.get("capability_ref") or "").strip()
+
+    print(f"project: {project_id}")
+    print(f"domain:  {payload.get('domain', 'user_project_domain')}")
+    print(f"capability_source: {cap_src}")
+    print("")
+
+    if cap_src != "branch" or not cap_ref:
+        print("cross_domain_links: (none)")
+        print("  This project uses a system main capability — no branch link.")
+        return 0
+
+    # Read branch DUT lifecycle
+    branch_manifest = Path("assets_branch") / "duts" / cap_ref / "manifest.yaml"
+    lc = "unknown"
+    group = ""
+    ref_dut = ""
+    if branch_manifest.exists():
+        try:
+            mf = _yaml.safe_load(branch_manifest.read_text(encoding="utf-8")) or {}
+            lc = str(mf.get("lifecycle_stage") or "draft").strip()
+            group = str(mf.get("group") or "").strip()
+            ref_dut = str(mf.get("reference_dut") or "").strip()
+        except Exception:
+            pass
+
+    print("cross_domain_links:")
+    print(f"  - type:             branch_capability_ref")
+    print(f"    target:           {cap_ref}")
+    print(f"    location:         assets_branch/duts/{cap_ref}/")
+    print(f"    lifecycle_stage:  {lc}")
+    if group:
+        print(f"    group:            {group}")
+    if ref_dut:
+        print(f"    reference_dut:    {ref_dut}  (system main reference used for bootstrap)")
+    print(f"    reason:           {payload.get('path_maturity', 'inferred')} path — "
+          f"{payload.get('target_mcu', '')} not in system main at project creation time")
+    print("")
+
+    # Lifecycle guidance
+    promote_ready = lc in ("validated", "merge_candidate")
+    print("  Lifecycle path (branch → system main):")
+    stages = ["draft", "runnable", "validated", "merge_candidate", "merged_to_main"]
+    stage_line = " → ".join(
+        f"[{s}]" if s == lc else s for s in stages
+    )
+    print(f"    {stage_line}")
+    print("")
+    if not promote_ready:
+        print("  Next steps to advance:")
+        if lc == "draft":
+            print(f"    1. Fill PLACEHOLDERs: ael dut show-placeholders --id {cap_ref}")
+            print(f"    2. ael dut set-lifecycle --id {cap_ref} --stage runnable")
+        elif lc == "runnable":
+            print(f"    1. Run and validate all experiments via project run-gate")
+            print(f"    2. ael dut set-lifecycle --id {cap_ref} --stage validated")
+        print(f"    3. ael dut set-lifecycle --id {cap_ref} --stage merge_candidate")
+        print(f"    4. ael dut promote --id {cap_ref}")
+    else:
+        print(f"  → Promote candidate ready:")
+        print(f"    ael dut promote --id {cap_ref}")
+    print("")
+    print("  Cross-domain impact:")
+    print(f"    When promoted, {cap_ref} enters assets_golden/ as a new system main capability.")
+    print(f"    This project ({project_id}) drives {payload.get('target_mcu','')} family expansion in system main.")
+
+    # Also show any entries in cross_domain_links field
+    extra_links = payload.get("cross_domain_links") or []
+    if isinstance(extra_links, list) and extra_links:
+        print("")
+        print("  Additional recorded links:")
+        for lk in extra_links:
+            if isinstance(lk, dict):
+                print(f"    - type: {lk.get('type','')}  target: {lk.get('target','')}  reason: {lk.get('reason','')}")
+    return 0
+
+
+def dut_show_linked_projects_cmd(dut_id: str, projects_root: str = "projects") -> int:
+    """Show user projects that reference a given branch/user DUT."""
+    import yaml as _yaml  # type: ignore
+
+    # Read DUT manifest for context
+    lc = "unknown"
+    group = ""
+    for ns_root in (Path("assets_branch"), Path("assets_user")):
+        mf_path = ns_root / "duts" / dut_id / "manifest.yaml"
+        if mf_path.exists():
+            try:
+                mf = _yaml.safe_load(mf_path.read_text(encoding="utf-8")) or {}
+                lc = str(mf.get("lifecycle_stage") or "").strip() or "unknown"
+                group = str(mf.get("group") or "").strip()
+            except Exception:
+                pass
+            break
+
+    print(f"dut_id:          {dut_id}")
+    print(f"lifecycle_stage: {lc}")
+    if group:
+        print(f"group:           {group}")
+    print("")
+
+    # Scan all project.yaml files for capability_ref == dut_id
+    proj_root = Path(projects_root)
+    linked: list[dict] = []
+    if proj_root.exists():
+        for pyaml in sorted(proj_root.glob("*/project.yaml")):
+            p = _project_yaml_load(pyaml)
+            if p and str(p.get("capability_ref") or "") == dut_id:
+                linked.append(p)
+
+    if not linked:
+        print("linked_projects: (none)")
+        print(f"  No user projects currently reference {dut_id}.")
+        return 0
+
+    print(f"linked_projects: ({len(linked)} found)")
+    for p in linked:
+        pid = p.get("project_id", "")
+        status = p.get("status", "")
+        user = p.get("project_user", "")
+        mcu = p.get("target_mcu", "")
+        print(f"  - {pid}  [{status}]  user: {user}  target_mcu: {mcu}")
+        print(f"    This project triggered creation of branch capability {dut_id}.")
+
+    print("")
+    promote_ready = lc in ("validated", "merge_candidate")
+    if promote_ready:
+        print(f"Promote path:  ael dut promote --id {dut_id}")
+    else:
+        print(f"Promote path:  advance lifecycle to validated, then:")
+        print(f"               ael dut set-lifecycle --id {dut_id} --stage merge_candidate")
+        print(f"               ael dut promote --id {dut_id}")
+    print(f"Effect:        {dut_id} enters assets_golden/ as a new system main capability.")
+    return 0
 
 
 def _project_intake(args) -> int:
