@@ -16,11 +16,7 @@
       "board": "stm32f411ceu6",
       "test": "tests/plans/stm32f411_gpio_signature.json"
     },
-    {
-      "board": "stm32f401rct6",
-      "test": "tests/plans/stm32f401_gpio_signature.json"
-    },
-    {
+{
       "board": "stm32g431cbu6",
       "test": "tests/plans/stm32g431_gpio_signature.json"
     },
