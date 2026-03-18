@@ -34,7 +34,7 @@ You can start with almost nothing:
 
 - **ST-Link + an STM32 MCU/board** — a standard path, often just **$10–20 USD**
 - **a single ESP32 dev board** — already enough to begin exploring AI-driven workflows
-- **ESP32 JTAG / ESP32 JTAG Plus + a target board** — a next-gen, all-in-one instrument
+- **ESP32JTAG + a target board** — a next-gen, all-in-one instrument
 
 ---
 
@@ -43,7 +43,7 @@ You can start with almost nothing:
 Traditional tools like ST-Link do one thing well:
 → flash and debug
 
-An ESP32-based instrument changes the model:
+AI instrument like ESP32JTAG changes the model:
 
 - **Wireless (WiFi)** — no cables, AI can access it over the network
 - **Flash firmware**
