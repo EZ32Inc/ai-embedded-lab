@@ -50,7 +50,7 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
-### STM32F407 Discovery — ST-Link V2 (7/7 PASS, 2026-03-18)
+### STM32F407 Discovery — ST-Link + STM32 board support added (7/7 PASS, 2026-03-18)
 
 AEL completed full bring-up and validation on STM32F407VGT6 Discovery using the onboard ST-Link V2 instrument path (USB → st-util GDB server → SWD).
 
