@@ -30,7 +30,7 @@ devices:
   # Flash uses BMDA GDB over WiFi; GPIO uses HTTPS LA API on port 443
   - name: esp_jtag_f411
     role: instrument
-    driver: esp_remote_jtag
+    driver: esp32_jtag
     connection:
       host: "192.168.2.103"
       gdb_port: 4242

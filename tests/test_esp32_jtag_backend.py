@@ -93,3 +93,19 @@ def test_backend_returns_structured_transport_failure():
     assert out["action"] == "reset"
     assert out["error"]["code"] == "transport_unavailable"
     assert out["error"]["details"]["exception_type"] == "TransportUnavailable"
+
+
+def test_backend_returns_phase2_placeholder_for_debug_halt():
+    backend = Esp32JtagBackend(host="127.0.0.1", port=5555)
+    out = backend.execute("debug_halt", {})
+    assert out["status"] == "failure"
+    assert out["action"] == "debug_halt"
+    assert out["error"]["code"] == "not_implemented"
+
+
+def test_backend_returns_phase2_placeholder_for_debug_read_memory():
+    backend = Esp32JtagBackend(host="127.0.0.1", port=5555)
+    out = backend.execute("debug_read_memory", {})
+    assert out["status"] == "failure"
+    assert out["action"] == "debug_read_memory"
+    assert out["error"]["code"] == "not_implemented"

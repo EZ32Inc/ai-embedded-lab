@@ -4,6 +4,8 @@ from typing import Any, Callable
 
 from ael.instruments.result import make_error_result, make_success_result
 
+from .actions.debug_halt import run_debug_halt
+from .actions.debug_read_memory import run_debug_read_memory
 from .actions.flash import run_flash
 from .actions.gpio_measure import run_gpio_measure
 from .actions.reset import run_reset
@@ -22,16 +24,19 @@ class Esp32JtagBackend:
             TransportConfig(host=host, port=port, timeout_s=timeout_s)
         )
         self._handlers: dict[str, ActionHandler] = {
+            "debug_halt": run_debug_halt,
+            "debug_read_memory": run_debug_read_memory,
             "flash": run_flash,
             "gpio_measure": run_gpio_measure,
             "reset": run_reset,
         }
+        self._implemented_actions = {"flash", "gpio_measure", "reset"}
 
     def capabilities(self) -> dict[str, Any]:
         return CAPABILITIES.to_dict()
 
     def supports_action(self, action: str) -> bool:
-        return action in self._handlers
+        return action in self._implemented_actions
 
     def execute(self, action: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         params = params or {}
@@ -109,5 +114,25 @@ def _bridge_result(result: dict[str, Any], instrument: dict, context: dict) -> d
 def invoke(action: str, instrument: dict, request: dict, context: dict) -> dict[str, Any]:
     host, port, timeout_s = _connection(instrument)
     backend = Esp32JtagBackend(host=host, port=port, timeout_s=timeout_s)
+    conn = instrument.get("connection") or {}
+    cfg = instrument.get("config") or {}
+    backend.transport = Esp32JtagTransport(
+        TransportConfig(
+            host=host,
+            port=port,
+            timeout_s=timeout_s,
+            compat_mode=True,
+            gdb_port=int(conn.get("gdb_port") or port),
+            web_port=int(conn.get("web_port") or conn.get("tcp_port") or 443),
+            gdb_cmd=str(cfg.get("gdb_cmd") or "arm-none-eabi-gdb"),
+            target_id=int(cfg.get("target_id") or 1),
+            gdb_launch_cmds=cfg.get("gdb_launch_cmds"),
+            speed_khz=(int(cfg.get("speed_khz")) if cfg.get("speed_khz") is not None else None),
+            gpio_channels=(dict(cfg.get("gpio_channels") or {})),
+            web_user=str(cfg.get("web_user") or "admin"),
+            web_pass=str(cfg.get("web_pass") or "admin"),
+            web_verify_ssl=bool(cfg.get("web_verify_ssl", False)),
+        )
+    )
     result = backend.execute(action, request)
     return _bridge_result(result, instrument, context)
