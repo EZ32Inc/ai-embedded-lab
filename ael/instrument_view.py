@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
+from ael.instruments import jtag_native_api
 from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
@@ -90,6 +91,7 @@ def build_probe_instance_view(
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
+        "instrument_family": "esp32jtag" if binding.type_id == "esp32jtag" else None,
         "config_path": _relpath(root, binding.config_path),
         "instance_path": _relpath(root, binding.instance_path),
         "type_path": _relpath(root, binding.type_path),
@@ -100,6 +102,17 @@ def build_probe_instance_view(
         if (binding.endpoint_host or binding.endpoint_port is not None)
         else None,
         "communication": dict(binding.communication or {}),
+        "native_interface": jtag_native_api.native_interface_profile() if binding.type_id == "esp32jtag" else {},
+        "native_interface_summary": (
+            {
+                "protocol": jtag_native_api.native_interface_profile().get("protocol"),
+                "role": jtag_native_api.native_interface_profile().get("role"),
+                "metadata_command_count": len(jtag_native_api.native_interface_profile().get("metadata_commands") or []),
+                "action_command_count": len(jtag_native_api.native_interface_profile().get("action_commands") or []),
+            }
+            if binding.type_id == "esp32jtag"
+            else {}
+        ),
         "capability_surfaces": dict(binding.capability_surfaces or {}),
         "metadata_validation_errors": list(binding.metadata_validation_errors),
         "legacy_warning": binding.legacy_warning,
@@ -160,14 +173,6 @@ def build_resolved_instrument_view(repo_root: Path | str | None, target_id: str)
     instance_path = root / "configs" / "instrument_instances" / f"{target_id}.yaml"
     probe_refs, instrument_refs = _board_reference_index(root)
     plan_refs = _plan_reference_index(root)
-    if instance_path.exists():
-        payload = build_probe_instance_view(
-            root,
-            target_id,
-            referenced_by={"boards": probe_refs.get(target_id, [])},
-        )
-        payload["ok"] = True
-        return payload
     manifest = InstrumentRegistry().get(target_id)
     if manifest:
         payload = build_instrument_manifest_view(
@@ -177,6 +182,14 @@ def build_resolved_instrument_view(repo_root: Path | str | None, target_id: str)
                 "boards": instrument_refs.get(target_id, []),
                 "plans": plan_refs.get(target_id, []),
             },
+        )
+        payload["ok"] = True
+        return payload
+    if instance_path.exists():
+        payload = build_probe_instance_view(
+            root,
+            target_id,
+            referenced_by={"boards": probe_refs.get(target_id, [])},
         )
         payload["ok"] = True
         return payload

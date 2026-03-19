@@ -17,10 +17,13 @@ def test_build_resolved_probe_instance_view():
     assert payload["legacy_kind"] == "probe_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
     assert payload["type"] == "esp32jtag"
+    assert payload["instrument_family"] == "esp32jtag"
     assert payload["instrument_role"] == "control"
     assert payload["communication"]["primary"] == "gdb_remote"
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
-    assert "stm32f103" in payload["referenced_by"]["boards"]
+    assert payload["native_interface"]["instrument_family"] == "esp32jtag"
+    assert payload["native_interface_summary"]["metadata_command_count"] == 4
+    assert "stm32f103_gpio" in payload["referenced_by"]["boards"]
 
 
 def test_build_resolved_instrument_manifest_view():
@@ -66,6 +69,8 @@ def test_instruments_describe_cli_text_output():
     assert "surfaces:" in res.stdout
     assert "gdb_remote" in res.stdout
     assert "web_api" in res.stdout
+    assert "instrument_family: esp32jtag" in res.stdout
+    assert "native_interface:" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "referenced_by:" in res.stdout
 

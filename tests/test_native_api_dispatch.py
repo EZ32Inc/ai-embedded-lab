@@ -46,3 +46,13 @@ def test_native_api_dispatch_rejects_unsupported_manifest():
     payload = native_api_dispatch.doctor(manifest)
     assert payload["status"] == "error"
     assert payload["error"]["code"] == "native_doctor_unsupported"
+
+
+def test_control_native_dispatch_routes_to_jtag_native_api(monkeypatch):
+    monkeypatch.setattr(
+        "ael.instruments.jtag_native_api.identify",
+        lambda probe_cfg: {"status": "ok", "data": {"instrument_family": "esp32jtag"}},
+    )
+    payload = native_api_dispatch.control_identify({"name": "ESP32JTAG"})
+    assert payload["status"] == "ok"
+    assert payload["data"]["instrument_family"] == "esp32jtag"

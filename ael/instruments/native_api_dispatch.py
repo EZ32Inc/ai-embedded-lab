@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict
 
 from ael.instruments import control_instrument_native_api
+from ael.instruments import jtag_native_api
 from ael.instruments import meter_native_api
 
 """
@@ -76,19 +77,19 @@ def stim_digital(manifest: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
 
 
 def control_identify(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    return control_instrument_native_api.identify(probe_cfg)
+    return jtag_native_api.identify(probe_cfg)
 
 
 def control_get_capabilities(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    return control_instrument_native_api.get_capabilities(probe_cfg)
+    return jtag_native_api.get_capabilities(probe_cfg)
 
 
 def control_get_status(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    return control_instrument_native_api.get_status(probe_cfg)
+    return jtag_native_api.get_status(probe_cfg)
 
 
 def control_doctor(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    return control_instrument_native_api.doctor(probe_cfg)
+    return jtag_native_api.doctor(probe_cfg)
 
 
 def capture_signature(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:

@@ -4,10 +4,9 @@ import socket
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from ael.doctor_checks import la_capture_ok, monitor_version
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
-from ael.instruments import provision as instrument_provision
+from ael.instruments import jtag_native_api
 from ael.instruments import native_api_dispatch
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
@@ -51,21 +50,30 @@ def _probe_cfg_from_binding(binding) -> Dict[str, Any]:
         cfg["gdb_port"] = connection.get("gdb_port")
     if "gdb_cmd" not in cfg and binding.raw.get("gdb_cmd"):
         cfg["gdb_cmd"] = binding.raw.get("gdb_cmd")
+    cfg["communication"] = dict(binding.communication or {})
+    cfg["capability_surfaces"] = dict(binding.capability_surfaces or {})
+    cfg["instance_id"] = binding.instance_id
+    cfg["type_id"] = binding.type_id
     return cfg
 
 
 def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, Any]:
     binding = load_probe_binding(repo_root, instance_id=instance_id)
     probe_cfg = _probe_cfg_from_binding(binding)
-    tcp = _tcp_check(binding.endpoint_host, binding.endpoint_port)
-    monitor_ok, monitor_detail = monitor_version(probe_cfg)
-    la_ok, la_detail = la_capture_ok(probe_cfg)
-    checks = {
-        "tcp": tcp,
-        "monitor_version": {"ok": bool(monitor_ok), "detail": monitor_detail},
-        "logic_analyzer": {"ok": bool(la_ok), "detail": la_detail},
-    }
-    overall_ok = bool(tcp.get("ok") and monitor_ok and la_ok)
+    native_doctor = native_api_dispatch.control_doctor(probe_cfg)
+    native_status = native_api_dispatch.control_get_status(probe_cfg)
+    native_identify = native_api_dispatch.control_identify(probe_cfg)
+    native_capabilities = native_api_dispatch.control_get_capabilities(probe_cfg)
+    checks = {}
+    if native_doctor.get("status") == "ok":
+        checks = ((native_doctor.get("data") or {}).get("checks") or {}) if isinstance(native_doctor.get("data"), dict) else {}
+        overall_ok = bool((native_doctor.get("data") or {}).get("reachable"))
+    else:
+        checks["native_doctor"] = {
+            "ok": False,
+            "error": ((native_doctor.get("error") or {}).get("message") or "native doctor failed"),
+        }
+        overall_ok = False
     control_instrument = {
         "kind": "control_instrument_instance",
         "legacy_kind": "probe_instance",
@@ -82,6 +90,10 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
+        "native_interface": jtag_native_api.native_interface_profile() if binding.type_id == "esp32jtag" else {},
+        "native_identify": native_identify,
+        "native_status": native_status,
+        "native_capabilities": native_capabilities,
         "control_instrument": control_instrument,
         "endpoint": {"host": binding.endpoint_host, "port": binding.endpoint_port},
         "communication": dict(binding.communication or {}),
