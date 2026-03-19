@@ -32,6 +32,7 @@ from ael import inventory
 from ael import instrument_doctor
 from ael import instrument_view
 from ael import connection_doctor
+from ael.pack_loader import load_pack
 from ael import stage_explain
 
 
@@ -3482,7 +3483,11 @@ def _load_json(path):
 def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False, no_build=False, verify_only=False):
     repo_root = os.path.dirname(os.path.dirname(__file__))
     pack_full = pack_path if os.path.isabs(pack_path) else os.path.join(repo_root, pack_path)
-    pack = _load_json(pack_full)
+    try:
+        pack = load_pack(pack_full)
+    except Exception as exc:
+        print(f"Pack: failed to load {pack_path}: {exc}")
+        return 2
 
     pack_name = pack.get("name", "pack")
     pack_board = board_override or pack.get("board")

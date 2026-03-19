@@ -17,6 +17,7 @@ from ael.connection_model import (
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instrument_view import build_resolved_instrument_inventory, render_resolved_instrument_inventory_text
+from ael.pack_loader import load_pack
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
 from ael.strategy_resolver import resolve_control_instrument_override
@@ -87,7 +88,10 @@ def _load_pack_index(repo_root: Path) -> List[Dict[str, Any]]:
             if rel in seen:
                 continue
             seen.add(rel)
-            payload = _load_json(path)
+            try:
+                payload = load_pack(path)
+            except Exception:
+                payload = {}
             packs.append(
                 {
                     "name": payload.get("name") or path.stem,

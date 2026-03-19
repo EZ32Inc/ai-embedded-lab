@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f103rct6_mailbox_base.json",
+  "name": "smoke_stm32f103rct6_mailbox_esp32jtag",
+  "board": "stm32f103rct6",
+  "notes": "STM32F103RCT6 mailbox smoke via ESP32-JTAG. Uses the shared mailbox firmware/test from the base pack and keeps instrument selection in the board path."
+}

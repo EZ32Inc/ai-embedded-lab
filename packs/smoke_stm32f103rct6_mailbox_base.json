@@ -1,0 +1,8 @@
+{
+  "name": "smoke_stm32f103rct6_mailbox_base",
+  "preflight": { "enabled": false },
+  "notes": "Shared STM32F103RCT6 mailbox smoke base pack. Shared firmware target, test plan, and mailbox verification path live here; instrument-specific execution details belong in child packs.",
+  "tests": [
+    "tests/plans/stm32f103rct6_mailbox.json"
+  ]
+}

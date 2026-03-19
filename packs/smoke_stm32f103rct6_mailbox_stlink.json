@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f103rct6_mailbox_base.json",
+  "name": "smoke_stm32f103rct6_mailbox_stlink",
+  "board": "stm32f103rct6_stlink",
+  "notes": "STM32F103RCT6 mailbox smoke via ST-Link. Uses the shared mailbox firmware/test from the base pack and keeps instrument-specific execution details in the ST-Link board profile."
+}

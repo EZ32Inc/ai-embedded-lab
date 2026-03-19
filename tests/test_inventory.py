@@ -31,6 +31,16 @@ def test_build_inventory_includes_pack_linked_stm32_test_and_no_missing_smoke_re
     assert not any(test["path"] == "tests/plans/uart_banner.json" for test in rp2040["tests"])
 
 
+def test_inventory_pack_index_resolves_extends_for_stm32f103rct6_mailbox_pilot():
+    packs = inventory._load_pack_index(REPO_ROOT)
+    esp = next(item for item in packs if item["path"] == "packs/smoke_stm32f103rct6_mailbox_esp32jtag.json")
+    stlink = next(item for item in packs if item["path"] == "packs/smoke_stm32f103rct6_mailbox_stlink.json")
+    assert esp["board"] == "stm32f103rct6"
+    assert stlink["board"] == "stm32f103rct6_stlink"
+    assert esp["tests"] == ["tests/plans/stm32f103rct6_mailbox.json"]
+    assert stlink["tests"] == ["tests/plans/stm32f103rct6_mailbox.json"]
+
+
 def test_inventory_cli_json_output():
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
