@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f103_gpio_loopbacks_base.json",
+  "name": "smoke_stm32f103_gpio_loopbacks_esp32jtag",
+  "board": "stm32f103_gpio",
+  "notes": "STM32F103 GPIO-bench loopback pack via ESP32-JTAG. Uses shared mailbox/self-check tests from the base pack and keeps instrument-specific execution details in the ESP32-JTAG board profile."
+}

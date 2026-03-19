@@ -1,0 +1,12 @@
+{
+  "name": "smoke_stm32f103_gpio_loopbacks_base",
+  "preflight": { "enabled": false },
+  "notes": "Shared STM32F103C8T6 GPIO-bench loopback pack. Shared DUT firmware/tests live here; instrument-specific execution details belong in child packs.",
+  "tests": [
+    "tests/plans/stm32f103_gpio_no_external_capture.json",
+    "tests/plans/stm32f103_uart_loopback_mailbox.json",
+    "tests/plans/stm32f103_spi_mailbox.json",
+    "tests/plans/stm32f103_exti_mailbox.json",
+    "tests/plans/stm32f103_adc_mailbox.json"
+  ]
+}

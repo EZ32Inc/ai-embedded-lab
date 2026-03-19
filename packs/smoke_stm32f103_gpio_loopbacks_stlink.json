@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f103_gpio_loopbacks_base.json",
+  "name": "smoke_stm32f103_gpio_loopbacks_stlink",
+  "board": "stm32f103_gpio_stlink",
+  "notes": "STM32F103 GPIO-bench loopback pack via ST-Link. Uses shared mailbox/self-check tests from the base pack and keeps instrument-specific execution details in the ST-Link board profile."
+}

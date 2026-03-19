@@ -1,0 +1,35 @@
+{
+  "name": "stm32f103_spi_mailbox",
+  "board": "stm32f103_gpio",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103_spi_mailbox",
+    "artifact_stem": "stm32f103_spi_mailbox_app",
+    "build_dir": "artifacts/build_stm32f103_spi_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "addr": "0x20004C00",
+    "settle_s": 1.0
+  },
+  "bench_setup": {
+    "notes": "SPI1 loopback mailbox test. Requires PA7/SPI1_MOSI -> PA6/SPI1_MISO. DUT performs bounded SPI self-check and reports PASS/FAIL through the AEL mailbox.",
+    "peripheral_signals": [
+      {
+        "role": "SPI1_SCK",
+        "dut_signal": "PA5",
+        "direction": "output"
+      },
+      {
+        "role": "SPI1_MISO",
+        "dut_signal": "PA6",
+        "direction": "input"
+      },
+      {
+        "role": "SPI1_MOSI",
+        "dut_signal": "PA7",
+        "direction": "output"
+      }
+    ]
+  }
+}

@@ -1,0 +1,20 @@
+instance:
+  id: stlink_stm32f103_gpio
+  type: stlink
+  label: ST-Link — STM32F103 GPIO Bench (local USB)
+
+connection:
+  ip: "127.0.0.1"
+  gdb_port: 4242
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: usb_local
+      endpoint: "127.0.0.1:4242"
+      protocol: gdb_remote
+      invocation_style: request_response
+
+capability_surfaces:
+  swd: gdb_remote

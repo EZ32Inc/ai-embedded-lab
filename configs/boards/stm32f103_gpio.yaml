@@ -24,6 +24,9 @@ board:
       - "load"
       - "attach {target_id}"
       - "detach"
+  mailbox_verify_defaults:
+    attach_monitor_cmd: "monitor a"
+    skip_attach: false
   observe_map:
     sig: P0.0
     pa4: P0.0

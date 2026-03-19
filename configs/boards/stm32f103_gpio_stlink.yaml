@@ -1,0 +1,25 @@
+board:
+  name: STM32F103 Bluepill GPIO Bench via ST-Link
+  target: stm32f103c8t6
+  instrument_instance: stlink_stm32f103_gpio
+  clock_hz: 8000000
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f103_gpio_no_external_capture
+    artifact_stem: stm32f103_gpio_no_external_capture_app
+  flash:
+    speed_khz: 1000
+    reset_strategy: none
+    post_load_settle_s: 2.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "load"
+      - "monitor reset run"
+      - "disconnect"
+  mailbox_verify_defaults:
+    skip_attach: true
+  default_wiring:
+    swd: "external"
+    reset: "NC"
+    verify: "NC"

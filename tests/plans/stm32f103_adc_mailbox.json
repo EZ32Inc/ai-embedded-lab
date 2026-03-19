@@ -1,0 +1,30 @@
+{
+  "name": "stm32f103_adc_mailbox",
+  "board": "stm32f103_gpio",
+  "preflight": { "enabled": false },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103_adc_mailbox",
+    "artifact_stem": "stm32f103_adc_mailbox_app",
+    "build_dir": "artifacts/build_stm32f103_adc_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "addr": "0x20004C00",
+    "settle_s": 1.0
+  },
+  "bench_setup": {
+    "notes": "ADC loopback mailbox test. Requires PA1 -> PA0/ADC1_IN0. DUT drives PA1, samples ADC1_IN0 internally, and reports PASS/FAIL through the AEL mailbox.",
+    "peripheral_signals": [
+      {
+        "role": "ADC1_IN0",
+        "dut_signal": "PA0/ADC1_IN0",
+        "direction": "input"
+      },
+      {
+        "role": "ADC_LOOPBACK_SOURCE",
+        "dut_signal": "PA1",
+        "direction": "output"
+      }
+    ]
+  }
+}
