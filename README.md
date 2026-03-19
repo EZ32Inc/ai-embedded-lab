@@ -99,6 +99,55 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### STM32F103C8T6 GPIO Bench — Shared Test Pack Across ST-Link and ESP32JTAG (5/5 PASS on both, 2026-03-19)
+
+AEL completed a full cross-instrument validation milestone on the STM32F103C8T6 Bluepill GPIO bench using one shared test/firmware pack family and two different control instruments:
+
+- `ST-Link`
+- `ESP32JTAG`
+
+This milestone proves that, for the same DUT family and shared test assets, AEL can switch instrument paths without changing the test intent.
+
+**Pack structure:**
+
+- shared base pack:
+  - `packs/smoke_stm32f103_gpio_loopbacks_base.json`
+- instrument-specific child packs:
+  - `packs/smoke_stm32f103_gpio_loopbacks_stlink.json`
+  - `packs/smoke_stm32f103_gpio_loopbacks_esp32jtag.json`
+
+**Shared tests validated:**
+
+- `stm32f103_gpio_no_external_capture`
+- `stm32f103_uart_loopback_mailbox`
+- `stm32f103_spi_mailbox`
+- `stm32f103_exti_mailbox`
+- `stm32f103_adc_mailbox`
+
+**Results:**
+
+- `ESP32JTAG + STM32F103C8T6`: `5/5 PASS`
+- `ST-Link + STM32F103C8T6`: `5/5 PASS`
+
+**What this proves:**
+
+- shared pack / child-pack structure works on real hardware
+- the same STM32F103C8T6 validation set can run through two instrument paths
+- instrument-specific execution details can stay in board/child-pack configuration
+- cross-instrument debug can expose tool-path issues without invalidating shared firmware/test methodology
+
+**Key debug conclusion from this milestone:**
+
+- `ST-Link` mailbox verify failures on this path were not caused by DUT wiring or loopback logic
+- the real issue was `st-util` session semantics in `check_mailbox_verify`
+- for `skip_attach` sessions, `disconnect` is correct and `detach` is not
+
+📄 [Closeout](docs/stm32f103_gpio_cross_instrument_closeout_2026-03-19.md)
+📄 [ST-Link child pack](packs/smoke_stm32f103_gpio_loopbacks_stlink.json)
+📄 [ESP32JTAG child pack](packs/smoke_stm32f103_gpio_loopbacks_esp32jtag.json)
+
+---
+
 ### STM32F407 Discovery — ST-Link + STM32 board support added (7/7 PASS, 2026-03-18)
 
 AEL completed full bring-up and validation on STM32F407VGT6 Discovery using the onboard ST-Link V2 instrument path (USB → st-util GDB server → SWD).
