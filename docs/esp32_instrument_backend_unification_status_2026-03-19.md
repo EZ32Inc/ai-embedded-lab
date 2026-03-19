@@ -18,6 +18,8 @@ newer IAM-style instrument backends such as `stlink` and `esp32_jtag`.
 - `ESP32JTAG`: yes, complete at the backend-package level
 - `ESP32JTAG`: yes, now also has a minimal instrument-level native API surface
   for identity / status / doctor / preflight
+- `ESP32JTAG`: runtime presentation now explicitly carries `instrument_family`
+  and subsystem-oriented doctor/status domains
 - `ESP32-S3 meter`: action-path unification is now complete; metadata and
   provision paths still remain native/provision scoped
 
@@ -50,6 +52,8 @@ Current result:
 - healthy live doctor samples now exist for:
   - `esp32jtag_stm32f411 @ 192.168.2.103`
   - `esp32jtag_g431_bench @ 192.168.2.62`
+  - `esp32jtag_rp2040_lab @ 192.168.2.63`
+  - `esp32jtag_h750_bench @ 192.168.2.106`
 
 Conclusion:
 

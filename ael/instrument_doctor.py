@@ -67,6 +67,10 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
     checks = {}
     if native_doctor.get("status") == "ok":
         checks = ((native_doctor.get("data") or {}).get("checks") or {}) if isinstance(native_doctor.get("data"), dict) else {}
+        if "gdb_remote" not in checks and "debug_remote" in checks:
+            checks["gdb_remote"] = checks.get("debug_remote")
+        if "capture_subsystem" not in checks and "capture_control" in checks:
+            checks["capture_subsystem"] = checks.get("capture_control")
         overall_ok = bool((native_doctor.get("data") or {}).get("reachable"))
     else:
         checks["native_doctor"] = {
@@ -89,6 +93,7 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
+        "instrument_family": "esp32jtag" if binding.type_id == "esp32jtag" else binding.type_id,
         "instrument_role": "control",
         "native_interface": jtag_native_api.native_interface_profile() if binding.type_id == "esp32jtag" else {},
         "native_identify": native_identify,

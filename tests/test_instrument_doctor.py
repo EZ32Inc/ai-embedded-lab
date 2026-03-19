@@ -28,12 +28,13 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["kind"] == "control_instrument_instance"
     assert payload["legacy_kind"] == "probe_instance"
     assert payload["id"] == "esp32jtag_stm32_golden"
+    assert payload["instrument_family"] == "esp32jtag"
     assert payload["instrument_role"] == "control"
     assert payload["control_instrument"]["kind"] == "control_instrument_instance"
     assert payload["control_instrument"]["legacy_kind"] == "probe_instance"
     assert payload["native_interface"]["instrument_family"] == "esp32jtag"
-    assert payload["checks"]["debug_remote"]["ok"] is True
-    assert payload["checks"]["capture_control"]["ok"] is True
+    assert payload["checks"]["gdb_remote"]["ok"] is True
+    assert payload["checks"]["capture_subsystem"]["ok"] is True
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
     assert payload["resolved_view"]["id"] == "esp32jtag_stm32_golden"
     assert payload["resolved_view"]["kind"] == "control_instrument_instance"
@@ -41,7 +42,8 @@ def test_doctor_probe_instance_reports_probe_health():
     rendered = instrument_view.render_doctor_text(payload)
     assert "resolved_instrument:" in rendered
     assert "checks:" in rendered
-    assert "debug_remote: ok=True" in rendered
+    assert "instrument_family: esp32jtag" in rendered
+    assert "gdb_remote: ok=True" in rendered
 
 
 def test_doctor_meter_manifest_reports_reachability():

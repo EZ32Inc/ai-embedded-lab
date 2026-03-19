@@ -256,6 +256,8 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         lines.append(f"legacy_kind: {payload.get('legacy_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
+    if payload.get("instrument_family"):
+        lines.append(f"instrument_family: {payload.get('instrument_family')}")
     if payload.get("instrument_role"):
         lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
@@ -336,6 +338,8 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
         lines.append(f"legacy_kind: {payload.get('legacy_kind')}")
     if payload.get("type"):
         lines.append(f"type: {payload.get('type')}")
+    if payload.get("instrument_family"):
+        lines.append(f"instrument_family: {payload.get('instrument_family')}")
     if payload.get("instrument_role"):
         lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
@@ -365,6 +369,8 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
     if isinstance(native_interface_summary, dict) and native_interface_summary:
         if native_interface_summary.get("role"):
             lines.append(f"native_role: {native_interface_summary.get('role')}")
+        if native_interface_summary.get("protocol"):
+            lines.append(f"native_protocol: {native_interface_summary.get('protocol')}")
         if native_interface_summary.get("metadata_command_count") is not None:
             lines.append(f"native_metadata_count: {native_interface_summary.get('metadata_command_count')}")
         if native_interface_summary.get("action_command_count") is not None:
@@ -433,6 +439,8 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
             lines.append(f"  {line}")
     if "ok" in payload:
         lines.append(f"doctor_ok: {payload.get('ok')}")
+    if payload.get("instrument_family"):
+        lines.append(f"instrument_family: {payload.get('instrument_family')}")
     native_interface = payload.get("native_interface")
     if isinstance(native_interface, dict) and native_interface:
         lines.append("native_interface:")

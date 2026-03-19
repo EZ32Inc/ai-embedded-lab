@@ -29,6 +29,7 @@ def test_identify_reports_multi_capability_identity():
     assert out["status"] == "ok"
     assert out["data"]["device_type"] == "multi_capability_instrument"
     assert out["data"]["instrument_family"] == "esp32jtag"
+    assert out["data"]["instrument_role"] == "control"
 
 
 def test_get_capabilities_reports_family_groups():
@@ -36,6 +37,7 @@ def test_get_capabilities_reports_family_groups():
     assert out["status"] == "ok"
     assert "debug_remote" in out["data"]["capability_families"]
     assert "capture_control" in out["data"]["capability_families"]
+    assert "preflight" in out["data"]["capability_families"]
 
 
 def test_get_status_reports_endpoint_domains(monkeypatch):
@@ -46,7 +48,9 @@ def test_get_status_reports_endpoint_domains(monkeypatch):
     out = jtag_native_api.get_status(_probe_cfg())
     assert out["status"] == "ok"
     assert out["data"]["health_domains"]["debug_remote"]["ok"] is True
-    assert out["data"]["health_domains"]["capture_control"]["ok"] is True
+    assert out["data"]["health_domains"]["web_api"]["ok"] is True
+    assert out["data"]["health_domains"]["capture_subsystem"]["ok"] is True
+    assert out["data"]["health_domains"]["monitor_targets"]["ok"] is None
 
 
 def test_doctor_wraps_preflight(monkeypatch):
@@ -61,6 +65,8 @@ def test_doctor_wraps_preflight(monkeypatch):
     out = jtag_native_api.doctor(_probe_cfg())
     assert out["status"] == "ok"
     assert out["data"]["checks"]["preflight"]["ok"] is True
+    assert out["data"]["checks"]["monitor_targets"]["targets"] == ["M4"]
+    assert out["data"]["checks"]["capture_subsystem"]["ok"] is True
 
 
 def test_preflight_probe_reports_native_success(monkeypatch):

@@ -14,7 +14,7 @@ Completed scope:
 - integrate it into native dispatch
 - surface it through instrument view and instrument doctor
 - verify the change with targeted tests
-- collect one real `ESP32JTAG` doctor/status evidence point
+- collect healthy live `ESP32JTAG` doctor/status evidence points
 
 Out of scope:
 
@@ -35,6 +35,13 @@ It defines:
 - `get_status`
 - `doctor`
 - `preflight_probe`
+
+It now also makes the instrument-level surface more explicit by:
+
+- exposing status domains for `network`, `gdb_remote`, `web_api`,
+  `capture_subsystem`, and `monitor_targets`
+- presenting `ESP32JTAG` consistently as an `instrument_family`
+- documenting lifecycle ownership separate from backend action execution
 
 Integration points:
 
@@ -132,11 +139,38 @@ Additional healthy sample:
   - the instrument-level doctor/status surface now has at least two healthy
     live confirmations on separate `ESP32JTAG` benches
 
+Additional healthy sample:
+
+- command: `python3 -m ael instruments doctor --id esp32jtag_rp2040_lab --format json`
+- instance: `esp32jtag_rp2040_lab @ 192.168.2.63`
+- observed result:
+  - overall doctor result: `ok = true`
+  - `monitor_targets`: `M0+, M0+, Rescue (Attach to reset)`
+  - `capture_subsystem`: `ok`
+  - `web_api`: `ok`
+- interpretation:
+  - the expanded doctor/status model also works on the RP2040 bench path
+
+Additional healthy sample:
+
+- command: `python3 -m ael instruments doctor --id esp32jtag_h750_bench --format json`
+- instance: `esp32jtag_h750_bench @ 192.168.2.106`
+- observed result:
+  - overall doctor result: `ok = true`
+  - `monitor_targets`: `M7`
+  - `capture_subsystem`: `ok`
+  - `web_api`: `ok`
+- interpretation:
+  - the instrument-level interface now has healthy live evidence across
+    multiple target families, not only the original F411/G431 benches
+
 ## What This Batch Proves
 
 - `ESP32JTAG` now has a named instrument-level native API surface, not only a
   backend action package
 - the instrument model is visible in inventory/describe/doctor surfaces
+- the runtime presentation now explicitly shows `instrument_family = esp32jtag`
+- status/doctor now expose subsystem-oriented health domains
 - metadata/status/doctor can be clarified without destabilizing backend action
   execution
 

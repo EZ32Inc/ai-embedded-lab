@@ -78,8 +78,21 @@ def native_interface_profile() -> Dict[str, Any]:
         "protocol": NATIVE_API_PROTOCOL,
         "role": "instrument_native_api",
         "instrument_family": "esp32jtag",
+        "instrument_identity": "multi_capability_instrument",
         "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
         "action_commands": ["preflight_probe"],
+        "status_domains": [
+            "network",
+            "gdb_remote",
+            "web_api",
+            "capture_subsystem",
+            "monitor_targets",
+        ],
+        "lifecycle_scope": {
+            "owned_by_native_api": ["identify", "get_capabilities", "get_status", "doctor", "preflight_probe"],
+            "owned_by_backend": ["flash", "reset", "debug_halt", "debug_read_memory", "gpio_measure"],
+            "out_of_scope": ["provision", "service_restart", "firmware_update"],
+        },
         "response_model": {
             "success": {"status": "ok", "data": "..."},
             "error": {
@@ -97,10 +110,11 @@ def identify(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
             "device_id": str(probe_cfg.get("instance_id") or probe_cfg.get("name") or "esp32jtag"),
             "device_type": "multi_capability_instrument",
             "instrument_family": "esp32jtag",
+            "instrument_role": "control",
             "model": str(probe_cfg.get("name") or "ESP32JTAG"),
             "protocol_version": NATIVE_API_PROTOCOL,
             "communication_endpoints": endpoints,
-            "capability_families": ["debug_remote", "capture_control", "reset_control"],
+            "capability_families": ["debug_remote", "capture_control", "reset_control", "preflight"],
         }
     )
 
@@ -114,14 +128,22 @@ def get_capabilities(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
                 "debug_remote": {
                     "actions": ["flash", "debug_halt", "debug_read_memory"],
                     "surface": capability_surfaces.get("swd", "gdb_remote"),
+                    "owned_by": "esp32_jtag_backend",
                 },
                 "reset_control": {
                     "actions": ["reset"],
                     "surface": capability_surfaces.get("reset_out"),
+                    "owned_by": "esp32_jtag_backend",
                 },
                 "capture_control": {
                     "actions": ["gpio_measure"],
                     "surface": capability_surfaces.get("gpio_in", "web_api"),
+                    "owned_by": "esp32_jtag_backend",
+                },
+                "preflight": {
+                    "actions": ["preflight_probe"],
+                    "surface": "instrument_native_api",
+                    "owned_by": "jtag_native_api",
                 },
             },
         }
@@ -134,18 +156,31 @@ def get_status(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
     control_api = endpoints.get("web_api")
     debug_check = _tcp_check(debug_remote)
     control_check = _tcp_check(control_api) if control_api else {"ok": False, "error": "missing endpoint", "endpoint": control_api}
+    network_ok = bool(debug_check.get("ok") or control_check.get("ok"))
     return _native_ok(
         {
             "protocol_version": NATIVE_API_PROTOCOL,
-            "reachable": bool(debug_check.get("ok") or control_check.get("ok")),
+            "reachable": network_ok,
             "endpoints": {
                 "debug_remote": debug_check,
                 "control_api": control_check,
             },
             "health_domains": {
-                "network": {"ok": bool(debug_check.get("ok") or control_check.get("ok"))},
+                "network": {
+                    "ok": network_ok,
+                    "summary": "at least one ESP32JTAG service endpoint is reachable" if network_ok else "no ESP32JTAG service endpoints are reachable",
+                },
                 "debug_remote": {"ok": bool(debug_check.get("ok"))},
-                "capture_control": {"ok": bool(control_check.get("ok"))},
+                "web_api": {"ok": bool(control_check.get("ok"))},
+                "capture_subsystem": {
+                    "ok": bool(control_check.get("ok")),
+                    "dependency": "web_api",
+                },
+                "monitor_targets": {
+                    "ok": None,
+                    "state": "unverified",
+                    "detail": "monitor target enumeration runs during doctor/preflight",
+                },
             },
         }
     )
@@ -157,15 +192,29 @@ def doctor(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
     if status.get("status") != "ok":
         return _native_error("jtag_doctor_failed", "jtag doctor failed to collect status", retryable=True)
     status_data = (status.get("data") or {}) if isinstance(status.get("data"), dict) else {}
+    health_domains = (status_data.get("health_domains") or {}) if isinstance(status_data.get("health_domains"), dict) else {}
+    preflight_info = info or {}
+    monitor_targets = preflight_info.get("targets") or []
+    monitor_ok = bool(preflight_info.get("monitor_ok"))
+    la_ok = bool(preflight_info.get("la_ok") or preflight_info.get("logic_analyzer"))
     payload = {
         "protocol_version": NATIVE_API_PROTOCOL,
         "reachable": bool(ok),
         "checks": {
-            "network": {"ok": bool((status_data.get("health_domains") or {}).get("network", {}).get("ok"))},
-            "debug_remote": {"ok": bool((status_data.get("health_domains") or {}).get("debug_remote", {}).get("ok"))},
-            "capture_control": {"ok": bool((status_data.get("health_domains") or {}).get("capture_control", {}).get("ok"))},
-            "preflight": {"ok": bool(ok), "detail": info},
+            "network": {"ok": bool((health_domains.get("network") or {}).get("ok"))},
+            "gdb_remote": {"ok": bool((health_domains.get("debug_remote") or {}).get("ok"))},
+            "web_api": {"ok": bool((health_domains.get("web_api") or {}).get("ok"))},
+            "capture_subsystem": {
+                "ok": la_ok,
+                "detail": "logic-analyzer self-test passed" if la_ok else "logic-analyzer self-test failed",
+            },
+            "monitor_targets": {
+                "ok": monitor_ok,
+                "targets": monitor_targets,
+            },
+            "preflight": {"ok": bool(ok), "detail": preflight_info},
         },
+        "lifecycle_boundary": native_interface_profile().get("lifecycle_scope"),
     }
     if ok:
         return _native_ok(payload)

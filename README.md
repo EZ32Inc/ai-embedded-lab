@@ -112,6 +112,15 @@ This layer now explicitly owns:
 - `doctor`
 - `preflight_probe`
 
+Its runtime model now explicitly presents `ESP32JTAG` as a multi-capability
+instrument family with subsystem-oriented health domains:
+
+- `network`
+- `gdb_remote`
+- `web_api`
+- `capture_subsystem`
+- `monitor_targets`
+
 It is integrated through:
 
 - `instrument_view`
@@ -129,6 +138,12 @@ Second healthy live sample:
 - `esp32jtag_g431_bench @ 192.168.2.62`
 - `ael instruments doctor --id esp32jtag_g431_bench`
 - result: `ok = true`
+
+Additional healthy live samples:
+
+- `esp32jtag_rp2040_lab @ 192.168.2.63`
+- `esp32jtag_h750_bench @ 192.168.2.106`
+- both returned `ok = true`
 
 This means `ESP32JTAG` is now legible both as:
 

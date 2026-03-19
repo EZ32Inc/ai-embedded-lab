@@ -107,6 +107,7 @@ def test_instruments_describe_cli_summary_output():
     assert "endpoint: 192.168.4.1:9000" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "native_actions: measure_digital, measure_voltage, stim_digital" in res.stdout
+    assert "native_protocol:" in res.stdout
     assert "native_metadata_count: 4" in res.stdout
     assert "native_action_count: 3" in res.stdout
 
