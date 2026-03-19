@@ -16,7 +16,7 @@
       "board": "stm32f411ceu6",
       "test": "tests/plans/stm32f411_gpio_signature.json"
     },
-{
+    {
       "board": "stm32g431cbu6",
       "test": "tests/plans/stm32g431_gpio_signature.json"
     },
@@ -25,8 +25,8 @@
       "test": "tests/plans/stm32h750_wiring_verify.json"
     },
     {
-      "board": "stm32f407_discovery",
-      "test": "tests/plans/stm32f407_mailbox.json"
+      "board": "stm32f103_gpio_stlink",
+      "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
     }
   ],
   "stop_on_fail": false,

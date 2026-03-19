@@ -785,6 +785,24 @@ def test_sequence_setting_rejects_non_dut_test_reference(tmp_path):
     assert "references non-DUT test" in error
 
 
+def test_sequence_setting_accepts_board_bound_non_inventory_step():
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "steps": [
+            {
+                "board": "stm32f103_gpio_stlink",
+                "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json",
+            }
+        ],
+    }
+
+    ok, error = default_verification._validate_sequence_steps(REPO_ROOT, setting)
+
+    assert ok is True
+    assert error == ""
+
+
 def test_parallel_repeat_until_fail_is_per_worker(tmp_path):
     setting = {
         "version": 1,

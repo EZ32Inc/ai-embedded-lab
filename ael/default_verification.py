@@ -215,7 +215,11 @@ def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any]) -> Tuple[
         if not board or not test:
             return False, f"step {idx} requires board and test"
         if (board, test) not in valid_pairs:
-            return False, f"step {idx} references non-DUT test board={board} test={test}"
+            test_payload = _load_test_payload(test)
+            test_board = str(test_payload.get("board") or "").strip() if isinstance(test_payload, dict) else ""
+            board_raw = _resolve_board_raw(repo_root, board)
+            if not (test_board == board and board_raw):
+                return False, f"step {idx} references non-DUT test board={board} test={test}"
         bad = [field for field in forbidden_fields if raw_step.get(field) not in (None, "")]
         if bad:
             return False, f"step {idx} must not redefine DUT test identity/setup fields: {', '.join(bad)}"
