@@ -34,7 +34,7 @@ You can start with almost nothing:
 
 - **ST-Link + an STM32 MCU/board** — a standard path, often just **$10–20 USD**
 - **a single ESP32 dev board** — already enough to begin exploring AI-driven workflows
-- **ESP32JTAG + a target board** — a next-gen, all-in-one instrument
+- **[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) + a target board** — a next-gen, all-in-one instrument
 
 ---
 
@@ -43,7 +43,7 @@ You can start with almost nothing:
 Traditional tools like ST-Link do one thing well:
 → flash and debug
 
-AI instrument like ESP32JTAG changes the model:
+AI instrument like [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) changes the model:
 
 - **Wireless (WiFi)** — no cables, AI can access it over the network
 - **Flash firmware**
@@ -138,7 +138,7 @@ And the old overlapping path is now explicitly bounded as legacy:
 
 - `esp_remote_jtag`
 
-### STM32 Cross-Instrument Milestone — Shared Test Packs Across ST-Link and ESP32JTAG (2026-03-19)
+### STM32 Cross-Instrument Milestone — Shared Test Packs Across ST-Link and [ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) (2026-03-19)
 
 AEL now has validated dual-instrument support for shared test-pack execution on both:
 
@@ -148,7 +148,7 @@ AEL now has validated dual-instrument support for shared test-pack execution on 
 The same validation methodology now works across two instrument paths:
 
 - `ST-Link`
-- `ESP32JTAG`
+- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)`
 
 This milestone proves that, for the same DUT family and shared test assets, AEL can switch instrument paths without changing the test intent.
 
@@ -170,7 +170,7 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
 
 **STM32F103C8T6 results:**
 
-- `ESP32JTAG + STM32F103C8T6`: `5/5 PASS`
+- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) + STM32F103C8T6`: `5/5 PASS`
 - `ST-Link + STM32F103C8T6`: `5/5 PASS`
 
 **STM32F407 mailbox pack family:**
@@ -187,7 +187,7 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
 
 **STM32F407 results:**
 
-- `ESP32JTAG + STM32F407`: repeated live passes
+- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) + STM32F407`: repeated live passes
 - `ST-Link + STM32F407`: repeated live passes
 
 **What this proves:**
@@ -450,7 +450,7 @@ AEL works with programmable **Instruments** that provide:
 - signal capture
 - runtime monitoring
 
-Today, **ESP32JTAG** serves as the first fully-supported Instrument.
+Today, **[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)** serves as the first fully-supported Instrument.
 
 It enables AEL to:
 
