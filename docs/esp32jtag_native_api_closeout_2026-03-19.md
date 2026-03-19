@@ -34,6 +34,7 @@ It defines:
 - `get_capabilities`
 - `get_status`
 - `doctor`
+- `preflight_probe`
 
 Integration points:
 
@@ -110,6 +111,27 @@ Healthy live sample:
   - it now has one healthy live sample through the real
     `instrument_doctor -> native_api_dispatch -> jtag_native_api` path
 
+Additional healthy sample:
+
+- command: `python3 -m ael instruments doctor --id esp32jtag_g431_bench --format json`
+- instance: `esp32jtag_g431_bench @ 192.168.2.62`
+- observed result:
+  - overall doctor result: `ok = true`
+  - `native_identify.status = ok`
+  - `native_capabilities.status = ok`
+  - `native_status.status = ok`
+  - preflight checks:
+    - ping: `ok`
+    - TCP `192.168.2.62:4242`: `ok`
+    - monitor targets: `ok`
+    - logic-analyzer self-test: `ok`
+  - returned target family: `M4`
+  - control API `https://192.168.2.62:443`: `ok`
+- interpretation:
+  - the healthy-sample set is no longer a single-instance confirmation
+  - the instrument-level doctor/status surface now has at least two healthy
+    live confirmations on separate `ESP32JTAG` benches
+
 ## What This Batch Proves
 
 - `ESP32JTAG` now has a named instrument-level native API surface, not only a
@@ -154,6 +176,8 @@ Reason:
 - the minimal metadata/status/doctor layer is now implemented and visible
 - one real live doctor run confirmed the integration path
 - there is now one healthy sample on `.103`
+- there is now a second healthy sample on `.62`
+- `preflight_probe` is now explicitly owned by `jtag_native_api`
 - but that is still only a narrow confirmation sample, not broad runtime
   coverage
 

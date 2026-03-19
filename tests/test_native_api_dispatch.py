@@ -56,3 +56,13 @@ def test_control_native_dispatch_routes_to_jtag_native_api(monkeypatch):
     payload = native_api_dispatch.control_identify({"name": "ESP32JTAG"})
     assert payload["status"] == "ok"
     assert payload["data"]["instrument_family"] == "esp32jtag"
+
+
+def test_control_preflight_routes_to_jtag_native_api(monkeypatch):
+    monkeypatch.setattr(
+        "ael.instruments.jtag_native_api.preflight_probe",
+        lambda probe_cfg: {"status": "ok", "data": {"protocol_version": "ael.local_instrument.jtag_native_api.v0.1"}},
+    )
+    payload = native_api_dispatch.preflight_probe({"name": "ESP32JTAG"})
+    assert payload["status"] == "ok"
+    assert payload["data"]["protocol_version"] == "ael.local_instrument.jtag_native_api.v0.1"

@@ -16,6 +16,8 @@ newer IAM-style instrument backends such as `stlink` and `esp32_jtag`.
 ## Short Answer
 
 - `ESP32JTAG`: yes, complete at the backend-package level
+- `ESP32JTAG`: yes, now also has a minimal instrument-level native API surface
+  for identity / status / doctor / preflight
 - `ESP32-S3 meter`: action-path unification is now complete; metadata and
   provision paths still remain native/provision scoped
 
@@ -39,10 +41,20 @@ Current result:
 - flash/reset/gpio_measure are integrated through the unified instrument backend path
 - debug placeholder actions exist
 - this line is already in the same packaging family as `stlink_backend`
+- a minimal instrument-level native API now exists for:
+  - `identify`
+  - `get_capabilities`
+  - `get_status`
+  - `doctor`
+  - `preflight_probe`
+- healthy live doctor samples now exist for:
+  - `esp32jtag_stm32f411 @ 192.168.2.103`
+  - `esp32jtag_g431_bench @ 192.168.2.62`
 
 Conclusion:
 
-- `ESP32JTAG` can be treated as already unified at the backend-package level
+- `ESP32JTAG` can be treated as unified both at the backend-package level and
+  at the minimal instrument-interface level
 
 ## ESP32-S3 Meter Status
 

@@ -61,3 +61,14 @@ def test_doctor_wraps_preflight(monkeypatch):
     out = jtag_native_api.doctor(_probe_cfg())
     assert out["status"] == "ok"
     assert out["data"]["checks"]["preflight"]["ok"] is True
+
+
+def test_preflight_probe_reports_native_success(monkeypatch):
+    monkeypatch.setattr(
+        "ael.adapters.preflight.run",
+        lambda probe_cfg: (True, {"targets": ["M4"], "logic_analyzer": True}),
+    )
+    out = jtag_native_api.preflight_probe(_probe_cfg())
+    assert out["status"] == "ok"
+    assert out["data"]["protocol_version"] == jtag_native_api.NATIVE_API_PROTOCOL
+    assert out["data"]["preflight"]["targets"] == ["M4"]

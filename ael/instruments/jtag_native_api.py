@@ -171,3 +171,22 @@ def doctor(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
         return _native_ok(payload)
     return _native_error("jtag_doctor_failed", "jtag instrument doctor failed", retryable=True, details=payload)
 
+
+def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
+    ok, info = preflight_adapter.run(probe_cfg)
+    if ok:
+        return _native_ok(
+            {
+                "protocol_version": NATIVE_API_PROTOCOL,
+                "preflight": info or {},
+            }
+        )
+    return _native_error(
+        "jtag_preflight_failed",
+        "jtag instrument preflight failed",
+        retryable=True,
+        details={
+            "protocol_version": NATIVE_API_PROTOCOL,
+            "preflight": info or {},
+        },
+    )

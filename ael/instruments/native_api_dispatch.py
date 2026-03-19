@@ -97,7 +97,7 @@ def capture_signature(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any
 
 
 def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
-    return control_instrument_native_api.preflight_probe(probe_cfg)
+    return jtag_native_api.preflight_probe(probe_cfg)
 
 
 def program_firmware(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:

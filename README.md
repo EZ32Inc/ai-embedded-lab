@@ -99,6 +99,44 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### ESP32JTAG Native API Milestone — Minimal Instrument Interface Live-Validated (2026-03-19)
+
+`ESP32JTAG` now has a minimal instrument-level native API on top of the
+existing backend package.
+
+This layer now explicitly owns:
+
+- `identify`
+- `get_capabilities`
+- `get_status`
+- `doctor`
+- `preflight_probe`
+
+It is integrated through:
+
+- `instrument_view`
+- `instrument_doctor`
+- `native_api_dispatch`
+
+Healthy live sample already captured:
+
+- `esp32jtag_stm32f411 @ 192.168.2.103`
+- `ael instruments doctor --id esp32jtag_stm32f411`
+- result: `ok = true`
+
+Second healthy live sample:
+
+- `esp32jtag_g431_bench @ 192.168.2.62`
+- `ael instruments doctor --id esp32jtag_g431_bench`
+- result: `ok = true`
+
+This means `ESP32JTAG` is now legible both as:
+
+- a unified action backend
+- a named multi-capability instrument interface
+
+📄 [ESP32JTAG native API closeout](docs/esp32jtag_native_api_closeout_2026-03-19.md)
+
 ### ESP32 Instrument Backend Milestone — Meter Runtime Path Revalidated (2026-03-19)
 
 After the backend unification work:
