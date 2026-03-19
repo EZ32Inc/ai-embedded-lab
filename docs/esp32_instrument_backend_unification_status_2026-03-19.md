@@ -58,6 +58,8 @@ Current active pieces are:
   [ael/instruments/meter_native_api.py](/nvme1t/work/codex/ai-embedded-lab/ael/instruments/meter_native_api.py)
 - adapter-registry runtime backend:
   [ael/adapter_registry.py](/nvme1t/work/codex/ai-embedded-lab/ael/adapter_registry.py)
+- default/runtime consumer path:
+  [ael/default_verification.py](/nvme1t/work/codex/ai-embedded-lab/ael/default_verification.py)
 
 What still remains outside the backend package on purpose:
 
@@ -70,6 +72,7 @@ Conclusion:
 
 - the meter action path is now in the unified backend family
 - provision and metadata logic remain bounded native/provision code
+- a real meter-backed runtime path has been revalidated after migration
 
 ## Current Boundary
 
@@ -79,6 +82,8 @@ The current state is mixed:
 - `ST-Link` is in the newer unified backend family
 - `ESP32-S3 meter` action execution is in the newer unified backend family
 - `USB-UART bridge` is now package-aligned with a compatibility shim
+- `esp_remote_jtag` is now explicitly a legacy compatibility shim over
+  `esp32_jtag` + `esp32_meter`
 
 So the answer to "is instrument packaging unified already?" is:
 
@@ -91,5 +96,7 @@ The chosen boundary is now explicit:
 
 - backend package owns action execution
 - native/provision code owns status, doctor, and reachability
+- runtime health/reporting code may still label the path as `meter_native_api`
+  while the action execution itself is delegated to `esp32_meter`
 
 This gives packaging parity without reopening the whole meter architecture.

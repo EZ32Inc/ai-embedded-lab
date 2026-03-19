@@ -10,6 +10,14 @@ from typing import Any
 from . import wifi
 from ael.adapters import esp32s3_dev_c_meter_tcp
 
+"""
+Provision boundary notes:
+
+- this module owns meter reachability, Wi-Fi/AP, and flashing/provisioning flow
+- it intentionally does not own normal runtime action execution
+- runtime meter actions are handled by the esp32_meter backend family
+"""
+
 RUN_METER_GUARD_TIMEOUT_S = 3.0
 
 

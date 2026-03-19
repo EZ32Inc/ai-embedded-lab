@@ -99,6 +99,45 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### ESP32 Instrument Backend Milestone — Meter Runtime Path Revalidated (2026-03-19)
+
+After the backend unification work:
+
+- `esp32_meter` action execution is now unified behind the backend package
+- `usb_uart_bridge` is package-aligned with the same backend family
+- `esp_remote_jtag` is now bounded as a legacy shim instead of a live mixed implementation
+
+This was also revalidated on a real meter-backed runtime path:
+
+- `esp32c6_gpio_signature_with_meter`
+- instrument: `esp32s3_dev_c_meter @ 192.168.4.1:9000`
+- result: `PASS`
+- run id: `2026-03-19_10-34-45_esp32c6_devkit_esp32c6_gpio_signature_with_meter`
+
+The practical result is that the runtime consumer path still works on real hardware after the meter action path moved behind the unified backend boundary.
+
+### Instrument Backend Milestone — ESP32 Meter Consumer Migration and Legacy Backend Cleanup (2026-03-19)
+
+AEL's instrument backend layout is now substantially cleaner and more uniform.
+
+- `esp32_meter` now has unified backend packaging and real consumer-path usage
+- `usb_uart_bridge` is now package-aligned with the rest of the backend family
+- `esp_remote_jtag` is no longer treated as an active mixed backend; it is now a
+  legacy compatibility shim over:
+  - `esp32_jtag`
+  - `esp32_meter`
+
+This means the main instrument backend family is now much clearer:
+
+- `stlink_backend`
+- `esp32_jtag`
+- `esp32_meter`
+- `usb_uart_bridge`
+
+And the old overlapping path is now explicitly bounded as legacy:
+
+- `esp_remote_jtag`
+
 ### STM32 Cross-Instrument Milestone — Shared Test Packs Across ST-Link and ESP32JTAG (2026-03-19)
 
 AEL now has validated dual-instrument support for shared test-pack execution on both:

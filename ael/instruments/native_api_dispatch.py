@@ -5,6 +5,15 @@ from typing import Any, Dict
 from ael.instruments import control_instrument_native_api
 from ael.instruments import meter_native_api
 
+"""
+Native dispatch boundary notes:
+
+- control-instrument operations stay on control_instrument_native_api
+- ESP32 meter metadata and doctor/status stay on meter_native_api
+- ESP32 meter action execution also enters through meter_native_api, which now
+  bridges those actions onto the unified esp32_meter backend
+"""
+
 
 def _unsupported(code: str, message: str) -> Dict[str, Any]:
     return {
