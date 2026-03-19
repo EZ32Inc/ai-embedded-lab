@@ -3496,14 +3496,31 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
         print("Pack: missing board or tests")
         return 2
 
-    # Validate tests for mixed boards
+    def _board_target(board_id):
+        if not board_id:
+            return None
+        board_cfg_path = os.path.join(repo_root, "configs", "boards", f"{board_id}.yaml")
+        board_cfg = _simple_yaml_load(board_cfg_path)
+        if not isinstance(board_cfg, dict):
+            return None
+        board_section = board_cfg.get("board", {})
+        if not isinstance(board_section, dict):
+            return None
+        target = board_section.get("target")
+        return str(target) if target else None
+
+    # Validate tests for mixed boards. Exact board ids may differ when the same
+    # DUT target is exercised via different instrument-specific board profiles.
+    pack_target = _board_target(pack_board)
     for t in tests:
         t_full = t if os.path.isabs(t) else os.path.join(repo_root, t)
         t_json = _load_json(t_full)
         t_board = t_json.get("board") if isinstance(t_json, dict) else None
         if t_board and t_board != pack_board:
-            print(f"Pack: test {t} targets board {t_board}, expected {pack_board}")
-            return 3
+            test_target = _board_target(str(t_board))
+            if not pack_target or not test_target or test_target != pack_target:
+                print(f"Pack: test {t} targets board {t_board}, expected {pack_board}")
+                return 3
 
     bench_path = os.path.join(repo_root, "configs", "bench.yaml")
     bench = _simple_yaml_load(bench_path)

@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f407_mailbox_base.json",
+  "name": "smoke_stm32f407_mailbox_stlink",
+  "board": "stm32f407_discovery",
+  "notes": "STM32F407 mailbox smoke via ST-Link. Uses the shared mailbox firmware/test from the base pack and keeps instrument-specific execution details in the ST-Link board profile."
+}

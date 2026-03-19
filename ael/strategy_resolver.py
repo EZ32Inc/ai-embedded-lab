@@ -596,6 +596,7 @@ def build_mailbox_verify_step(
             "settle_s":         float(merged.get("settle_s", 0.0)),
             "skip_attach":      bool(merged.get("skip_attach", False)),
             "halt_before_read": bool(merged.get("halt_before_read", False)),
+            "attach_monitor_cmd": str(merged.get("attach_monitor_cmd", "monitor swdp_scan")),
             "out_json":         str(artifacts_dir / "mailbox_verify.json"),
         },
     }

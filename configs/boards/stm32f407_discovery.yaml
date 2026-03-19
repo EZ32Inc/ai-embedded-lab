@@ -17,6 +17,8 @@ board:
       - "load"
       - "monitor reset run"
       - "disconnect"
+  mailbox_verify_defaults:
+    skip_attach: true
   default_wiring:
     swd: "onboard"
     reset: "NC"

@@ -44,6 +44,7 @@ def _gdb_read_mailbox(
     addr: int,
     skip_attach: bool = False,
     halt_before_read: bool = False,
+    attach_monitor_cmd: str = "monitor swdp_scan",
 ) -> Dict[str, Any]:
     """Run arm-none-eabi-gdb in batch mode and parse x/4xw output.
 
@@ -57,7 +58,7 @@ def _gdb_read_mailbox(
         f"target extended-remote {endpoint}",
     ]
     if not skip_attach:
-        cmds += ["monitor swdp_scan", f"attach {target_id}"]
+        cmds += [attach_monitor_cmd, f"attach {target_id}"]
     if halt_before_read:
         cmds += ["monitor halt"]
     cmds += [
@@ -116,6 +117,7 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
     out_json    = inputs.get("out_json")
     skip_attach      = bool(inputs.get("skip_attach", False))
     halt_before_read = bool(inputs.get("halt_before_read", False))
+    attach_monitor_cmd = str(inputs.get("attach_monitor_cmd", "monitor swdp_scan"))
 
     if not probe_ip:
         return {"ok": False, "error_summary": "check.mailbox_verify: probe_ip not set"}
@@ -125,7 +127,14 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
 
     addr     = int(addr_str, 16)
     endpoint = f"{probe_ip}:{probe_port}"
-    raw      = _gdb_read_mailbox(endpoint, target_id, addr, skip_attach=skip_attach, halt_before_read=halt_before_read)
+    raw      = _gdb_read_mailbox(
+        endpoint,
+        target_id,
+        addr,
+        skip_attach=skip_attach,
+        halt_before_read=halt_before_read,
+        attach_monitor_cmd=attach_monitor_cmd,
+    )
 
     if not raw.get("ok"):
         result = {

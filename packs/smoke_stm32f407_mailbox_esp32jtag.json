@@ -1,0 +1,6 @@
+{
+  "extends": "smoke_stm32f407_mailbox_base.json",
+  "name": "smoke_stm32f407_mailbox_esp32jtag",
+  "board": "stm32f407_discovery_esp32jtag",
+  "notes": "STM32F407 mailbox smoke via ESP32-JTAG. Uses the shared mailbox firmware/test from the base pack and keeps instrument-specific execution details in the ESP32-JTAG board profile."
+}

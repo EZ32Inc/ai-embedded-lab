@@ -12,8 +12,7 @@
   "signal_checks": [],
   "mailbox_verify": {
     "settle_s": 4.0,
-    "addr": "0x2001FC00",
-    "skip_attach": true
+    "addr": "0x2001FC00"
   },
   "bench_setup": {
     "notes": "STM32F4 Discovery via ST-Link direct integration. st-util must be running on localhost:4242 before ael run. Green LED (PD12) blinks at 1 Hz. Mailbox at 0x2001FC00 (SRAM1 top -1KB). PASS after first blink cycle (~1 s).",

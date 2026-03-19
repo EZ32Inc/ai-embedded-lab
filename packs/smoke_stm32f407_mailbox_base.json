@@ -1,0 +1,8 @@
+{
+  "name": "smoke_stm32f407_mailbox_base",
+  "preflight": { "enabled": false },
+  "notes": "Shared STM32F407 mailbox smoke base pack. Shared firmware target, mailbox test plan, and mailbox verification contract live here; instrument-specific execution details belong in child packs.",
+  "tests": [
+    "tests/plans/stm32f407_mailbox.json"
+  ]
+}
