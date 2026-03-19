@@ -61,9 +61,10 @@ def _gdb_read_mailbox(
         cmds += [attach_monitor_cmd, f"attach {target_id}"]
     if halt_before_read:
         cmds += ["monitor halt"]
+    disconnect_cmd = "disconnect" if skip_attach else "detach"
     cmds += [
         f"x/4xw {addr:#010x}",
-        "detach",
+        disconnect_cmd,
         "quit",
     ]
     args = ["arm-none-eabi-gdb", "--batch"] + [
