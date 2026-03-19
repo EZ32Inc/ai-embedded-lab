@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 
-from ael.adapters import esp32s3_dev_c_meter_tcp
 from ael.instruments import provision as instrument_provision
+from ael.instruments.backends.esp32_meter.backend import Esp32MeterBackend
 
 
 NATIVE_API_PROTOCOL = "ael.local_instrument.native_api.v0.1"
@@ -43,6 +43,45 @@ def _cfg_from_manifest(manifest: Dict[str, Any], *, host: Optional[str] = None, 
         "host": str(host or default_host),
         "port": int(port or default_port),
     }
+
+
+def _backend_from_manifest(
+    manifest: Dict[str, Any],
+    *,
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+    timeout_s: float = 3.0,
+) -> Esp32MeterBackend:
+    cfg = _cfg_from_manifest(manifest, host=host, port=port)
+    return Esp32MeterBackend(
+        host=cfg["host"],
+        port=cfg["port"],
+        timeout_s=timeout_s,
+    )
+
+
+def _execute_action(
+    manifest: Dict[str, Any],
+    action: str,
+    params: Dict[str, Any],
+    *,
+    host: Optional[str] = None,
+    port: Optional[int] = None,
+    unwrap_raw: bool = False,
+) -> Dict[str, Any]:
+    result = _backend_from_manifest(manifest, host=host, port=port).execute(action, params)
+    if result.get("status") == "success":
+        data = (result.get("data") or {}) if isinstance(result.get("data"), dict) else {}
+        if unwrap_raw and isinstance(data.get("raw"), dict):
+            return _native_ok(data["raw"])
+        return _native_ok(data)
+    error = (result.get("error") or {}) if isinstance(result.get("error"), dict) else {}
+    return _native_error(
+        str(error.get("code") or f"{action}_failed"),
+        str(error.get("message") or f"{action} failed"),
+        retryable=True,
+        details={"action": action},
+    )
 
 
 def native_interface_profile() -> Dict[str, Any]:
@@ -134,21 +173,25 @@ def doctor(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_s: f
 
 
 def measure_digital(manifest: Dict[str, Any], *, pins: list[int], duration_ms: int = 500, host: Optional[str] = None, port: Optional[int] = None) -> Dict[str, Any]:
-    cfg = _cfg_from_manifest(manifest, host=host, port=port)
-    try:
-        payload = esp32s3_dev_c_meter_tcp.measure_digital(cfg, pins=pins, duration_ms=duration_ms)
-        return _native_ok(payload)
-    except Exception as exc:
-        return _native_error("measure_digital_failed", str(exc), retryable=True)
+    return _execute_action(
+        manifest,
+        "gpio_measure",
+        {"channels": list(pins), "duration_ms": int(duration_ms)},
+        host=host,
+        port=port,
+        unwrap_raw=True,
+    )
 
 
 def measure_voltage(manifest: Dict[str, Any], *, gpio: int = 4, avg: int = 16, host: Optional[str] = None, port: Optional[int] = None) -> Dict[str, Any]:
-    cfg = _cfg_from_manifest(manifest, host=host, port=port)
-    try:
-        payload = esp32s3_dev_c_meter_tcp.measure_voltage(cfg, gpio=gpio, avg=avg)
-        return _native_ok(payload)
-    except Exception as exc:
-        return _native_error("measure_voltage_failed", str(exc), retryable=True)
+    return _execute_action(
+        manifest,
+        "voltage_read",
+        {"gpio": int(gpio), "avg": int(avg)},
+        host=host,
+        port=port,
+        unwrap_raw=True,
+    )
 
 
 def stim_digital(
@@ -163,17 +206,18 @@ def stim_digital(
     host: Optional[str] = None,
     port: Optional[int] = None,
 ) -> Dict[str, Any]:
-    cfg = _cfg_from_manifest(manifest, host=host, port=port)
-    try:
-        payload = esp32s3_dev_c_meter_tcp.stim_digital(
-            cfg,
-            gpio=gpio,
-            mode=mode,
-            duration_us=duration_us,
-            freq_hz=freq_hz,
-            pattern=pattern,
-            keep=keep,
-        )
-        return _native_ok(payload)
-    except Exception as exc:
-        return _native_error("stim_digital_failed", str(exc), retryable=True)
+    return _execute_action(
+        manifest,
+        "stim_digital",
+        {
+            "gpio": int(gpio),
+            "mode": mode,
+            "duration_us": duration_us,
+            "freq_hz": freq_hz,
+            "pattern": pattern,
+            "keep": int(keep),
+        },
+        host=host,
+        port=port,
+        unwrap_raw=True,
+    )

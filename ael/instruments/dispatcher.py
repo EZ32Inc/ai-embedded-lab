@@ -34,7 +34,7 @@ _DRIVER_BACKENDS: dict[str, str] = {
     "esp_remote_jtag": "ael.instruments.backends.esp_remote_jtag",
     "esp32_jtag": "ael.instruments.backends.esp32_jtag.backend",
     "esp32_meter": "ael.instruments.backends.esp32_meter.backend",
-    "usb_uart_bridge": "ael.instruments.backends.usb_uart_bridge",
+    "usb_uart_bridge": "ael.instruments.backends.usb_uart_bridge.backend",
 }
 
 _catalog_cache: InstrumentCatalog | None = None
