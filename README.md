@@ -99,16 +99,21 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
-### STM32F103C8T6 GPIO Bench — Shared Test Pack Across ST-Link and ESP32JTAG (5/5 PASS on both, 2026-03-19)
+### STM32 Cross-Instrument Milestone — Shared Test Packs Across ST-Link and ESP32JTAG (2026-03-19)
 
-AEL completed a full cross-instrument validation milestone on the STM32F103C8T6 Bluepill GPIO bench using one shared test/firmware pack family and two different control instruments:
+AEL now has validated dual-instrument support for shared test-pack execution on both:
+
+- `STM32F103C8T6 Bluepill GPIO Bench`
+- `STM32F407 Discovery`
+
+The same validation methodology now works across two instrument paths:
 
 - `ST-Link`
 - `ESP32JTAG`
 
 This milestone proves that, for the same DUT family and shared test assets, AEL can switch instrument paths without changing the test intent.
 
-**Pack structure:**
+**STM32F103C8T6 pack family:**
 
 - shared base pack:
   - `packs/smoke_stm32f103_gpio_loopbacks_base.json`
@@ -116,7 +121,7 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
   - `packs/smoke_stm32f103_gpio_loopbacks_stlink.json`
   - `packs/smoke_stm32f103_gpio_loopbacks_esp32jtag.json`
 
-**Shared tests validated:**
+**STM32F103C8T6 shared tests validated:**
 
 - `stm32f103_gpio_no_external_capture`
 - `stm32f103_uart_loopback_mailbox`
@@ -124,27 +129,47 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
 - `stm32f103_exti_mailbox`
 - `stm32f103_adc_mailbox`
 
-**Results:**
+**STM32F103C8T6 results:**
 
 - `ESP32JTAG + STM32F103C8T6`: `5/5 PASS`
 - `ST-Link + STM32F103C8T6`: `5/5 PASS`
 
+**STM32F407 mailbox pack family:**
+
+- shared base pack:
+  - `packs/smoke_stm32f407_mailbox_base.json`
+- instrument-specific child packs:
+  - `packs/smoke_stm32f407_mailbox_stlink.json`
+  - `packs/smoke_stm32f407_mailbox_esp32jtag.json`
+
+**STM32F407 shared test validated:**
+
+- `stm32f407_mailbox`
+
+**STM32F407 results:**
+
+- `ESP32JTAG + STM32F407`: repeated live passes
+- `ST-Link + STM32F407`: repeated live passes
+
 **What this proves:**
 
 - shared pack / child-pack structure works on real hardware
-- the same STM32F103C8T6 validation set can run through two instrument paths
+- the same DUT-side validation assets can run through two instrument paths
 - instrument-specific execution details can stay in board/child-pack configuration
 - cross-instrument debug can expose tool-path issues without invalidating shared firmware/test methodology
 
-**Key debug conclusion from this milestone:**
+**Key debug conclusion from this milestone sequence:**
 
 - `ST-Link` mailbox verify failures on this path were not caused by DUT wiring or loopback logic
 - the real issue was `st-util` session semantics in `check_mailbox_verify`
 - for `skip_attach` sessions, `disconnect` is correct and `detach` is not
 
-📄 [Closeout](docs/stm32f103_gpio_cross_instrument_closeout_2026-03-19.md)
-📄 [ST-Link child pack](packs/smoke_stm32f103_gpio_loopbacks_stlink.json)
-📄 [ESP32JTAG child pack](packs/smoke_stm32f103_gpio_loopbacks_esp32jtag.json)
+📄 [STM32F103 closeout](docs/stm32f103_gpio_cross_instrument_closeout_2026-03-19.md)
+📄 [STM32F103 ST-Link child pack](packs/smoke_stm32f103_gpio_loopbacks_stlink.json)
+📄 [STM32F103 ESP32JTAG child pack](packs/smoke_stm32f103_gpio_loopbacks_esp32jtag.json)
+📄 [STM32F407 closeout](docs/stm32f407_shared_mailbox_stability_closeout_2026-03-18.md)
+📄 [STM32F407 ST-Link child pack](packs/smoke_stm32f407_mailbox_stlink.json)
+📄 [STM32F407 ESP32JTAG child pack](packs/smoke_stm32f407_mailbox_esp32jtag.json)
 
 ---
 
@@ -468,17 +493,46 @@ And much more to come.
 
 ---
 
+## Golden-Standard Validated MCUs
+
+MCUs that have completed real-hardware validation at AEL's current golden-standard level.
+
+- `STM32F103C8T6`
+  - validated with shared cross-instrument loopback pack on both `ST-Link` and `ESP32JTAG`
+- `STM32F103RCT6`
+  - validated with full `7/7 PASS` smoke suite
+- `STM32F401RCT6`
+  - validated with full `8/8 PASS` smoke suite
+- `STM32F411CEU6`
+  - validated with full `8/8 PASS` smoke suite
+- `STM32F407VGT6`
+  - validated on `STM32F407 Discovery`
+  - shared mailbox path validated on both `ST-Link` and `ESP32JTAG`
+  - full `7/7 PASS` smoke baseline validated on `ST-Link`
+- `STM32G431CBU6`
+  - validated with full `9/9 PASS` smoke suite
+- `STM32H750VBT6`
+  - validated with full `7/7 PASS` smoke suite
+- `RP2040`
+  - validated in current AEL verified-board baseline
+- `ESP32-C6`
+  - validated in current AEL verified-board baseline
+
+---
+
 ## Verified Boards
 
 Boards that have completed full bring-up and sequential verification on real hardware.
 
 | Board | MCU | Family | Experiments | Status | Doc |
 |-------|-----|--------|-------------|--------|-----|
-| STM32F407 Discovery | STM32F407 | STM32F4 | 7 | verified (ST-Link) | [docs/methodology/smoke_stm32f407_baseline_v0_1.md](docs/methodology/smoke_stm32f407_baseline_v0_1.md) |
+| STM32F103 GPIO Bench | STM32F103C8T6 | STM32F1 | 5 | verified (ST-Link + ESP32JTAG) | [docs/stm32f103_gpio_cross_instrument_closeout_2026-03-19.md](docs/stm32f103_gpio_cross_instrument_closeout_2026-03-19.md) |
+| STM32F103RCT6 board | STM32F103RCT6 | STM32F1 | 7 | verified | [docs/boards/stm32f103rct6.md](docs/boards/stm32f103rct6.md) |
+| STM32F407 Discovery | STM32F407VGT6 | STM32F4 | 7 | verified (ST-Link baseline + dual-instrument mailbox) | [docs/methodology/smoke_stm32f407_baseline_v0_1.md](docs/methodology/smoke_stm32f407_baseline_v0_1.md) |
 | STM32F411CEU6 (Black Pill) | STM32F411 | STM32F4 | 8 | verified | [docs/boards/stm32f411ceu6.md](docs/boards/stm32f411ceu6.md) |
 | STM32F401RCT6 | STM32F401 | STM32F4 | 8 | verified | [docs/boards/stm32f401rct6.md](docs/boards/stm32f401rct6.md) |
-| STM32G431CBU6 | STM32G431 | STM32G4 | 9 | verified | — |
-| STM32H750VBT6 YD | STM32H750 | STM32H7 | 7 | verified | — |
+| STM32G431CBU6 | STM32G431CBU6 | STM32G4 | 9 | verified | [docs/methodology/stm32g431_milestone_postmortem_v0_1.md](docs/methodology/stm32g431_milestone_postmortem_v0_1.md) |
+| STM32H750VBT6 YD | STM32H750VBT6 | STM32H7 | 7 | verified | [docs/methodology/stm32h750_milestone_postmortem_v0_1.md](docs/methodology/stm32h750_milestone_postmortem_v0_1.md) |
 | RP2040 Pico | RP2040 | RP2 | — | verified | — |
 | ESP32-C6 DevKit | ESP32-C6 | ESP32 | — | verified | — |
 
