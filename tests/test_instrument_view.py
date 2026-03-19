@@ -31,6 +31,7 @@ def test_build_resolved_instrument_manifest_view():
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "esp32s3_dev_c_meter"
+    assert payload["instrument_family"] == "esp32_meter"
     assert payload["communication"]["protocol"] == "gpio_meter_v1"
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
     assert payload["native_interface"]["role"] == "instrument_native_api"
@@ -104,6 +105,7 @@ def test_instruments_describe_cli_summary_output():
         check=True,
     )
     assert "esp32s3_dev_c_meter [instrument]" in res.stdout
+    assert "instrument_family: esp32_meter" in res.stdout
     assert "endpoint: 192.168.4.1:9000" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "native_actions: measure_digital, measure_voltage, stim_digital" in res.stdout

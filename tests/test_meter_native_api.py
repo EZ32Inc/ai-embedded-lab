@@ -20,15 +20,18 @@ def test_meter_identify_and_capabilities():
     profile = meter_native_api.native_interface_profile()
     assert profile["protocol"] == meter_native_api.NATIVE_API_PROTOCOL
     assert "measure_digital" in profile["action_commands"]
+    assert profile["instrument_family"] == "esp32_meter"
 
     identify = meter_native_api.identify(manifest)
     assert identify["status"] == "ok"
     assert identify["data"]["protocol_version"] == meter_native_api.NATIVE_API_PROTOCOL
     assert identify["data"]["device_id"] == "esp32s3_dev_c_meter"
+    assert identify["data"]["instrument_family"] == "esp32_meter"
     assert identify["data"]["endpoint"] == "192.168.4.1:9000"
 
     caps = meter_native_api.get_capabilities(manifest)
     assert caps["status"] == "ok"
+    assert caps["data"]["capability_families"]["digital_measurement"]["actions"] == ["measure_digital"]
     assert "measure.digital" in caps["data"]["capabilities"]
     assert "stim.digital" in caps["data"]["capabilities"]
 
@@ -50,6 +53,25 @@ def test_meter_status_and_doctor_error_shapes(monkeypatch):
     assert doctor["status"] == "error"
     assert doctor["error"]["code"] == "meter_doctor_failed"
     assert doctor["error"]["details"]["protocol_version"] == meter_native_api.NATIVE_API_PROTOCOL
+
+
+def test_meter_status_and_doctor_success_shapes(monkeypatch):
+    manifest = _manifest()
+
+    monkeypatch.setattr(
+        "ael.instruments.provision.ensure_meter_reachable",
+        lambda **kwargs: {"ok": True, "host": "192.168.4.1", "tcp_port": 9000},
+    )
+
+    status = meter_native_api.get_status(manifest)
+    assert status["status"] == "ok"
+    assert status["data"]["instrument_family"] == "esp32_meter"
+    assert status["data"]["health_domains"]["meter_service"]["ok"] is True
+
+    doctor = meter_native_api.doctor(manifest)
+    assert doctor["status"] == "ok"
+    assert doctor["data"]["checks"]["measurement_surface"]["ok"] is True
+    assert doctor["data"]["lifecycle_boundary"]["owned_by_native_api"][0] == "identify"
 
 
 def test_meter_action_wrappers(monkeypatch):

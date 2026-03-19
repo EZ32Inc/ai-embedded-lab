@@ -86,11 +86,40 @@ def _execute_action(
 
 def native_interface_profile() -> Dict[str, Any]:
     return {
-        "name": "Local Instrument Interface",
+        "name": "ESP32 Meter Native Instrument Interface",
         "protocol": NATIVE_API_PROTOCOL,
         "role": "instrument_native_api",
+        "instrument_family": "esp32_meter",
+        "instrument_identity": "measurement_and_stimulus_instrument",
         "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
         "action_commands": ["measure_digital", "measure_voltage", "stim_digital"],
+        "status_domains": [
+            "network",
+            "meter_service",
+            "measurement_surface",
+            "stimulation_surface",
+        ],
+        "lifecycle_scope": {
+            "owned_by_native_api": [
+                "identify",
+                "get_capabilities",
+                "get_status",
+                "doctor",
+                "measure_digital",
+                "measure_voltage",
+                "stim_digital",
+            ],
+            "owned_by_backend": [
+                "gpio_measure",
+                "voltage_read",
+                "stim_digital",
+            ],
+            "out_of_scope": [
+                "provision",
+                "wifi_onboarding",
+                "firmware_update",
+            ],
+        },
         "response_model": {
             "success": {"status": "ok", "data": "..."},
             "error": {
@@ -106,7 +135,9 @@ def identify(manifest: Dict[str, Any]) -> Dict[str, Any]:
     return _native_ok(
         {
             "device_id": str(manifest.get("id") or "meter"),
-            "device_type": "meter",
+            "device_type": "measurement_and_stimulus_instrument",
+            "instrument_family": "esp32_meter",
+            "instrument_role": "external_instrument",
             "model": str(manifest.get("model") or "ESP32 Meter"),
             "protocol_version": NATIVE_API_PROTOCOL,
             "endpoint": f"{cfg['host']}:{cfg['port']}",
@@ -132,6 +163,21 @@ def get_capabilities(manifest: Dict[str, Any]) -> Dict[str, Any]:
     return _native_ok(
         {
             "protocol_version": NATIVE_API_PROTOCOL,
+            "instrument_family": "esp32_meter",
+            "capability_families": {
+                "digital_measurement": {
+                    "actions": ["measure_digital"],
+                    "surface": "meter_tcp",
+                },
+                "voltage_measurement": {
+                    "actions": ["measure_voltage"],
+                    "surface": "meter_tcp",
+                },
+                "digital_stimulation": {
+                    "actions": ["stim_digital"],
+                    "surface": "meter_tcp",
+                },
+            },
             "capabilities": caps,
         }
     )
@@ -144,9 +190,16 @@ def get_status(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_
         return _native_ok(
             {
                 "protocol_version": NATIVE_API_PROTOCOL,
+                "instrument_family": "esp32_meter",
                 "host": cfg["host"],
                 "port": cfg["port"],
                 "reachability": payload,
+                "health_domains": {
+                    "network": {"ok": bool(payload.get("ok"))},
+                    "meter_service": {"ok": bool(payload.get("ok"))},
+                    "measurement_surface": {"ok": bool(payload.get("ok"))},
+                    "stimulation_surface": {"ok": bool(payload.get("ok"))},
+                },
             }
         )
     except Exception as exc:
@@ -162,7 +215,21 @@ def doctor(manifest: Dict[str, Any], *, host: Optional[str] = None, timeout_s: f
     cfg = _cfg_from_manifest(manifest, host=host)
     try:
         payload = instrument_provision.ensure_meter_reachable(manifest=manifest, host=cfg["host"], timeout_s=timeout_s)
-        return _native_ok(payload)
+        return _native_ok(
+            {
+                "protocol_version": NATIVE_API_PROTOCOL,
+                "instrument_family": "esp32_meter",
+                "reachable": bool(payload.get("ok")),
+                "checks": {
+                    "network": {"ok": bool(payload.get("ok"))},
+                    "meter_service": {"ok": bool(payload.get("ok"))},
+                    "measurement_surface": {"ok": bool(payload.get("ok"))},
+                    "stimulation_surface": {"ok": bool(payload.get("ok"))},
+                    "reachability": payload,
+                },
+                "lifecycle_boundary": native_interface_profile().get("lifecycle_scope"),
+            }
+        )
     except Exception as exc:
         return _native_error(
             "meter_doctor_failed",

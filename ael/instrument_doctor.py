@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import jtag_native_api
+from ael.instruments import meter_native_api
 from ael.instruments import native_api_dispatch
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
@@ -122,8 +123,16 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
         native_doctor = native_api_dispatch.doctor(manifest)
         checks["native_doctor"] = native_doctor
         if native_doctor.get("status") == "ok":
-            checks["reachability"] = native_doctor.get("data", {})
-            overall_ok = bool((checks.get("reachability") or {}).get("ok"))
+            native_data = native_doctor.get("data", {}) if isinstance(native_doctor.get("data"), dict) else {}
+            doctor_checks = native_data.get("checks") if isinstance(native_data.get("checks"), dict) else {}
+            checks.update(doctor_checks)
+            reachability = doctor_checks.get("reachability")
+            if isinstance(reachability, dict):
+                checks["reachability"] = reachability
+                overall_ok = bool(reachability.get("ok"))
+            else:
+                checks["reachability"] = native_data
+                overall_ok = bool(native_data.get("reachable") or native_data.get("ok"))
         else:
             checks["reachability"] = {
                 "ok": False,
@@ -143,9 +152,18 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
         "ok": overall_ok,
         "kind": "instrument",
         "id": instrument_id,
+        "instrument_family": (
+            "esp32_meter"
+            if instrument_id == "esp32s3_dev_c_meter"
+            else (str((manifest.get("native_interface") or {}).get("instrument_family") or "").strip() or None)
+        ),
         "endpoint": endpoint,
         "communication": dict(communication or {}),
-        "native_interface": dict(manifest.get("native_interface") or {}),
+        "native_interface": (
+            meter_native_api.native_interface_profile()
+            if instrument_id == "esp32s3_dev_c_meter"
+            else dict(manifest.get("native_interface") or {})
+        ),
         "capability_surfaces": dict(manifest.get("capability_surfaces") or {}),
         "metadata_validation_errors": (
             validate_communication(communication)

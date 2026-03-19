@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments import jtag_native_api
+from ael.instruments import meter_native_api
 from ael.instruments.registry import InstrumentRegistry
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
@@ -135,6 +136,8 @@ def build_instrument_manifest_view(
     refs = referenced_by or {}
     communication = dict(manifest.get("communication") or {})
     native_interface = dict(manifest.get("native_interface") or {})
+    if instrument_id == "esp32s3_dev_c_meter":
+        native_interface = meter_native_api.native_interface_profile()
     capability_surfaces = dict(manifest.get("capability_surfaces") or {})
     native_interface_summary = {}
     if native_interface:
@@ -147,6 +150,7 @@ def build_instrument_manifest_view(
     return {
         "kind": "instrument",
         "id": instrument_id,
+        "instrument_family": native_interface.get("instrument_family") if isinstance(native_interface, dict) else None,
         "origin": manifest.get("_origin"),
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,
