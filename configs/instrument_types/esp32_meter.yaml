@@ -1,0 +1,17 @@
+instance:
+  type: esp32_meter
+  label: ESP32 Meter (TCP)
+
+communication:
+  primary: meter_tcp
+  surfaces:
+    - name: meter_tcp
+      transport: wifi
+      protocol: gpio_meter_v1
+      invocation_style: request_response
+
+capability_surfaces:
+  gpio_in: meter_tcp
+  adc_in: meter_tcp
+  gpio_out: meter_tcp
+

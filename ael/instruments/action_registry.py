@@ -36,6 +36,11 @@ ACTION_REGISTRY = {
         "optional_request_fields": [],
         "description": "Read a voltage channel associated with a DUT or instrument.",
     },
+    "stim_digital": {
+        "required_request_fields": ["gpio", "mode"],
+        "optional_request_fields": ["duration_us", "freq_hz", "pattern", "keep"],
+        "description": "Drive a digital stimulus on an instrument-controlled GPIO.",
+    },
     "debug_halt": {
         "required_request_fields": [],
         "optional_request_fields": [],

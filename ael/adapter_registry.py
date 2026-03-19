@@ -49,8 +49,17 @@ class _Esp32MeterTcpBackend(_InstrumentBackend):
 
     def __init__(self):
         from ael.adapters import esp32s3_dev_c_meter_tcp
+        from ael.instruments.backends.esp32_meter.backend import Esp32MeterBackend
 
         self._impl = esp32s3_dev_c_meter_tcp
+        self._backend_cls = Esp32MeterBackend
+
+    def _backend(self, cfg):
+        return self._backend_cls(
+            host=str(cfg.get("host") or "192.168.4.1"),
+            port=int(cfg.get("port") or 9000),
+            timeout_s=float(cfg.get("timeout_s") or 3.0),
+        )
 
     def selftest(self, cfg, params, out_path):
         return self._impl.selftest(
@@ -67,10 +76,29 @@ class _Esp32MeterTcpBackend(_InstrumentBackend):
         )
 
     def measure_digital(self, cfg, pins, duration_ms, out_path):
-        return self._impl.measure_digital(cfg, pins=pins, duration_ms=duration_ms, out_path=out_path)
+        result = self._backend(cfg).execute(
+            "gpio_measure",
+            {"channels": list(pins), "duration_ms": int(duration_ms)},
+        )
+        if result.get("status") != "success":
+            raise RuntimeError(str(((result.get("error") or {}) if isinstance(result.get("error"), dict) else {}).get("message") or "meter gpio_measure failed"))
+        raw = ((result.get("data") or {}) if isinstance(result.get("data"), dict) else {}).get("raw")
+        if out_path and isinstance(raw, dict):
+            _write_json(out_path, raw)
+        return raw if isinstance(raw, dict) else {}
 
     def measure_voltage(self, cfg, gpio, avg, out_path):
-        return self._impl.measure_voltage(cfg, gpio=gpio, avg=avg, out_path=out_path)
+        result = self._backend(cfg).execute(
+            "voltage_read",
+            {"gpio": int(gpio), "avg": int(avg)},
+        )
+        if result.get("status") != "success":
+            raise RuntimeError(str(((result.get("error") or {}) if isinstance(result.get("error"), dict) else {}).get("message") or "meter voltage_read failed"))
+        data = (result.get("data") or {}) if isinstance(result.get("data"), dict) else {}
+        raw = data.get("raw")
+        if out_path and isinstance(raw, dict):
+            _write_json(out_path, raw)
+        return {"voltage_v": data.get("voltage_v")}
 
 
 class _InstrumentBackendRegistry:

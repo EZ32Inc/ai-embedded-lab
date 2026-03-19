@@ -42,7 +42,69 @@ class _FakeBackendRegistry:
         return self.backend
 
 
+class _FakeUnifiedMeterBackend:
+    def __init__(self):
+        self.calls = []
+
+    def execute(self, action, params):
+        self.calls.append((action, params))
+        if action == "gpio_measure":
+            return {
+                "status": "success",
+                "action": "gpio_measure",
+                "data": {
+                    "channels": params.get("channels"),
+                    "duration_ms": params.get("duration_ms"),
+                    "raw": {
+                        "pins": [
+                            {
+                                "gpio": 11,
+                                "state": "high",
+                                "samples": 100,
+                                "ones": 100,
+                                "zeros": 0,
+                                "transitions": 0,
+                            }
+                        ]
+                    },
+                },
+                "logs": [],
+            }
+        raise AssertionError(f"unexpected action: {action}")
+
+
 class TestInstrumentBackendRouting(unittest.TestCase):
+    def test_default_meter_backend_registry_uses_unified_backend_package(self):
+        registry = AdapterRegistry()
+        adapter = registry.get("check.instrument_signature")
+        fake_unified_backend = _FakeUnifiedMeterBackend()
+
+        with patch("ael.instruments.native_api_dispatch.measure_digital", return_value={"status": "error", "error": {"code": "native_measure_digital_unsupported", "message": "unsupported", "retryable": False}}), patch(
+            "ael.adapter_registry._Esp32MeterTcpBackend._backend",
+            return_value=fake_unified_backend,
+        ):
+            with tempfile.TemporaryDirectory() as td:
+                result = adapter.execute(
+                    {
+                        "type": "check.instrument_signature",
+                        "inputs": {
+                            "instrument_id": "esp32s3_dev_c_meter",
+                            "cfg": {"host": "127.0.0.1", "port": 9000},
+                            "links": [{"inst_gpio": 11, "expect": "high", "dut_gpio": "GPIO2"}],
+                            "digital_out": str(Path(td) / "instrument_digital.json"),
+                            "verify_out": str(Path(td) / "verify_result.json"),
+                            "duration_ms": 500,
+                        },
+                    },
+                    None,
+                    None,
+                )
+        self.assertTrue(result.get("ok"))
+        self.assertEqual(
+            fake_unified_backend.calls,
+            [("gpio_measure", {"channels": [11], "duration_ms": 500})],
+        )
+
     def test_selftest_routes_with_instrument_id(self):
         registry = AdapterRegistry()
         adapter = registry.get("check.instrument_selftest")
