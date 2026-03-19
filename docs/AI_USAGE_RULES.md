@@ -102,6 +102,30 @@ But CLI remains the stable execution layer.
 
 Design CLI for AI consumption, not human usage.
 
+## New Pack Completion Rule
+
+When an AI agent creates or formalizes a new test pack and reaches meaningful
+live validation, the task is not complete at code or commit.
+
+Required closeout:
+
+- validation closeout document
+- reusable skill capture under `docs/skills/`
+
+This applies especially when the work includes:
+
+- a new pack family
+- cross-instrument validation
+- a real bench/debug/verify fix
+
+The agent must explicitly record:
+
+- why the issue happened
+- what evidence separated false leads from the real cause
+- what reusable workflow or debug pattern should be applied next time
+
+Do not treat this as optional documentation polish. It is part of completion.
+
 ## Inventory Questions
 
 For DUT, MCU, and test-coverage questions, prefer the repo-native inventory command first:
