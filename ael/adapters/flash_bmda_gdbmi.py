@@ -1,7 +1,13 @@
 import json
 import os
+from pathlib import Path
+import socket
 import subprocess
 import time
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_STLINK_GDB_SERVER_SCRIPT = _REPO_ROOT / "instruments" / "STLinkInstrument" / "scripts" / "gdb_server.sh"
 
 
 def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue, launch_cmds):
@@ -86,6 +92,65 @@ def _append_flash_log(path: str, text: str) -> None:
         pass
 
 
+def _is_local_host(ip: str) -> bool:
+    value = str(ip or "").strip().lower()
+    return value in {"127.0.0.1", "localhost", "::1"}
+
+
+def _port_is_listening(ip: str, port: int, timeout_s: float = 0.25) -> bool:
+    try:
+        with socket.create_connection((ip, int(port)), timeout=timeout_s):
+            return True
+    except OSError:
+        return False
+
+
+def _wait_for_port(ip: str, port: int, timeout_s: float) -> bool:
+    deadline = time.time() + max(0.0, float(timeout_s))
+    while time.time() < deadline:
+        if _port_is_listening(ip, port):
+            return True
+        time.sleep(0.1)
+    return _port_is_listening(ip, port)
+
+
+def _ensure_local_stlink_gdb_server(probe_cfg, emit, startup_timeout_s: float = 5.0):
+    ip = str(probe_cfg.get("ip") or "").strip()
+    port = int(probe_cfg.get("gdb_port") or 0)
+    if not _is_local_host(ip) or port <= 0:
+        return
+    if _port_is_listening(ip, port):
+        return
+    if not _STLINK_GDB_SERVER_SCRIPT.exists():
+        emit(f"Flash: local ST-Link GDB server script missing: {_STLINK_GDB_SERVER_SCRIPT}")
+        return
+
+    emit(f"Flash: local ST-Link GDB server not detected at {ip}:{port}; starting it")
+    cmd = [str(_STLINK_GDB_SERVER_SCRIPT), "--port", str(port)]
+    try:
+        proc = subprocess.Popen(
+            cmd,
+            cwd=str(_REPO_ROOT),
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except Exception as exc:
+        emit(f"Flash: failed to start local ST-Link GDB server ({exc})")
+        return
+
+    if _wait_for_port(ip, port, startup_timeout_s):
+        emit(f"Flash: local ST-Link GDB server ready at {ip}:{port} (pid {proc.pid})")
+        return
+
+    emit(f"Flash: local ST-Link GDB server did not become ready at {ip}:{port}")
+    try:
+        if proc.poll() is None:
+            proc.terminate()
+    except Exception:
+        pass
+
+
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     if not firmware_path or not os.path.exists(firmware_path):
         print("Flash: firmware not found")
@@ -147,11 +212,15 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         strategies[1]["name"] = reset_strategy
 
     emit("Flash: BMDA via GDB (resilience ladder)")
+    if _is_local_host(ip) and port:
+        _ensure_local_stlink_gdb_server(probe_cfg, emit)
     ok = False
     strategy_used = ""
     last_error = ""
 
     for idx, strat in enumerate(strategies, start=1):
+        if _is_local_host(ip) and port:
+            _ensure_local_stlink_gdb_server(probe_cfg, emit)
         try:
             res = _run_gdb(
                 gdb_cmd,
