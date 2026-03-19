@@ -148,7 +148,7 @@ AEL now has validated dual-instrument support for shared test-pack execution on 
 The same validation methodology now works across two instrument paths:
 
 - `ST-Link`
-- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag)`
+- `ESP32JTAG`
 
 This milestone proves that, for the same DUT family and shared test assets, AEL can switch instrument paths without changing the test intent.
 
@@ -170,7 +170,7 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
 
 **STM32F103C8T6 results:**
 
-- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) + STM32F103C8T6`: `5/5 PASS`
+- `ESP32JTAG + STM32F103C8T6`: `5/5 PASS`
 - `ST-Link + STM32F103C8T6`: `5/5 PASS`
 
 **STM32F407 mailbox pack family:**
@@ -187,7 +187,7 @@ This milestone proves that, for the same DUT family and shared test assets, AEL 
 
 **STM32F407 results:**
 
-- `[ESP32JTAG](https://www.crowdsupply.com/ez32/esp32jtag) + STM32F407`: repeated live passes
+- `ESP32JTAG + STM32F407`: repeated live passes
 - `ST-Link + STM32F407`: repeated live passes
 
 **What this proves:**
@@ -689,34 +689,6 @@ Notes:
 Early stage but actively used in daily development.
 
 Feedback and contributions are welcome.
-
----
-
-## Milestones
-
-**v0.11-ai-loop** — AI-controlled hardware validation loop (2026-03-03)
-
-AEL completed a full AI-driven hardware development loop using Codex:
-
-- Generated a RunPlan
-- Executed BUILD → LOAD → CHECK pipeline
-- Flashed firmware to real hardware
-- Captured UART logs and measured GPIO voltage
-- Verified digital signature
-- Detected a runtime failure, implemented a fix, re-ran the pipeline
-- Achieved PASS on real hardware
-
-**v0.11-autonomous-loop** — Autonomous development loop (2026-03-04)
-
-AEL completed a full autonomous repository development cycle:
-
-- Executed task queue sequentially
-- Implemented minimal scoped changes
-- Ran validation after every task
-- Recorded task status with commit traceability
-- Committed each completed step
-
-Primary outputs: AIP HTTP instrument adapter, instrument manifest loader, AIP capability mapping, evidence writer helper, instrument contract validator.
 
 ---
 
