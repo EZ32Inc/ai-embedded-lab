@@ -9,7 +9,8 @@ from ael.instruments import meter_native_api
 """
 Native dispatch boundary notes:
 
-- control-instrument operations stay on control_instrument_native_api
+- generic control helper operations stay on control_instrument_native_api
+- ESP32JTAG identity/status/doctor/preflight are now owned by jtag_native_api
 - ESP32 meter metadata and doctor/status stay on meter_native_api
 - ESP32 meter action execution also enters through meter_native_api, which now
   bridges those actions onto the unified esp32_meter backend
