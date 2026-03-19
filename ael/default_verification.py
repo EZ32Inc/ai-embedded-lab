@@ -284,6 +284,21 @@ def _local_instrument_interface_path(repo_root: Path, board: str | None, test_pa
     probe_raw, probe_path = _resolve_step_probe_binding(repo_root, {"board": board_id, "test": test_path})
     probe_cfg = _normalize_probe_cfg(probe_raw)
     if probe_path or str(probe_cfg.get("host") or "").strip():
+        try:
+            config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
+            instance_id = resolve_control_instrument_instance(
+                str(config_root),
+                args=None,
+                board_id=board_id,
+            )
+            if instance_id:
+                binding = load_probe_binding(config_root, instance_id=instance_id)
+            else:
+                binding = load_probe_binding(config_root, probe_path=probe_path)
+            if str(binding.type_id or "").strip() == "esp32jtag":
+                return "jtag_native_api"
+        except Exception:
+            pass
         return "control_instrument_native_api"
     return ""
 

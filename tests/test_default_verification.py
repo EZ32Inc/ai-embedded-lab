@@ -197,7 +197,7 @@ def test_run_single_skips_meter_guard_for_non_meter_test(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
+    assert result["local_instrument_interface_path"] == "jtag_native_api"
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
 
@@ -466,7 +466,7 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
+    assert result["local_instrument_interface_path"] == "jtag_native_api"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -505,7 +505,7 @@ connection:
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
+    assert result["local_instrument_interface_path"] == "jtag_native_api"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -1275,7 +1275,7 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
         )
 
     assert code == 0
-    assert result["local_instrument_interface_path"] == "control_instrument_native_api"
+    assert result["local_instrument_interface_path"] == "jtag_native_api"
     guard_mock.assert_not_called()
 
     esp32_test = tmp_path / "esp32c6_gpio_signature_with_meter.json"
