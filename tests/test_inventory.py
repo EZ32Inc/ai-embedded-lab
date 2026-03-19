@@ -66,6 +66,56 @@ def test_inventory_text_render_omits_generic_section():
     assert "rp2040_gpio_signature" in text
 
 
+def test_inventory_plan_index_surfaces_structured_metadata_for_pilot_plans():
+    plans_by_path, _ = inventory._load_plan_index(REPO_ROOT)
+
+    uart = plans_by_path["tests/plans/stm32f103_uart_loopback_mailbox.json"]
+    spi = plans_by_path["tests/plans/stm32f103_spi_mailbox.json"]
+
+    assert uart["schema_version"] == "1.0"
+    assert uart["test_kind"] == "baremetal_mailbox"
+    assert uart["supported_instruments"] == ["stlink", "esp32jtag"]
+    assert uart["requires"] == {"mailbox": True, "datacapture": False}
+    assert uart["labels"] == ["mailbox", "portable", "cross_instrument"]
+    assert uart["covers"] == ["uart"]
+    assert uart["validation_errors"] == []
+
+    assert spi["schema_version"] == "1.0"
+    assert spi["test_kind"] == "baremetal_mailbox"
+    assert spi["supported_instruments"] == ["stlink", "esp32jtag"]
+    assert spi["requires"] == {"mailbox": True, "datacapture": False}
+    assert spi["labels"] == ["mailbox", "portable", "cross_instrument"]
+    assert spi["covers"] == ["spi"]
+    assert spi["validation_errors"] == []
+
+
+def test_inventory_plan_index_reports_invalid_structured_metadata(tmp_path: Path):
+    repo_root = tmp_path / "repo"
+    plans_dir = repo_root / "tests" / "plans"
+    plans_dir.mkdir(parents=True)
+    (plans_dir / "invalid.json").write_text(
+        json.dumps(
+            {
+                "schema_version": "9.9",
+                "name": "invalid_plan",
+                "test_kind": ["bad"],
+                "supported_instruments": "stlink",
+                "requires": {"mailbox": "yes"},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    plans_by_path, generic_plans = inventory._load_plan_index(repo_root)
+    entry = plans_by_path["tests/plans/invalid.json"]
+
+    assert generic_plans[0]["path"] == "tests/plans/invalid.json"
+    assert "unknown schema_version: 9.9" in entry["validation_errors"]
+    assert "test_kind must be a non-empty string" in entry["validation_errors"]
+    assert "supported_instruments must be a list of non-empty strings" in entry["validation_errors"]
+    assert "requires.mailbox must be boolean" in entry["validation_errors"]
+
+
 def test_inventory_instances_cli_json_output():
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -255,6 +305,25 @@ def test_describe_test_for_generated_stm32_uart_dual_instrument_contract():
     assert "uart_tx -> PA9/USART1_TX" in rendered
     assert "control_instrument -> esp32jtag_stm32_uart" in rendered
     assert "uart_instrument -> usb_uart_bridge_daemon" in rendered
+
+
+def test_describe_test_surfaces_structured_plan_metadata():
+    payload = inventory.describe_test("stm32f103_gpio", "tests/plans/stm32f103_uart_loopback_mailbox.json", REPO_ROOT)
+
+    assert payload["ok"] is True
+    test = payload["test"]
+    assert test["schema_version"] == "1.0"
+    assert test["test_kind"] == "baremetal_mailbox"
+    assert test["supported_instruments"] == ["stlink", "esp32jtag"]
+    assert test["requires"] == {"mailbox": True, "datacapture": False}
+    assert test["labels"] == ["mailbox", "portable", "cross_instrument"]
+    assert test["covers"] == ["uart"]
+    assert test["validation_errors"] == []
+    rendered = inventory.render_describe_text(payload)
+    assert "schema_version: 1.0" in rendered
+    assert "test_kind: baremetal_mailbox" in rendered
+    assert "supported_instruments: stlink, esp32jtag" in rendered
+    assert 'requires: {"datacapture": false, "mailbox": true}' in rendered
 
 
 def test_describe_test_for_generated_esp32_i2c_contract():

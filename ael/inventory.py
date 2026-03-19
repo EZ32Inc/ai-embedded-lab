@@ -21,6 +21,7 @@ from ael.pack_loader import load_pack
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
 from ael.strategy_resolver import resolve_control_instrument_override
+from ael.test_plan_schema import extract_plan_metadata
 from ael.verification_model import summarize_resource_keys
 
 
@@ -53,12 +54,21 @@ def _load_plan_index(repo_root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[D
     for path in sorted(plans_dir.glob("*.json")):
         payload = _load_json(path)
         rel = path.relative_to(repo_root).as_posix()
+        metadata = extract_plan_metadata(payload)
         entry = {
             "name": payload.get("name") or path.stem,
             "path": rel,
             "board": payload.get("board"),
             "dut": payload.get("dut"),
             "validation_style": _infer_validation_style(payload),
+            "schema_version": metadata.get("schema_version"),
+            "declared_schema_version": metadata.get("declared_schema_version"),
+            "test_kind": metadata.get("test_kind"),
+            "supported_instruments": metadata.get("supported_instruments"),
+            "requires": metadata.get("requires"),
+            "labels": metadata.get("labels"),
+            "covers": metadata.get("covers"),
+            "validation_errors": list(metadata.get("validation_errors") or []),
         }
         plans_by_path[rel] = entry
         if not entry["board"] and not entry["dut"]:
@@ -338,13 +348,23 @@ def _merge_tests(items: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
                 "name": item.get("name"),
                 "path": item.get("path"),
                 "validation_style": item.get("validation_style"),
+                "schema_version": item.get("schema_version"),
+                "test_kind": item.get("test_kind"),
+                "supported_instruments": item.get("supported_instruments"),
+                "requires": item.get("requires"),
+                "labels": item.get("labels"),
+                "covers": item.get("covers"),
                 "missing": bool(item.get("missing")),
+                "validation_errors": list(item.get("validation_errors") or []),
                 "sources": [source],
             }
             merged[key] = current
         else:
             if item.get("missing"):
                 current["missing"] = True
+            for err in item.get("validation_errors") or []:
+                if err not in current["validation_errors"]:
+                    current["validation_errors"].append(err)
             if source not in current["sources"]:
                 current["sources"].append(source)
     return list(merged.values())
@@ -380,6 +400,13 @@ def build_inventory(repo_root: Path | None = None) -> Dict[str, Any]:
                             "path": plan["path"],
                             "via": "direct_plan",
                             "validation_style": plan["validation_style"],
+                            "schema_version": plan.get("schema_version"),
+                            "test_kind": plan.get("test_kind"),
+                            "supported_instruments": plan.get("supported_instruments"),
+                            "requires": plan.get("requires"),
+                            "labels": plan.get("labels"),
+                            "covers": plan.get("covers"),
+                            "validation_errors": plan.get("validation_errors"),
                         }
                     )
             for pack in packs:
@@ -396,6 +423,13 @@ def build_inventory(repo_root: Path | None = None) -> Dict[str, Any]:
                                 "via": "pack",
                                 "pack": pack["name"],
                                 "validation_style": plan["validation_style"],
+                                "schema_version": plan.get("schema_version"),
+                                "test_kind": plan.get("test_kind"),
+                                "supported_instruments": plan.get("supported_instruments"),
+                                "requires": plan.get("requires"),
+                                "labels": plan.get("labels"),
+                                "covers": plan.get("covers"),
+                                "validation_errors": plan.get("validation_errors"),
                             }
                         )
                     else:
@@ -459,6 +493,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             return {"ok": False, "error": f"test not found: {test_path}"}
 
     payload = _load_json(path)
+    metadata = extract_plan_metadata(payload)
     board_cfg = _load_board_cfg(root, board_id)
     connection_ctx = normalize_connection_context(
         board_cfg,
@@ -474,6 +509,14 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "name": payload.get("name") or path.stem,
             "path": path.relative_to(root).as_posix(),
             "validation_style": _infer_validation_style(payload),
+            "schema_version": metadata.get("schema_version"),
+            "declared_schema_version": metadata.get("declared_schema_version"),
+            "test_kind": metadata.get("test_kind"),
+            "supported_instruments": metadata.get("supported_instruments"),
+            "requires": metadata.get("requires"),
+            "labels": metadata.get("labels"),
+            "covers": metadata.get("covers"),
+            "validation_errors": list(metadata.get("validation_errors") or []),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
         "selected_board_profile": _selected_board_profile_payload(root, board_id, board_cfg),
@@ -557,6 +600,22 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"board: {payload.get('board')}")
     test = payload.get("test", {})
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
+    if test.get("schema_version"):
+        lines.append(f"schema_version: {test.get('schema_version')}")
+    if test.get("test_kind"):
+        lines.append(f"test_kind: {test.get('test_kind')}")
+    if test.get("supported_instruments"):
+        lines.append("supported_instruments: " + ", ".join(test.get("supported_instruments") or []))
+    if isinstance(test.get("requires"), dict) and test.get("requires"):
+        lines.append("requires: " + json.dumps(test.get("requires"), sort_keys=True))
+    if test.get("labels"):
+        lines.append("labels: " + ", ".join(test.get("labels") or []))
+    if test.get("covers"):
+        lines.append("covers: " + ", ".join(test.get("covers") or []))
+    if test.get("validation_errors"):
+        lines.append("test_validation_errors:")
+        for item in test.get("validation_errors") or []:
+            lines.append(f"  - {item}")
     dut = payload.get("selected_dut", {})
     if isinstance(dut, dict) and dut:
         lines.append(f"selected_dut: {dut.get('id')}")
@@ -717,6 +776,13 @@ def render_text(inventory: Dict[str, Any]) -> str:
             continue
         for test in tests:
             extras = []
+            schema_tag = test.get("schema_version")
+            if schema_tag and schema_tag != "legacy":
+                extras.append(f"schema={schema_tag}")
+            if test.get("test_kind"):
+                extras.append(f"kind={test.get('test_kind')}")
+            if test.get("validation_errors"):
+                extras.append(f"errors={len(test.get('validation_errors') or [])}")
             for source in test.get("sources") or []:
                 via = source.get("via")
                 if source.get("pack"):
