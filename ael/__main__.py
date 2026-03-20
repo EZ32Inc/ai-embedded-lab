@@ -1749,7 +1749,13 @@ def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") ->
         n_total = dv_state.get("configured_steps", 0)
         n_pass = len(dv_state.get("validated_tests", []))
         health = dv_state.get("health_status", "")
+        schema_review = str(dv_state.get("schema_review_status") or "").strip()
+        next_action = str(dv_state.get("next_recommended_action") or "").strip()
         dv_summary = f"{n_pass}/{n_total} passing  [{health}]"
+        if schema_review:
+            dv_summary += f"  schema={schema_review}"
+        if next_action:
+            dv_summary += f"  next={next_action}"
     except Exception:
         dv_summary = "(unavailable)"
 

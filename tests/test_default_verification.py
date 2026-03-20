@@ -1215,6 +1215,48 @@ def test_verify_default_review_cli_outputs_compact_summary(tmp_path):
     assert "warning_summary: none" in res.stdout
 
 
+def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
+    setting_path = REPO_ROOT / "configs" / "default_verification_setting.yaml"
+    backup = setting_path.read_text(encoding="utf-8") if setting_path.exists() else None
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    try:
+        res = subprocess.run(
+            [sys.executable, "-m", "ael", "status", "--runs-root", str(runs_root)],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True,
+        )
+    finally:
+        if backup is None:
+            setting_path.unlink(missing_ok=True)
+        else:
+            setting_path.write_text(backup, encoding="utf-8")
+
+    assert "default verification:" in res.stdout
+    assert "schema=aligned" in res.stdout
+    assert "next=all steps passing" in res.stdout
+
+
 def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
     setting_path = tmp_path / "default_verification_setting.json"
     setting_path.write_text(
