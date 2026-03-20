@@ -985,6 +985,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(summary_control_surfaces)
         if surfaces:
             print(f"Summary: controller_surfaces={surfaces}")
+            print(f"Summary: control_instrument_surfaces={surfaces}")
     print(
         "Summary: artifacts "
         f"result={summary.get('key_artifact_paths', {}).get('result')} "
@@ -1064,6 +1065,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(lkg_control_surfaces)
         if surfaces:
             print(f"LKG: controller_surfaces={surfaces}")
+            print(f"LKG: control_instrument_surfaces={surfaces}")
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
     conn = last_known_good.get("connection_setup", {}) if isinstance(last_known_good.get("connection_setup"), dict) else {}
