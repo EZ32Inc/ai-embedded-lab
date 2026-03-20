@@ -89,6 +89,79 @@ def _degraded_instrument_policy(result: Dict[str, Any]) -> Dict[str, Any]:
     return policy
 
 
+def _infer_instrument_health(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("instrument_health") or result.get("health") or "").strip()
+    if direct:
+        return direct
+    if bool(result.get("ok")):
+        return "ready"
+    condition = _infer_instrument_condition(result)
+    if condition in ("instrument_unreachable", "instrument_transport_unavailable", "instrument_api_unavailable"):
+        return "degraded"
+    if condition == "instrument_verify_failed":
+        return "degraded"
+    return ""
+
+
+
+def _infer_failure_boundary(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("failure_boundary") or "").strip()
+    if direct:
+        return direct
+    condition = _infer_instrument_condition(result)
+    if condition == "instrument_unreachable":
+        return "instrument_connectivity"
+    if condition in ("instrument_transport_unavailable", "instrument_api_unavailable"):
+        return "instrument_service"
+    if condition == "instrument_verify_failed":
+        return "instrument_measurement"
+    return ""
+
+
+
+def _infer_recovery_hint(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("recovery_hint") or "").strip()
+    if direct:
+        return direct
+    policy = result.get("degraded_instrument_policy") if isinstance(result.get("degraded_instrument_policy"), dict) else {}
+    policy_class = str(policy.get("policy_class") or "").strip()
+    if not policy_class:
+        policy_class = str(_degraded_instrument_policy(result).get("policy_class") or "").strip()
+    if policy_class == "bench_degraded_fail_fast":
+        return "restore instrument reachability before retrying the run"
+    if policy_class == "bench_degraded_retry_once":
+        return "recover instrument transport or API availability and retry once"
+    if policy_class == "verify_no_retry":
+        return "inspect instrument-side verification inputs before retrying"
+    return ""
+
+
+
+def _attach_instrument_semantics(result: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(result, dict):
+        return result
+    family = str(result.get("instrument_family") or result.get("instrument_interface_family") or "").strip()
+    if family:
+        result.setdefault("instrument_family", family)
+        result.setdefault("instrument_interface_family", family)
+    health = _infer_instrument_health(result)
+    if health:
+        result.setdefault("instrument_health", health)
+    boundary = _infer_failure_boundary(result)
+    if boundary:
+        result.setdefault("failure_boundary", boundary)
+    hint = _infer_recovery_hint(result)
+    if hint:
+        result.setdefault("recovery_hint", hint)
+    return result
+
+
 def _load_text_payload(path: Path) -> Dict[str, Any]:
     text = path.read_text(encoding="utf-8")
     # JSON is a YAML subset and keeps parsing deterministic without extra deps.
@@ -527,7 +600,7 @@ def _resolve_board_raw(repo_root: Path, board: str | None) -> Dict[str, Any]:
     return loaded if isinstance(loaded, dict) else {}
 
 
-def _local_instrument_interface_path(repo_root: Path, board: str | None, test_path: str | None) -> str:
+def _instrument_interface_family(repo_root: Path, board: str | None, test_path: str | None) -> str:
     board_id = str(board or "").strip()
     if not board_id:
         return ""
@@ -538,7 +611,7 @@ def _local_instrument_interface_path(repo_root: Path, board: str | None, test_pa
         if isinstance(test_raw, dict):
             instrument_id, _tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
             if str(instrument_id or "").strip() == "esp32s3_dev_c_meter":
-                return "meter_native_api"
+                return "esp32_meter"
     probe_raw, probe_path = _resolve_step_probe_binding(repo_root, {"board": board_id, "test": test_path})
     probe_cfg = _normalize_probe_cfg(probe_raw)
     if probe_path or str(probe_cfg.get("host") or "").strip():
@@ -553,11 +626,11 @@ def _local_instrument_interface_path(repo_root: Path, board: str | None, test_pa
                 binding = load_probe_binding(config_root, instance_id=instance_id)
             else:
                 binding = load_probe_binding(config_root, probe_path=probe_path)
-            if str(binding.type_id or "").strip() == "esp32jtag":
-                return "jtag_native_api"
+            if str(binding.type_id or "").strip():
+                return str(binding.type_id or "").strip()
         except Exception:
             pass
-        return "control_instrument_native_api"
+        return "control"
     return ""
 
 
@@ -594,7 +667,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     test = _resolve_path(repo_root, step.get("test"))
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
-    local_interface_path = _local_instrument_interface_path(repo_root, str(board), test)
+    interface_family = _instrument_interface_family(repo_root, str(board), test)
     schema_payload = _schema_advisory_payload(repo_root, str(board), str(test))
     for item in schema_payload.get("schema_warning_messages") or []:
         print(f"default_verification: warning - {item}")
@@ -622,11 +695,12 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 out["failure_scope"] = failure_scope
                 if isinstance(out.get("observations"), dict):
                     out["observations"].setdefault("failure_scope", failure_scope)
-            if local_interface_path:
-                out["local_instrument_interface_path"] = local_interface_path
+            if interface_family:
+                out["instrument_interface_family"] = interface_family
             out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
             policy = _degraded_instrument_policy(out)
             out["degraded_instrument_policy"] = policy
+            _attach_instrument_semantics(out)
             out["retry_summary"] = {
                 "meter_guard_attempts": meter_attempts,
                 "meter_guard_retries_used": max(0, meter_attempts - 1),
@@ -654,8 +728,8 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         exit_code, payload = code
         if isinstance(payload, dict):
             out = {"ok": int(exit_code) == 0}
-            if local_interface_path:
-                out["local_instrument_interface_path"] = local_interface_path
+            if interface_family:
+                out["instrument_interface_family"] = interface_family
             out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
             if not bool(out["ok"]):
                 for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "observations"):
@@ -678,10 +752,11 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 policy = _degraded_instrument_policy(out)
                 if policy.get("policy_class"):
                     out["degraded_instrument_policy"] = policy
+            _attach_instrument_semantics(out)
             return int(exit_code), out
         out = {"ok": int(exit_code) == 0}
-        if local_interface_path:
-            out["local_instrument_interface_path"] = local_interface_path
+        if interface_family:
+            out["instrument_interface_family"] = interface_family
         out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
         if not bool(out["ok"]) and hasattr(payload, "artifacts_dir"):
             details = _extract_verify_result_details(
@@ -707,11 +782,13 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
             policy = _degraded_instrument_policy(out)
             if policy.get("policy_class"):
                 out["degraded_instrument_policy"] = policy
+        _attach_instrument_semantics(out)
         return int(exit_code), out
     out = {"ok": int(code) == 0}
-    if local_interface_path:
-        out["local_instrument_interface_path"] = local_interface_path
+    if interface_family:
+        out["instrument_interface_family"] = interface_family
     out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
+    _attach_instrument_semantics(out)
     return int(code), out
 
 
@@ -844,10 +921,22 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
         "[SUMMARY] health pass_count="
         f"{health.get('total_pass_count', 0)} fail_count={health.get('total_fail_count', 0)}",
     )
-    local_paths = health.get("local_instrument_interface_path_counts")
-    if isinstance(local_paths, dict) and local_paths:
-        parts = [f"{name}={local_paths[name]}" for name in sorted(local_paths)]
-        _log_line(lock, f"[SUMMARY] local_instrument_interface_paths {' '.join(parts)}")
+    instrument_families = health.get("instrument_family_counts")
+    if isinstance(instrument_families, dict) and instrument_families:
+        parts = [f"{name}={instrument_families[name]}" for name in sorted(instrument_families)]
+        _log_line(lock, f"[SUMMARY] instrument_families {' '.join(parts)}")
+    instrument_health = health.get("instrument_health_counts")
+    if isinstance(instrument_health, dict) and instrument_health:
+        parts = [f"{name}={instrument_health[name]}" for name in sorted(instrument_health)]
+        _log_line(lock, f"[SUMMARY] instrument_health {' '.join(parts)}")
+    failure_boundaries = health.get("failure_boundary_counts")
+    if isinstance(failure_boundaries, dict) and failure_boundaries:
+        parts = [f"{name}={failure_boundaries[name]}" for name in sorted(failure_boundaries)]
+        _log_line(lock, f"[SUMMARY] failure_boundaries {' '.join(parts)}")
+    recovery_hints = health.get("recovery_hint_counts")
+    if isinstance(recovery_hints, dict) and recovery_hints:
+        parts = [f"{name}={recovery_hints[name]}" for name in sorted(recovery_hints)]
+        _log_line(lock, f"[SUMMARY] recovery_hints {' | '.join(parts)}")
     counts = health.get("instrument_condition_counts")
     if isinstance(counts, dict) and counts:
         parts = [f"{name}={counts[name]}" for name in sorted(counts)]

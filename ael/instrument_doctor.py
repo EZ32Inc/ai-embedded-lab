@@ -7,6 +7,7 @@ from typing import Any, Dict, Optional
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
+from ael.instruments.interfaces.model import derive_doctor_health
 from ael.instruments.interfaces.registry import control_family, control_native_interface, resolve_control_provider, resolve_manifest_provider
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
@@ -64,14 +65,15 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
     native_status = native_api_dispatch.control_get_status(probe_cfg)
     native_identify = native_api_dispatch.control_identify(probe_cfg)
     native_capabilities = native_api_dispatch.control_get_capabilities(probe_cfg)
+    doctor_data = (native_doctor.get("result") or native_doctor.get("data") or {}) if isinstance(native_doctor, dict) else {}
     checks = {}
     if native_doctor.get("status") == "ok":
-        checks = ((native_doctor.get("data") or {}).get("checks") or {}) if isinstance(native_doctor.get("data"), dict) else {}
+        checks = (doctor_data.get("checks") or {}) if isinstance(doctor_data, dict) else {}
         if "gdb_remote" not in checks and "debug_remote" in checks:
             checks["gdb_remote"] = checks.get("debug_remote")
         if "capture_subsystem" not in checks and "capture_control" in checks:
             checks["capture_subsystem"] = checks.get("capture_control")
-        overall_ok = bool((native_doctor.get("data") or {}).get("reachable"))
+        overall_ok = bool(doctor_data.get("reachable"))
     else:
         checks["native_doctor"] = {
             "ok": False,
@@ -108,6 +110,9 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "capability_surfaces": dict(binding.capability_surfaces or {}),
         "metadata_validation_errors": list(binding.metadata_validation_errors),
         "checks": checks,
+        "health": (doctor_data.get("health") if isinstance(doctor_data, dict) and doctor_data.get("health") else derive_doctor_health(reachable=bool(overall_ok), checks=checks)),
+        "recovery_hint": doctor_data.get("recovery_hint") if isinstance(doctor_data, dict) else None,
+        "failure_boundary": doctor_data.get("failure_boundary") if isinstance(doctor_data, dict) else None,
     }
 
 
@@ -120,15 +125,16 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
     endpoint = communication.get("endpoint")
     provider = resolve_manifest_provider(manifest)
     checks: Dict[str, Any] = {}
+    doctor_data: Dict[str, Any] = {}
 
     if provider is not None:
         native_doctor = native_api_dispatch.doctor(manifest)
         checks["native_doctor"] = native_doctor
+        doctor_data = native_doctor.get("result", {}) if isinstance(native_doctor.get("result"), dict) else (native_doctor.get("data", {}) if isinstance(native_doctor.get("data"), dict) else {})
         if native_doctor.get("status") == "ok":
-            native_data = native_doctor.get("data", {}) if isinstance(native_doctor.get("data"), dict) else {}
-            doctor_checks = native_data.get("checks") if isinstance(native_data.get("checks"), dict) else {}
+            doctor_checks = doctor_data.get("checks") if isinstance(doctor_data.get("checks"), dict) else {}
             checks.update(doctor_checks)
-            overall_ok = bool(native_data.get("reachable", True))
+            overall_ok = bool(doctor_data.get("reachable", True))
         else:
             checks["availability"] = {
                 "ok": False,
@@ -163,6 +169,9 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
             )
         ),
         "checks": checks,
+        "health": (doctor_data.get("health") if isinstance(doctor_data, dict) and doctor_data.get("health") else derive_doctor_health(reachable=bool(overall_ok), checks=checks)),
+        "recovery_hint": doctor_data.get("recovery_hint") if isinstance(doctor_data, dict) else None,
+        "failure_boundary": doctor_data.get("failure_boundary") if isinstance(doctor_data, dict) else None,
     }
 
 

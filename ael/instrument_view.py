@@ -269,6 +269,12 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_family"):
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
+    if payload.get("health"):
+        lines.append(f"health: {payload.get('health')}")
+    if payload.get("failure_boundary"):
+        lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
+    if payload.get("recovery_hint"):
+        lines.append(f"recovery_hint: {payload.get('recovery_hint')}")
     if payload.get("instrument_role"):
         lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
@@ -351,6 +357,12 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
         lines.append(f"type: {payload.get('type')}")
     if payload.get("instrument_family"):
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
+    if payload.get("health"):
+        lines.append(f"health: {payload.get('health')}")
+    if payload.get("failure_boundary"):
+        lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
+    if payload.get("recovery_hint"):
+        lines.append(f"recovery_hint: {payload.get('recovery_hint')}")
     if payload.get("instrument_role"):
         lines.append(f"instrument_role: {payload.get('instrument_role')}")
     if payload.get("origin"):
@@ -452,6 +464,12 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
         lines.append(f"doctor_ok: {payload.get('ok')}")
     if payload.get("instrument_family"):
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
+    if payload.get("health"):
+        lines.append(f"health: {payload.get('health')}")
+    if payload.get("failure_boundary"):
+        lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
+    if payload.get("recovery_hint"):
+        lines.append(f"recovery_hint: {payload.get('recovery_hint')}")
     native_interface = payload.get("native_interface")
     if isinstance(native_interface, dict) and native_interface:
         lines.append("native_interface:")

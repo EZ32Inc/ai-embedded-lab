@@ -31,9 +31,13 @@ def test_usb_uart_provider_status_and_doctor(monkeypatch):
     )
     status = usb_uart_bridge.get_status(manifest)
     assert status["status"] == "ok"
+    assert status["data"]["status_model_version"] == "instrument_status/v1"
+    assert status["data"]["health"] == "ready"
     assert status["data"]["health_domains"]["bridge_service"]["ok"] is True
     doctor = usb_uart_bridge.doctor(manifest)
     assert doctor["status"] == "ok"
+    assert doctor["data"]["doctor_model_version"] == "instrument_doctor/v1"
+    assert doctor["data"]["health"] == "healthy"
     assert doctor["data"]["checks"]["bridge_service"]["ok"] is True
 
 
@@ -44,10 +48,22 @@ def test_usb_uart_provider_action_wrappers(monkeypatch):
         "ael.instruments.interfaces.usb_uart_bridge._http_call",
         lambda manifest, path, **kwargs: {"status": "ok", "data": {"path": path, "payload": kwargs.get("payload")}},
     )
-    opened = usb_uart_bridge.open_uart(manifest)
+    opened = usb_uart_bridge.PROVIDER.invoke_action(manifest, "open")
     assert opened["status"] == "ok"
-    written = usb_uart_bridge.write_uart(manifest, text="ping")
+    assert opened["family"] == "usb_uart_bridge"
+    assert opened["action"] == "open"
+    assert opened["data"]["session_state"] == "open"
+    written = usb_uart_bridge.PROVIDER.invoke_action(manifest, "write_uart", text="ping")
+    assert written["status"] == "ok"
+    assert written["family"] == "usb_uart_bridge"
+    assert written["action"] == "write_uart"
     assert written["data"]["path"] == "/write"
     assert written["data"]["payload"]["text"] == "ping"
-    read = usb_uart_bridge.read_uart(manifest, size=64)
+    read = usb_uart_bridge.PROVIDER.invoke_action(manifest, "read_uart", size=64)
+    assert read["status"] == "ok"
+    assert read["family"] == "usb_uart_bridge"
+    assert read["action"] == "read_uart"
     assert read["data"]["payload"]["size"] == 64
+    closed = usb_uart_bridge.PROVIDER.invoke_action(manifest, "close")
+    assert closed["status"] == "ok"
+    assert closed["data"]["session_state"] == "closed"

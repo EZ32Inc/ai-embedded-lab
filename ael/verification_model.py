@@ -123,12 +123,75 @@ def _failure_summary(result: Dict[str, Any] | Any) -> str:
     return " ".join(parts).strip()
 
 
+def _infer_result_instrument_health(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("instrument_health") or result.get("health") or "").strip()
+    if direct:
+        return direct
+    if bool(result.get("ok")):
+        return "ready"
+    observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+    condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
+    if condition in {"instrument_unreachable", "instrument_transport_unavailable", "instrument_api_unavailable", "instrument_verify_failed"}:
+        return "degraded"
+    return ""
+
+
+
+def _infer_result_failure_boundary(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("failure_boundary") or "").strip()
+    if direct:
+        return direct
+    observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+    condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
+    if condition == "instrument_unreachable":
+        return "instrument_connectivity"
+    if condition in {"instrument_transport_unavailable", "instrument_api_unavailable"}:
+        return "instrument_service"
+    if condition == "instrument_verify_failed":
+        return "instrument_measurement"
+    return ""
+
+
+
+def _infer_result_recovery_hint(result: Dict[str, Any]) -> str:
+    if not isinstance(result, dict):
+        return ""
+    direct = str(result.get("recovery_hint") or "").strip()
+    if direct:
+        return direct
+    policy = result.get("degraded_instrument_policy") if isinstance(result.get("degraded_instrument_policy"), dict) else {}
+    policy_class = str(policy.get("policy_class") or "").strip()
+    if not policy_class:
+        observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
+        condition = str(result.get("instrument_condition") or observations.get("instrument_condition") or "").strip()
+        if condition == "instrument_unreachable":
+            policy_class = "bench_degraded_fail_fast"
+        elif condition in {"instrument_transport_unavailable", "instrument_api_unavailable"}:
+            policy_class = "bench_degraded_retry_once"
+        elif condition == "instrument_verify_failed":
+            policy_class = "verify_no_retry"
+    if policy_class == "bench_degraded_fail_fast":
+        return "restore instrument reachability before retrying the run"
+    if policy_class == "bench_degraded_retry_once":
+        return "recover instrument transport or API availability and retry once"
+    if policy_class == "verify_no_retry":
+        return "inspect instrument-side verification inputs before retrying"
+    return ""
+
+
 def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, Any]:
     condition_counts: Dict[str, int] = {}
     policy_counts: Dict[str, int] = {}
     failure_class_counts: Dict[str, int] = {}
     verify_substage_counts: Dict[str, int] = {}
-    local_path_counts: Dict[str, int] = {}
+    instrument_family_counts: Dict[str, int] = {}
+    instrument_health_counts: Dict[str, int] = {}
+    failure_boundary_counts: Dict[str, int] = {}
+    recovery_hint_counts: Dict[str, int] = {}
     worker_pass_counts: Dict[str, int] = {}
     worker_fail_counts: Dict[str, int] = {}
     degraded_workers: List[Dict[str, Any]] = []
@@ -151,9 +214,18 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
         if not isinstance(result, dict):
             continue
         observations = result.get("observations") if isinstance(result.get("observations"), dict) else {}
-        local_path = str(result.get("local_instrument_interface_path") or "").strip()
-        if local_path:
-            local_path_counts[local_path] = local_path_counts.get(local_path, 0) + 1
+        instrument_family = str(result.get("instrument_family") or result.get("instrument_interface_family") or "").strip()
+        if instrument_family:
+            instrument_family_counts[instrument_family] = instrument_family_counts.get(instrument_family, 0) + 1
+        instrument_health = _infer_result_instrument_health(result)
+        if instrument_health:
+            instrument_health_counts[instrument_health] = instrument_health_counts.get(instrument_health, 0) + 1
+        failure_boundary = _infer_result_failure_boundary(result)
+        if failure_boundary:
+            failure_boundary_counts[failure_boundary] = failure_boundary_counts.get(failure_boundary, 0) + 1
+        recovery_hint = _infer_result_recovery_hint(result)
+        if recovery_hint:
+            recovery_hint_counts[recovery_hint] = recovery_hint_counts.get(recovery_hint, 0) + 1
         failure_class = str(result.get("failure_class") or observations.get("failure_class") or "").strip()
         if failure_class:
             failure_class_counts[failure_class] = failure_class_counts.get(failure_class, 0) + 1
@@ -195,7 +267,11 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
         "policy_class_counts": policy_counts,
         "failure_class_counts": failure_class_counts,
         "verify_substage_counts": verify_substage_counts,
-        "local_instrument_interface_path_counts": local_path_counts,
+        "instrument_family_counts": instrument_family_counts,
+        "instrument_interface_family_counts": instrument_family_counts,
+        "instrument_health_counts": instrument_health_counts,
+        "failure_boundary_counts": failure_boundary_counts,
+        "recovery_hint_counts": recovery_hint_counts,
         "degraded_workers": degraded_workers,
     }
 

@@ -1960,6 +1960,44 @@ def _board_state(board_id: str, runs_root: str) -> dict:
     }
 
 
+def _state_count_summary(values: list[str]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for raw in values:
+        key = str(raw or "").strip()
+        if not key:
+            continue
+        counts[key] = counts.get(key, 0) + 1
+    return counts
+
+
+
+def _state_latest_instrument_fields(result: dict) -> dict:
+    if not isinstance(result, dict):
+        return {}
+    field_names = (
+        "instrument_family",
+        "instrument_interface_family",
+        "instrument_health",
+        "failure_boundary",
+        "recovery_hint",
+    )
+    out = {}
+    for name in field_names:
+        value = str(result.get(name) or "").strip()
+        if value:
+            out[name] = value
+    return out
+
+
+
+def _render_count_line(prefix: str, counts: dict) -> str:
+    if not isinstance(counts, dict) or not counts:
+        return f"{prefix}: none"
+    parts = [f"{name}={counts[name]}" for name in sorted(counts)]
+    return f"{prefix}: {' '.join(parts)}"
+
+
+
 def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     """Build a state object for default verification from config + recent run artifacts."""
     try:
@@ -1982,6 +2020,10 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     current_blocker = ""
     schema_results: list[dict] = []
     repo_root = Path(__file__).resolve().parents[1]
+    latest_instrument_families: list[str] = []
+    latest_instrument_health: list[str] = []
+    latest_failure_boundaries: list[str] = []
+    latest_recovery_hints: list[str] = []
 
     for step in steps:
         if not isinstance(step, dict):
@@ -2047,13 +2089,23 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
 
         ok = bool(result.get("ok", False))
         run_id = candidates[0].name
+        latest_fields = _state_latest_instrument_fields(result)
+        family = str(latest_fields.get("instrument_family") or latest_fields.get("instrument_interface_family") or "").strip()
+        if family:
+            latest_instrument_families.append(family)
+        if latest_fields.get("instrument_health"):
+            latest_instrument_health.append(str(latest_fields.get("instrument_health")))
+        if latest_fields.get("failure_boundary"):
+            latest_failure_boundaries.append(str(latest_fields.get("failure_boundary")))
+        if latest_fields.get("recovery_hint"):
+            latest_recovery_hints.append(str(latest_fields.get("recovery_hint")))
 
         if ok:
-            validated.append({"step": step_label, "run_id": run_id, "optional": optional})
+            validated.append({"step": step_label, "run_id": run_id, "optional": optional, **latest_fields})
             if not last_successful:
-                last_successful = {"step": step_label, "run_id": run_id}
+                last_successful = {"step": step_label, "run_id": run_id, **latest_fields}
         else:
-            entry = {"step": step_label, "run_id": run_id, "optional": optional}
+            entry = {"step": step_label, "run_id": run_id, "optional": optional, **latest_fields}
             if optional:
                 optional_failing.append(entry)
             else:
@@ -2093,6 +2145,11 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     if schema_warning_messages and not failing:
         next_action = "all steps passing, but review instrument support declarations and schema warnings"
 
+    instrument_family_counts = _state_count_summary(latest_instrument_families)
+    instrument_health_counts = _state_count_summary(latest_instrument_health)
+    failure_boundary_counts = _state_count_summary(latest_failure_boundaries)
+    recovery_hint_counts = _state_count_summary(latest_recovery_hints)
+
     return {
         "name": "Default Verification",
         "type": "system_baseline",
@@ -2110,6 +2167,10 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         "schema_advisory_summary": schema_advisory_summary,
         "schema_warning_messages": schema_warning_messages,
         "next_recommended_action": next_action,
+        "instrument_family_counts": instrument_family_counts,
+        "instrument_health_counts": instrument_health_counts,
+        "failure_boundary_counts": failure_boundary_counts,
+        "recovery_hint_counts": recovery_hint_counts,
         "key_refs": [
             setting_file,
             "docs/default_verification_baseline.md",
@@ -2158,6 +2219,14 @@ def _render_verify_default_state_text(state: dict) -> str:
         lines.append("schema_review:")
         lines.append(f"  coverage: {coverage}")
         lines.append(f"  alignment: {alignment}")
+    instrument_family_counts = state.get("instrument_family_counts") if isinstance(state.get("instrument_family_counts"), dict) else {}
+    instrument_health_counts = state.get("instrument_health_counts") if isinstance(state.get("instrument_health_counts"), dict) else {}
+    failure_boundary_counts = state.get("failure_boundary_counts") if isinstance(state.get("failure_boundary_counts"), dict) else {}
+    recovery_hint_counts = state.get("recovery_hint_counts") if isinstance(state.get("recovery_hint_counts"), dict) else {}
+    lines.append(_render_count_line("instrument_families", instrument_family_counts))
+    lines.append(_render_count_line("instrument_health", instrument_health_counts))
+    lines.append(_render_count_line("failure_boundaries", failure_boundary_counts))
+    lines.append(_render_count_line("recovery_hints", recovery_hint_counts))
     if summary:
         lines.append("schema_advisory_summary:")
         lines.append(f"  structured_step_count: {summary.get('structured_step_count', 0)}")
@@ -2211,6 +2280,22 @@ def _render_verify_default_review_text(state: dict) -> str:
     if supported_counts:
         parts = [f"{key}={supported_counts[key]}" for key in sorted(supported_counts)]
         lines.append("instrument_support: " + " ".join(parts))
+    instrument_family_counts = state.get("instrument_family_counts") if isinstance(state.get("instrument_family_counts"), dict) else {}
+    instrument_health_counts = state.get("instrument_health_counts") if isinstance(state.get("instrument_health_counts"), dict) else {}
+    failure_boundary_counts = state.get("failure_boundary_counts") if isinstance(state.get("failure_boundary_counts"), dict) else {}
+    recovery_hint_counts = state.get("recovery_hint_counts") if isinstance(state.get("recovery_hint_counts"), dict) else {}
+    if instrument_family_counts:
+        parts = [f"{key}={instrument_family_counts[key]}" for key in sorted(instrument_family_counts)]
+        lines.append("instrument_families: " + " ".join(parts))
+    if instrument_health_counts:
+        parts = [f"{key}={instrument_health_counts[key]}" for key in sorted(instrument_health_counts)]
+        lines.append("instrument_health: " + " ".join(parts))
+    if failure_boundary_counts:
+        parts = [f"{key}={failure_boundary_counts[key]}" for key in sorted(failure_boundary_counts)]
+        lines.append("failure_boundaries: " + " ".join(parts))
+    if recovery_hint_counts:
+        parts = [f"{key}={recovery_hint_counts[key]}" for key in sorted(recovery_hint_counts)]
+        lines.append("recovery_hints: " + " | ".join(parts))
     if warning_messages:
         lines.append(f"warning_summary: {len(warning_messages)} schema warning(s)")
         for item in warning_messages:

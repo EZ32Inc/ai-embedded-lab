@@ -157,7 +157,16 @@ def default_verification_review_summary(repo_root: str | Path | None = None) -> 
 
 def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dict[str, str]:
     text = str(review.get("text") or "")
-    highlights = {"health_status": "unavailable", "schema_review_status": "unavailable", "warning_summary": "unavailable", "structured_coverage": "unavailable"}
+    highlights = {
+        "health_status": "unavailable",
+        "schema_review_status": "unavailable",
+        "warning_summary": "unavailable",
+        "structured_coverage": "unavailable",
+        "instrument_families": "unavailable",
+        "instrument_health": "unavailable",
+        "failure_boundaries": "unavailable",
+        "recovery_hints": "unavailable",
+    }
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("health_status:"):
@@ -168,6 +177,14 @@ def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dic
             highlights["warning_summary"] = stripped.split(":", 1)[1].strip() or "unavailable"
         elif stripped.startswith("structured_coverage:"):
             highlights["structured_coverage"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("instrument_families:"):
+            highlights["instrument_families"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("instrument_health:"):
+            highlights["instrument_health"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("failure_boundaries:"):
+            highlights["failure_boundaries"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("recovery_hints:"):
+            highlights["recovery_hints"] = stripped.split(":", 1)[1].strip() or "unavailable"
     if not bool(review.get("ok", False)) and highlights["warning_summary"] == "unavailable":
         highlights["warning_summary"] = "review unavailable"
     return highlights

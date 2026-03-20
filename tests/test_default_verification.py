@@ -206,7 +206,7 @@ def test_run_single_skips_meter_guard_for_non_meter_test(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "jtag_native_api"
+    assert result["instrument_interface_family"] == "esp32jtag"
     guard_mock.assert_not_called()
     run_mock.assert_called_once()
 
@@ -466,7 +466,7 @@ def test_run_single_retries_transient_meter_api_failure_once(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "meter_native_api"
+    assert result["instrument_interface_family"] == "esp32_meter"
     assert guard_mock.call_count == 2
     sleep_mock.assert_called_once_with(1.0)
     run_mock.assert_called_once()
@@ -567,7 +567,7 @@ def test_run_single_uses_board_probe_default_when_step_probe_missing(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "jtag_native_api"
+    assert result["instrument_interface_family"] == "esp32jtag"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -606,7 +606,7 @@ connection:
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "jtag_native_api"
+    assert result["instrument_interface_family"] == "esp32jtag"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -645,7 +645,7 @@ def test_run_single_uses_no_probe_for_esp32c6_meter_path(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "meter_native_api"
+    assert result["instrument_interface_family"] == "esp32_meter"
     guard_mock.assert_called_once()
     assert run_mock.call_args.kwargs["probe_path"] is None
 
@@ -684,7 +684,7 @@ def test_run_single_keeps_meter_instrument_path_for_esp32c6(tmp_path):
 
     assert code == 0
     assert result["ok"] is True
-    assert result["local_instrument_interface_path"] == "meter_native_api"
+    assert result["instrument_interface_family"] == "esp32_meter"
     guard_mock.assert_called_once()
     assert guard_mock.call_args.kwargs["host"] == "192.168.4.1"
     assert guard_mock.call_args.kwargs["manifest"]["id"] == "esp32s3_dev_c_meter"
@@ -1147,7 +1147,7 @@ def test_verify_default_state_prefers_schema_warning_next_action(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     with patch(
         "ael.__main__.inventory_view.describe_test",
@@ -1253,7 +1253,7 @@ def test_verify_default_review_cli_outputs_compact_summary(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1300,7 +1300,7 @@ def test_status_state_review_surfaces_are_consistent_for_same_baseline(tmp_path)
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1386,7 +1386,7 @@ def test_audit_and_verify_default_surfaces_use_consistent_review_vocabulary(tmp_
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     state = _verify_default_state(str(setting_path), str(runs_root))
     review_text = _render_verify_default_review_text(state)
@@ -1419,7 +1419,7 @@ def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1463,7 +1463,7 @@ def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1491,6 +1491,9 @@ def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
     assert "schema_advisory_summary:" in res.stdout
     assert "baseline_readiness_status: ready" in res.stdout
     assert "schema_review_status: aligned" in res.stdout
+    assert "instrument_families: esp32_meter=1" in res.stdout
+    assert "instrument_health: ready=1" in res.stdout
+    assert "failure_boundaries: none" in res.stdout
     assert "schema_review:" in res.stdout
     assert "structured_step_count: 1" in res.stdout
     assert "supported_instrument_status_counts:" in res.stdout
@@ -1513,7 +1516,7 @@ def test_verify_default_state_cli_json_includes_schema_summary(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1541,6 +1544,10 @@ def test_verify_default_state_cli_json_includes_schema_summary(tmp_path):
 
     assert payload["baseline_readiness_status"] == "ready"
     assert payload["schema_review_status"] == "aligned"
+    assert payload["instrument_family_counts"] == {"esp32_meter": 1}
+    assert payload["instrument_health_counts"] == {"ready": 1}
+    assert payload["failure_boundary_counts"] == {}
+    assert payload["recovery_hint_counts"] == {}
     assert "schema_advisory_summary" in payload
     assert payload["schema_advisory_summary"]["structured_step_count"] == 1
 
@@ -2056,7 +2063,7 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
                             "error": "meter esp32s3_dev_c_meter at 192.168.4.1:9000 accepted tcp but api ping failed.",
                             "failure_class": "network_meter_api",
                             "instrument_condition": "instrument_api_unavailable",
-                            "local_instrument_interface_path": "meter_native_api",
+                            "instrument_interface_family": "esp32_meter",
                         },
                     },
                 ],
@@ -2090,7 +2097,11 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert payload["health_summary"]["instrument_condition_counts"] == {"instrument_api_unavailable": 1}
     assert payload["health_summary"]["policy_class_counts"] == {"bench_degraded_retry_once": 1}
     assert payload["health_summary"]["failure_class_counts"] == {"network_meter_api": 1}
-    assert payload["health_summary"]["local_instrument_interface_path_counts"] == {"meter_native_api": 1}
+    assert payload["health_summary"]["instrument_family_counts"] == {"esp32_meter": 1}
+    assert payload["health_summary"]["instrument_interface_family_counts"] == {"esp32_meter": 1}
+    assert payload["health_summary"]["instrument_health_counts"] == {"degraded": 1, "ready": 1}
+    assert payload["health_summary"]["failure_boundary_counts"] == {"instrument_service": 1}
+    assert payload["health_summary"]["recovery_hint_counts"] == {"recover instrument transport or API availability and retry once": 1}
     assert payload["health_summary"]["total_pass_count"] == 6
     assert payload["health_summary"]["total_fail_count"] == 1
     assert payload["health_summary"]["worker_pass_counts"]["rp2040_gpio_signature"] == 5
@@ -2098,7 +2109,7 @@ def test_parallel_repeat_until_fail_keeps_unrelated_worker_progress_when_instrum
     assert payload["health_summary"]["degraded_workers"][0]["name"] == "esp32c6_gpio_signature_with_meter"
 
 
-def test_run_single_reports_local_instrument_interface_path_for_default_targets(tmp_path):
+def test_run_single_reports_instrument_interface_family_for_default_targets(tmp_path):
     rp2040_test = tmp_path / "gpio_signature.json"
     rp2040_test.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")
 
@@ -2113,7 +2124,8 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
         )
 
     assert code == 0
-    assert result["local_instrument_interface_path"] == "jtag_native_api"
+    assert result["instrument_interface_family"] == "esp32jtag"
+    assert result["instrument_health"] == "ready"
     guard_mock.assert_not_called()
 
     esp32_test = tmp_path / "esp32c6_gpio_signature_with_meter.json"
@@ -2139,7 +2151,8 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
         )
 
     assert code == 0
-    assert result["local_instrument_interface_path"] == "meter_native_api"
+    assert result["instrument_interface_family"] == "esp32_meter"
+    assert result["instrument_health"] == "ready"
     guard_mock.assert_called_once()
 
 
@@ -2168,7 +2181,14 @@ def test_default_verification_review_highlights_extracts_status_and_warning_summ
 
     highlights = default_verification_review_highlights(review)
 
-    assert highlights == {"health_status": "pass", "schema_review_status": "aligned", "structured_coverage": "structured=3 legacy=0", "warning_summary": "none"}
+    assert highlights["health_status"] == "pass"
+    assert highlights["schema_review_status"] == "aligned"
+    assert highlights["structured_coverage"] == "structured=3 legacy=0"
+    assert highlights["warning_summary"] == "none"
+    assert highlights["instrument_families"] == "unavailable"
+    assert highlights["instrument_health"] == "unavailable"
+    assert highlights["failure_boundaries"] == "unavailable"
+    assert highlights["recovery_hints"] == "unavailable"
 
 
 def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, tmp_path):
@@ -2205,6 +2225,7 @@ def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, t
     assert "structured_coverage: structured=3 legacy=0" in text
     assert "warning_summary: none" in text
     assert "baseline_readiness_status: ready" in text
+    assert "instrument_families:" in text
     assert "merge_advisory: baseline readiness aligned" in text
     assert "baseline_readiness_status: ready" in text
     assert "merge_advisory: baseline readiness aligned" in text
@@ -2250,6 +2271,10 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
         "schema_review_status: warnings_present\n"
         "structured_coverage: structured=3 legacy=1\n"
         "warning_summary: 1 schema warning(s)\n"
+        "instrument_families: esp32_meter=1\n"
+        "instrument_health: degraded=1\n"
+        "failure_boundaries: instrument_service=1\n"
+        "recovery_hints: recover instrument transport or API availability and retry once=1\n"
     )
     monkeypatch.chdir(tmp_path)
     (tmp_path / "reports").mkdir()
@@ -2412,11 +2437,19 @@ def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consis
         "schema_review_status: warnings_present\n"
         "structured_coverage: structured=3 legacy=1\n"
         "warning_summary: 1 schema warning(s)\n"
+        "instrument_families: esp32_meter=1\n"
+        "instrument_health: degraded=1\n"
+        "failure_boundaries: instrument_service=1\n"
+        "recovery_hints: recover instrument transport or API availability and retry once=1\n"
     )
     expected = {
         "schema_review_status": "warnings_present",
         "structured_coverage": "structured=3 legacy=1",
         "warning_summary": "1 schema warning(s)",
+        "instrument_families": "esp32_meter=1",
+        "instrument_health": "degraded=1",
+        "failure_boundaries": "instrument_service=1",
+        "recovery_hints": "recover instrument transport or API availability and retry once=1",
     }
     review_payload = default_verification_review_payload({"ok": True, "text": review_text})
 
@@ -2598,3 +2631,34 @@ def test_review_pack_and_nightly_report_surface_baseline_readiness_advisory(monk
 
     assert pack_payload["baseline_readiness_status"] == "needs_attention"
     assert nightly_payload["baseline_readiness_status"] == "needs_attention"
+
+
+def test_print_worker_totals_includes_unified_instrument_semantics(capsys):
+    lock = __import__("threading").Lock()
+    workers = [
+        {
+            "name": "esp32c6_gpio_signature_with_meter",
+            "pass_count": 0,
+            "completed_iterations": 1,
+            "ok": False,
+            "results": [
+                {
+                    "result": {
+                        "ok": False,
+                        "instrument_interface_family": "esp32_meter",
+                        "instrument_health": "degraded",
+                        "failure_boundary": "instrument_service",
+                        "recovery_hint": "recover instrument transport or API availability and retry once",
+                        "instrument_condition": "instrument_api_unavailable",
+                        "failure_class": "network_meter_api",
+                    }
+                }
+            ],
+        }
+    ]
+    default_verification._print_worker_totals(lock, workers)
+    out = capsys.readouterr().out
+    assert "[SUMMARY] instrument_families esp32_meter=1" in out
+    assert "[SUMMARY] instrument_health degraded=1" in out
+    assert "[SUMMARY] failure_boundaries instrument_service=1" in out
+    assert "[SUMMARY] recovery_hints recover instrument transport or API availability and retry once=1" in out
