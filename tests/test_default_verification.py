@@ -202,6 +202,98 @@ def test_run_single_skips_meter_guard_for_non_meter_test(tmp_path):
     run_mock.assert_called_once()
 
 
+def test_run_single_surfaces_schema_advisories_for_structured_meter_path(tmp_path):
+    test_path = tmp_path / "meter_path.json"
+    test_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "name": "meter_path",
+                "test_kind": "instrument_specific",
+                "board": "esp32c6_devkit",
+                "supported_instruments": ["esp32_meter"],
+                "requires": {"mailbox": False, "datacapture": True},
+                "labels": ["meter", "instrument_path"],
+                "covers": ["gpio", "voltage"],
+                "instrument": {
+                    "id": "esp32s3_dev_c_meter",
+                    "tcp": {"host": "192.168.4.1", "port": 9000},
+                },
+                "bench_setup": {
+                    "dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}],
+                    "ground_required": True,
+                    "ground_confirmed": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=(0, {"ok": True}),
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    assert code == 0
+    assert result["ok"] is True
+    assert result["plan_schema_kind"] == "structured"
+    assert result["test_kind"] == "instrument_specific"
+    assert result["supported_instrument_advisory"]["status"] == "declared_supported"
+    assert result["schema_advisories"] == [
+        "instrument-side measurement path",
+        "requires instrument-side measurement and no mailbox dependency",
+        "selected instrument type esp32_meter is declared supported",
+    ]
+    assert result.get("schema_warning_messages") is None or result.get("schema_warning_messages") == []
+    guard_mock.assert_called_once()
+    run_mock.assert_called_once()
+
+
+def test_run_single_prints_warning_for_unsupported_declared_instrument(tmp_path, capsys):
+    test_path = tmp_path / "unsupported_meter_path.json"
+    test_path.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "name": "unsupported_meter_path",
+                "test_kind": "instrument_specific",
+                "board": "esp32c6_devkit",
+                "supported_instruments": ["stlink"],
+                "requires": {"mailbox": False, "datacapture": True},
+                "labels": ["meter", "instrument_path"],
+                "covers": ["gpio", "voltage"],
+                "instrument": {
+                    "id": "esp32s3_dev_c_meter",
+                    "tcp": {"host": "192.168.4.1", "port": 9000},
+                },
+                "bench_setup": {
+                    "dut_to_instrument": [{"dut_gpio": "X1(GPIO4)", "inst_gpio": 11, "expect": "toggle"}],
+                    "ground_required": True,
+                    "ground_confirmed": True,
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    step = {"board": "esp32c6_devkit", "test": str(test_path)}
+
+    with patch("ael.default_verification.instrument_provision.ensure_meter_reachable") as guard_mock, patch(
+        "ael.default_verification.run_pipeline",
+        return_value=(0, {"ok": True}),
+    ) as run_mock:
+        code, result = default_verification._run_single(tmp_path, step, "normal")
+
+    captured = capsys.readouterr().out
+    assert code == 0
+    assert result["supported_instrument_advisory"]["status"] == "declared_unsupported"
+    assert result["schema_warning_messages"] == ["selected instrument type esp32_meter is not in declared support set"]
+    assert "default_verification: warning - selected instrument type esp32_meter is not in declared support set" in captured
+    guard_mock.assert_called_once()
+    run_mock.assert_called_once()
+
+
 def test_run_single_promotes_verify_failure_details_from_pipeline(tmp_path):
     test_path = tmp_path / "gpio_signature.json"
     test_path.write_text('{"name":"gpio_signature","pin":"P0.0"}', encoding="utf-8")

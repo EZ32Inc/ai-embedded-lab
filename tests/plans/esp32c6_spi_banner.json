@@ -1,7 +1,13 @@
 {
+  "schema_version": "1.0",
   "name": "esp32c6_spi_banner",
+  "test_kind": "instrument_specific",
   "board": "esp32c6_devkit",
   "dut": "esp32c6_devkit",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": true},
+  "labels": ["meter", "instrument_path"],
+  "covers": ["spi", "voltage"],
   "pin": "sig",
   "build": {
     "project_dir": "firmware/targets/esp32c6_spi_banner",

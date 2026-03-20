@@ -17,6 +17,7 @@ from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _extract_verify_result_details, _normalize_probe_cfg, _simple_yaml_load, run_pipeline
 from ael.probe_binding import empty_probe_binding, load_probe_binding
+from ael.test_plan_schema import extract_plan_metadata
 from ael.verification_model import VerificationSuite, VerificationTask, VerificationWorker
 from ael.verification_model import _failure_summary as _worker_failure_summary
 from ael.verification_model import summarize_resource_keys, summarize_worker_health
@@ -108,6 +109,158 @@ def _load_text_payload(path: Path) -> Dict[str, Any]:
 def _save_payload(path: Path, payload: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _metadata_explanation(metadata: Dict[str, Any]) -> Dict[str, str | None]:
+    test_kind = str(metadata.get("test_kind") or "").strip()
+    requires = metadata.get("requires") if isinstance(metadata.get("requires"), dict) else {}
+    if test_kind == "instrument_specific":
+        return {
+            "verification_mode_summary": "instrument-side measurement path",
+            "requires_summary": "requires instrument-side measurement and no mailbox dependency",
+        }
+    if test_kind == "baremetal_mailbox":
+        mailbox_required = requires.get("mailbox") is True
+        return {
+            "verification_mode_summary": "bare-metal mailbox verification",
+            "requires_summary": "requires mailbox-backed DUT result path" if mailbox_required else "mailbox optional",
+        }
+    return {
+        "verification_mode_summary": None,
+        "requires_summary": None,
+    }
+
+
+def _load_instrument_instance_type(repo_root: Path, instrument_id: str | None) -> str | None:
+    instance_id = str(instrument_id or "").strip()
+    if not instance_id:
+        return None
+    for root in (repo_root, ael_paths.repo_root()):
+        path = Path(root) / "configs" / "instrument_instances" / f"{instance_id}.yaml"
+        if not path.exists():
+            continue
+        raw = _simple_yaml_load(str(path))
+        instance = raw.get("instance", {}) if isinstance(raw, dict) else {}
+        if not isinstance(instance, dict):
+            continue
+        type_id = str(instance.get("type") or raw.get("type") or "").strip()
+        if type_id:
+            return type_id
+    if instance_id == "esp32s3_dev_c_meter":
+        return "esp32_meter"
+    return None
+
+
+def _supported_instrument_advisory(
+    supported_instruments: List[str] | None,
+    *,
+    selected_instrument_id: str | None,
+    selected_instrument_type: str | None,
+) -> Dict[str, Any] | None:
+    declared = [item for item in (supported_instruments or []) if isinstance(item, str) and item.strip()]
+    if not declared:
+        return None
+    if not selected_instrument_type:
+        return {
+            "status": "selection_unresolved",
+            "selected_instrument_id": selected_instrument_id,
+            "selected_instrument_type": None,
+            "declared_supported_instruments": declared,
+            "summary": "supported instruments declared, but no selected instrument type was resolved",
+        }
+    status = "declared_supported" if selected_instrument_type in declared else "declared_unsupported"
+    summary = (
+        f"selected instrument type {selected_instrument_type} is declared supported"
+        if status == "declared_supported"
+        else f"selected instrument type {selected_instrument_type} is not in declared support set"
+    )
+    return {
+        "status": status,
+        "selected_instrument_id": selected_instrument_id,
+        "selected_instrument_type": selected_instrument_type,
+        "declared_supported_instruments": declared,
+        "summary": summary,
+    }
+
+
+def _schema_advisory_payload_from_test(repo_root: Path, test_path: str) -> Dict[str, Any]:
+    raw = _load_text_payload(Path(test_path))
+    if not isinstance(raw, dict):
+        return {}
+    metadata = extract_plan_metadata(raw)
+    explanation = _metadata_explanation(metadata)
+    instrument_cfg = raw.get("instrument") if isinstance(raw.get("instrument"), dict) else {}
+    instrument_id = str(instrument_cfg.get("id") or "").strip() or None
+    instrument_type = _load_instrument_instance_type(repo_root, instrument_id)
+    advisory = _supported_instrument_advisory(
+        metadata.get("supported_instruments"),
+        selected_instrument_id=instrument_id,
+        selected_instrument_type=instrument_type,
+    )
+    items: List[str] = []
+    for key in ("verification_mode_summary", "requires_summary"):
+        value = str(explanation.get(key) or "").strip()
+        if value:
+            items.append(value)
+    if isinstance(advisory, dict):
+        summary = str(advisory.get("summary") or "").strip()
+        if summary:
+            items.append(summary)
+    status = str(advisory.get("status") or "").strip() if isinstance(advisory, dict) else ""
+    warnings: List[str] = []
+    if status == "declared_unsupported":
+        warnings.append(str(advisory.get("summary") or "selected instrument is not in declared support set"))
+    return {
+        "plan_schema_kind": "structured" if metadata.get("schema_version") not in (None, "", "legacy") else "legacy",
+        "schema_version": metadata.get("schema_version"),
+        "test_kind": metadata.get("test_kind"),
+        "supported_instruments": metadata.get("supported_instruments"),
+        "supported_instrument_advisory": advisory,
+        "schema_advisories": items,
+        "schema_warning_messages": warnings,
+    }
+
+
+def _schema_advisory_payload(repo_root: Path, board: str, test: str) -> Dict[str, Any]:
+    fallback = _schema_advisory_payload_from_test(repo_root, test)
+    try:
+        described = inventory_view.describe_test(board_id=board, test_path=test, repo_root=repo_root)
+    except Exception:
+        described = {}
+    if not isinstance(described, dict) or not described.get("ok"):
+        return fallback
+    test_payload = described.get("test") if isinstance(described.get("test"), dict) else {}
+    advisory = test_payload.get("supported_instrument_advisory") if isinstance(test_payload.get("supported_instrument_advisory"), dict) else None
+    items: List[str] = []
+    for key in ("verification_mode_summary", "requires_summary"):
+        value = str(test_payload.get(key) or "").strip()
+        if value:
+            items.append(value)
+    if isinstance(advisory, dict):
+        summary = str(advisory.get("summary") or "").strip()
+        if summary:
+            items.append(summary)
+    status = str(advisory.get("status") or "").strip() if isinstance(advisory, dict) else ""
+    warnings: List[str] = []
+    if status == "declared_unsupported":
+        warnings.append(str(advisory.get("summary") or "selected instrument is not in declared support set"))
+    payload = {
+        "plan_schema_kind": "structured" if test_payload.get("schema_version") not in (None, "", "legacy") else "legacy",
+        "schema_version": test_payload.get("schema_version"),
+        "test_kind": test_payload.get("test_kind"),
+        "supported_instruments": test_payload.get("supported_instruments"),
+        "supported_instrument_advisory": advisory,
+        "schema_advisories": items,
+        "schema_warning_messages": warnings,
+    }
+    fallback_advisory = fallback.get("supported_instrument_advisory") if isinstance(fallback.get("supported_instrument_advisory"), dict) else None
+    if (
+        isinstance(fallback_advisory, dict)
+        and str(fallback_advisory.get("status") or "").strip() in {"declared_supported", "declared_unsupported"}
+        and str((advisory or {}).get("status") or "").strip() == "selection_unresolved"
+    ):
+        payload.update({k: v for k, v in fallback.items() if v not in (None, "", [], {})})
+    return payload
 
 
 def load_setting(path: str | None = None) -> Dict[str, Any]:
@@ -337,6 +490,9 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     if not board or not test:
         return 2, {"ok": False, "error": "single_run requires board and test"}
     local_interface_path = _local_instrument_interface_path(repo_root, str(board), test)
+    schema_payload = _schema_advisory_payload(repo_root, str(board), str(test))
+    for item in schema_payload.get("schema_warning_messages") or []:
+        print(f"default_verification: warning - {item}")
     meter_attempts = 0
     while True:
         try:
@@ -363,6 +519,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                     out["observations"].setdefault("failure_scope", failure_scope)
             if local_interface_path:
                 out["local_instrument_interface_path"] = local_interface_path
+            out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
             policy = _degraded_instrument_policy(out)
             out["degraded_instrument_policy"] = policy
             out["retry_summary"] = {
@@ -394,6 +551,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
             out = {"ok": int(exit_code) == 0}
             if local_interface_path:
                 out["local_instrument_interface_path"] = local_interface_path
+            out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
             if not bool(out["ok"]):
                 for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "observations"):
                     if key in payload and payload.get(key) not in (None, "", {}, []):
@@ -419,6 +577,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
         out = {"ok": int(exit_code) == 0}
         if local_interface_path:
             out["local_instrument_interface_path"] = local_interface_path
+        out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
         if not bool(out["ok"]) and hasattr(payload, "artifacts_dir"):
             details = _extract_verify_result_details(
                 {
@@ -447,6 +606,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
     out = {"ok": int(code) == 0}
     if local_interface_path:
         out["local_instrument_interface_path"] = local_interface_path
+    out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
     return int(code), out
 
 

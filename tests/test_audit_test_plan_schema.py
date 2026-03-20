@@ -28,6 +28,9 @@ def test_audit_test_plan_schema_counts_structured_and_legacy_plans():
     c3_meter = next(item for item in report["plans"] if item["path"] == "tests/plans/esp32c3_gpio_signature_with_meter.json")
     assert c3_meter["schema_version"] == "1.0"
     assert c3_meter["test_kind"] == "instrument_specific"
+    i2c_meter = next(item for item in report["plans"] if item["path"] == "tests/plans/esp32c6_i2c_banner.json")
+    assert i2c_meter["schema_version"] == "1.0"
+    assert i2c_meter["test_kind"] == "instrument_specific"
     assert report["summary"]["structured_ready_count"] >= 1
     assert report["summary"]["legacy_mailbox_candidate_count"] >= 0
     assert report["summary"]["invalid_structured_count"] == 0
@@ -61,6 +64,7 @@ def test_audit_test_plan_schema_renders_text_summary():
     assert "esp32s3_dev_c_meter:" in text
     assert "tests/plans/stm32f103_uart_loopback_mailbox.json [1.0]" in text
     assert "tests/plans/esp32c3_gpio_signature_with_meter.json [1.0]" in text
+    assert "tests/plans/esp32c6_i2c_banner.json [1.0]" in text
 
 
 def test_inventory_audit_test_schema_cli_json_output():
