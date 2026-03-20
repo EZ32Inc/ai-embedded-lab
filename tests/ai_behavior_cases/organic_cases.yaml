@@ -162,6 +162,7 @@
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
     - "python3 -m ael verify-default review"
+    - "baseline_readiness_status"
     - "python3 -m ael verify-default state --format json"
     must_use_formal_path: true
   required_output_elements:
@@ -186,6 +187,7 @@
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
     - "python3 -m ael verify-default review"
+    - "baseline_readiness_status"
     - "python3 -m ael verify-default state --format json"
   allow_retrieval_failure: true
   must_use_formal_path: true
@@ -211,6 +213,7 @@
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
     - "python3 -m ael verify-default review"
+    - "baseline_readiness_status"
     - "python3 -m ael verify-default state --format json"
   allow_retrieval_failure: true
   must_use_formal_path: true

@@ -41,6 +41,7 @@ Typical inputs include:
 
 - `python3 -m ael verify-default review`
 - `python3 -m ael verify-default state --format json`
+- `baseline_readiness_status` from repo-native review/state surfaces
 - current default verification settings
 - the executed default verification sequence
 - per-step run results
@@ -84,9 +85,10 @@ This skill should keep separate:
 Recommended flow:
 
 1. Run `python3 -m ael verify-default review` first.
-2. If needed, inspect `python3 -m ael verify-default state --format json` for structured details.
-3. Inspect the current default verification configuration when the review summary is not enough.
-4. Inspect the executed sequence and per-step results.
+2. Read `baseline_readiness_status` first when present; treat it as the repo-native top-level baseline health signal.
+3. If needed, inspect `python3 -m ael verify-default state --format json` for structured details.
+4. Inspect the current default verification configuration when the review summary is not enough.
+5. Inspect the executed sequence and per-step results.
 3. Identify which board, test, and instrument paths were exercised.
 4. Summarize the pass or fail state for each step.
 5. Classify any sandbox-blocked or network-policy-blocked live-bench attempt as
@@ -106,6 +108,7 @@ At minimum, this skill should produce:
 - per-step result summary
 - which board, test, and instrument paths were exercised
 - overall baseline health assessment
+- explicit use of `baseline_readiness_status` when present
 - explicit distinction between `FAIL` and `INVALID` where relevant
 - important caveats or known weak points
 - recommended next interpretation or next safe action
