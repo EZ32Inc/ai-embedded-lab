@@ -46,8 +46,10 @@ def test_build_resolved_usb_uart_bridge_manifest_view():
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "usb_uart_bridge_daemon"
+    assert payload["instrument_family"] == "usb_uart_bridge"
     assert payload["communication"]["protocol"] == "ael-usb-uart-bridge-v0.1"
     assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
+    assert payload["native_interface"]["instrument_family"] == "usb_uart_bridge"
     assert payload["capability_surfaces"]["observe.uart"] == "primary"
     assert payload["capability_surfaces"]["bridge.serial"] == "primary"
     assert payload["metadata_validation_errors"] == []

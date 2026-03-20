@@ -6,9 +6,8 @@ from typing import Any, Dict, Optional
 
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
-from ael.instruments import jtag_native_api
-from ael.instruments import meter_native_api
 from ael.instruments import native_api_dispatch
+from ael.instruments.interfaces.registry import resolve_control_provider, resolve_manifest_provider
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
 
@@ -79,6 +78,9 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
             "error": ((native_doctor.get("error") or {}).get("message") or "native doctor failed"),
         }
         overall_ok = False
+    provider = resolve_control_provider(probe_cfg)
+    profile = provider.native_interface_profile() if provider is not None else ({})
+    identify_data = (native_identify.get("data") or {}) if isinstance(native_identify.get("data"), dict) else {}
     control_instrument = {
         "kind": "control_instrument_instance",
         "legacy_kind": "probe_instance",
@@ -94,9 +96,9 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
-        "instrument_family": "esp32jtag" if binding.type_id == "esp32jtag" else binding.type_id,
-        "instrument_role": "control",
-        "native_interface": jtag_native_api.native_interface_profile() if binding.type_id == "esp32jtag" else {},
+        "instrument_family": str(identify_data.get("instrument_family") or (provider.family if provider is not None else binding.type_id)),
+        "instrument_role": str(identify_data.get("instrument_role") or "control"),
+        "native_interface": profile,
         "native_identify": native_identify,
         "native_status": native_status,
         "native_capabilities": native_capabilities,
@@ -116,31 +118,25 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
 
     communication = manifest.get("communication", {}) if isinstance(manifest.get("communication"), dict) else {}
     endpoint = communication.get("endpoint")
-    host, port = _split_host_port(endpoint)
+    provider = resolve_manifest_provider(manifest)
     checks: Dict[str, Any] = {}
 
-    if instrument_id == "esp32s3_dev_c_meter":
+    if provider is not None:
         native_doctor = native_api_dispatch.doctor(manifest)
         checks["native_doctor"] = native_doctor
         if native_doctor.get("status") == "ok":
             native_data = native_doctor.get("data", {}) if isinstance(native_doctor.get("data"), dict) else {}
             doctor_checks = native_data.get("checks") if isinstance(native_data.get("checks"), dict) else {}
             checks.update(doctor_checks)
-            reachability = doctor_checks.get("reachability")
-            if isinstance(reachability, dict):
-                checks["reachability"] = reachability
-                overall_ok = bool(reachability.get("ok"))
-            else:
-                checks["reachability"] = native_data
-                overall_ok = bool(native_data.get("reachable") or native_data.get("ok"))
+            overall_ok = bool(native_data.get("reachable", True))
         else:
-            checks["reachability"] = {
+            checks["availability"] = {
                 "ok": False,
                 "error": ((native_doctor.get("error") or {}).get("message") or "native doctor failed"),
-                "host": host,
             }
             overall_ok = False
     else:
+        host, port = _split_host_port(endpoint)
         if host and port is not None:
             checks["tcp"] = _tcp_check(host, port)
             overall_ok = bool((checks.get("tcp") or {}).get("ok"))
@@ -148,22 +144,15 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
             checks["availability"] = {"ok": False, "error": "no active doctor available for this instrument type"}
             overall_ok = False
 
+    native_interface = provider.native_interface_profile() if provider is not None else dict(manifest.get("native_interface") or {})
     return {
         "ok": overall_ok,
         "kind": "instrument",
         "id": instrument_id,
-        "instrument_family": (
-            "esp32_meter"
-            if instrument_id == "esp32s3_dev_c_meter"
-            else (str((manifest.get("native_interface") or {}).get("instrument_family") or "").strip() or None)
-        ),
+        "instrument_family": (provider.family if provider is not None else (str((manifest.get("native_interface") or {}).get("instrument_family") or "").strip() or None)),
         "endpoint": endpoint,
         "communication": dict(communication or {}),
-        "native_interface": (
-            meter_native_api.native_interface_profile()
-            if instrument_id == "esp32s3_dev_c_meter"
-            else dict(manifest.get("native_interface") or {})
-        ),
+        "native_interface": native_interface,
         "capability_surfaces": dict(manifest.get("capability_surfaces") or {}),
         "metadata_validation_errors": (
             validate_communication(communication)

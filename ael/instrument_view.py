@@ -5,9 +5,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
-from ael.instruments import jtag_native_api
-from ael.instruments import meter_native_api
 from ael.instruments.registry import InstrumentRegistry
+from ael.instruments.interfaces.registry import resolve_control_provider, resolve_manifest_provider
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
 
@@ -86,13 +85,31 @@ def build_probe_instance_view(
     root = Path(repo_root or REPO_ROOT)
     binding = load_probe_binding(root, instance_id=instance_id)
     refs = referenced_by or {}
+    probe_cfg = {
+        "ip": binding.endpoint_host,
+        "gdb_port": binding.endpoint_port,
+        "communication": dict(binding.communication or {}),
+        "capability_surfaces": dict(binding.capability_surfaces or {}),
+        "instance_id": binding.instance_id,
+        "type_id": binding.type_id,
+    }
+    provider = resolve_control_provider(probe_cfg)
+    native_interface = provider.native_interface_profile() if provider is not None else {}
+    native_interface_summary = {}
+    if native_interface:
+        native_interface_summary = {
+            "protocol": native_interface.get("protocol"),
+            "role": native_interface.get("role"),
+            "metadata_command_count": len(native_interface.get("metadata_commands") or []),
+            "action_command_count": len(native_interface.get("action_commands") or []),
+        }
     return {
         "kind": "control_instrument_instance",
         "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
-        "instrument_family": "esp32jtag" if binding.type_id == "esp32jtag" else None,
+        "instrument_family": provider.family if provider is not None else None,
         "config_path": _relpath(root, binding.config_path),
         "instance_path": _relpath(root, binding.instance_path),
         "type_path": _relpath(root, binding.type_path),
@@ -103,17 +120,8 @@ def build_probe_instance_view(
         if (binding.endpoint_host or binding.endpoint_port is not None)
         else None,
         "communication": dict(binding.communication or {}),
-        "native_interface": jtag_native_api.native_interface_profile() if binding.type_id == "esp32jtag" else {},
-        "native_interface_summary": (
-            {
-                "protocol": jtag_native_api.native_interface_profile().get("protocol"),
-                "role": jtag_native_api.native_interface_profile().get("role"),
-                "metadata_command_count": len(jtag_native_api.native_interface_profile().get("metadata_commands") or []),
-                "action_command_count": len(jtag_native_api.native_interface_profile().get("action_commands") or []),
-            }
-            if binding.type_id == "esp32jtag"
-            else {}
-        ),
+        "native_interface": native_interface,
+        "native_interface_summary": native_interface_summary,
         "capability_surfaces": dict(binding.capability_surfaces or {}),
         "metadata_validation_errors": list(binding.metadata_validation_errors),
         "legacy_warning": binding.legacy_warning,
@@ -135,9 +143,8 @@ def build_instrument_manifest_view(
         return {"ok": False, "error": f"instrument not found: {instrument_id}"}
     refs = referenced_by or {}
     communication = dict(manifest.get("communication") or {})
-    native_interface = dict(manifest.get("native_interface") or {})
-    if instrument_id == "esp32s3_dev_c_meter":
-        native_interface = meter_native_api.native_interface_profile()
+    provider = resolve_manifest_provider(manifest)
+    native_interface = provider.native_interface_profile() if provider is not None else dict(manifest.get("native_interface") or {})
     capability_surfaces = dict(manifest.get("capability_surfaces") or {})
     native_interface_summary = {}
     if native_interface:
@@ -150,7 +157,7 @@ def build_instrument_manifest_view(
     return {
         "kind": "instrument",
         "id": instrument_id,
-        "instrument_family": native_interface.get("instrument_family") if isinstance(native_interface, dict) else None,
+        "instrument_family": (provider.family if provider is not None else (native_interface.get("instrument_family") if isinstance(native_interface, dict) else None)),
         "origin": manifest.get("_origin"),
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,

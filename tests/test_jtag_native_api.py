@@ -78,3 +78,51 @@ def test_preflight_probe_reports_native_success(monkeypatch):
     assert out["status"] == "ok"
     assert out["data"]["protocol_version"] == jtag_native_api.NATIVE_API_PROTOCOL
     assert out["data"]["preflight"]["targets"] == ["M4"]
+
+
+
+def test_native_profile_exposes_family_owned_actions():
+    profile = jtag_native_api.native_interface_profile()
+    assert "program_firmware" in profile["action_commands"]
+    assert "capture_signature" in profile["action_commands"]
+    assert "program_firmware" in profile["lifecycle_scope"]["owned_by_native_api"]
+    assert "capture_signature" in profile["lifecycle_scope"]["owned_by_native_api"]
+
+
+
+def test_get_capabilities_reports_program_and_capture_actions():
+    out = jtag_native_api.get_capabilities(_probe_cfg())
+    assert out["status"] == "ok"
+    assert "firmware_programming" in out["data"]["capability_families"]
+    assert "capture_signature" in out["data"]["capability_families"]
+
+
+
+def test_program_firmware_delegates_to_control_helper(monkeypatch):
+    monkeypatch.setattr(
+        "ael.instruments.control_instrument_native_api.program_firmware",
+        lambda probe_cfg, **kwargs: {"status": "ok", "data": {"firmware_path": kwargs["firmware_path"], "family": probe_cfg["instance_id"]}},
+    )
+    out = jtag_native_api.program_firmware(_probe_cfg(), firmware_path="/tmp/fake.elf")
+    assert out["status"] == "ok"
+    assert out["data"]["firmware_path"] == "/tmp/fake.elf"
+    assert out["data"]["family"] == "esp32jtag_stm32_golden"
+
+
+
+def test_capture_signature_delegates_to_control_helper(monkeypatch):
+    monkeypatch.setattr(
+        "ael.instruments.control_instrument_native_api.capture_signature",
+        lambda probe_cfg, **kwargs: {"status": "ok", "data": {"pin": kwargs["pin"], "family": probe_cfg["instance_id"]}},
+    )
+    out = jtag_native_api.capture_signature(
+        _probe_cfg(),
+        pin="P0.0",
+        duration_s=1.0,
+        expected_hz=1.0,
+        min_edges=1,
+        max_edges=10,
+    )
+    assert out["status"] == "ok"
+    assert out["data"]["pin"] == "P0.0"
+    assert out["data"]["family"] == "esp32jtag_stm32_golden"

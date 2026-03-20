@@ -81,20 +81,91 @@ def test_doctor_meter_manifest_reports_reachability():
     assert "action_commands: measure_digital, measure_voltage, stim_digital" in rendered
 
 
-def test_doctor_usb_uart_bridge_manifest_reports_tcp_health():
+def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     with patch(
-        "ael.instrument_doctor._tcp_check",
-        return_value={"ok": True, "host": "127.0.0.1", "port": 8767},
+        "ael.instrument_doctor.native_api_dispatch.doctor",
+        return_value={
+            "status": "ok",
+            "data": {
+                "reachable": True,
+                "checks": {
+                    "tcp": {"ok": True},
+                    "bridge_service": {"ok": True},
+                    "uart_surface": {"ok": True},
+                },
+            },
+        },
     ):
         payload = instrument_doctor.doctor(REPO_ROOT, "usb_uart_bridge_daemon")
 
     assert payload["ok"] is True
     assert payload["kind"] == "instrument"
     assert payload["id"] == "usb_uart_bridge_daemon"
+    assert payload["instrument_family"] == "usb_uart_bridge"
     assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
-    assert payload["checks"]["tcp"]["ok"] is True
+    assert payload["native_interface"]["instrument_family"] == "usb_uart_bridge"
+    assert payload["checks"]["native_doctor"]["status"] == "ok"
+    assert payload["checks"]["bridge_service"]["ok"] is True
     assert payload["resolved_view"]["id"] == "usb_uart_bridge_daemon"
     rendered = instrument_view.render_doctor_text(payload)
     assert "usb_uart_bridge_daemon" in rendered
-    assert "tcp: ok=True" in rendered
+    assert "bridge_service: ok=True" in rendered
     assert "native_interface:" in rendered
+
+
+
+def test_doctor_probe_instance_reports_stlink_native_profile():
+    class _Provider:
+        family = "stlink"
+
+        @staticmethod
+        def native_interface_profile():
+            return {
+                "protocol": "ael.local_instrument.stlink_native_api.v0.1",
+                "instrument_family": "stlink",
+                "role": "instrument_native_api",
+            }
+
+    class _Binding:
+        raw = {
+            "probe": {"name": "ST-Link"},
+            "connection": {"ip": "127.0.0.1", "gdb_port": 4242},
+            "gdb_cmd": "arm-none-eabi-gdb",
+        }
+        communication = {
+            "primary": "gdb_remote",
+            "surfaces": [{"name": "gdb_remote", "endpoint": "127.0.0.1:4242"}],
+        }
+        capability_surfaces = {"swd": "gdb_remote"}
+        instance_id = "stlink_stm32f103_gpio"
+        type_id = "stlink"
+        endpoint_host = "127.0.0.1"
+        endpoint_port = 4242
+        metadata_validation_errors = []
+
+    with patch(
+        "ael.instrument_doctor.load_probe_binding",
+        return_value=_Binding(),
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.control_doctor",
+        return_value={"status": "ok", "data": {"reachable": True, "checks": {"gdb_remote": {"ok": True}}}},
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.control_get_status",
+        return_value={"status": "ok", "data": {"reachable": True}},
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.control_identify",
+        return_value={"status": "ok", "data": {"instrument_family": "stlink", "instrument_role": "control"}},
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.control_get_capabilities",
+        return_value={"status": "ok", "data": {"capability_families": {"debug_remote": {}}}},
+    ), patch(
+        "ael.instrument_doctor.resolve_control_provider",
+        return_value=_Provider(),
+    ):
+        payload = instrument_doctor.doctor_probe_instance(REPO_ROOT, "stlink_stm32f103_gpio")
+
+    assert payload["ok"] is True
+    assert payload["instrument_family"] == "stlink"
+    assert payload["instrument_role"] == "control"
+    assert payload["native_interface"]["instrument_family"] == "stlink"
+    assert payload["native_interface"]["protocol"] == "ael.local_instrument.stlink_native_api.v0.1"

@@ -4,6 +4,7 @@ import socket
 from typing import Any, Dict, Optional
 
 from ael.adapters import preflight as preflight_adapter
+from ael.instruments import control_instrument_native_api
 
 
 NATIVE_API_PROTOCOL = "ael.local_instrument.jtag_native_api.v0.1"
@@ -80,7 +81,7 @@ def native_interface_profile() -> Dict[str, Any]:
         "instrument_family": "esp32jtag",
         "instrument_identity": "multi_capability_instrument",
         "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
-        "action_commands": ["preflight_probe"],
+        "action_commands": ["preflight_probe", "program_firmware", "capture_signature"],
         "status_domains": [
             "network",
             "gdb_remote",
@@ -89,7 +90,7 @@ def native_interface_profile() -> Dict[str, Any]:
             "monitor_targets",
         ],
         "lifecycle_scope": {
-            "owned_by_native_api": ["identify", "get_capabilities", "get_status", "doctor", "preflight_probe"],
+            "owned_by_native_api": ["identify", "get_capabilities", "get_status", "doctor", "preflight_probe", "program_firmware", "capture_signature"],
             "owned_by_backend": ["flash", "reset", "debug_halt", "debug_read_memory", "gpio_measure"],
             "out_of_scope": ["provision", "service_restart", "firmware_update"],
         },
@@ -143,6 +144,16 @@ def get_capabilities(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
                 "preflight": {
                     "actions": ["preflight_probe"],
                     "surface": "instrument_native_api",
+                    "owned_by": "jtag_native_api",
+                },
+                "firmware_programming": {
+                    "actions": ["program_firmware"],
+                    "surface": capability_surfaces.get("swd", "gdb_remote"),
+                    "owned_by": "jtag_native_api",
+                },
+                "capture_signature": {
+                    "actions": ["capture_signature"],
+                    "surface": capability_surfaces.get("gpio_in", "web_api"),
                     "owned_by": "jtag_native_api",
                 },
             },
@@ -239,3 +250,12 @@ def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
             "preflight": info or {},
         },
     )
+
+
+def program_firmware(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+    return control_instrument_native_api.program_firmware(probe_cfg, **kwargs)
+
+
+
+def capture_signature(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
+    return control_instrument_native_api.capture_signature(probe_cfg, **kwargs)
