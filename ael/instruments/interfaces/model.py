@@ -8,6 +8,35 @@ CAPABILITY_TAXONOMY_VERSION = "instrument_capabilities/v1"
 STATUS_MODEL_VERSION = "instrument_status/v1"
 DOCTOR_MODEL_VERSION = "instrument_doctor/v1"
 
+CAPABILITY_TAXONOMY_KEYS = frozenset({
+    "capture.digital",
+    "debug.attach",
+    "debug.flash",
+    "debug.halt",
+    "debug.memory_read",
+    "debug.reset",
+    "measure.digital",
+    "measure.voltage",
+    "probe.preflight",
+    "stim.digital",
+    "uart.observe",
+    "uart.read",
+    "uart.session",
+    "uart.write",
+})
+
+
+def enforce_capability_taxonomy(capabilities: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for key, value in (capabilities or {}).items():
+        name = str(key).strip()
+        if not name:
+            continue
+        if name not in CAPABILITY_TAXONOMY_KEYS:
+            raise ValueError(f"unknown capability taxonomy key: {name}")
+        normalized[name] = dict(value or {})
+    return normalized
+
 
 def _fallback_payload(payload: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
     if not isinstance(payload, dict) or not payload:
@@ -62,6 +91,7 @@ def normalize_capabilities_result(
     capabilities: Dict[str, Dict[str, Any]],
     lifecycle_boundary: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    capabilities = enforce_capability_taxonomy(capabilities)
     capability_keys = sorted(capabilities)
     supported_actions = sorted(
         {
@@ -84,6 +114,7 @@ def normalize_capabilities_result(
     result: Dict[str, Any] = {
         "instrument_family": family,
         "capability_taxonomy_version": CAPABILITY_TAXONOMY_VERSION,
+        "capability_taxonomy_enforced": True,
         "capability_keys": capability_keys,
         "capabilities": capabilities,
         "supported_actions": supported_actions,

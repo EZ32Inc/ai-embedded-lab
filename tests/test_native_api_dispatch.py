@@ -2,6 +2,7 @@ from pathlib import Path
 
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
+from ael.instruments.interfaces.model import normalize_capabilities_result
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -276,6 +277,7 @@ def test_manifest_capabilities_return_unified_taxonomy_for_meter(monkeypatch):
     assert payload["family"] == "esp32_meter"
     assert payload["action"] == "get_capabilities"
     assert payload["result"]["capability_taxonomy_version"] == "instrument_capabilities/v1"
+    assert payload["result"]["capability_taxonomy_enforced"] is True
     assert "measure.digital" in payload["result"]["capability_keys"]
 
 
@@ -409,3 +411,15 @@ def test_stim_digital_returns_unified_envelope_for_meter(monkeypatch):
     assert payload["result"]["keep"] == 1
     assert payload["data"]["gpio"] == 15
     assert payload["data"]["mode"] == "toggle"
+
+
+def test_normalize_capabilities_rejects_unknown_taxonomy_key():
+    try:
+        normalize_capabilities_result(
+            family="fake",
+            capabilities={"legacy.capability": {"actions": ["noop"], "surfaces": ["legacy"]}},
+        )
+    except ValueError as exc:
+        assert "unknown capability taxonomy key" in str(exc)
+    else:
+        raise AssertionError("expected capability taxonomy enforcement failure")
