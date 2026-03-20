@@ -3,7 +3,7 @@ from __future__ import annotations
 import socket
 from typing import Any, Dict, Optional
 
-from ael.instruments import control_instrument_native_api
+from ael.instruments import controller_backend
 from ael.instruments.backends.stlink_backend.capability import CAPABILITIES
 
 
@@ -139,7 +139,7 @@ def get_capabilities(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
                 "firmware_programming": {
                     "actions": ["program_firmware"],
                     "surface": capability_surfaces.get("swd", "gdb_remote"),
-                    "owned_by": "control_instrument_native_api",
+                    "owned_by": "controller_backend",
                 },
                 "debug_attach": {
                     "actions": ["preflight_probe"],
@@ -222,4 +222,4 @@ def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def program_firmware(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
-    return control_instrument_native_api.program_firmware(probe_cfg, **kwargs)
+    return controller_backend.program_firmware(probe_cfg, **kwargs)

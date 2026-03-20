@@ -4,7 +4,7 @@ import socket
 from typing import Any, Dict, Optional
 
 from ael.adapters import preflight as preflight_adapter
-from ael.instruments import control_instrument_native_api
+from ael.instruments import controller_backend
 
 
 NATIVE_API_PROTOCOL = "ael.local_instrument.jtag_native_api.v0.1"
@@ -253,9 +253,9 @@ def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def program_firmware(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
-    return control_instrument_native_api.program_firmware(probe_cfg, **kwargs)
+    return controller_backend.program_firmware(probe_cfg, **kwargs)
 
 
 
 def capture_signature(probe_cfg: Dict[str, Any], **kwargs: Any) -> Dict[str, Any]:
-    return control_instrument_native_api.capture_signature(probe_cfg, **kwargs)
+    return controller_backend.capture_signature(probe_cfg, **kwargs)

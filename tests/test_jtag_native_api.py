@@ -100,7 +100,7 @@ def test_get_capabilities_reports_program_and_capture_actions():
 
 def test_program_firmware_delegates_to_control_helper(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.control_instrument_native_api.program_firmware",
+        "ael.instruments.controller_backend.program_firmware",
         lambda probe_cfg, **kwargs: {"status": "ok", "data": {"firmware_path": kwargs["firmware_path"], "family": probe_cfg["instance_id"]}},
     )
     out = jtag_native_api.program_firmware(_probe_cfg(), firmware_path="/tmp/fake.elf")
@@ -112,7 +112,7 @@ def test_program_firmware_delegates_to_control_helper(monkeypatch):
 
 def test_capture_signature_delegates_to_control_helper(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.control_instrument_native_api.capture_signature",
+        "ael.instruments.controller_backend.capture_signature",
         lambda probe_cfg, **kwargs: {"status": "ok", "data": {"pin": kwargs["pin"], "family": probe_cfg["instance_id"]}},
     )
     out = jtag_native_api.capture_signature(
