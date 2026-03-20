@@ -120,3 +120,70 @@ That would have missed the actual delivery requirement:
 
 This closeout exists to prevent "commit done" from being mistaken for "pattern
 validated".
+
+
+## Post-Closeout Follow-Up: ESP32 JTAG Probe-Config Regression
+
+Later on `2026-03-20`, a new `default verification` run failed with `1/6 PASS`
+and `5/6 FAIL`, including all four `ESP32JTAG`-backed tests.
+
+That run initially looked like another bench-health incident, but the boundary
+was different:
+
+- `instrument doctor` on `esp32jtag_rp2040_lab` at `192.168.2.63` was healthy
+- live `ping`, `TCP 4242`, `monitor targets`, and LA self-test were all OK
+- the failing `ael run` path still died immediately in `preflight`
+
+The decisive comparison was between the failing run's effective config and its
+materialized run plan:
+
+- [failing rp2040 run_plan.json](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_12-47-14_rp2040_pico_rp2040_gpio_signature/artifacts/run_plan.json)
+- [failing rp2040 config_effective.json](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_12-47-14_rp2040_pico_rp2040_gpio_signature/config_effective.json)
+
+The run plan `probe_cfg` had lost the metadata needed by the new provider
+registry to recognize the control instrument family. In particular,
+`instance_id`, `type_id`, `communication`, and `capability_surfaces` were not
+being preserved by `normalize_probe_cfg()`.
+
+That meant the failure boundary was not network reachability. It was a
+run-time config-shape regression introduced after the instrument-interface
+standardization work.
+
+### Repair
+
+The recovery changes were:
+
+- [ael/strategy_resolver.py](/nvme1t/work/codex/ai-embedded-lab/ael/strategy_resolver.py)
+  - preserve `instance`, `type`, `communication`, and
+    `capability_surfaces` when building normalized `probe_cfg`
+- [ael/instruments/interfaces/registry.py](/nvme1t/work/codex/ai-embedded-lab/ael/instruments/interfaces/registry.py)
+  - add a compatibility fallback so legacy/minimal ESP32 JTAG probe shapes are
+    still recognized as `esp32jtag`
+
+Regression tests added:
+
+- [tests/test_strategy_resolver.py](/nvme1t/work/codex/ai-embedded-lab/tests/test_strategy_resolver.py)
+- [tests/test_instrument_interface_registry.py](/nvme1t/work/codex/ai-embedded-lab/tests/test_instrument_interface_registry.py)
+
+### Recovery Evidence
+
+Recovered single-test runs:
+
+- [rp2040](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_13-08-08_rp2040_pico_rp2040_gpio_signature/result.json)
+- [stm32f411](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_13-09-03_stm32f411ceu6_stm32f411_gpio_signature/result.json)
+- [stm32g431](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_13-09-08_stm32g431cbu6_stm32g431_gpio_signature/result.json)
+- [stm32h750](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_13-09-22_stm32h750vbt6_stm32h750_wiring_verify/result.json)
+
+Recovered full baseline pass:
+
+- [default verification run set `2026-03-20_13-10-38`](/nvme1t/work/codex/ai-embedded-lab/runs/2026-03-20_13-10-38_rp2040_pico_rp2040_gpio_signature/result.json)
+
+The follow-up matters because it validates a stronger claim than the original
+closeout alone:
+
+- the parallel baseline remained stable through a later refactor-induced
+  regression
+- the regression was diagnosed by comparing doctor-path config shape against
+  run-path config shape
+- the repaired system returned to `6/6 PASS` without changing the actual bench
+  setups
