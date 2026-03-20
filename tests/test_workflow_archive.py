@@ -55,12 +55,17 @@ def test_workflow_archive_records_plan_run(monkeypatch, tmp_path):
     assert finished["selected_board_profile"]["config"].endswith("configs/boards/esp32c3_devkit.yaml")
     assert finished["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
     assert finished["test"]["name"] == "esp32c3_gpio_signature_with_meter"
+    assert finished["controller"]["communication"]["primary"] == "gdb_remote"
     assert finished["control_instrument"]["communication"]["primary"] == "gdb_remote"
+    assert finished["controller"]["capability_surfaces"]["swd"] == "gdb_remote"
     assert finished["control_instrument"]["capability_surfaces"]["swd"] == "gdb_remote"
     assert finished["selected"]["board_profile_config"].endswith("configs/boards/esp32c3_devkit.yaml")
+    assert finished["selected"]["controller_config"].endswith("configs/esp32jtag.yaml")
     assert finished["selected"]["control_instrument_config"].endswith("configs/esp32jtag.yaml")
+    assert finished["selected"]["compatibility"]["controller_config"].endswith("configs/esp32jtag.yaml")
     assert finished["selected"]["compatibility"]["probe_config"].endswith("configs/esp32jtag.yaml")
     assert finished["compatibility"]["board"]["id"] == "esp32c3_devkit"
+    assert finished["compatibility"]["controller"]["communication"]["primary"] == "gdb_remote"
     assert finished["compatibility"]["probe"]["communication"]["primary"] == "gdb_remote"
     assert finished["instrument"]["communication"]["protocol"] == "gpio_meter_v1"
     assert finished["instrument"]["capability_surfaces"]["measure.digital"] == "primary"

@@ -1291,6 +1291,16 @@ def run_pipeline(
             "name": Path(test_path).stem,
             "path": str(test_path),
         },
+        "controller": {
+            "name": probe_cfg.get("name"),
+            "config": probe_path,
+            "instance": probe_instance_id,
+            "type": probe_type,
+            "endpoint": {"host": probe_host, "port": probe_port},
+            "communication": dict(probe_communication or {}),
+            "capability_surfaces": dict(probe_capability_surfaces or {}),
+            "legacy_warning": binding.legacy_warning,
+        },
         "control_instrument": {
             "name": probe_cfg.get("name"),
             "config": probe_path,
@@ -1310,10 +1320,12 @@ def run_pipeline(
         },
         "selected": {
             "board_profile_config": str(board_path) if board_path else None,
+            "controller_config": str(probe_path) if probe_path else None,
             "control_instrument_config": str(probe_path) if probe_path else None,
             "test_config": str(test_path),
             "compatibility": {
                 "board_config": str(board_path) if board_path else None,
+                "controller_config": str(probe_path) if probe_path else None,
                 "probe_config": str(probe_path) if probe_path else None,
             },
         },
@@ -1324,6 +1336,16 @@ def run_pipeline(
                 "id": board_id or "unknown",
                 "name": board_cfg.get("name"),
                 "target": board_cfg.get("target"),
+            },
+            "controller": {
+                "name": probe_cfg.get("name"),
+                "path": probe_path,
+                "instance_id": probe_instance_id,
+                "type": probe_type,
+                "endpoint": {"host": probe_host, "port": probe_port},
+                "communication": dict(probe_communication or {}),
+                "capability_surfaces": dict(probe_capability_surfaces or {}),
+                "legacy_warning": binding.legacy_warning,
             },
             "probe": {
                 "name": probe_cfg.get("name"),
