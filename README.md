@@ -99,6 +99,39 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### Schema Convergence Milestone — Default Verification Reached Parallel Stable Closure (2026-03-20)
+
+The post-refactor validation result now shows that AEL has moved past "functionally working" and into a stable converged phase.
+
+A six-platform, cross-instrument `default verification` baseline was run in full parallel mode for three consecutive rounds, and all three rounds passed without flaky behavior.
+
+This milestone supports four concrete conclusions:
+
+- system behavior has converged
+- the schema abstraction and execution model are self-consistent
+- the architecture is not showing hidden coupling or unstable resource contention on this baseline
+- AI can now drive the full repo-native engineering loop repeatedly on real hardware with stable outcomes
+
+What this means in practice:
+
+- `default verification` is no longer only a feature demo or a one-off green run
+- the repaired `ST-Link` path now holds inside the same parallel batch as the ESP32JTAG and meter-backed paths
+- the recent schema and execution-layer changes now have repeated live-bench evidence behind them
+
+Representative live evidence:
+
+- first full six-way parallel pass: `2026-03-20_10-33-07`
+- repeated six-way parallel passes:
+  - `2026-03-20_10-36-49`
+  - `2026-03-20_10-37-43`
+  - `2026-03-20_10-38-37`
+- all six experiments passed in each run set, including `stm32f103_gpio_no_external_capture_stlink`
+
+This is the point where AEL starts to look less like "AI-assisted execution" and more like an `AI-reliable engineering system`.
+
+📄 [Parallel stability closeout](docs/default_verification_parallel_stability_closeout_2026-03-20.md)
+📄 [ST-Link recovery skill](docs/skills/stlink_parallel_default_verification_recovery_skill_2026-03-20.md)
+
 ### ESP32JTAG Native API Milestone — Minimal Instrument Interface Live-Validated (2026-03-19)
 
 `ESP32JTAG` now has a minimal instrument-level native API on top of the
