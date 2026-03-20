@@ -161,9 +161,9 @@
   intent_type: default_verification_review
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
-    - "python3 -m ael inventory list"
-    - "python3 -m ael verify-default run"
-  must_use_formal_path: true
+    - "python3 -m ael verify-default review"
+    - "python3 -m ael verify-default state --format json"
+    must_use_formal_path: true
   required_output_elements:
     - "current default verification sequence or covered baseline paths"
     - "current coverage summary"
@@ -174,7 +174,7 @@
     - "omitting current caveats"
     - "answering only from stale memory without current repo retrieval"
   judge_rubric:
-    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "response is grounded in current repo-native default-verification review/state retrieval"
     - "current covered baseline paths are summarized clearly"
     - "health assessment is present but not overstated"
     - "important caveats remain visible"
@@ -185,8 +185,8 @@
   intent_type: default_verification_review
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
-    - "python3 -m ael inventory list"
-    - "python3 -m ael verify-default run"
+    - "python3 -m ael verify-default review"
+    - "python3 -m ael verify-default state --format json"
   allow_retrieval_failure: true
   must_use_formal_path: true
   required_output_elements:
@@ -199,7 +199,7 @@
     - "hiding the meter reachability failure"
     - "answering only from stale memory without current repo retrieval"
   judge_rubric:
-    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "response is grounded in current repo-native default-verification review/state retrieval"
     - "current covered baseline paths are summarized clearly even when the run stops early"
     - "health assessment reflects the guarded meter-unreachable failure"
     - "important caveats and operator action remain visible"
@@ -210,8 +210,8 @@
   intent_type: default_verification_review
   user_question: "What is currently covered and is the default verification baseline healthy?"
   expected_retrieval_path:
-    - "python3 -m ael inventory list"
-    - "python3 -m ael verify-default run"
+    - "python3 -m ael verify-default review"
+    - "python3 -m ael verify-default state --format json"
   allow_retrieval_failure: true
   must_use_formal_path: true
   required_output_elements:
@@ -224,7 +224,7 @@
     - "claiming the whole baseline is healthy when the current run still shows the esp32c6 flash/serial-path failure"
     - "answering only from stale memory without current repo retrieval"
   judge_rubric:
-    - "response is grounded in current repo-native inventory state and a current default-verification run"
+    - "response is grounded in current repo-native default-verification review/state retrieval"
     - "current covered baseline paths include the current F411 representative step"
     - "health assessment distinguishes the healthy F411 integration from the separate esp32c6 baseline issue"
     - "important caveats remain visible"

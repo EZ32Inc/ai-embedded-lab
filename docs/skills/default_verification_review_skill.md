@@ -29,6 +29,7 @@ This is a high-value skill in AEL because:
 Use this skill when:
 
 - `python3 -m ael verify-default run` has just completed
+- `python3 -m ael verify-default review` is available and can be used as the primary repo-native summary source
 - the default verification sequence has changed
 - a key board, test, or instrument path included in the sequence has changed
 - the user asks whether the current baseline is healthy
@@ -38,6 +39,8 @@ Use this skill when:
 
 Typical inputs include:
 
+- `python3 -m ael verify-default review`
+- `python3 -m ael verify-default state --format json`
 - current default verification settings
 - the executed default verification sequence
 - per-step run results
@@ -80,8 +83,10 @@ This skill should keep separate:
 
 Recommended flow:
 
-1. Inspect the current default verification configuration.
-2. Inspect the executed sequence and per-step results.
+1. Run `python3 -m ael verify-default review` first.
+2. If needed, inspect `python3 -m ael verify-default state --format json` for structured details.
+3. Inspect the current default verification configuration when the review summary is not enough.
+4. Inspect the executed sequence and per-step results.
 3. Identify which board, test, and instrument paths were exercised.
 4. Summarize the pass or fail state for each step.
 5. Classify any sandbox-blocked or network-policy-blocked live-bench attempt as
@@ -172,6 +177,7 @@ Relationship to workflow/reporting skills more broadly:
 
 Without a formal skills system, this skill can already be used as:
 
+- a repo-native command pattern built around `python3 -m ael verify-default review`
 - a documented output expectation after default verification runs
 - a prompt pattern for Codex or Gemini
 - a review checklist before or after structural changes

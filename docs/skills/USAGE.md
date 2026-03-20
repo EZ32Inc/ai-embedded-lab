@@ -50,7 +50,7 @@ Examples:
 - after user setup corrections: use `user_correction_and_setup_reprint`
 - after successful run/check/report: use `validation_summary_emission`
 - after a successful run when restating reusable bench state: use `last_known_good_extraction`
-- after `verify-default run`: use `default_verification_review`
+- after `verify-default run`: use `python3 -m ael verify-default review`, then apply `default_verification_review`
 
 ## What Not To Do
 
