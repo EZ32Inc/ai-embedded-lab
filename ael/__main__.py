@@ -200,6 +200,9 @@ def main():
     verify_default_state.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_state.add_argument("--runs-root", default="runs")
     verify_default_state.add_argument("--format", choices=["json", "text"], default="json")
+    verify_default_review = verify_default_sub.add_parser("review", help="show concise default verification review summary")
+    verify_default_review.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
+    verify_default_review.add_argument("--runs-root", default="runs")
 
     inventory_p = sub.add_parser("inventory")
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
@@ -829,6 +832,11 @@ def main():
                 print(_render_verify_default_state_text(state))
             else:
                 print(json.dumps(state, indent=2, sort_keys=True))
+            health = state["health_status"]
+            sys.exit(0 if health in ("pass", "partial_pass") else 1)
+        if args.verify_default_cmd == "review":
+            state = _verify_default_state(args.file, args.runs_root)
+            print(_render_verify_default_review_text(state))
             health = state["health_status"]
             sys.exit(0 if health in ("pass", "partial_pass") else 1)
 
@@ -2161,6 +2169,37 @@ def _render_verify_default_state_text(state: dict) -> str:
         for t in state["failing_tests"]:
             run_id = t.get("run_id") or "no_run_found"
             lines.append(f"  - {t['step']} (run: {run_id})")
+    return "\n".join(lines)
+
+
+def _render_verify_default_review_text(state: dict) -> str:
+    summary = state.get("schema_advisory_summary") if isinstance(state.get("schema_advisory_summary"), dict) else {}
+    structured = int(summary.get("structured_step_count", 0))
+    legacy = int(summary.get("legacy_step_count", 0))
+    warning_messages = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+    test_kind_counts = summary.get("test_kind_counts") if isinstance(summary.get("test_kind_counts"), dict) else {}
+    supported_counts = summary.get("supported_instrument_status_counts") if isinstance(summary.get("supported_instrument_status_counts"), dict) else {}
+
+    lines = [
+        "Default Verification Review",
+        f"health_status: {state.get('health_status', '')}",
+        f"schema_review_status: {state.get('schema_review_status', '') or _schema_review_status(summary)}",
+        f"structured_coverage: structured={structured} legacy={legacy}",
+    ]
+    if test_kind_counts:
+        parts = [f"{key}={test_kind_counts[key]}" for key in sorted(test_kind_counts)]
+        lines.append("test_kind_distribution: " + " ".join(parts))
+    if supported_counts:
+        parts = [f"{key}={supported_counts[key]}" for key in sorted(supported_counts)]
+        lines.append("instrument_support: " + " ".join(parts))
+    if warning_messages:
+        lines.append(f"warning_summary: {len(warning_messages)} schema warning(s)")
+        for item in warning_messages:
+            lines.append(f"  - {item}")
+    else:
+        lines.append("warning_summary: none")
+    lines.append(f"current_blocker: {state.get('current_blocker') or 'none'}")
+    lines.append(f"next_recommended_action: {state.get('next_recommended_action', '')}")
     return "\n".join(lines)
 
 

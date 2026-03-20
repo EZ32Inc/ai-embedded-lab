@@ -8,7 +8,7 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from ael.__main__ import _render_verify_default_state_text, _verify_default_state
+from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
 from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
 
@@ -1140,6 +1140,79 @@ def test_render_verify_default_state_text_includes_schema_summary():
     assert "declared_unsupported: 1" in text
     assert "warning_messages:" in text
     assert "selected instrument type esp32_meter is not in declared support set" in text
+
+
+def test_render_verify_default_review_text_includes_compact_summary():
+    text = _render_verify_default_review_text(
+        {
+            "health_status": "pass",
+            "schema_review_status": "warnings_present",
+            "current_blocker": "selected instrument type esp32_meter is not in declared support set",
+            "next_recommended_action": "all steps passing, but review instrument support declarations and schema warnings",
+            "schema_advisory_summary": {
+                "structured_step_count": 1,
+                "legacy_step_count": 1,
+                "test_kind_counts": {"instrument_specific": 1},
+                "supported_instrument_status_counts": {"declared_unsupported": 1},
+                "warning_messages": ["selected instrument type esp32_meter is not in declared support set"],
+            },
+        }
+    )
+
+    assert "Default Verification Review" in text
+    assert "health_status: pass" in text
+    assert "schema_review_status: warnings_present" in text
+    assert "structured_coverage: structured=1 legacy=1" in text
+    assert "test_kind_distribution: instrument_specific=1" in text
+    assert "instrument_support: declared_unsupported=1" in text
+    assert "warning_summary: 1 schema warning(s)" in text
+    assert "current_blocker: selected instrument type esp32_meter is not in declared support set" in text
+
+
+def test_verify_default_review_cli_outputs_compact_summary(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ael",
+            "verify-default",
+            "review",
+            "--file",
+            str(setting_path),
+            "--runs-root",
+            str(runs_root),
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+
+    assert "Default Verification Review" in res.stdout
+    assert "schema_review_status: aligned" in res.stdout
+    assert "structured_coverage: structured=1 legacy=0" in res.stdout
+    assert "warning_summary: none" in res.stdout
 
 
 def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
