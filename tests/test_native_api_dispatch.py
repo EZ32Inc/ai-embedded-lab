@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
-from ael.instruments.interfaces.model import normalize_capabilities_result, normalize_doctor_result, normalize_status_result
+from ael.instruments.interfaces.model import normalize_capabilities_result, normalize_doctor_check_entry, normalize_doctor_result, normalize_status_result
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -263,7 +263,12 @@ def test_control_doctor_returns_unified_semantics_for_stlink(monkeypatch):
     assert payload["family"] == "stlink"
     assert payload["action"] == "doctor"
     assert payload["result"]["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["result"]["doctor_check_schema_version"] == "instrument_doctor_checks/v1"
     assert payload["result"]["doctor_checks_enforced"] is True
+    assert payload["result"]["checks"]["gdb_remote"]["summary"] == "ok"
+    assert payload["result"]["checks"]["gdb_remote"]["evidence"] == {}
+    assert payload["result"]["checks"]["debug_attach"]["summary"] == "unverified"
+    assert payload["result"]["checks"]["debug_attach"]["evidence"]["state"] == "unverified"
     assert payload["result"]["health"] == "healthy"
     assert payload["result"]["failure_boundary"] == "probe_health"
 
@@ -451,3 +456,15 @@ def test_normalize_doctor_rejects_unknown_check_key():
         assert "unknown doctor check key" in str(exc)
     else:
         raise AssertionError("expected doctor taxonomy enforcement failure")
+
+
+def test_normalize_doctor_check_entry_canonicalizes_summary_detail_and_evidence():
+    payload = normalize_doctor_check_entry(
+        "preflight",
+        {"ok": False, "error": "timeout", "attempts": 2},
+    )
+    assert payload["ok"] is False
+    assert payload["summary"] == "timeout"
+    assert payload["detail"] == "timeout"
+    assert payload["evidence"]["error"] == "timeout"
+    assert payload["evidence"]["attempts"] == 2

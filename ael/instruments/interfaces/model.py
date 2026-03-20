@@ -7,6 +7,7 @@ CONTRACT_VERSION = "instrument_action/v1"
 CAPABILITY_TAXONOMY_VERSION = "instrument_capabilities/v1"
 STATUS_MODEL_VERSION = "instrument_status/v1"
 DOCTOR_MODEL_VERSION = "instrument_doctor/v1"
+DOCTOR_CHECK_SCHEMA_VERSION = "instrument_doctor_checks/v1"
 
 CAPABILITY_TAXONOMY_KEYS = frozenset({
     "capture.digital",
@@ -89,6 +90,47 @@ def enforce_doctor_check_keys(checks: Dict[str, Dict[str, Any]]) -> Dict[str, Di
             raise ValueError(f"unknown doctor check key: {name}")
         normalized[name] = dict(value or {})
     return normalized
+
+
+def normalize_doctor_check_entry(name: str, detail: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(detail or {})
+    ok = payload.get("ok")
+    if ok is not None and not isinstance(ok, bool):
+        ok = bool(ok)
+    summary = payload.get("summary")
+    if summary is None:
+        if payload.get("error"):
+            summary = str(payload.get("error"))
+        elif payload.get("state") is not None:
+            summary = str(payload.get("state"))
+        elif ok is True:
+            summary = "ok"
+        elif ok is False:
+            summary = "failed"
+    detail_text = payload.get("detail")
+    if detail_text is None and payload.get("error"):
+        detail_text = str(payload.get("error"))
+    evidence = payload.get("evidence") if isinstance(payload.get("evidence"), dict) else {}
+    for key, value in payload.items():
+        if key in {"ok", "summary", "detail", "evidence"}:
+            continue
+        evidence.setdefault(key, value)
+    normalized = {
+        "ok": ok,
+        "summary": summary,
+        "detail": detail_text,
+        "evidence": evidence,
+    }
+    for key, value in payload.items():
+        if key in normalized:
+            continue
+        normalized[key] = value
+    return normalized
+
+
+def normalize_doctor_checks(checks: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    normalized = enforce_doctor_check_keys(checks)
+    return {name: normalize_doctor_check_entry(name, detail) for name, detail in normalized.items()}
 
 
 def _fallback_payload(payload: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -211,10 +253,11 @@ def normalize_doctor_result(
     recovery_hint: Optional[str] = None,
     failure_boundary: Optional[str] = None,
 ) -> Dict[str, Any]:
-    checks = enforce_doctor_check_keys(checks)
+    checks = normalize_doctor_checks(checks)
     result: Dict[str, Any] = {
         "instrument_family": family,
         "doctor_model_version": DOCTOR_MODEL_VERSION,
+        "doctor_check_schema_version": DOCTOR_CHECK_SCHEMA_VERSION,
         "doctor_checks_enforced": True,
         "reachable": reachable,
         "health": derive_doctor_health(reachable=reachable, checks=checks),
