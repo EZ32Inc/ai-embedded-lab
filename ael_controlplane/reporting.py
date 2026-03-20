@@ -157,10 +157,12 @@ def default_verification_review_summary(repo_root: str | Path | None = None) -> 
 
 def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dict[str, str]:
     text = str(review.get("text") or "")
-    highlights = {"schema_review_status": "unavailable", "warning_summary": "unavailable", "structured_coverage": "unavailable"}
+    highlights = {"health_status": "unavailable", "schema_review_status": "unavailable", "warning_summary": "unavailable", "structured_coverage": "unavailable"}
     for line in text.splitlines():
         stripped = line.strip()
-        if stripped.startswith("schema_review_status:"):
+        if stripped.startswith("health_status:"):
+            highlights["health_status"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("schema_review_status:"):
             highlights["schema_review_status"] = stripped.split(":", 1)[1].strip() or "unavailable"
         elif stripped.startswith("warning_summary:"):
             highlights["warning_summary"] = stripped.split(":", 1)[1].strip() or "unavailable"
@@ -171,6 +173,23 @@ def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dic
     return highlights
 
 
+def _baseline_readiness_from_review_payload(payload: Dict[str, str | bool]) -> str:
+    health = str(payload.get("health_status") or "").strip()
+    schema = str(payload.get("schema_review_status") or "").strip()
+    warning_summary = str(payload.get("warning_summary") or "").strip()
+    if health in ("fail", "partial_pass"):
+        return "needs_attention"
+    if health in ("unknown", "unavailable", ""):
+        return "unavailable"
+    if warning_summary not in ("", "none", "unavailable"):
+        return "needs_attention"
+    if schema in ("warnings_present", "partial_structured_coverage"):
+        return "needs_attention"
+    if health == "pass" and schema in ("aligned", "no_schema_signals"):
+        return "ready"
+    return "needs_attention"
+
+
 def default_verification_review_payload(review: Dict[str, str | bool]) -> Dict[str, str | bool]:
     payload = dict(review)
     payload.update(default_verification_review_highlights(payload))
@@ -178,6 +197,7 @@ def default_verification_review_payload(review: Dict[str, str | bool]) -> Dict[s
     payload["text"] = str(payload.get("text") or payload.get("error") or "")
     if payload["text"] and not str(payload.get("error") or ""):
         payload["error"] = ""
+    payload["baseline_readiness_status"] = _baseline_readiness_from_review_payload(payload)
     return payload
 
 

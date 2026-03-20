@@ -10,6 +10,7 @@ def build_nightly_report_payload(date_str: str, summary: dict) -> Dict:
     plans: List[Dict] = summary.get("plans", []) if isinstance(summary.get("plans"), list) else []
     baseline_review = summary.get("default_verification_review") if isinstance(summary.get("default_verification_review"), dict) else default_verification_review_snapshot(Path(__file__).resolve().parents[1])
     review = default_verification_review_payload(baseline_review)
+    baseline_readiness_status = str(summary.get("baseline_readiness_status") or review.get("baseline_readiness_status") or "unavailable")
     failures: List[Dict] = []
     for p in plans:
         if str(p.get("status", "")).upper() in ("FAIL", "FAILED"):
@@ -54,6 +55,7 @@ def build_nightly_report_payload(date_str: str, summary: dict) -> Dict:
         "plans": plans,
         "failures": failures,
         "default_verification_review": review,
+        "baseline_readiness_status": baseline_readiness_status,
         "merge_readiness": merge_rows,
         "changes": changes,
     }
@@ -62,6 +64,8 @@ def build_nightly_report_payload(date_str: str, summary: dict) -> Dict:
 def _render_nightly_report_markdown(payload: Dict) -> str:
     plans = payload.get("plans", []) if isinstance(payload.get("plans"), list) else []
     review = payload.get("default_verification_review", {}) if isinstance(payload.get("default_verification_review"), dict) else {}
+    baseline_readiness_status = str(payload.get("baseline_readiness_status") or review.get("baseline_readiness_status") or "unavailable")
+    merge_advisory = "baseline readiness aligned" if baseline_readiness_status == "ready" else "warning-only: baseline readiness needs attention"
     lines = [
         f"# AEL Nightly Report — {payload.get('date', '')}",
         f"- Started: {payload.get('started_at', '')}",
@@ -106,6 +110,8 @@ def _render_nightly_report_markdown(payload: Dict) -> str:
         [
             "",
             "## Merge Readiness",
+            f"- baseline_readiness_status: {baseline_readiness_status}",
+            f"- merge_advisory: {merge_advisory}",
             "| Branch | Task | Status | Execution Mode | Tests | Merge Ready |",
             "|------|------|------|------|------|------|",
         ]

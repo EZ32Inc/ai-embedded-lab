@@ -51,6 +51,7 @@ def build_review_pack_payload(branch: str, task: Dict, artifacts: Dict) -> Dict:
         if val:
             evidence[key] = val
 
+    review = default_verification_review_payload(default_verification_review_snapshot(_repo_root()))
     return {
         "branch": branch,
         "task_title": task_title,
@@ -61,7 +62,8 @@ def build_review_pack_payload(branch: str, task: Dict, artifacts: Dict) -> Dict:
         "files_changed": changed or "(no file changes detected)",
         "diff_summary": diffstat or "(no diffstat detected)",
         "evidence": evidence,
-        "default_verification_review": default_verification_review_payload(default_verification_review_snapshot(_repo_root())),
+        "default_verification_review": review,
+        "baseline_readiness_status": str(review.get("baseline_readiness_status", "unavailable")),
         "reproduction_command": f'python3 -m ael submit "{prompt or task_title}"',
         "merge_ready": merge_ready,
     }
@@ -69,6 +71,8 @@ def build_review_pack_payload(branch: str, task: Dict, artifacts: Dict) -> Dict:
 
 def _render_review_pack_markdown(payload: Dict) -> str:
     review = payload.get("default_verification_review", {}) if isinstance(payload.get("default_verification_review"), dict) else {}
+    baseline_readiness_status = str(payload.get("baseline_readiness_status") or review.get("baseline_readiness_status") or "unavailable")
+    merge_advisory = "baseline readiness aligned" if baseline_readiness_status == "ready" else "warning-only: baseline readiness needs attention"
     lines = [
         f"Branch: {payload.get('branch', '')}",
         f"Task: {payload.get('task_title', '')}",
@@ -112,6 +116,8 @@ def _render_review_pack_markdown(payload: Dict) -> str:
             "",
             "## Merge Recommendation",
             f"merge_ready: {payload.get('merge_ready', 'no')}",
+            f"baseline_readiness_status: {baseline_readiness_status}",
+            f"merge_advisory: {merge_advisory}",
             "",
         ]
     )

@@ -2093,6 +2093,7 @@ def test_default_verification_review_payload_normalizes_review_fields():
     assert payload["schema_review_status"] == "aligned"
     assert payload["structured_coverage"] == "structured=3 legacy=0"
     assert payload["warning_summary"] == "none"
+    assert payload["baseline_readiness_status"] == "ready"
     assert payload["text"].startswith("Default Verification Review")
     assert payload["error"] == ""
 
@@ -2105,7 +2106,7 @@ def test_default_verification_review_highlights_extracts_status_and_warning_summ
 
     highlights = default_verification_review_highlights(review)
 
-    assert highlights == {"schema_review_status": "aligned", "structured_coverage": "structured=3 legacy=0", "warning_summary": "none"}
+    assert highlights == {"health_status": "pass", "schema_review_status": "aligned", "structured_coverage": "structured=3 legacy=0", "warning_summary": "none"}
 
 
 def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, tmp_path):
@@ -2141,6 +2142,10 @@ def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, t
     assert "schema_review_status: aligned" in text
     assert "structured_coverage: structured=3 legacy=0" in text
     assert "warning_summary: none" in text
+    assert "baseline_readiness_status: ready" in text
+    assert "merge_advisory: baseline readiness aligned" in text
+    assert "baseline_readiness_status: ready" in text
+    assert "merge_advisory: baseline readiness aligned" in text
 
 
 def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, tmp_path):
@@ -2172,6 +2177,8 @@ def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, t
     assert "schema_review_status: aligned" in text
     assert "structured_coverage: structured=3 legacy=0" in text
     assert "warning_summary: none" in text
+    assert "baseline_readiness_status: ready" in text
+    assert "merge_advisory: baseline readiness aligned" in text
 
 
 def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp_path):
@@ -2234,6 +2241,8 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
     nightly_text = nightly_path.read_text(encoding="utf-8")
     for expected in (
         "- schema_review_status: warnings_present",
+        "baseline_readiness_status: needs_attention",
+        "merge_advisory: warning-only: baseline readiness needs attention",
         "- structured_coverage: structured=3 legacy=1",
         "- warning_summary: 1 schema warning(s)",
         "schema_review_status: warnings_present",
@@ -2310,6 +2319,7 @@ def test_build_review_pack_payload_exposes_machine_readable_review(monkeypatch):
     assert payload["default_verification_review"]["schema_review_status"] == "aligned"
     assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=0"
     assert payload["default_verification_review"]["warning_summary"] == "none"
+    assert payload["baseline_readiness_status"] == "ready"
 
 
 def test_build_nightly_report_payload_exposes_machine_readable_review():
@@ -2330,6 +2340,7 @@ def test_build_nightly_report_payload_exposes_machine_readable_review():
     assert payload["default_verification_review"]["schema_review_status"] == "warnings_present"
     assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
     assert payload["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
+    assert payload["baseline_readiness_status"] == "needs_attention"
 
 
 def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consistent(monkeypatch, tmp_path):
@@ -2477,3 +2488,51 @@ def test_verify_default_review_text_includes_baseline_readiness_status():
     )
 
     assert "baseline_readiness_status: ready" in text
+
+
+def test_review_pack_and_nightly_report_surface_baseline_readiness_advisory(monkeypatch, tmp_path):
+    review_text = (
+        "Default Verification Review\n"
+        "health_status: pass\n"
+        "schema_review_status: partial_structured_coverage\n"
+        "structured_coverage: structured=3 legacy=1\n"
+        "warning_summary: none\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "reports").mkdir()
+    monkeypatch.setattr(
+        "ael_controlplane.review_pack.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    monkeypatch.setattr(
+        "ael_controlplane.nightly_report.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
+
+    pack_payload = build_review_pack_payload(
+        branch="agent/report-review",
+        task={
+            "title": "report task",
+            "task_id": "task_1",
+            "execution_mode": "offline",
+            "prompt": "review prompt",
+            "merge_ready": "yes",
+            "summary": "review summary",
+        },
+        artifacts={"run_dir": "runs/report-task"},
+    )
+    nightly_payload = build_nightly_report_payload(
+        "2026-03-20",
+        {
+            "started_at": "2026-03-20T00:00:00",
+            "finished_at": "2026-03-20T00:10:00",
+            "ok": True,
+            "plans": [],
+            "baseline_readiness_status": "needs_attention",
+            "default_verification_review": {"ok": True, "text": review_text},
+        },
+    )
+
+    assert pack_payload["baseline_readiness_status"] == "needs_attention"
+    assert nightly_payload["baseline_readiness_status"] == "needs_attention"
