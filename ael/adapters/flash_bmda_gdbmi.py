@@ -421,10 +421,12 @@ def _ensure_local_stlink_gdb_server(
     }
     if not result["port_checked"]:
         return result
-    if _port_is_listening(ip, port):
-        return result
+    existing_listener = _port_is_listening(ip, port)
+    if existing_listener:
+        emit(f"Flash: restarting existing local ST-Link GDB server on {ip}:{port} to ensure a clean session")
     _terminate_stale_stlink_processes(port, emit)
     if _port_is_listening(ip, port):
+        emit(f"Flash: local ST-Link GDB server still present on {ip}:{port} after cleanup; reusing it")
         return result
     if not _STLINK_GDB_SERVER_SCRIPT.exists():
         msg = f"Flash: local ST-Link GDB server script missing: {_STLINK_GDB_SERVER_SCRIPT}"
