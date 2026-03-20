@@ -234,6 +234,19 @@ def resolve_control_instrument_config(
     return resolve_probe_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)
 
 
+def resolve_controller_config(
+    repo_root: str,
+    args: Any,
+    board_id: Optional[str] = None,
+    pack_meta: Optional[dict] = None,
+) -> Optional[str]:
+    """Resolve the config path for the selected controller instrument.
+
+    This is the neutral public alias for control/probe-style policy resolution.
+    """
+    return resolve_control_instrument_config(repo_root, args, board_id=board_id, pack_meta=pack_meta)
+
+
 def resolve_probe_instance(
     repo_root: str,
     args: Any,
@@ -281,6 +294,19 @@ def resolve_control_instrument_instance(
     This is the instrument-first alias for the legacy probe-instance policy path.
     """
     return resolve_probe_instance(repo_root, args, board_id=board_id, pack_meta=pack_meta)
+
+
+def resolve_controller_instance(
+    repo_root: str,
+    args: Any,
+    board_id: Optional[str] = None,
+    pack_meta: Optional[dict] = None,
+) -> Optional[str]:
+    """Resolve the selected controller instrument instance.
+
+    This is the neutral public alias for control/probe-style policy resolution.
+    """
+    return resolve_control_instrument_instance(repo_root, args, board_id=board_id, pack_meta=pack_meta)
 
 
 def resolve_board_config(repo_root: str, args: Any, pack_meta: Optional[dict] = None) -> Optional[str]:

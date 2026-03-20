@@ -235,8 +235,9 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
     ).strip() or None
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
     return {
-        "kind": "control_instrument",
-        "legacy_kind": "probe",
+        "kind": "controller",
+        "legacy_kind": "control_instrument",
+        "compatibility_kind": "probe",
         "id": binding.instance_id or binding.raw.get("probe", {}).get("name") or "ESP32JTAG",
         "type": binding.type_id,
         "instrument_role": "control",
@@ -254,10 +255,11 @@ def _primary_selected_instrument(poi: Dict[str, Any]) -> Dict[str, Any]:
     if not isinstance(poi, dict):
         return {}
     kind = str(poi.get("kind") or "").strip()
-    if kind == "control_instrument":
+    if kind in {"control_instrument", "controller"}:
         return {
-            "kind": "control_instrument",
-            "legacy_kind": poi.get("legacy_kind"),
+            "kind": "controller",
+            "legacy_kind": poi.get("legacy_kind") or "control_instrument",
+            "compatibility_kind": poi.get("compatibility_kind") or "probe",
             "id": poi.get("id"),
             "type": poi.get("type"),
             "instrument_role": poi.get("instrument_role") or "control",
@@ -301,10 +303,19 @@ def _bench_selection_digest(payload: Dict[str, Any]) -> List[str]:
         kind = str(instrument.get("kind") or "").strip()
         instrument_id = instrument.get("id")
         if instrument_id:
-            items.append(f"{kind}_id:{instrument_id}")
+            if kind in {"controller", "control_instrument"}:
+                items.append(f"controller_id:{instrument_id}")
+                items.append(f"control_instrument_id:{instrument_id}")
+            else:
+                items.append(f"{kind}_id:{instrument_id}")
         endpoint = instrument.get("endpoint")
         if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
-            items.append(f"{kind}_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
+            if kind in {"controller", "control_instrument"}:
+                endpoint_text = f"{endpoint.get('host')}:{endpoint.get('port')}"
+                items.append(f"controller_endpoint:{endpoint_text}")
+                items.append(f"control_instrument_endpoint:{endpoint_text}")
+            else:
+                items.append(f"{kind}_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
     return items
 
 
@@ -312,11 +323,15 @@ def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], conne
     resource_keys = []
     kind = str(selected_instrument.get("kind") or "").strip()
     endpoint = selected_instrument.get("endpoint") if isinstance(selected_instrument.get("endpoint"), dict) else {}
-    if kind == "control_instrument":
+    if kind in {"control_instrument", "controller"}:
         if endpoint.get("host") and endpoint.get("port") is not None:
-            resource_keys.append(f"probe:{endpoint.get('host')}:{endpoint.get('port')}")
+            endpoint_text = f"{endpoint.get('host')}:{endpoint.get('port')}"
+            resource_keys.append(f"probe:{endpoint_text}")
+            resource_keys.append(f"controller:{endpoint_text}")
         elif selected_instrument.get("config"):
-            resource_keys.append(f"probe_path:{selected_instrument.get('config')}")
+            config_path = selected_instrument.get('config')
+            resource_keys.append(f"probe_path:{config_path}")
+            resource_keys.append(f"controller_path:{config_path}")
     elif kind == "instrument":
         inst_id = selected_instrument.get("id")
         if inst_id and endpoint.get("host") and endpoint.get("port") is not None:
@@ -721,6 +736,8 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"{poi.get('kind')}: {poi.get('id')}")
     if poi.get("legacy_kind") and poi.get("legacy_kind") != poi.get("kind"):
         lines.append(f"legacy_kind: {poi.get('legacy_kind')}")
+    if poi.get("compatibility_kind"):
+        lines.append(f"compatibility_kind: {poi.get('compatibility_kind')}")
     if poi.get("type"):
         lines.append(f"type: {poi.get('type')}")
     endpoint = poi.get("endpoint")

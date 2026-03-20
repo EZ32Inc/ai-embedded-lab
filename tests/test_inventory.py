@@ -162,16 +162,19 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["selected_board_profile"]["id"] == "stm32f401rct6"
     assert payload["selected_board_profile"]["config"] == "configs/boards/stm32f401rct6.yaml"
     assert payload["selected_board_profile"]["role"] == "runtime_policy"
-    assert payload["selected_instrument"]["kind"] == "control_instrument"
-    assert payload["selected_instrument"]["legacy_kind"] == "probe"
+    assert payload["selected_instrument"]["kind"] == "controller"
+    assert payload["selected_instrument"]["legacy_kind"] == "control_instrument"
+    assert payload["selected_instrument"]["compatibility_kind"] == "probe"
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
-    assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
-    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.109:4242"]
+    assert payload["compatibility"]["probe_or_instrument"]["kind"] == "controller"
+    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.109:4242", "controller:192.168.2.109:4242"]
     assert payload["selected_bench_resources"]["contract_version"] == 1
-    assert "control_instrument_id:esp32jtag_stm32_golden" in payload["selected_bench_resources"]["selection_digest"]
+    assert "controller_id:esp32jtag_stm32_golden" in payload["selected_bench_resources"]["selection_digest"]
     assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.109:4242"]
-    assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
+    assert payload["selected_bench_resources"]["resource_summary"]["controller_endpoints"] == ["192.168.2.109:4242"]
+    assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "control_instrument"
+    assert payload["compatibility"]["probe_or_instrument"]["compatibility_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
     assert any(conn["from"] == "PA2" and conn["to"] == "P0.0" for conn in payload["connections"])
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
@@ -191,10 +194,11 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert "dut_runtime_binding: board_profile_driven" in rendered
     assert "board_profile_role: runtime_policy" in rendered
     assert "bench_resource_contract_version: 1" in rendered
-    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.109:4242" in rendered
+    assert "bench_resource_selection_digest: controller_id:esp32jtag_stm32_golden; control_instrument_id:esp32jtag_stm32_golden; controller_endpoint:192.168.2.109:4242; control_instrument_endpoint:192.168.2.109:4242" in rendered
     assert "board_profile_config: configs/boards/stm32f401rct6.yaml" in rendered
-    assert "control_instrument: esp32jtag_stm32_golden" in rendered
-    assert "legacy_kind: probe" in rendered
+    assert "controller: esp32jtag_stm32_golden" in rendered
+    assert "legacy_kind: control_instrument" in rendered
+    assert "compatibility_kind: probe" in rendered
     assert "connection_setup:" in rendered
     assert "source_summary:" in rendered
     assert "resolved_wiring:" in rendered
@@ -235,7 +239,7 @@ def test_describe_test_for_rp2350_gpio_signature():
     assert payload["selected_board_profile"]["id"] == "rp2350_pico2"
     assert payload["selected_board_profile"]["config"] == "configs/boards/rp2350_pico2.yaml"
     assert payload["selected_board_profile"]["role"] == "runtime_policy"
-    assert payload["selected_instrument"]["kind"] == "control_instrument"
+    assert payload["selected_instrument"]["kind"] == "controller"
     assert payload["selected_instrument"]["id"] == "esp32jtag_rp2040_lab"
     assert any(conn["from"] == "GPIO16" and conn["to"] == "P0.0" for conn in payload["connections"])
     rendered = inventory.render_describe_text(payload)

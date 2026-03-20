@@ -93,3 +93,24 @@ def test_control_instrument_arg_overrides_legacy_probe_arg(tmp_path):
         config_resolver.resolve_control_instrument_config(str(tmp_path), args=_Args(), board_id=None)
         == "configs/instrument_instances/esp32jtag_rp2040_lab.yaml"
     )
+
+
+def test_controller_aliases_match_control_instrument_resolution(tmp_path):
+    boards = tmp_path / "configs" / "boards"
+    boards.mkdir(parents=True)
+    (boards / "alias_board.yaml").write_text(
+        """board:
+  control_instrument_instance: esp32jtag_rp2040_lab
+  control_instrument_required: true
+""",
+        encoding="utf-8",
+    )
+
+    assert (
+        config_resolver.resolve_controller_instance(str(tmp_path), args=None, board_id="alias_board")
+        == config_resolver.resolve_control_instrument_instance(str(tmp_path), args=None, board_id="alias_board")
+    )
+    assert (
+        config_resolver.resolve_controller_config(str(tmp_path), args=None, board_id="alias_board")
+        == config_resolver.resolve_control_instrument_config(str(tmp_path), args=None, board_id="alias_board")
+    )

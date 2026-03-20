@@ -24,30 +24,35 @@ def summarize_resource_keys(keys: List[str] | None) -> Dict[str, Any]:
         "instrument_endpoints": [],
         "other": [],
     }
+    def _append_unique(name: str, value: str) -> None:
+        bucket = summary.setdefault(name, [])
+        if value not in bucket:
+            bucket.append(value)
+
     for key in raw:
         text = str(key or "").strip()
         if not text:
             continue
         if text.startswith("dut:"):
-            summary["dut_ids"].append(text.split(":", 1)[1])
+            _append_unique("dut_ids", text.split(":", 1)[1])
         elif text.startswith("probe:"):
             value = text.split(":", 1)[1]
-            summary["control_instrument_endpoints"].append(value)
-            summary["controller_endpoints"].append(value)
+            _append_unique("control_instrument_endpoints", value)
+            _append_unique("controller_endpoints", value)
         elif text.startswith("probe_path:"):
             value = text.split(":", 1)[1]
-            summary["control_instrument_configs"].append(value)
-            summary["controller_configs"].append(value)
+            _append_unique("control_instrument_configs", value)
+            _append_unique("controller_configs", value)
         elif text.startswith("controller:"):
-            summary["controller_endpoints"].append(text.split(":", 1)[1])
+            _append_unique("controller_endpoints", text.split(":", 1)[1])
         elif text.startswith("controller_path:"):
-            summary["controller_configs"].append(text.split(":", 1)[1])
+            _append_unique("controller_configs", text.split(":", 1)[1])
         elif text.startswith("serial:"):
-            summary["serial_ports"].append(text.split(":", 1)[1])
+            _append_unique("serial_ports", text.split(":", 1)[1])
         elif text.startswith("instrument:"):
-            summary["instrument_endpoints"].append(text.split(":", 1)[1])
+            _append_unique("instrument_endpoints", text.split(":", 1)[1])
         else:
-            summary["other"].append(text)
+            _append_unique("other", text)
     return summary
 
 
