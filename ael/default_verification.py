@@ -413,7 +413,7 @@ def _canonical_test_name(test_path: str | None) -> str:
     return Path(str(test_path or "")).stem or "unknown_test"
 
 
-def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any]) -> Tuple[bool, str]:
+def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any], *, label: str = "step") -> Tuple[bool, str]:
     steps = setting.get("steps", [])
     if not isinstance(steps, list) or not steps:
         return False, "sequence mode requires non-empty steps"
@@ -431,20 +431,56 @@ def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any]) -> Tuple[
     forbidden_fields = ("name", "probe", "instrument_instance")
     for idx, raw_step in enumerate(steps, start=1):
         if not isinstance(raw_step, dict):
-            return False, f"step {idx} must be an object"
+            return False, f"{label} {idx} must be an object"
         board = str(raw_step.get("board") or "").strip()
         test = _resolve_path(repo_root, raw_step.get("test"))
         if not board or not test:
-            return False, f"step {idx} requires board and test"
+            return False, f"{label} {idx} requires board and test"
         if (board, test) not in valid_pairs:
             test_payload = _load_test_payload(test)
             test_board = str(test_payload.get("board") or "").strip() if isinstance(test_payload, dict) else ""
             board_raw = _resolve_board_raw(repo_root, board)
             if not (test_board == board and board_raw):
-                return False, f"step {idx} references non-DUT test board={board} test={test}"
+                return False, f"{label} {idx} references non-DUT test board={board} test={test}"
         bad = [field for field in forbidden_fields if raw_step.get(field) not in (None, "")]
         if bad:
-            return False, f"step {idx} must not redefine DUT test identity/setup fields: {', '.join(bad)}"
+            return False, f"{label} {idx} must not redefine DUT test identity/setup fields: {', '.join(bad)}"
+    return True, ""
+
+
+def _sequence_groups(setting: Dict[str, Any]) -> List[Dict[str, Any]]:
+    raw_groups = setting.get("groups")
+    if not isinstance(raw_groups, list) or not raw_groups:
+        return [dict(setting)]
+
+    groups: List[Dict[str, Any]] = []
+    parent_policy = setting.get("execution_policy") if isinstance(setting.get("execution_policy"), dict) else {}
+    for idx, raw_group in enumerate(raw_groups, start=1):
+        group = dict(raw_group) if isinstance(raw_group, dict) else {}
+        policy = group.get("execution_policy") if isinstance(group.get("execution_policy"), dict) else parent_policy
+        groups.append(
+            {
+                "version": setting.get("version", 1),
+                "mode": "sequence",
+                "suite_name": str(group.get("name") or setting.get("suite_name") or f"group_{idx:02d}"),
+                "execution_policy": dict(policy) if isinstance(policy, dict) else {},
+                "stop_on_fail": bool(group.get("stop_on_fail", setting.get("stop_on_fail", True))),
+                "steps": list(group.get("steps") or []),
+            }
+        )
+    return groups
+
+
+def _validate_sequence_groups(repo_root: Path, setting: Dict[str, Any]) -> Tuple[bool, str]:
+    groups = _sequence_groups(setting)
+    if not groups:
+        return False, "sequence mode requires at least one group"
+    if len(groups) == 1 and "groups" not in setting:
+        return _validate_sequence_steps(repo_root, groups[0])
+    for idx, group in enumerate(groups, start=1):
+        ok, error = _validate_sequence_steps(repo_root, group, label=f"group {idx} step")
+        if not ok:
+            return False, error
     return True, ""
 
 
@@ -895,6 +931,70 @@ def _run_serial_suite_once(
     return (0 if overall_ok else last_code or 1), payload
 
 
+def _run_sequence_groups_once(
+    repo_root: Path,
+    setting: Dict[str, Any],
+    output_mode: str,
+) -> Tuple[int, Dict[str, Any]]:
+    groups = _sequence_groups(setting)
+    if len(groups) == 1 and "groups" not in setting:
+        suite = _suite_from_setting(groups[0])
+        if suite.execution_policy.get("kind") == "serial":
+            return _run_serial_suite_once(repo_root, groups[0], suite, output_mode)
+        return _run_parallel_suite_once(repo_root, suite, output_mode)
+
+    stop_on_fail = bool(setting.get("stop_on_fail", True))
+    overall_ok = True
+    last_code = 0
+    group_results: List[Dict[str, Any]] = []
+    results: List[Dict[str, Any]] = []
+    worker_payloads: List[Dict[str, Any]] = []
+
+    for idx, group in enumerate(groups, start=1):
+        suite = _suite_from_setting(group)
+        policy_kind = suite.execution_policy.get("kind")
+        if policy_kind == "serial":
+            code, payload = _run_serial_suite_once(repo_root, group, suite, output_mode)
+        else:
+            code, payload = _run_parallel_suite_once(repo_root, suite, output_mode)
+        group_record = {
+            "index": idx,
+            "name": str(group.get("suite_name") or f"group_{idx:02d}"),
+            "ok": code == 0,
+            "code": int(code),
+            "execution_policy": payload.get("execution_policy", {"kind": policy_kind or "parallel"}),
+            "selected_dut_tests": payload.get("selected_dut_tests", []),
+            "results": payload.get("results", []),
+        }
+        if isinstance(payload.get("workers"), list):
+            group_record["workers"] = payload.get("workers", [])
+            worker_payloads.extend(payload.get("workers", []))
+        group_results.append(group_record)
+        results.extend(payload.get("results", []))
+        if code != 0:
+            overall_ok = False
+            last_code = int(code)
+            if stop_on_fail:
+                break
+
+    summary = _summarize_schema_advisories(results)
+    _print_schema_warning_overview(summary)
+    return (0 if overall_ok else last_code or 1), {
+        "ok": overall_ok,
+        "mode": "sequence",
+        "suite": {
+            "name": str(setting.get("suite_name") or "default_verification"),
+            "tasks": [str(item.get("name") or "") for item in results],
+        },
+        "execution_policy": {"kind": "grouped", "group_count": len(group_results)},
+        "selected_dut_tests": [str(item.get("name") or "") for item in results],
+        "groups": group_results,
+        "results": results,
+        "workers": worker_payloads,
+        "schema_advisory_summary": summary,
+    }
+
+
 def _run_parallel_repeat_until_fail(
     repo_root: Path,
     suite: VerificationSuite,
@@ -1013,13 +1113,10 @@ def run_default_setting(
         return code, payload
 
     if mode == "sequence":
-        ok, error = _validate_sequence_steps(repo_root, setting)
+        ok, error = _validate_sequence_groups(repo_root, setting)
         if not ok:
             return 2, {"ok": False, "mode": mode, "error": error}
-        suite = _suite_from_setting(setting)
-        if suite.execution_policy.get("kind") == "serial":
-            return _run_serial_suite_once(repo_root, setting, suite, output_mode)
-        return _run_parallel_suite_once(repo_root, suite, output_mode)
+        return _run_sequence_groups_once(repo_root, setting, output_mode)
 
     return 2, {"ok": False, "mode": mode, "error": f"unsupported mode: {mode}"}
 
@@ -1060,18 +1157,19 @@ def run_until_fail(
     setting = load_setting(path)
     mode = str(setting.get("mode", "none")).strip().lower()
     if mode == "sequence":
-        ok, error = _validate_sequence_steps(ael_paths.repo_root(), setting)
+        ok, error = _validate_sequence_groups(ael_paths.repo_root(), setting)
         if not ok:
             return 2, {"ok": False, "mode": mode, "error": error}
-        suite = _suite_from_setting(setting)
-        if suite.execution_policy.get("kind") != "serial":
-            repo_root = ael_paths.repo_root()
-            return _run_parallel_repeat_until_fail(
-                repo_root=repo_root,
-                suite=suite,
-                output_mode=output_mode,
-                limit=max(1, int(limit)),
-            )
+        if "groups" not in setting:
+            suite = _suite_from_setting(setting)
+            if suite.execution_policy.get("kind") != "serial":
+                repo_root = ael_paths.repo_root()
+                return _run_parallel_repeat_until_fail(
+                    repo_root=repo_root,
+                    suite=suite,
+                    output_mode=output_mode,
+                    limit=max(1, int(limit)),
+                )
 
     max_runs = max(1, int(limit))
     runs: List[Dict[str, Any]] = []

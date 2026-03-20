@@ -789,6 +789,68 @@ def test_parallel_sequence_run_uses_worker_summaries(tmp_path):
     assert any(not item["ok"] for item in payload["results"])
 
 
+def test_grouped_sequence_runs_parallel_then_serial_groups(tmp_path):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "stop_on_fail": True,
+        "groups": [
+            {
+                "name": "parallel_batch",
+                "execution_policy": {"kind": "parallel"},
+                "steps": [
+                    {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+                    {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
+                ],
+            },
+            {
+                "name": "serial_tail",
+                "execution_policy": {"kind": "serial"},
+                "steps": [
+                    {"board": "stm32f411ceu6", "test": "tests/plans/stm32f411_gpio_signature.json"},
+                ],
+            },
+        ],
+    }
+
+    parallel_payload = {
+        "ok": True,
+        "execution_policy": {"kind": "parallel", "iterations_per_worker": 1},
+        "selected_dut_tests": ["rp2040_gpio_signature", "stm32f103_gpio_signature"],
+        "results": [
+            {"name": "rp2040_gpio_signature", "board": "rp2040_pico", "code": 0, "ok": True, "result": {"ok": True}},
+            {"name": "stm32f103_gpio_signature", "board": "stm32f103_gpio", "code": 0, "ok": True, "result": {"ok": True}},
+        ],
+        "workers": [{"name": "rp2040_gpio_signature", "pass_count": 1, "completed_iterations": 1, "ok": True, "results": []}],
+    }
+    serial_payload = {
+        "ok": True,
+        "execution_policy": {"kind": "serial", "iterations_per_worker": 1},
+        "selected_dut_tests": ["stm32f411_gpio_signature"],
+        "results": [
+            {"name": "stm32f411_gpio_signature", "board": "stm32f411ceu6", "code": 0, "ok": True, "result": {"ok": True}},
+        ],
+    }
+
+    with patch("ael.default_verification._run_parallel_suite_once", return_value=(0, parallel_payload)) as parallel_mock, patch(
+        "ael.default_verification._run_serial_suite_once", return_value=(0, serial_payload)
+    ) as serial_mock:
+        code, payload = default_verification.run_default_setting(path=_write_setting(tmp_path, setting))
+
+    assert code == 0
+    assert payload["ok"] is True
+    assert payload["execution_policy"] == {"kind": "grouped", "group_count": 2}
+    assert [group["name"] for group in payload["groups"]] == ["parallel_batch", "serial_tail"]
+    assert payload["selected_dut_tests"] == [
+        "rp2040_gpio_signature",
+        "stm32f103_gpio_signature",
+        "stm32f411_gpio_signature",
+    ]
+    assert len(payload["workers"]) == 1
+    assert parallel_mock.call_count == 1
+    assert serial_mock.call_count == 1
+
+
 def test_serial_default_verification_prints_selected_dut_tests(tmp_path, capsys):
     setting = {
         "version": 1,

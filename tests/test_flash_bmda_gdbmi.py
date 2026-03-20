@@ -116,6 +116,72 @@ def test_classify_stlink_server_issue_timeout():
     assert "timed out" in diag["summary"].lower()
 
 
+def test_probe_stlink_health_reports_missing_programmer():
+    class Result:
+        returncode = 0
+        stdout = "Found 0 stlink programmers\n"
+        stderr = ""
+
+    with patch.object(flash_bmda_gdbmi, "_STINFO_BIN", Path("/tmp/st-info")), patch(
+        "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
+    ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.run", return_value=Result()):
+        diag = flash_bmda_gdbmi._probe_stlink_health()
+
+    assert diag["ok"] is False
+    assert diag["code"] == "usb_missing"
+    assert "no ST-Link device" in diag["summary"]
+
+
+def test_probe_stlink_with_retries_recovers_on_second_attempt():
+    emitted = []
+    calls = [
+        {"ok": False, "code": "usb_missing", "summary": "missing", "hint": "retry", "output": "", "command": ""},
+        {"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""},
+    ]
+
+    with patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_health", side_effect=calls), patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ) as sleep_mock:
+        diag = flash_bmda_gdbmi._probe_stlink_with_retries(emitted.append, attempts=3, delay_s=1.0)
+
+    assert diag["ok"] is True
+    assert any("direct probe retry 1/2" in line for line in emitted)
+    assert any("direct probe recovered on attempt 2/3" in line for line in emitted)
+    sleep_mock.assert_called_once_with(1.0)
+
+
+def test_probe_stlink_with_retries_returns_last_failure_after_budget():
+    emitted = []
+    failure = {"ok": False, "code": "swd_attach_failed", "summary": "bad", "hint": "retry", "output": "", "command": ""}
+
+    with patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_health", side_effect=[failure, failure, failure]), patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ) as sleep_mock:
+        diag = flash_bmda_gdbmi._probe_stlink_with_retries(emitted.append, attempts=3, delay_s=0.5)
+
+    assert diag["ok"] is False
+    assert diag["code"] == "swd_attach_failed"
+    assert any("direct probe retry 1/2" in line for line in emitted)
+    assert any("direct probe retry 2/2" in line for line in emitted)
+    assert sleep_mock.call_count == 2
+
+
+def test_probe_stlink_health_reports_swd_attach_failure():
+    class Result:
+        returncode = 0
+        stdout = "Found 1 stlink programmers\n  chipid:     0x000\n  dev-type:   unknown\n"
+        stderr = "Failed to enter SWD mode\n"
+
+    with patch.object(flash_bmda_gdbmi, "_STINFO_BIN", Path("/tmp/st-info")), patch(
+        "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
+    ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.run", return_value=Result()):
+        diag = flash_bmda_gdbmi._probe_stlink_health()
+
+    assert diag["ok"] is False
+    assert diag["code"] == "swd_attach_failed"
+    assert "SWD" in diag["summary"]
+
+
 def test_cleanup_managed_local_stlink_server_terminates_pid():
     emitted = []
     with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[True, False]), patch(
@@ -247,7 +313,8 @@ def test_ensure_local_stlink_gdb_server_starts_when_port_missing(tmp_path):
     with patch.object(flash_bmda_gdbmi, "_STLINK_GDB_SERVER_SCRIPT", Path("/tmp/fake_gdb_server.sh")), patch(
         "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
     ), patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[]), patch(
-        "ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, False, True, True]
+        "ael.adapters.flash_bmda_gdbmi._probe_stlink_health", return_value={"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}
+    ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, False, True, True]
     ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()) as popen, patch(
         "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
     ):
@@ -263,6 +330,37 @@ def test_ensure_local_stlink_gdb_server_starts_when_port_missing(tmp_path):
     assert result["skip_port_probe"] is True
     assert any("starting it" in line for line in emitted)
     assert any("ready at 127.0.0.1:4242" in line for line in emitted)
+
+
+def test_ensure_local_stlink_gdb_server_reports_direct_probe_failure(tmp_path):
+    emitted = []
+    flash_log = tmp_path / "flash.log"
+
+    with patch.object(flash_bmda_gdbmi, "_STLINK_GDB_SERVER_SCRIPT", Path("/tmp/fake_gdb_server.sh")), patch(
+        "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
+    ), patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[]), patch(
+        "ael.adapters.flash_bmda_gdbmi._port_is_listening", return_value=False
+    ), patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_health",
+        return_value={
+            "ok": False,
+            "code": "swd_attach_failed",
+            "summary": "Flash: ST-Link could not attach to the target over SWD.",
+            "hint": "Flash: diagnostic - direct ST-Link probe found the adapter but could not enter SWD mode.",
+            "output": "Failed to enter SWD mode",
+            "command": "st-info --probe",
+        },
+    ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen") as popen:
+        result = flash_bmda_gdbmi._ensure_local_stlink_gdb_server(
+            {"ip": "127.0.0.1", "gdb_port": 4242},
+            emitted.append,
+            flash_log_path=str(flash_log),
+        )
+
+    assert result["ok"] is False
+    assert result["error"] == "Flash: ST-Link could not attach to the target over SWD."
+    assert result["diagnostic_code"] == "swd_attach_failed"
+    popen.assert_not_called()
+    assert any("direct probe output follows" in line for line in emitted)
 
 
 def test_ensure_local_stlink_gdb_server_reports_early_exit(tmp_path):
@@ -285,7 +383,8 @@ def test_ensure_local_stlink_gdb_server_reports_early_exit(tmp_path):
     with patch.object(flash_bmda_gdbmi, "_STLINK_GDB_SERVER_SCRIPT", Path("/tmp/fake_gdb_server.sh")), patch(
         "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
     ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", return_value=False), patch(
-        "ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()
+        "ael.adapters.flash_bmda_gdbmi._probe_stlink_health", return_value={"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}
+    ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()
     ), patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
         result = flash_bmda_gdbmi._ensure_local_stlink_gdb_server(
             {"ip": "127.0.0.1", "gdb_port": 4242},
@@ -440,7 +539,7 @@ def test_ensure_local_stlink_gdb_server_clears_stale_process_before_start(tmp_pa
         "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
     ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, False, True, True]), patch(
         "ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[999]
-    ), patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=False), patch(
+    ), patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_health", return_value={"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}), patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=False), patch(
         "ael.adapters.flash_bmda_gdbmi.os.kill"
     ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()
     ) as popen, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):

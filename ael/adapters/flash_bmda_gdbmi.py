@@ -1,5 +1,6 @@
 import json
 import os
+import shlex
 import signal
 from pathlib import Path
 import socket
@@ -10,6 +11,10 @@ from typing import Optional
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _STLINK_GDB_SERVER_SCRIPT = _REPO_ROOT / "instruments" / "STLinkInstrument" / "scripts" / "gdb_server.sh"
+_STLINK_INSTALL_DIR = _REPO_ROOT / "instruments" / "STLinkInstrument" / "install"
+_STLINK_BIN_DIR = _STLINK_INSTALL_DIR / "bin"
+_STLINK_LIB_DIR = _STLINK_INSTALL_DIR / "lib"
+_STINFO_BIN = _STLINK_BIN_DIR / "st-info"
 
 
 def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue, launch_cmds):
@@ -169,6 +174,120 @@ def _classify_stlink_server_issue(text: str) -> dict[str, str]:
     return {}
 
 
+def _stlink_env() -> dict[str, str]:
+    env = dict(os.environ)
+    lib_dir = str(_STLINK_LIB_DIR)
+    current = str(env.get("LD_LIBRARY_PATH") or "").strip()
+    env["LD_LIBRARY_PATH"] = lib_dir if not current else f"{lib_dir}:{current}"
+    return env
+
+
+def _probe_stlink_health(timeout_s: float = 8.0) -> dict[str, str | bool]:
+    if not _STINFO_BIN.exists():
+        return {"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}
+    cmd = [str(_STINFO_BIN), "--probe"]
+    command_text = "LD_LIBRARY_PATH=" + shlex.quote(str(_STLINK_LIB_DIR)) + " " + " ".join(shlex.quote(part) for part in cmd)
+    try:
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=max(1.0, float(timeout_s)),
+            env=_stlink_env(),
+        )
+    except subprocess.TimeoutExpired as exc:
+        output = ((exc.stdout or "") + (exc.stderr or "")).strip()
+        return {
+            "ok": False,
+            "code": "probe_timeout",
+            "summary": "Flash: ST-Link direct probe timed out.",
+            "hint": "Flash: diagnostic - direct ST-Link probe timed out before GDB server startup. Replug the probe and power-cycle the target, then retry.",
+            "output": output,
+            "command": command_text,
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "code": "probe_error",
+            "summary": "Flash: ST-Link direct probe failed.",
+            "hint": f"Flash: diagnostic - direct ST-Link probe could not start ({exc}).",
+            "output": str(exc),
+            "command": command_text,
+        }
+
+    output = ((res.stdout or "") + (res.stderr or "")).strip()
+    low = output.lower()
+    if "found 0 stlink programmers" in low:
+        return {
+            "ok": False,
+            "code": "usb_missing",
+            "summary": "Flash: no ST-Link device detected.",
+            "hint": "Flash: diagnostic - direct ST-Link probe saw no programmers even though USB may still be enumerated. Replug the probe, then retry.",
+            "output": output,
+            "command": command_text,
+        }
+    if "failed to enter swd mode" in low or "chipid:     0x000" in low or "dev-type:   unknown" in low:
+        return {
+            "ok": False,
+            "code": "swd_attach_failed",
+            "summary": "Flash: ST-Link could not attach to the target over SWD.",
+            "hint": "Flash: diagnostic - direct ST-Link probe found the adapter but could not enter SWD mode. Check target power, SWD wiring, and BOOT/reset state, then replug the probe or power-cycle the target.",
+            "output": output,
+            "command": command_text,
+        }
+    return {
+        "ok": True,
+        "code": "",
+        "summary": "",
+        "hint": "",
+        "output": output,
+        "command": command_text,
+    }
+
+
+def _emit_stlink_probe_failure(emit, diagnostic: dict[str, str | bool]) -> None:
+    summary = str(diagnostic.get("summary") or "").strip()
+    hint = str(diagnostic.get("hint") or "").strip()
+    command = str(diagnostic.get("command") or "").strip()
+    output = str(diagnostic.get("output") or "").strip()
+    if summary:
+        emit(summary)
+    if hint:
+        emit(hint)
+    if command:
+        emit(f"Flash: direct probe command: {command}")
+    if output:
+        emit("Flash: direct probe output follows:")
+        emit(output)
+
+
+def _probe_stlink_with_retries(
+    emit,
+    attempts: int = 3,
+    delay_s: float = 1.0,
+    retry_codes: tuple[str, ...] = ("probe_timeout", "usb_missing", "swd_attach_failed"),
+) -> dict[str, str | bool]:
+    total = max(1, int(attempts))
+    retryable = {str(item) for item in retry_codes}
+    last: dict[str, str | bool] = {"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}
+    for idx in range(1, total + 1):
+        last = _probe_stlink_health()
+        if bool(last.get("ok", False)):
+            if idx > 1:
+                emit(f"Flash: direct probe recovered on attempt {idx}/{total}")
+            return last
+        code = str(last.get("code") or "").strip()
+        if idx >= total or code not in retryable:
+            break
+        emit(
+            "Flash: direct probe retry "
+            f"{idx}/{total - 1} after {float(delay_s):.1f}s "
+            f"(code={code or 'unknown'})"
+        )
+        time.sleep(max(0.0, float(delay_s)))
+    return last
+
+
 def _emit_stlink_server_failure(emit, reason: str, server_log_path: str) -> dict[str, str]:
     emit(reason)
     recent = _read_recent_text(server_log_path)
@@ -315,8 +434,16 @@ def _ensure_local_stlink_gdb_server(
         result["diagnostic_code"] = diagnostic.get("code", "")
         return result
 
+    probe_diagnostic = _probe_stlink_with_retries(emit)
+    if not bool(probe_diagnostic.get("ok", False)):
+        _emit_stlink_probe_failure(emit, probe_diagnostic)
+        result["ok"] = False
+        result["error"] = str(probe_diagnostic.get("summary") or "Flash: ST-Link direct probe failed.")
+        result["diagnostic_code"] = str(probe_diagnostic.get("code") or "")
+        return result
+
     emit(f"Flash: local ST-Link GDB server not detected at {ip}:{port}; starting it")
-    cmd = [str(_STLINK_GDB_SERVER_SCRIPT), "--port", str(port)]
+    cmd = [str(_STLINK_GDB_SERVER_SCRIPT), "--port", str(port), "--multi"]
     log_handle: Optional[object] = None
     try:
         if result["server_log_path"]:

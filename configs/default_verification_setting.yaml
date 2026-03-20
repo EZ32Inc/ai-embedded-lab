@@ -1,34 +1,39 @@
 {
-  "execution_policy": {
-    "kind": "serial"
-  },
   "mode": "sequence",
-  "steps": [
+  "stop_on_fail": true,
+  "version": 1,
+  "groups": [
     {
-      "board": "esp32c6_devkit",
-      "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"
-    },
-    {
-      "board": "rp2040_pico",
-      "test": "tests/plans/rp2040_gpio_signature.json"
-    },
-    {
-      "board": "stm32f411ceu6",
-      "test": "tests/plans/stm32f411_gpio_signature.json"
-    },
-    {
-      "board": "stm32g431cbu6",
-      "test": "tests/plans/stm32g431_gpio_signature.json"
-    },
-    {
-      "board": "stm32h750vbt6",
-      "test": "tests/plans/stm32h750_wiring_verify.json"
-    },
-    {
-      "board": "stm32f103_gpio_stlink",
-      "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
+      "name": "parallel_batch",
+      "execution_policy": {
+        "kind": "parallel"
+      },
+      "steps": [
+        {
+          "board": "esp32c6_devkit",
+          "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"
+        },
+        {
+          "board": "rp2040_pico",
+          "test": "tests/plans/rp2040_gpio_signature.json"
+        },
+        {
+          "board": "stm32f411ceu6",
+          "test": "tests/plans/stm32f411_gpio_signature.json"
+        },
+        {
+          "board": "stm32g431cbu6",
+          "test": "tests/plans/stm32g431_gpio_signature.json"
+        },
+        {
+          "board": "stm32h750vbt6",
+          "test": "tests/plans/stm32h750_wiring_verify.json"
+        },
+        {
+          "board": "stm32f103_gpio_stlink",
+          "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
+        }
+      ]
     }
-  ],
-  "stop_on_fail": false,
-  "version": 1
+  ]
 }
