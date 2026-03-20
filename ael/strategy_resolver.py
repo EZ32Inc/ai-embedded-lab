@@ -27,6 +27,9 @@ class ResolvedRunStrategy:
 def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
     probe = raw.get("probe", {}) if isinstance(raw, dict) else {}
     connection = raw.get("connection", {}) if isinstance(raw, dict) else {}
+    instance = raw.get("instance", {}) if isinstance(raw, dict) else {}
+    communication = raw.get("communication", {}) if isinstance(raw, dict) else {}
+    capability_surfaces = raw.get("capability_surfaces", {}) if isinstance(raw, dict) else {}
     cfg = dict(probe)
     if "ip" not in cfg and "ip" in connection:
         cfg["ip"] = connection["ip"]
@@ -34,6 +37,19 @@ def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
         cfg["gdb_port"] = connection["gdb_port"]
     if "gdb_cmd" not in cfg:
         cfg["gdb_cmd"] = raw.get("gdb_cmd") if isinstance(raw, dict) else None
+    if isinstance(instance, dict):
+        if "instance_id" not in cfg and instance.get("id") is not None:
+            cfg["instance_id"] = instance.get("id")
+        if "type_id" not in cfg and instance.get("type") is not None:
+            cfg["type_id"] = instance.get("type")
+        if "name" not in cfg:
+            label = instance.get("label")
+            inst_type = instance.get("type")
+            cfg["name"] = label or inst_type or cfg.get("name")
+    if isinstance(communication, dict) and communication and "communication" not in cfg:
+        cfg["communication"] = dict(communication)
+    if isinstance(capability_surfaces, dict) and capability_surfaces and "capability_surfaces" not in cfg:
+        cfg["capability_surfaces"] = dict(capability_surfaces)
     return cfg
 
 

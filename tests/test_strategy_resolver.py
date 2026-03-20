@@ -42,6 +42,39 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(resolved.instrument_communication, {})
         self.assertEqual(resolved.instrument_capability_surfaces, {})
 
+    def test_normalize_probe_cfg_preserves_control_provider_metadata(self):
+        raw = {
+            "instance": {
+                "id": "esp32jtag_rp2040_lab",
+                "type": "esp32jtag",
+                "label": "ESP32JTAG RP2040 Lab",
+            },
+            "connection": {
+                "ip": "192.168.2.63",
+                "gdb_port": 4242,
+            },
+            "communication": {
+                "primary": "gdb_remote",
+                "surfaces": [
+                    {"name": "gdb_remote", "endpoint": "192.168.2.63:4242"},
+                    {"name": "web_api", "endpoint": "https://192.168.2.63:443"},
+                ],
+            },
+            "capability_surfaces": {"swd": "gdb_remote", "gpio_in": "web_api"},
+            "gdb_cmd": "arm-none-eabi-gdb",
+        }
+
+        cfg = strategy_resolver.normalize_probe_cfg(raw)
+
+        self.assertEqual(cfg.get("instance_id"), "esp32jtag_rp2040_lab")
+        self.assertEqual(cfg.get("type_id"), "esp32jtag")
+        self.assertEqual(cfg.get("name"), "ESP32JTAG RP2040 Lab")
+        self.assertEqual(cfg.get("communication", {}).get("primary"), "gdb_remote")
+        self.assertEqual(cfg.get("capability_surfaces", {}).get("gpio_in"), "web_api")
+        self.assertEqual(cfg.get("ip"), "192.168.2.63")
+        self.assertEqual(cfg.get("gdb_port"), 4242)
+        self.assertEqual(cfg.get("gdb_cmd"), "arm-none-eabi-gdb")
+
     def test_resolve_run_strategy_preserves_non_idf_build_type_on_override(self):
         board_raw = {
             "board": {

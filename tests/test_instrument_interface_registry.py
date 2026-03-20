@@ -77,3 +77,18 @@ def test_helper_profiles_resolve_for_control_and_manifest():
     manifest_profile = manifest_native_interface(manifest)
     assert control_profile["instrument_family"] == "stlink"
     assert manifest_profile["instrument_family"] == "esp32_meter"
+
+
+def test_control_provider_resolves_legacy_minimal_esp32jtag_shape():
+    provider = resolve_control_provider(
+        {
+            "ip": "192.168.2.63",
+            "gdb_port": 4242,
+            "web_scheme": "https",
+            "web_user": "admin",
+            "web_pass": "admin",
+            "wifi_mode": "ST",
+        }
+    )
+    assert provider is not None
+    assert provider.family == "esp32jtag"

@@ -43,10 +43,14 @@ def _control_family(cfg: Dict[str, Any]) -> Optional[str]:
     names = {str(item.get("name") or "").strip() for item in surfaces if isinstance(item, dict)}
     if "web_api" in names:
         return "esp32jtag"
+    host = str(cfg.get("ip") or "").strip()
+    if any(str(cfg.get(key) or "").strip() for key in ("web_scheme", "web_user", "web_pass", "wifi_mode")):
+        return "esp32jtag"
     if "gdb_remote" in names:
-        host = str(cfg.get("ip") or "").strip()
         if host == "127.0.0.1":
             return "stlink"
+    if host == "127.0.0.1":
+        return "stlink"
     return None
 
 
