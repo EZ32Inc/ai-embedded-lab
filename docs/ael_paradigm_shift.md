@@ -1,14 +1,11 @@
 # AEL Paradigm Shift
-### From AI Assistant to AI-Driven Embedded Engineering
-*(从 AI 辅助到 AI 驱动)*
+### From AI Assistant to AI-Driven Embedded Engineering (从AI辅助到AI驱动)
 
 AEL introduces a new way of doing embedded engineering.
 
 This document explains why it feels fundamentally different from traditional workflows, and what changes when AI becomes the executor of engineering tasks.
 
 ---
-
-## TL;DR
 
 - AI executes the embedded workflow end-to-end
 - Humans define goals, not steps
