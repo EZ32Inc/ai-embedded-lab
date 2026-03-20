@@ -299,6 +299,18 @@ When interpreting repeated default-verification requests, use worker-level repea
 - Do not use an outer shell loop around `python3 -m ael verify-default run` unless the user explicitly asks for suite-round serialization.
 - Treat outer shell loops as a special case for round-by-round suite pacing, not the normal repeated baseline behavior.
 
+## Commit Discipline
+
+When an AI agent is executing repo work, each completed independent small intent must be committed immediately as its own atomic commit.
+
+Rules:
+
+- do not batch unrelated small intents into one commit
+- finish one intent, verify it, commit it, then move to the next intent
+- if a task spans multiple independent fixes or cleanups, split them into separate commits
+
+This rule is operational, not stylistic. It exists so validation, rollback, and review stay precise across long-running AI-driven sessions.
+
 ## Live Bench Execution
 
 Commands that touch live bench resources must be run with escalated permissions
