@@ -1,12 +1,26 @@
-# AEL — AI-Driven Embedded Lab
+# AEL — AI-Driven Embedded Engineering
 
-What if embedded development could feel like **vibe coding**?
+AEL (AI Embedded Lab) is a new way of doing embedded engineering.
 
-Instead of manually writing firmware, reading datasheets, wiring instruments, and debugging step by step, you can describe what you want in natural language — and the system helps design experiments, generate firmware, run tests on real hardware, and analyze the results.
+Instead of writing code, flashing firmware, and debugging manually,
+you define the goal — and AI executes the workflow.
 
-AEL is an experimental system that brings **vibe coding to embedded systems**.
+- AI generates firmware
+- AI runs it on hardware or simulation
+- AI analyzes results and fixes issues
+- AI iterates until it works
 
-It connects AI reasoning with a real embedded hardware lab. The system can generate firmware, design experiments, flash MCUs, capture signals, and verify behavior automatically.
+This turns embedded development into a closed-loop system:
+
+AI → Generate → Execute → Observe → Iterate
+
+## 🚀 What is AEL?
+
+- AI executes the embedded workflow end-to-end
+- Humans define goals, not steps
+- Development becomes a closed-loop system on real hardware
+
+👉 Learn more: [AEL Paradigm Shift](docs/ael_paradigm_shift.md)
 
 ---
 
