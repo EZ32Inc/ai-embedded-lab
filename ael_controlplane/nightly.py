@@ -20,7 +20,7 @@ from ael.git_ops import (
     safe_branch_name,
 )
 from ael_controlplane.nightly_report import write_nightly_report
-from ael_controlplane.reporting import default_verification_review_snapshot
+from ael_controlplane.reporting import default_verification_review_payload, default_verification_review_snapshot
 from ael_controlplane.review_pack import generate_review_pack
 
 
@@ -117,7 +117,7 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
         return summary
 
     plans = _collect_backlog(cfg)
-    summary["default_verification_review"] = default_verification_review_snapshot(repo_root())
+    summary["default_verification_review"] = default_verification_review_payload(default_verification_review_snapshot(repo_root()))
     smoke_ok = True
     if not cfg.dry_run:
         smoke_ok = _smoke_gates_pass()

@@ -2320,3 +2320,62 @@ def test_build_nightly_report_payload_exposes_machine_readable_review():
     assert payload["default_verification_review"]["schema_review_status"] == "warnings_present"
     assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
     assert payload["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
+
+
+def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consistent(monkeypatch, tmp_path):
+    review_text = (
+        "Default Verification Review\n"
+        "health_status: pass\n"
+        "schema_review_status: warnings_present\n"
+        "structured_coverage: structured=3 legacy=1\n"
+        "warning_summary: 1 schema warning(s)\n"
+    )
+    expected = {
+        "schema_review_status": "warnings_present",
+        "structured_coverage": "structured=3 legacy=1",
+        "warning_summary": "1 schema warning(s)",
+    }
+    review_payload = default_verification_review_payload({"ok": True, "text": review_text})
+
+    monkeypatch.setattr(
+        "ael_controlplane.review_pack.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
+    review_pack_payload = build_review_pack_payload(
+        branch="agent/report-review",
+        task={
+            "title": "report task",
+            "task_id": "task_1",
+            "execution_mode": "offline",
+            "prompt": "review prompt",
+            "merge_ready": "no",
+            "summary": "review summary",
+        },
+        artifacts={"run_dir": "runs/report-task"},
+    )
+
+    nightly_payload = build_nightly_report_payload(
+        "2026-03-20",
+        {
+            "started_at": "2026-03-20T00:00:00",
+            "finished_at": "2026-03-20T00:10:00",
+            "ok": True,
+            "plans": [],
+            "default_verification_review": {"ok": True, "text": review_text},
+        },
+    )
+
+    monkeypatch.setattr("ael_controlplane.nightly.current_branch", lambda: "feature/nightly-test")
+    monkeypatch.setattr("ael_controlplane.nightly._collect_backlog", lambda _cfg: [])
+    monkeypatch.setattr(
+        "ael_controlplane.nightly.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
+
+    for key, value in expected.items():
+        assert review_payload[key] == value
+        assert review_pack_payload["default_verification_review"][key] == value
+        assert nightly_payload["default_verification_review"][key] == value
+        assert summary["default_verification_review"][key] == value
