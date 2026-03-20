@@ -9,6 +9,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
+from ael_controlplane.nightly import NightlyConfig, run_nightly
 from ael_controlplane.nightly_report import write_nightly_report
 from ael_controlplane.reporting import default_verification_review_highlights
 from ael_controlplane.review_pack import generate_review_pack
@@ -2078,22 +2079,22 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
 def test_default_verification_review_highlights_extracts_status_and_warning_summary():
     review = {
         "ok": True,
-        "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+        "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
     }
 
     highlights = default_verification_review_highlights(review)
 
-    assert highlights == {"schema_review_status": "aligned", "warning_summary": "none"}
+    assert highlights == {"schema_review_status": "aligned", "structured_coverage": "structured=3 legacy=0", "warning_summary": "none"}
 
 
 def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
     (tmp_path / "reports").mkdir()
     monkeypatch.setattr(
-        "ael_controlplane.review_pack.default_verification_review_summary",
+        "ael_controlplane.review_pack.default_verification_review_snapshot",
         lambda *_args, **_kwargs: {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
         },
     )
     monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
@@ -2114,17 +2115,19 @@ def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, t
     text = path.read_text(encoding="utf-8")
     assert "## Default Verification Review" in text
     assert "- schema_review_status: aligned" in text
+    assert "- structured_coverage: structured=3 legacy=0" in text
     assert "- warning_summary: none" in text
     assert "schema_review_status: aligned" in text
+    assert "structured_coverage: structured=3 legacy=0" in text
     assert "warning_summary: none" in text
 
 
 def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, tmp_path):
     monkeypatch.setattr(
-        "ael_controlplane.nightly_report.default_verification_review_summary",
+        "ael_controlplane.nightly_report.default_verification_review_snapshot",
         lambda *_args, **_kwargs: {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
         },
     )
 
@@ -2143,8 +2146,10 @@ def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, t
     text = path.read_text(encoding="utf-8")
     assert "## Default Verification Review" in text
     assert "- schema_review_status: aligned" in text
+    assert "- structured_coverage: structured=3 legacy=0" in text
     assert "- warning_summary: none" in text
     assert "schema_review_status: aligned" in text
+    assert "structured_coverage: structured=3 legacy=0" in text
     assert "warning_summary: none" in text
 
 
@@ -2159,12 +2164,24 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
     monkeypatch.chdir(tmp_path)
     (tmp_path / "reports").mkdir()
     monkeypatch.setattr(
-        "ael_controlplane.review_pack.default_verification_review_summary",
-        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+        "ael_controlplane.review_pack.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": review_text,
+            "schema_review_status": "warnings_present",
+            "structured_coverage": "structured=3 legacy=1",
+            "warning_summary": "1 schema warning(s)",
+        },
     )
     monkeypatch.setattr(
-        "ael_controlplane.nightly_report.default_verification_review_summary",
-        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+        "ael_controlplane.nightly_report.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": review_text,
+            "schema_review_status": "warnings_present",
+            "structured_coverage": "structured=3 legacy=1",
+            "warning_summary": "1 schema warning(s)",
+        },
     )
     monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
 
@@ -2196,6 +2213,7 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
     nightly_text = nightly_path.read_text(encoding="utf-8")
     for expected in (
         "- schema_review_status: warnings_present",
+        "- structured_coverage: structured=3 legacy=1",
         "- warning_summary: 1 schema warning(s)",
         "schema_review_status: warnings_present",
         "structured_coverage: structured=3 legacy=1",
@@ -2203,3 +2221,38 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
     ):
         assert expected in pack_text
         assert expected in nightly_text
+
+
+def test_run_nightly_surfaces_default_verification_review_summary_and_report(monkeypatch, tmp_path):
+    review_text = (
+        "Default Verification Review\n"
+        "health_status: pass\n"
+        "schema_review_status: warnings_present\n"
+        "structured_coverage: structured=3 legacy=1\n"
+        "warning_summary: 1 schema warning(s)\n"
+    )
+    monkeypatch.setattr("ael_controlplane.nightly.current_branch", lambda: "feature/nightly-test")
+    monkeypatch.setattr("ael_controlplane.nightly._collect_backlog", lambda _cfg: [])
+    monkeypatch.setattr(
+        "ael_controlplane.nightly.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": review_text,
+            "schema_review_status": "warnings_present",
+            "structured_coverage": "structured=3 legacy=1",
+            "warning_summary": "1 schema warning(s)",
+        },
+    )
+
+    summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
+
+    assert summary["default_verification_review"]["schema_review_status"] == "warnings_present"
+    assert summary["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
+    assert summary["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
+
+    report_text = Path(summary["report_path"]).read_text(encoding="utf-8")
+    assert "## Default Verification Review" in report_text
+    assert "- schema_review_status: warnings_present" in report_text
+    assert "- structured_coverage: structured=3 legacy=1" in report_text
+    assert "- warning_summary: 1 schema warning(s)" in report_text
+    assert "structured_coverage: structured=3 legacy=1" in report_text

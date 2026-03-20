@@ -6,7 +6,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
-from ael_controlplane.reporting import default_verification_review_highlights, default_verification_review_summary
+from ael_controlplane.reporting import default_verification_review_highlights, default_verification_review_snapshot
 
 
 def _repo_root() -> Path:
@@ -48,8 +48,11 @@ def generate_review_pack(branch: str, task: Dict, artifacts: Dict) -> Path:
         changed = _run_git(["diff", "--name-status", "HEAD~1...HEAD"])
     if not diffstat:
         diffstat = _run_git(["diff", "--stat", "HEAD~1...HEAD"])
-    baseline_review = default_verification_review_summary(_repo_root())
+    baseline_review = default_verification_review_snapshot(_repo_root())
     baseline_highlights = default_verification_review_highlights(baseline_review)
+    schema_review_status = str(baseline_review.get("schema_review_status") or baseline_highlights["schema_review_status"])
+    structured_coverage = str(baseline_review.get("structured_coverage") or baseline_highlights["structured_coverage"])
+    warning_summary = str(baseline_review.get("warning_summary") or baseline_highlights["warning_summary"])
 
     lines = [
         f"Branch: {branch}",
@@ -83,8 +86,9 @@ def generate_review_pack(branch: str, task: Dict, artifacts: Dict) -> Path:
         [
             "",
             "## Default Verification Review",
-            f"- schema_review_status: {baseline_highlights['schema_review_status']}",
-            f"- warning_summary: {baseline_highlights['warning_summary']}",
+            f"- schema_review_status: {schema_review_status}",
+            f"- structured_coverage: {structured_coverage}",
+            f"- warning_summary: {warning_summary}",
             "```text",
             str(baseline_review.get("text") or baseline_review.get("error") or "(unavailable)"),
             "```",

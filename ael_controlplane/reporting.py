@@ -157,16 +157,24 @@ def default_verification_review_summary(repo_root: str | Path | None = None) -> 
 
 def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dict[str, str]:
     text = str(review.get("text") or "")
-    highlights = {"schema_review_status": "unavailable", "warning_summary": "unavailable"}
+    highlights = {"schema_review_status": "unavailable", "warning_summary": "unavailable", "structured_coverage": "unavailable"}
     for line in text.splitlines():
         stripped = line.strip()
         if stripped.startswith("schema_review_status:"):
             highlights["schema_review_status"] = stripped.split(":", 1)[1].strip() or "unavailable"
         elif stripped.startswith("warning_summary:"):
             highlights["warning_summary"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("structured_coverage:"):
+            highlights["structured_coverage"] = stripped.split(":", 1)[1].strip() or "unavailable"
     if not bool(review.get("ok", False)) and highlights["warning_summary"] == "unavailable":
         highlights["warning_summary"] = "review unavailable"
     return highlights
+
+
+def default_verification_review_snapshot(repo_root: str | Path | None = None) -> Dict[str, str | bool]:
+    review = default_verification_review_summary(repo_root)
+    review.update(default_verification_review_highlights(review))
+    return review
 
 
 def append_task_result(report_root: str | Path, record: Dict) -> Path:
