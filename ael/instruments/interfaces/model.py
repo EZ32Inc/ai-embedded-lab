@@ -25,6 +25,35 @@ CAPABILITY_TAXONOMY_KEYS = frozenset({
     "uart.write",
 })
 
+STATUS_HEALTH_DOMAIN_KEYS = frozenset({
+    "bridge_service",
+    "capture",
+    "debug_remote",
+    "gpio_in",
+    "logic_analyzer",
+    "network",
+    "reachability",
+    "swd",
+    "tcp",
+    "uart_surface",
+    "web_api",
+})
+
+DOCTOR_CHECK_KEYS = frozenset({
+    "bridge_service",
+    "capture_control",
+    "debug_attach",
+    "gdb_remote",
+    "logic_analyzer",
+    "measurement_surface",
+    "network",
+    "preflight",
+    "reachability",
+    "tcp",
+    "uart_surface",
+    "web_api",
+})
+
 
 def enforce_capability_taxonomy(capabilities: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     normalized: Dict[str, Dict[str, Any]] = {}
@@ -34,6 +63,30 @@ def enforce_capability_taxonomy(capabilities: Dict[str, Dict[str, Any]]) -> Dict
             continue
         if name not in CAPABILITY_TAXONOMY_KEYS:
             raise ValueError(f"unknown capability taxonomy key: {name}")
+        normalized[name] = dict(value or {})
+    return normalized
+
+
+def enforce_status_health_domains(health_domains: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for key, value in (health_domains or {}).items():
+        name = str(key).strip()
+        if not name:
+            continue
+        if name not in STATUS_HEALTH_DOMAIN_KEYS:
+            raise ValueError(f"unknown status health-domain key: {name}")
+        normalized[name] = dict(value or {})
+    return normalized
+
+
+def enforce_doctor_check_keys(checks: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for key, value in (checks or {}).items():
+        name = str(key).strip()
+        if not name:
+            continue
+        if name not in DOCTOR_CHECK_KEYS:
+            raise ValueError(f"unknown doctor check key: {name}")
         normalized[name] = dict(value or {})
     return normalized
 
@@ -133,9 +186,11 @@ def normalize_status_result(
     endpoints: Optional[Dict[str, Any]] = None,
     observations: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    health_domains = enforce_status_health_domains(health_domains)
     result: Dict[str, Any] = {
         "instrument_family": family,
         "status_model_version": STATUS_MODEL_VERSION,
+        "status_taxonomy_enforced": True,
         "reachable": reachable,
         "health": derive_status_health(reachable=reachable, health_domains=health_domains),
         "health_domains": dict(health_domains or {}),
@@ -156,9 +211,11 @@ def normalize_doctor_result(
     recovery_hint: Optional[str] = None,
     failure_boundary: Optional[str] = None,
 ) -> Dict[str, Any]:
+    checks = enforce_doctor_check_keys(checks)
     result: Dict[str, Any] = {
         "instrument_family": family,
         "doctor_model_version": DOCTOR_MODEL_VERSION,
+        "doctor_checks_enforced": True,
         "reachable": reachable,
         "health": derive_doctor_health(reachable=reachable, checks=checks),
         "checks": dict(checks or {}),

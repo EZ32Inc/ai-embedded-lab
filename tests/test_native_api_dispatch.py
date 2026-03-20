@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
-from ael.instruments.interfaces.model import normalize_capabilities_result
+from ael.instruments.interfaces.model import normalize_capabilities_result, normalize_doctor_result, normalize_status_result
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -231,6 +231,7 @@ def test_control_status_returns_unified_envelope_for_esp32jtag(monkeypatch):
     assert payload["action"] == "get_status"
     assert payload["result"]["health"] == "ready"
     assert payload["result"]["status_model_version"] == "instrument_status/v1"
+    assert payload["result"]["status_taxonomy_enforced"] is True
 
 
 
@@ -262,6 +263,7 @@ def test_control_doctor_returns_unified_semantics_for_stlink(monkeypatch):
     assert payload["family"] == "stlink"
     assert payload["action"] == "doctor"
     assert payload["result"]["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["result"]["doctor_checks_enforced"] is True
     assert payload["result"]["health"] == "healthy"
     assert payload["result"]["failure_boundary"] == "probe_health"
 
@@ -423,3 +425,29 @@ def test_normalize_capabilities_rejects_unknown_taxonomy_key():
         assert "unknown capability taxonomy key" in str(exc)
     else:
         raise AssertionError("expected capability taxonomy enforcement failure")
+
+
+def test_normalize_status_rejects_unknown_health_domain_key():
+    try:
+        normalize_status_result(
+            family="fake",
+            reachable=True,
+            health_domains={"legacy_domain": {"ok": True}},
+        )
+    except ValueError as exc:
+        assert "unknown status health-domain key" in str(exc)
+    else:
+        raise AssertionError("expected status taxonomy enforcement failure")
+
+
+def test_normalize_doctor_rejects_unknown_check_key():
+    try:
+        normalize_doctor_result(
+            family="fake",
+            reachable=True,
+            checks={"legacy_check": {"ok": True}},
+        )
+    except ValueError as exc:
+        assert "unknown doctor check key" in str(exc)
+    else:
+        raise AssertionError("expected doctor taxonomy enforcement failure")
