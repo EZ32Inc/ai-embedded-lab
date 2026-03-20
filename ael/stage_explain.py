@@ -23,9 +23,30 @@ from ael.strategy_resolver import (
     resolve_load_stage,
     resolve_run_strategy,
 )
+from ael.test_plan_schema import extract_plan_metadata
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def _metadata_explanation(metadata: Dict[str, Any]) -> Dict[str, str | None]:
+    test_kind = str(metadata.get("test_kind") or "").strip()
+    requires = metadata.get("requires") if isinstance(metadata.get("requires"), dict) else {}
+    if test_kind == "instrument_specific":
+        return {
+            "verification_mode_summary": "instrument-side measurement path",
+            "requires_summary": "requires instrument-side measurement and no mailbox dependency",
+        }
+    if test_kind == "baremetal_mailbox":
+        mailbox_required = requires.get("mailbox") is True
+        return {
+            "verification_mode_summary": "bare-metal mailbox verification",
+            "requires_summary": "requires mailbox-backed DUT result path" if mailbox_required else "mailbox optional",
+        }
+    return {
+        "verification_mode_summary": None,
+        "requires_summary": None,
+    }
 
 
 def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -48,23 +69,25 @@ def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
 def _selected_dut_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx.get("resolved")
     board_cfg = resolved.board_cfg if resolved is not None else {}
+    ownership_kind = str(ctx.get("ownership_kind") or "board_owned").strip() or "board_owned"
     return {
         "id": board_id,
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
-        "runtime_binding": "board_profile_driven",
+        "runtime_binding": "board_profile_driven" if ownership_kind == "board_owned" else "instrument_owned_plan",
     }
 
 
 def _selected_board_profile_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx.get("resolved")
     board_cfg = resolved.board_cfg if resolved is not None else {}
+    ownership_kind = str(ctx.get("ownership_kind") or "board_owned").strip() or "board_owned"
     return {
         "id": board_id,
         "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
         "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
         "config": ctx.get("board_path"),
-        "role": "runtime_policy",
+        "role": "runtime_policy" if ownership_kind == "board_owned" else "instrument_plan_context",
     }
 
 
@@ -140,15 +163,26 @@ def _abs(root: Path, path: str) -> Path:
 
 def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, Any]:
     board_path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
-    if not board_path.exists():
-        raise FileNotFoundError(f"board config not found: {board_path}")
     test_file = _abs(repo_root, test_path)
     if not test_file.exists():
         raise FileNotFoundError(f"test not found: {test_file}")
     test_raw = _load_json(test_file)
+    board_exists = board_path.exists()
+    ownership_kind = "board_owned"
+    if not board_exists:
+        if isinstance(test_raw.get("instrument"), dict) and test_raw.get("selftest"):
+            ownership_kind = "instrument_owned"
+        else:
+            raise FileNotFoundError(f"board config not found: {board_path}")
     override_instance_id, override_probe_rel = resolve_control_instrument_override(repo_root, test_raw)
-    probe_rel = override_probe_rel or resolve_control_instrument_config(str(repo_root), args=None, board_id=board_id)
-    instance_id = override_instance_id or resolve_control_instrument_instance(str(repo_root), args=None, board_id=board_id)
+    probe_rel = None
+    instance_id = None
+    if ownership_kind == "board_owned":
+        probe_rel = override_probe_rel or resolve_control_instrument_config(str(repo_root), args=None, board_id=board_id)
+        instance_id = override_instance_id or resolve_control_instrument_instance(str(repo_root), args=None, board_id=board_id)
+    else:
+        probe_rel = override_probe_rel
+        instance_id = override_instance_id
     if probe_rel or instance_id:
         binding = load_probe_binding(
             repo_root,
@@ -160,11 +194,12 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     else:
         binding = empty_probe_binding()
         probe_path_rel = None
-    board_raw = _simple_yaml_load(str(board_path))
+    board_raw = _simple_yaml_load(str(board_path)) if board_exists else {"board": {"name": board_id, "target": board_id}}
     probe_raw = binding.raw
     resolved = resolve_run_strategy(probe_raw, board_raw, test_raw, wiring=None, request_timeout_s=None, repo_root=repo_root)
     return {
-        "board_path": board_path.relative_to(repo_root).as_posix(),
+        "ownership_kind": ownership_kind,
+        "board_path": board_path.relative_to(repo_root).as_posix() if board_exists else None,
         "test_path": test_file.relative_to(repo_root).as_posix(),
         "probe_path": probe_path_rel,
         "probe_instance_id": binding.instance_id,
@@ -182,6 +217,8 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
     board_cfg = resolved.board_cfg
     test_raw = ctx["test_raw"]
+    metadata = extract_plan_metadata(test_raw)
+    explanation = _metadata_explanation(metadata)
     build_kind, known_firmware_path, _build_step = resolve_build_stage(
         board_cfg=board_cfg,
         verify_only=False,
@@ -255,6 +292,17 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "selected_dut": _selected_dut_payload(board_id, ctx),
             "selected_board_profile": _selected_board_profile_payload(board_id, ctx),
             "selected_bench_resources": _selected_bench_resources_payload(ctx),
+            "ownership_kind": ctx.get("ownership_kind"),
+            "plan_schema_kind": "structured" if metadata.get("schema_version") != "legacy" else "legacy",
+            "schema_version": metadata.get("schema_version"),
+            "test_kind": metadata.get("test_kind"),
+            "supported_instruments": metadata.get("supported_instruments"),
+            "requires": metadata.get("requires"),
+            "labels": metadata.get("labels"),
+            "covers": metadata.get("covers"),
+            "verification_mode_summary": explanation.get("verification_mode_summary"),
+            "requires_summary": explanation.get("requires_summary"),
+            "test_validation_errors": list(metadata.get("validation_errors") or []),
             "control_instrument_selection": _control_instrument_selection(ctx),
             "control_instrument": ctx["probe_path"],
             "control_instrument_instance": ctx.get("probe_instance_id"),
@@ -286,6 +334,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "builder and flash strategy resolution",
             "wiring assumptions",
             "check model selection",
+            "structured test metadata when present",
         ],
         "does_not_confirm": [
             "probe reachability",
@@ -458,6 +507,11 @@ def render_text(payload: Dict[str, Any]) -> str:
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")
                 continue
+            if k == "test_validation_errors" and isinstance(v, list):
+                lines.append(f"  - {k}:")
+                for item in v:
+                    lines.append(f"    - {item}")
+                continue
             if k in ("selected_dut", "selected_board_profile", "selected_bench_resources") and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
@@ -470,6 +524,9 @@ def render_text(payload: Dict[str, Any]) -> str:
             if k == "connection_setup" and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 lines.extend(render_connection_setup_text(v, indent="    "))
+                continue
+            if k in ("supported_instruments", "labels", "covers") and isinstance(v, list):
+                lines.append(f"  - {k}: {', '.join(str(item) for item in v)}")
                 continue
             lines.append(f"  - {k}: {v}")
     if payload.get("checks") is not None:

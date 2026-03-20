@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
   "name": "stm32f407_timer_mailbox",
   "board": "stm32f407_discovery",
+  "supported_instruments": ["stlink", "esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "portable", "cross_instrument"],
+  "covers": ["timer"],
   "preflight": {
     "enabled": false
   },

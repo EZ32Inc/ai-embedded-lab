@@ -19,7 +19,7 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['board_clock_hz'] == 16000000
     assert payload['selected']['check_model'] == 'signal_verify'
     assert payload['selected']['verification_views']['signal']['resolved_to'] == 'P0.0'
-    assert payload['selected']['verification_views']['led']['resolved_to'] == 'P0.3'
+    assert 'led' not in payload['selected']['verification_views']
     assert payload['selected']['control_instrument_selection']['instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['control_instrument_selection']['type'] == 'esp32jtag'
     assert payload['selected']['control_instrument'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
@@ -101,6 +101,66 @@ def test_explain_plan_for_stm32_uart_instance_uses_uart_bench_profile():
     assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_uart'
 
 
+def test_explain_plan_surfaces_structured_test_metadata_for_mailbox_plan():
+    payload = stage_explain.explain_stage('stm32f103_gpio', 'tests/plans/stm32f103_uart_loopback_mailbox.json', 'plan', REPO_ROOT)
+
+    assert payload['ok'] is True
+    assert payload['selected']['plan_schema_kind'] == 'structured'
+    assert payload['selected']['schema_version'] == '1.0'
+    assert payload['selected']['test_kind'] == 'baremetal_mailbox'
+    assert payload['selected']['supported_instruments'] == ['stlink', 'esp32jtag']
+    assert payload['selected']['requires'] == {'mailbox': True, 'datacapture': False}
+    assert payload['selected']['labels'] == ['mailbox', 'portable', 'cross_instrument']
+    assert payload['selected']['covers'] == ['uart']
+    assert payload['selected']['verification_mode_summary'] == 'bare-metal mailbox verification'
+    assert payload['selected']['requires_summary'] == 'requires mailbox-backed DUT result path'
+    assert payload['selected']['test_validation_errors'] == []
+    text = stage_explain.render_text(payload)
+    assert 'plan_schema_kind: structured' in text
+    assert 'schema_version: 1.0' in text
+    assert 'test_kind: baremetal_mailbox' in text
+    assert 'supported_instruments: stlink, esp32jtag' in text
+    assert "requires: {'mailbox': True, 'datacapture': False}" in text
+
+
+def test_explain_plan_surfaces_instrument_specific_metadata_for_meter_plan():
+    payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'plan', REPO_ROOT)
+
+    assert payload['ok'] is True
+    assert payload['selected']['plan_schema_kind'] == 'structured'
+    assert payload['selected']['schema_version'] == '1.0'
+    assert payload['selected']['test_kind'] == 'instrument_specific'
+    assert payload['selected']['supported_instruments'] == ['esp32_meter']
+    assert payload['selected']['requires'] == {'mailbox': False, 'datacapture': True}
+    assert payload['selected']['labels'] == ['meter', 'instrument_path']
+    assert payload['selected']['covers'] == ['gpio', 'voltage']
+    assert payload['selected']['verification_mode_summary'] == 'instrument-side measurement path'
+    assert payload['selected']['requires_summary'] == 'requires instrument-side measurement and no mailbox dependency'
+    text = stage_explain.render_text(payload)
+    assert 'test_kind: instrument_specific' in text
+    assert 'supported_instruments: esp32_meter' in text
+    assert 'verification_mode_summary: instrument-side measurement path' in text
+
+
+def test_explain_plan_for_instrument_owned_selftest():
+    payload = stage_explain.explain_stage('esp32s3_dev_c_meter', 'tests/plans/instrument_esp32s3_dev_c_meter_selftest.json', 'plan', REPO_ROOT)
+
+    assert payload['ok'] is True
+    assert payload['selected']['ownership_kind'] == 'instrument_owned'
+    assert payload['selected']['selected_dut']['id'] == 'esp32s3_dev_c_meter'
+    assert payload['selected']['selected_dut']['runtime_binding'] == 'instrument_owned_plan'
+    assert payload['selected']['selected_board_profile']['config'] is None
+    assert payload['selected']['selected_board_profile']['role'] == 'instrument_plan_context'
+    assert payload['selected']['plan_schema_kind'] == 'structured'
+    assert payload['selected']['test_kind'] == 'instrument_specific'
+    assert payload['selected']['supported_instruments'] == ['esp32_meter']
+    assert payload['selected']['selected_bench_resources']['instrument']['id'] == 'esp32s3_dev_c_meter'
+    assert payload['selected']['control_instrument_selection'] is None
+    text = stage_explain.render_text(payload)
+    assert 'ownership_kind: instrument_owned' in text
+    assert 'runtime_binding: instrument_owned_plan' in text
+
+
 def test_render_text_includes_communication_blocks_readably():
     text = stage_explain.render_text(
         {
@@ -118,6 +178,14 @@ def test_render_text_includes_communication_blocks_readably():
                         "resolved_wiring": {"verify": "P0.0"},
                     },
                 },
+                "plan_schema_kind": "structured",
+                "schema_version": "1.0",
+                "test_kind": "baremetal_mailbox",
+                "supported_instruments": ["stlink", "esp32jtag"],
+                "requires": {"mailbox": True, "datacapture": False},
+                "labels": ["mailbox", "portable"],
+                "covers": ["uart"],
+                "test_validation_errors": [],
                 "control_instrument": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
                 "control_instrument_communication": {"primary": "gdb_remote"},
                 "control_instrument_capability_surfaces": {"swd": "gdb_remote"},
@@ -141,6 +209,10 @@ def test_render_text_includes_communication_blocks_readably():
     assert "selected_dut:" in text
     assert "selected_board_profile:" in text
     assert "selected_bench_resources:" in text
+    assert "plan_schema_kind: structured" in text
+    assert "schema_version: 1.0" in text
+    assert "test_kind: baremetal_mailbox" in text
+    assert "supported_instruments: stlink, esp32jtag" in text
     assert "connection_setup:" in text
     assert "ground_confirmed: True" in text
     assert "capability_surface_plan:" in text

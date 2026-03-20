@@ -34,6 +34,8 @@ from ael import instrument_view
 from ael import connection_doctor
 from ael.pack_loader import load_pack
 from ael import stage_explain
+from tools.audit_test_plan_schema import build_report as build_test_plan_schema_report, render_text as render_test_plan_schema_report_text
+from tools.audit_test_plan_schema import build_report as build_test_plan_schema_report, render_text as render_test_plan_schema_report_text
 
 
 def main():
@@ -216,6 +218,10 @@ def main():
     inventory_connection_diff.add_argument("--against-board", required=True)
     inventory_connection_diff.add_argument("--against-test", required=True)
     inventory_connection_diff.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_audit = inventory_sub.add_parser("audit-test-schema")
+    inventory_audit.add_argument("--format", choices=["json", "text"], default="json")
+    inventory_audit = inventory_sub.add_parser("audit-test-schema")
+    inventory_audit.add_argument("--format", choices=["json", "text"], default="json")
 
     connection_p = sub.add_parser("connection")
     connection_sub = connection_p.add_subparsers(dest="connection_cmd", required=True)
@@ -654,6 +660,20 @@ def main():
             else:
                 print(json.dumps(payload, indent=2, sort_keys=True))
             sys.exit(0 if payload.get("ok") else 1)
+        if args.inventory_cmd == "audit-test-schema":
+            payload = build_test_plan_schema_report(Path(repo_root))
+            if args.format == "text":
+                print(render_test_plan_schema_report_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
+        if args.inventory_cmd == "audit-test-schema":
+            payload = build_test_plan_schema_report(Path(repo_root))
+            if args.format == "text":
+                print(render_test_plan_schema_report_text(payload), end="")
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            sys.exit(0)
     if args.cmd == "explain-stage":
         payload = stage_explain.explain_stage(board_id=args.board, test_path=args.test, stage=args.stage, repo_root=Path(repo_root))
         if args.format == "text":

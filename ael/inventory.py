@@ -28,6 +28,26 @@ from ael.verification_model import summarize_resource_keys
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _metadata_explanation(metadata: Dict[str, Any]) -> Dict[str, str | None]:
+    test_kind = str(metadata.get("test_kind") or "").strip()
+    requires = metadata.get("requires") if isinstance(metadata.get("requires"), dict) else {}
+    if test_kind == "instrument_specific":
+        return {
+            "verification_mode_summary": "instrument-side measurement path",
+            "requires_summary": "requires instrument-side measurement and no mailbox dependency",
+        }
+    if test_kind == "baremetal_mailbox":
+        mailbox_required = requires.get("mailbox") is True
+        return {
+            "verification_mode_summary": "bare-metal mailbox verification",
+            "requires_summary": "requires mailbox-backed DUT result path" if mailbox_required else "mailbox optional",
+        }
+    return {
+        "verification_mode_summary": None,
+        "requires_summary": None,
+    }
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -494,6 +514,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
 
     payload = _load_json(path)
     metadata = extract_plan_metadata(payload)
+    explanation = _metadata_explanation(metadata)
     board_cfg = _load_board_cfg(root, board_id)
     connection_ctx = normalize_connection_context(
         board_cfg,
@@ -516,6 +537,8 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "requires": metadata.get("requires"),
             "labels": metadata.get("labels"),
             "covers": metadata.get("covers"),
+            "verification_mode_summary": explanation.get("verification_mode_summary"),
+            "requires_summary": explanation.get("requires_summary"),
             "validation_errors": list(metadata.get("validation_errors") or []),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
@@ -600,6 +623,8 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
     lines.append(f"board: {payload.get('board')}")
     test = payload.get("test", {})
     lines.append(f"test: {test.get('name')} ({test.get('path')})")
+    plan_schema_kind = "structured" if test.get("schema_version") and test.get("schema_version") != "legacy" else "legacy"
+    lines.append(f"plan_schema_kind: {plan_schema_kind}")
     if test.get("schema_version"):
         lines.append(f"schema_version: {test.get('schema_version')}")
     if test.get("test_kind"):
@@ -612,6 +637,10 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append("labels: " + ", ".join(test.get("labels") or []))
     if test.get("covers"):
         lines.append("covers: " + ", ".join(test.get("covers") or []))
+    if test.get("verification_mode_summary"):
+        lines.append(f"verification_mode_summary: {test.get('verification_mode_summary')}")
+    if test.get("requires_summary"):
+        lines.append(f"requires_summary: {test.get('requires_summary')}")
     if test.get("validation_errors"):
         lines.append("test_validation_errors:")
         for item in test.get("validation_errors") or []:

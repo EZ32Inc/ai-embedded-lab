@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
   "name": "stm32f103_adc_mailbox",
   "board": "stm32f103_gpio",
+  "supported_instruments": ["stlink", "esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "portable", "cross_instrument"],
+  "covers": ["adc"],
   "preflight": { "enabled": false },
   "build": {
     "project_dir": "firmware/targets/stm32f103_adc_mailbox",

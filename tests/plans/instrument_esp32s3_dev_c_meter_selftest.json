@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
   "name": "instrument_esp32s3_dev_c_meter_selftest",
   "board": "esp32s3_dev_c_meter",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {
+    "mailbox": false,
+    "datacapture": true
+  },
+  "labels": ["meter", "selftest"],
+  "covers": ["stim", "measure", "loopback"],
   "instrument": {
     "id": "esp32s3_dev_c_meter",
     "tcp": { "host": "192.168.4.1", "port": 9000 }

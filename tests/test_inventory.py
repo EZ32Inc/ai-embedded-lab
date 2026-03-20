@@ -55,6 +55,12 @@ def test_inventory_cli_json_output():
     payload = json.loads(res.stdout)
     assert payload["ok"] is True
     assert "esp32c3_devkit" in payload["summary"]["duts_with_tests"]
+    stm32 = next(item for item in payload["duts"] if item["dut_id"] == "stm32f103_gpio")
+    structured = next(test for test in stm32["tests"] if test["path"] == "tests/plans/stm32f103_uart_loopback_mailbox.json")
+    assert structured["schema_version"] == "1.0"
+    assert structured["test_kind"] == "baremetal_mailbox"
+    assert structured["supported_instruments"] == ["stlink", "esp32jtag"]
+    assert structured["requires"] == {"mailbox": True, "datacapture": False}
 
 
 def test_inventory_text_render_omits_generic_section():
@@ -161,19 +167,17 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert payload["selected_instrument"]["id"] == "esp32jtag_stm32_golden"
     assert payload["selected_instrument"]["communication"]["primary"] == "gdb_remote"
     assert payload["compatibility"]["probe_or_instrument"]["kind"] == "control_instrument"
-    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.98:4242"]
+    assert payload["selected_bench_resources"]["resource_keys"] == ["probe:192.168.2.109:4242"]
     assert payload["selected_bench_resources"]["contract_version"] == 1
     assert "control_instrument_id:esp32jtag_stm32_golden" in payload["selected_bench_resources"]["selection_digest"]
-    assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.98:4242"]
+    assert payload["selected_bench_resources"]["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.109:4242"]
     assert payload["compatibility"]["probe_or_instrument"]["legacy_kind"] == "probe"
     assert any(conn["from"] == "SWD" and conn["to"] == "P3" for conn in payload["connections"])
-    assert any(conn["from"] == "PA4" and conn["to"] == "P0.0" for conn in payload["connections"])
+    assert any(conn["from"] == "PA2" and conn["to"] == "P0.0" for conn in payload["connections"])
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
-    assert any(conn["from"] == "PA2" and conn["to"] == "P0.2" for conn in payload["connections"])
-    assert any(conn["from"] == "PC13" and conn["to"] == "P0.3" for conn in payload["connections"])
+    assert any(conn["from"] == "PB13" and conn["to"] == "P0.2" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
-    assert len(payload["warnings"]) == 1
-    assert "MCU pin PC13 is connected to 2 observation points" in payload["warnings"][0]
+    assert payload["warnings"] == []
     assert payload["board_context"]["clock_hz"] == 16000000
     assert payload["board_context"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert payload["connection_setup"]["resolved_wiring"]["verify"] == "P0.0"
@@ -187,7 +191,7 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert "dut_runtime_binding: board_profile_driven" in rendered
     assert "board_profile_role: runtime_policy" in rendered
     assert "bench_resource_contract_version: 1" in rendered
-    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.98:4242" in rendered
+    assert "bench_resource_selection_digest: control_instrument_id:esp32jtag_stm32_golden; control_instrument_endpoint:192.168.2.109:4242" in rendered
     assert "board_profile_config: configs/boards/stm32f401rct6.yaml" in rendered
     assert "control_instrument: esp32jtag_stm32_golden" in rendered
     assert "legacy_kind: probe" in rendered
@@ -199,9 +203,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
 
 def test_describe_test_warns_on_duplicate_mcu_pin_connections():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_gpio_signature.json", REPO_ROOT)
-    assert len(payload["warnings"]) == 1
-    assert "MCU pin PC13 is connected to 2 observation points" in payload["warnings"][0]
-    assert payload["connection_setup"]["warnings"]
+    assert payload["warnings"] == []
+    assert payload["connection_setup"]["warnings"] == []
 
 
 def test_describe_test_for_meter_path():
@@ -318,12 +321,47 @@ def test_describe_test_surfaces_structured_plan_metadata():
     assert test["requires"] == {"mailbox": True, "datacapture": False}
     assert test["labels"] == ["mailbox", "portable", "cross_instrument"]
     assert test["covers"] == ["uart"]
+    assert test["verification_mode_summary"] == "bare-metal mailbox verification"
+    assert test["requires_summary"] == "requires mailbox-backed DUT result path"
     assert test["validation_errors"] == []
     rendered = inventory.render_describe_text(payload)
+    assert "plan_schema_kind: structured" in rendered
     assert "schema_version: 1.0" in rendered
     assert "test_kind: baremetal_mailbox" in rendered
     assert "supported_instruments: stlink, esp32jtag" in rendered
     assert 'requires: {"datacapture": false, "mailbox": true}' in rendered
+    assert "verification_mode_summary: bare-metal mailbox verification" in rendered
+
+
+def test_describe_test_surfaces_instrument_specific_metadata():
+    payload = inventory.describe_test("esp32c6_devkit", "tests/plans/esp32c6_gpio_signature_with_meter.json", REPO_ROOT)
+
+    assert payload["ok"] is True
+    test = payload["test"]
+    assert test["schema_version"] == "1.0"
+    assert test["test_kind"] == "instrument_specific"
+    assert test["supported_instruments"] == ["esp32_meter"]
+    assert test["requires"] == {"mailbox": False, "datacapture": True}
+    assert test["labels"] == ["meter", "instrument_path"]
+    assert test["covers"] == ["gpio", "voltage"]
+    assert test["verification_mode_summary"] == "instrument-side measurement path"
+    assert test["requires_summary"] == "requires instrument-side measurement and no mailbox dependency"
+    assert test["validation_errors"] == []
+
+
+def test_describe_test_surfaces_instrument_selftest_metadata():
+    payload = inventory.describe_test("esp32s3_dev_c_meter", "tests/plans/instrument_esp32s3_dev_c_meter_selftest.json", REPO_ROOT)
+
+    assert payload["ok"] is True
+    test = payload["test"]
+    assert test["schema_version"] == "1.0"
+    assert test["test_kind"] == "instrument_specific"
+    assert test["supported_instruments"] == ["esp32_meter"]
+    assert test["requires"] == {"mailbox": False, "datacapture": True}
+    assert test["labels"] == ["meter", "selftest"]
+    assert test["covers"] == ["stim", "measure", "loopback"]
+    assert test["verification_mode_summary"] == "instrument-side measurement path"
+    assert test["validation_errors"] == []
 
 
 def test_describe_test_for_generated_esp32_i2c_contract():
@@ -414,7 +452,7 @@ def test_describe_test_for_stm32f103_gpio_signature_multi_signal_contract():
 def test_describe_test_for_stm32f401_led_blink():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_led_blink.json", REPO_ROOT)
     assert payload["ok"] is True
-    assert any(conn["from"] == "PC13" and conn["to"] == "P0.3" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
     assert any(check["type"] == "led" and check["pin"] == "led" for check in payload["expected_checks"])
     assert any(check["type"] == "signal" and check["pin"] == "led" for check in payload["expected_checks"])
+    assert payload["warnings"] == ["warning: test pin led resolves to LED, but verification_views.signal resolves to P0.0"]

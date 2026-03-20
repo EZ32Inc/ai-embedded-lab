@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
   "name": "stm32g431_minimal_runtime_mailbox",
   "board": "stm32g431cbu6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "minimal_runtime"],
+  "covers": ["runtime_gate"],
   "build": {
     "project_dir": "firmware/targets/stm32g431_minimal_runtime_mailbox",
     "artifact_stem": "stm32g431_minimal_runtime_mailbox_app",

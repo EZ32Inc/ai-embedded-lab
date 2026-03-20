@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
   "name": "stm32f103_gpio_no_external_capture_stlink",
   "board": "stm32f103_gpio_stlink",
+  "supported_instruments": ["stlink"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "selftest_only"],
+  "covers": ["gpio"],
   "preflight": {
     "enabled": false
   },

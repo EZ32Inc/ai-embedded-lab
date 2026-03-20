@@ -1,6 +1,15 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
   "name": "stm32h750_pwm_capture",
   "board": "stm32h750vbt6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "portable", "selfcheck"],
+  "covers": ["pwm", "timing"],
   "build": {
     "project_dir": "firmware/targets/stm32h750_pwm_capture",
     "artifact_stem": "stm32h750_pwm_capture_app",
