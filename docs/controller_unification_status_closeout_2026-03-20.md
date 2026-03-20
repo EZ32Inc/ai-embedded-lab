@@ -4,18 +4,18 @@
 
 The repo has moved beyond a unified instrument interface skeleton.
 
-The active system now exposes a first working controller/instrument model across:
+The active system now exposes a first working controller and instrument model across:
 
 - interface providers
 - action envelopes
-- doctor/status/capability semantics
+- doctor, status, and capability semantics
 - runtime reporting
 - workflow archive events
 - CLI entry points
 - default verification resolution
 - family-native backend delegation
 
-This is not yet the end state. The remaining work is now mostly legacy-seam cleanup, not architecture definition.
+This is not yet the end state. The remaining work is now mostly legacy-seam cleanup and stronger taxonomy enforcement, not architecture definition.
 
 ## Completed Layers
 
@@ -35,8 +35,8 @@ The active callers now route through `ael/instruments/interfaces/`.
 A first working semantic layer is in place:
 
 - capability taxonomy documented in `docs/instrument_model_v1.md`
-- shared action/result envelope in `ael/instruments/interfaces/model.py`
-- unified `doctor/status/capabilities` top-level semantics
+- shared action and result envelope in `ael/instruments/interfaces/model.py`
+- unified `doctor`, `status`, and `capabilities` top-level semantics
 - real migrated actions across the four main families
 
 ### 3. Public Vocabulary Shift
@@ -51,7 +51,7 @@ Compatibility aliases are still present where needed.
 
 ### 4. Runtime Surfaces Converted
 
-The following active runtime/user-visible surfaces now emit or consume controller/instrument-neutral vocabulary:
+The following active runtime and user-visible surfaces now emit or consume controller and instrument-neutral vocabulary:
 
 - instrument view
 - instrument doctor
@@ -72,6 +72,8 @@ A neutral backend facade now exists:
 
 `jtag_native_api.py` and `stlink_native_api.py` no longer call `control_instrument_native_api.py` directly for their shared control-path actions.
 
+`control_instrument_native_api.py` is now explicitly marked as a legacy backend module.
+
 ## Key Commit Chain
 
 The main consolidation sequence is:
@@ -87,6 +89,8 @@ The main consolidation sequence is:
 - `3faa3f3` `Add controller alias to CLI`
 - `8d3ad68` `Use controller aliases in default verification`
 - `b8a833d` `Add neutral controller backend facade`
+- `6ba864b` `Add controller backend regression tests`
+- `fc6736c` `Mark control native API as legacy backend`
 
 ## What Is Still Not Fully Unified
 
@@ -99,7 +103,7 @@ The repo still contains:
 - `stlink_native_api.py`
 - `meter_native_api.py`
 
-These are now closer to backend details, but the naming itself is still legacy-oriented.
+These are now backend details, but the naming itself is still legacy-oriented.
 
 ### 2. Legacy Compatibility Payloads
 
@@ -109,10 +113,15 @@ Many active payloads intentionally still carry compatibility fields such as:
 - `control_instrument_config`
 - `control_instrument_instance`
 - `probe` compatibility blocks
+- `status` and `data` compatibility fields on action results
 
 This is acceptable for the current migration stage, but it is not the final model.
 
-### 3. Historical Artifacts and Snapshots
+### 3. Soft Taxonomy Enforcement
+
+Capability keys, health domains, and failure boundaries are documented and partially live, but they are not yet enforced as a strict shared taxonomy across every provider and caller.
+
+### 4. Historical Artifacts and Snapshots
 
 Reference snapshots, archived logs, and older docs still contain historical vocabulary.
 
@@ -128,13 +137,13 @@ into:
 
 - active semantic unification of the main execution surfaces
 
-The next work should not be another large architecture rewrite. It should be a controlled retirement of the remaining legacy seams.
+The next work should not be another large architecture rewrite. It should be a controlled retirement of the remaining legacy seams and a stricter enforcement of the documented model.
 
 ## Recommended Next Slice
 
 The next highest-value cleanup slice is:
 
-1. reduce direct first-class status of `control_instrument_native_api.py`
-2. formalize backend ownership naming around `controller_backend`
+1. enforce capability and health taxonomy keys in provider outputs
+2. formalize canonical `checks` schemas for doctor outputs
 3. shrink compatibility payload duplication where live callers no longer need it
 4. update older user-facing docs and reference snapshots only after active code paths are stable

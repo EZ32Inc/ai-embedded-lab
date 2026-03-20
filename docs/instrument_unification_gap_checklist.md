@@ -8,94 +8,98 @@ Status legend:
 
 ## ST-Link
 
-- `identify`: PARTIAL
-  - returns legacy native profile naming in protocol metadata
+- `identify`: OK
+  - family and backend role are exposed consistently; legacy backend is explicitly marked
 - `get_capabilities`: PARTIAL
-  - capability families exist but not mapped to stable taxonomy names
+  - capability keys are exposed, but taxonomy enforcement is still soft
 - `get_status`: PARTIAL
-  - health domains are family-local, not taxonomy-backed
+  - normalized top-level envelope exists; health domains still need stricter shared taxonomy
 - `doctor`: PARTIAL
-  - doctor schema differs from meter and uart families
+  - normalized health, failure boundary, and recovery hint are present; check bodies still vary by family
 - `preflight_probe`: PARTIAL
-  - action semantics are usable, but response shape is legacy-first
-- `program_firmware`: PARTIAL
-  - unified envelope added in interface layer; legacy backend still underneath
+  - action is usable and routable, but response details remain backend-shaped
+- `program_firmware`: OK
+  - unified envelope is live in interface layer and backed by controller facade
+- `capture_signature`: OK
+  - standardized unsupported envelope is emitted with fallback guidance
 - naming consistency: PARTIAL
-  - still leaks `stlink_native_api` in lower layers
+  - public and runtime naming is clean; legacy backend module names still exist internally
 - error consistency: PARTIAL
-  - good retryability, but error codes not yet taxonomized
+  - error envelope is unified, but boundary taxonomy is not fully enforced everywhere
 
 ## ESP32 JTAG
 
-- `identify`: PARTIAL
-  - family is correct, but capability names are still family-local
+- `identify`: OK
+  - family, interface, and controller metadata are stable on active paths
 - `get_capabilities`: PARTIAL
-  - capability families exist but not yet mapped to taxonomy strings
+  - capability keys are exposed, but family-local detail still leaks under result payloads
 - `get_status`: PARTIAL
-  - domain structure differs from ST-Link and meter
+  - normalized top-level envelope exists; health domains still need stricter shared taxonomy
 - `doctor`: PARTIAL
-  - semantically rich but not fully normalized
+  - normalized health, failure boundary, and recovery hint are present; checks are not yet fully canonicalized
 - `preflight_probe`: PARTIAL
-  - useful but legacy-first response
-- `program_firmware`: PARTIAL
-  - unified envelope added in interface layer; legacy backend still underneath
+  - action is useful and provider-routed, but detailed payload shape remains legacy-heavy
+- `program_firmware`: OK
+  - unified envelope is live in interface layer and backed by controller facade
 - `capture_signature`: PARTIAL
-  - action exists but still returns legacy payload shape
+  - unified envelope is live, but compatibility aliases are still required by downstream consumers
 - naming consistency: PARTIAL
-  - still leaks `jtag_native_api` below interface layer
+  - public and runtime naming is clean; `jtag_native_api.py` remains a family backend detail
 - error consistency: PARTIAL
-  - no single family-independent error taxonomy yet
+  - envelope is shared, but no full family-independent error code set exists yet
 
 ## ESP32 Meter
 
-- `identify`: PARTIAL
-  - manifest-side contract differs from control-side families
+- `identify`: OK
+  - interface and provider routing is aligned with the shared model
 - `get_capabilities`: PARTIAL
-  - capability declaration uses instrument-specific names like `measure.digital`
+  - taxonomy keys are exposed, but some result details still use meter-specific naming
 - `get_status`: PARTIAL
-  - health semantics differ from doctor and from control instruments
+  - normalized top-level envelope exists; health semantics still need stronger cross-family alignment
 - `doctor`: PARTIAL
-  - envelope is legacy-first
-- `measure_digital`: PARTIAL
-  - action contract not yet wrapped to model v1 envelope
-- `measure_voltage`: PARTIAL
-  - same mismatch as digital measure
-- `stim_digital`: PARTIAL
-  - same mismatch as digital measure
+  - normalized health and recovery fields are present; detailed checks remain family-shaped
+- `measure_digital`: OK
+  - unified action envelope is live with compatibility aliases retained
+- `measure_voltage`: OK
+  - unified action envelope is live with compatibility aliases retained
+- `stim_digital`: OK
+  - unified action envelope is live with compatibility aliases retained
 - naming consistency: PARTIAL
-  - lower layer still exposes `meter_native_api`
+  - public and runtime naming is clean; `meter_native_api.py` remains an internal backend module
 - error consistency: PARTIAL
-  - errors are usable but not taxonomy-backed
+  - result and error envelope is shared, but taxonomy-backed boundaries are not fully enforced
 
 ## USB UART Bridge
 
-- `identify`: PARTIAL
-  - largely aligned but still bridge-specific terminology
+- `identify`: OK
+  - interface and provider routing is aligned with the shared model
 - `get_capabilities`: PARTIAL
-  - capability groups are not yet taxonomy-backed (`uart.bridge`, `uart.observe` should be explicit)
+  - stable top-level keys exist, but capability taxonomy is still soft-enforced
 - `get_status`: PARTIAL
-  - health domains are simple and not normalized with other families
+  - normalized top-level envelope exists; health domains remain simpler than other families
 - `doctor`: PARTIAL
-  - lifecycle info present, but response semantics differ from others
-- `open`: PARTIAL
-  - action payload shape is legacy-first
-- `close`: PARTIAL
-  - same mismatch as `open`
-- `write_uart`: PARTIAL
-  - no strict request/result model yet
-- `read_uart`: PARTIAL
-  - no strict request/result model yet
+  - normalized health and recovery fields are present; detailed checks remain bridge-specific
+- `open`: OK
+  - unified action envelope is live with compatibility aliases retained
+- `close`: OK
+  - unified action envelope is live with compatibility aliases retained
+- `write_uart`: OK
+  - unified action envelope is live with compatibility aliases retained
+- `read_uart`: OK
+  - unified action envelope is live with compatibility aliases retained
 - naming consistency: PARTIAL
-  - lower layer still exposes `usb_uart_bridge_daemon`
+  - public and runtime naming is clean; internal daemon and backend naming still exists below the interface layer
 - error consistency: PARTIAL
-  - HTTP errors wrapped, but not classified under shared boundaries
+  - result and error envelope is shared, but shared boundary taxonomy is not fully enforced
 
 ## Cross-Cutting Summary
 
 - unified provider spine: OK
 - unified dispatch routing: OK
 - unified action envelope: PARTIAL
-- stable capability taxonomy: BROKEN
-- normalized doctor/status semantics: BROKEN
-- reporting vocabulary: PARTIAL
-- fallback/degradation model: PARTIAL
+- stable capability taxonomy: PARTIAL
+- normalized doctor and status semantics: PARTIAL
+- reporting vocabulary: OK
+- fallback and degradation model: PARTIAL
+- public controller and instrument naming: OK
+- legacy backend isolation: PARTIAL
