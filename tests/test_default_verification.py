@@ -2262,9 +2262,13 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
 
     summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
 
+    assert summary["schema_review_status"] == "warnings_present"
+    assert summary["structured_coverage"] == "structured=3 legacy=1"
+    assert summary["warning_summary"] == "1 schema warning(s)"
     assert summary["default_verification_review"]["schema_review_status"] == "warnings_present"
     assert summary["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
     assert summary["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
+    assert summary["review_pack_paths"] == []
 
     report_text = Path(summary["report_path"]).read_text(encoding="utf-8")
     assert "## Default Verification Review" in report_text
@@ -2379,3 +2383,26 @@ def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consis
         assert review_pack_payload["default_verification_review"][key] == value
         assert nightly_payload["default_verification_review"][key] == value
         assert summary["default_verification_review"][key] == value
+
+
+def test_run_nightly_surfaces_top_level_review_keys_and_review_pack_paths(monkeypatch, tmp_path):
+    review_text = (
+        "Default Verification Review\n"
+        "health_status: pass\n"
+        "schema_review_status: aligned\n"
+        "structured_coverage: structured=4 legacy=0\n"
+        "warning_summary: none\n"
+    )
+    monkeypatch.setattr("ael_controlplane.nightly.current_branch", lambda: "feature/nightly-test")
+    monkeypatch.setattr("ael_controlplane.nightly._collect_backlog", lambda _cfg: [])
+    monkeypatch.setattr(
+        "ael_controlplane.nightly.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+
+    summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
+
+    assert summary["schema_review_status"] == "aligned"
+    assert summary["structured_coverage"] == "structured=4 legacy=0"
+    assert summary["warning_summary"] == "none"
+    assert summary["review_pack_paths"] == []

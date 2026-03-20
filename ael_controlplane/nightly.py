@@ -106,6 +106,10 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
         "finished_at": "",
         "plans": [],
         "report_path": "",
+        "review_pack_paths": [],
+        "schema_review_status": "unavailable",
+        "structured_coverage": "unavailable",
+        "warning_summary": "unavailable",
         "default_verification_review": {},
     }
 
@@ -118,6 +122,9 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
 
     plans = _collect_backlog(cfg)
     summary["default_verification_review"] = default_verification_review_payload(default_verification_review_snapshot(repo_root()))
+    summary["schema_review_status"] = str(summary["default_verification_review"].get("schema_review_status", "unavailable"))
+    summary["structured_coverage"] = str(summary["default_verification_review"].get("structured_coverage", "unavailable"))
+    summary["warning_summary"] = str(summary["default_verification_review"].get("warning_summary", "unavailable"))
     smoke_ok = True
     if not cfg.dry_run:
         smoke_ok = _smoke_gates_pass()
@@ -198,6 +205,8 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
             review_artifacts["run_dir"] = entry["run_dir"]
             rp = generate_review_pack(branch=branch, task=review_task, artifacts=review_artifacts)
             entry["review_pack"] = str(rp)
+            if entry["review_pack"]:
+                summary["review_pack_paths"].append(entry["review_pack"])
             if not ok:
                 summary["ok"] = False
             summary["plans"].append(entry)
