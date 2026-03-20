@@ -131,6 +131,24 @@ def preflight_probe(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
     return _native_error("control_preflight_failed", "control instrument preflight failed", retryable=True, details={"preflight": info or {}})
 
 
+def _flash_success_details(flash_json_path: Optional[str]) -> Dict[str, Any]:
+    path = str(flash_json_path or "").strip()
+    if not path:
+        return {}
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    out: Dict[str, Any] = {}
+    managed = payload.get("managed_stlink_server")
+    if isinstance(managed, dict) and managed.get("managed") and int(managed.get("pid") or 0) > 0:
+        out["managed_stlink_server"] = {
+            "managed": True,
+            "pid": int(managed.get("pid") or 0),
+        }
+    return out
+
+
 def program_firmware(
     probe_cfg: Dict[str, Any],
     *,
@@ -140,7 +158,9 @@ def program_firmware(
 ) -> Dict[str, Any]:
     ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path, flash_cfg=flash_cfg or {}, flash_json_path=flash_json_path)
     if ok:
-        return _native_ok({"firmware_path": firmware_path})
+        data = {"firmware_path": firmware_path}
+        data.update(_flash_success_details(flash_json_path))
+        return _native_ok(data)
     failure = _flash_failure_details(flash_json_path)
     details = {"firmware_path": firmware_path, **failure.get("details", {})}
     return _native_error(

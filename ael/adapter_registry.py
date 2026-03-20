@@ -297,6 +297,16 @@ class _LoadAdapter:
         if settle_s > 0.0:
             print(f"Flash: settling {settle_s:.2f}s before next stage")
             time.sleep(settle_s)
+        if isinstance(payload, dict):
+            data = payload.get("data", {}) if isinstance(payload.get("data"), dict) else {}
+            managed = data.get("managed_stlink_server")
+            if isinstance(managed, dict) and managed.get("managed") and int(managed.get("pid") or 0) > 0:
+                state = _load_runtime_state(ctx)
+                state["managed_local_stlink_server"] = {
+                    "managed": True,
+                    "pid": int(managed.get("pid") or 0),
+                }
+                _save_runtime_state(ctx, state)
         return {"ok": True}
 
 

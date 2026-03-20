@@ -243,6 +243,34 @@ def _terminate_stale_stlink_processes(port: int, emit) -> None:
     time.sleep(0.1)
 
 
+def _cleanup_managed_local_stlink_server(bootstrap: dict | None, emit) -> None:
+    state = bootstrap if isinstance(bootstrap, dict) else {}
+    if not state.get("managed"):
+        return
+    pid = int(state.get("pid") or 0)
+    if pid <= 0 or not _pid_exists(pid):
+        return
+    emit(f"Flash: stopping managed local ST-Link GDB server pid {pid}")
+    try:
+        os.kill(pid, signal.SIGTERM)
+    except ProcessLookupError:
+        return
+    except Exception as exc:
+        emit(f"Flash: failed to terminate managed local ST-Link server pid {pid} ({exc})")
+        return
+    time.sleep(0.2)
+    if not _pid_exists(pid):
+        return
+    emit(f"Flash: managed local ST-Link GDB server pid {pid} ignored SIGTERM; sending SIGKILL")
+    try:
+        os.kill(pid, signal.SIGKILL)
+    except ProcessLookupError:
+        return
+    except Exception as exc:
+        emit(f"Flash: failed to SIGKILL managed local ST-Link server pid {pid} ({exc})")
+    time.sleep(0.1)
+
+
 def _local_stlink_server_available(ip: str, port: int, bootstrap: dict | None = None) -> bool:
     state = bootstrap if isinstance(bootstrap, dict) else {}
     if not _is_local_host(ip) or int(port or 0) <= 0:
@@ -270,6 +298,7 @@ def _ensure_local_stlink_gdb_server(
         "error": "",
         "diagnostic_code": "",
         "skip_port_probe": False,
+        "pid": 0,
     }
     if not result["port_checked"]:
         return result
@@ -314,6 +343,7 @@ def _ensure_local_stlink_gdb_server(
 
     result["managed"] = True
     result["skip_port_probe"] = True
+    result["pid"] = proc.pid
     deadline = time.time() + max(0.0, float(startup_timeout_s))
     while time.time() < deadline:
         exit_code = proc.poll()
@@ -404,92 +434,92 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     ok = False
     strategy_used = ""
     last_error = ""
-    stlink_bootstrap = {"ok": True, "managed": False, "port_checked": False, "server_log_path": "", "error": "", "diagnostic_code": "", "skip_port_probe": False}
+    stlink_bootstrap = {"ok": True, "managed": False, "port_checked": False, "server_log_path": "", "error": "", "diagnostic_code": "", "skip_port_probe": False, "pid": 0}
     if _is_local_host(ip) and port:
         stlink_bootstrap = _ensure_local_stlink_gdb_server(probe_cfg, emit, flash_log_path=flash_log_path)
         if not stlink_bootstrap.get("ok", True):
             last_error = stlink_bootstrap.get("error") or "local ST-Link GDB server startup failed"
 
     for idx, strat in enumerate(strategies, start=1):
-        if last_error and not ok and stlink_bootstrap.get("port_checked") and not stlink_bootstrap.get("ok", True):
-            break
-        if stlink_bootstrap.get("port_checked") and not _local_stlink_server_available(ip, port, stlink_bootstrap):
-            if stlink_bootstrap.get("managed"):
-                last_error = "local ST-Link GDB server stopped before flash attempt"
-                _emit_stlink_server_failure(emit, f"Flash: {last_error}", stlink_bootstrap.get("server_log_path", ""))
-            else:
-                last_error = f"local ST-Link GDB server unavailable at {ip}:{port}"
-                emit(f"Flash: {last_error}")
-            break
-        try:
-            res = _run_gdb(
-                gdb_cmd,
-                ip,
-                port,
-                firmware_path,
-                target_id,
-                strat.get("pre", []),
-                strat.get("post", []),
-                timeout_s,
-                do_continue,
-                launch_cmds,
-            )
-            out = (res.stdout or "") + (res.stderr or "")
-            out_l = out.lower()
-            noticed_keyword = _contains_rejected_output(out, notice_output_keywords)
-            attempt_ok = res.returncode == 0 and "failed" not in out_l
-            attempts.append(
-                {
-                    "attempt": idx,
-                    "strategy": strat.get("name"),
-                    "ok": attempt_ok,
-                    "returncode": res.returncode,
-                    "noticed_keyword": noticed_keyword or None,
-                }
-            )
-            emit(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
-            if res.stdout:
-                emit(res.stdout.strip())
-            if res.stderr:
-                emit(res.stderr.strip())
-            if noticed_keyword:
-                msg = f"There is warning/error during flash: matched '{noticed_keyword}'."
-                if flash_log_path:
-                    msg += f" Check more details in log file {flash_log_path}"
-                emit(msg)
-            if attempt_ok:
-                ok = True
-                strategy_used = strat.get("name")
-                # If the probe reports a remote failure, try a delayed continue.
-                if (not launch_cmds) and ("remote failure reply" in out_l or "could not read registers" in out_l):
-                    if reset_available and retry_continue_on_remote_failure:
-                        emit("Flash: warning - remote failure reply, retrying continue")
-                        time.sleep(0.5)
-                        try:
-                            res2 = _run_continue(gdb_cmd, ip, port, target_id, continue_retry_timeout_s)
-                            if res2.stdout:
-                                emit(res2.stdout.strip())
-                            if res2.stderr:
-                                emit(res2.stderr.strip())
-                        except Exception as exc:
-                            emit(f"Flash: continue retry error ({exc})")
-                    elif reset_available:
-                        emit("Flash: warning - remote failure reply after load; skipping continue retry")
-                    else:
-                        emit("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
+            if last_error and not ok and stlink_bootstrap.get("port_checked") and not stlink_bootstrap.get("ok", True):
                 break
-            last_error = "flash attempt failed"
-        except Exception as exc:
-            attempts.append(
-                {
-                    "attempt": idx,
-                    "strategy": strat.get("name"),
-                    "ok": False,
-                    "error": str(exc),
-                }
-            )
-            last_error = str(exc)
-        time.sleep(0.2)
+            if stlink_bootstrap.get("port_checked") and not _local_stlink_server_available(ip, port, stlink_bootstrap):
+                if stlink_bootstrap.get("managed"):
+                    last_error = "local ST-Link GDB server stopped before flash attempt"
+                    _emit_stlink_server_failure(emit, f"Flash: {last_error}", stlink_bootstrap.get("server_log_path", ""))
+                else:
+                    last_error = f"local ST-Link GDB server unavailable at {ip}:{port}"
+                    emit(f"Flash: {last_error}")
+                break
+            try:
+                res = _run_gdb(
+                    gdb_cmd,
+                    ip,
+                    port,
+                    firmware_path,
+                    target_id,
+                    strat.get("pre", []),
+                    strat.get("post", []),
+                    timeout_s,
+                    do_continue,
+                    launch_cmds,
+                )
+                out = (res.stdout or "") + (res.stderr or "")
+                out_l = out.lower()
+                noticed_keyword = _contains_rejected_output(out, notice_output_keywords)
+                attempt_ok = res.returncode == 0 and "failed" not in out_l
+                attempts.append(
+                    {
+                        "attempt": idx,
+                        "strategy": strat.get("name"),
+                        "ok": attempt_ok,
+                        "returncode": res.returncode,
+                        "noticed_keyword": noticed_keyword or None,
+                    }
+                )
+                emit(f"Flash: attempt {idx} ({strat.get('name')}) -> " + ("OK" if attempt_ok else "FAIL"))
+                if res.stdout:
+                    emit(res.stdout.strip())
+                if res.stderr:
+                    emit(res.stderr.strip())
+                if noticed_keyword:
+                    msg = f"There is warning/error during flash: matched '{noticed_keyword}'."
+                    if flash_log_path:
+                        msg += f" Check more details in log file {flash_log_path}"
+                    emit(msg)
+                if attempt_ok:
+                    ok = True
+                    strategy_used = strat.get("name")
+                    # If the probe reports a remote failure, try a delayed continue.
+                    if (not launch_cmds) and ("remote failure reply" in out_l or "could not read registers" in out_l):
+                        if reset_available and retry_continue_on_remote_failure:
+                            emit("Flash: warning - remote failure reply, retrying continue")
+                            time.sleep(0.5)
+                            try:
+                                res2 = _run_continue(gdb_cmd, ip, port, target_id, continue_retry_timeout_s)
+                                if res2.stdout:
+                                    emit(res2.stdout.strip())
+                                if res2.stderr:
+                                    emit(res2.stderr.strip())
+                            except Exception as exc:
+                                emit(f"Flash: continue retry error ({exc})")
+                        elif reset_available:
+                            emit("Flash: warning - remote failure reply after load; skipping continue retry")
+                        else:
+                            emit("Flash: warning - remote failure reply; reset not wired, skipping continue retry")
+                    break
+                last_error = "flash attempt failed"
+            except Exception as exc:
+                attempts.append(
+                    {
+                        "attempt": idx,
+                        "strategy": strat.get("name"),
+                        "ok": False,
+                        "error": str(exc),
+                    }
+                )
+                last_error = str(exc)
+            time.sleep(0.2)
 
     if not ok:
         emit("Flash: FAIL")
@@ -506,6 +536,11 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
             "reset_strategy": reset_strategy,
             "error_summary": last_error,
         }
+        if stlink_bootstrap.get("managed") and int(stlink_bootstrap.get("pid") or 0) > 0:
+            payload["managed_stlink_server"] = {
+                "managed": True,
+                "pid": int(stlink_bootstrap.get("pid") or 0),
+            }
         try:
             with open(flash_json_path, "w", encoding="utf-8") as f:
                 json.dump(payload, f, indent=2, sort_keys=True)

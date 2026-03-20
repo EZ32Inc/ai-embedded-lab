@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from ael.run_contract import RunTermination
 from ael import failure_recovery
 from ael import recovery_policy
+from ael.adapters import flash_bmda_gdbmi
 
 
 @dataclass
@@ -212,6 +213,26 @@ def _record_recovery_attempt(attempts: Dict[str, int], action_type: str) -> None
         attempts[key] = int(attempts.get(key, 0)) + 1
 
 
+
+
+def _cleanup_managed_local_stlink_server(run_dir: Path) -> None:
+    state_path = Path(run_dir) / "artifacts" / "runtime_state.json"
+    if not state_path.exists():
+        return
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+    managed = state.get("managed_local_stlink_server")
+    if isinstance(managed, dict):
+        flash_bmda_gdbmi._cleanup_managed_local_stlink_server(managed, print)
+        state.pop("managed_local_stlink_server", None)
+        try:
+            state_path.write_text(json.dumps(state, indent=2, sort_keys=True), encoding="utf-8")
+        except Exception:
+            pass
+
+
 def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
     if not isinstance(plan, dict):
         raise ValueError("plan must be a dict")
@@ -371,5 +392,6 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
                     break
             result["failure_kind"] = last_failure
 
+    _cleanup_managed_local_stlink_server(Path(run_dir))
     _write_json(ctx.artifacts_dir / "result.json", result)
     return result

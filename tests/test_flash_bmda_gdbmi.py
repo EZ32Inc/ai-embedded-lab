@@ -116,6 +116,28 @@ def test_classify_stlink_server_issue_timeout():
     assert "timed out" in diag["summary"].lower()
 
 
+def test_cleanup_managed_local_stlink_server_terminates_pid():
+    emitted = []
+    with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[True, False]), patch(
+        "ael.adapters.flash_bmda_gdbmi.os.kill"
+    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
+        flash_bmda_gdbmi._cleanup_managed_local_stlink_server({"managed": True, "pid": 123}, emitted.append)
+
+    kill_mock.assert_called_once()
+    assert any("stopping managed local ST-Link GDB server pid 123" in line for line in emitted)
+
+
+def test_cleanup_managed_local_stlink_server_escalates_to_sigkill():
+    emitted = []
+    with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[True, True]), patch(
+        "ael.adapters.flash_bmda_gdbmi.os.kill"
+    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
+        flash_bmda_gdbmi._cleanup_managed_local_stlink_server({"managed": True, "pid": 123}, emitted.append)
+
+    assert kill_mock.call_count == 2
+    assert any("ignored SIGTERM" in line for line in emitted)
+
+
 def test_local_stlink_server_available_uses_managed_flag():
     assert flash_bmda_gdbmi._local_stlink_server_available(
         "127.0.0.1", 4242, {"managed": True}
@@ -291,6 +313,38 @@ def test_ensure_local_stlink_gdb_server_skips_remote_probe():
     popen.assert_not_called()
     assert result["ok"] is True
     assert emitted == []
+
+
+def test_run_records_managed_local_stlink_server_in_flash_json(tmp_path):
+    firmware = tmp_path / "fw.elf"
+    firmware.write_text("stub", encoding="utf-8")
+    flash_json = tmp_path / "flash.json"
+
+    class Result:
+        returncode = 0
+        stdout = "Transfer rate: 1 KB/sec\n"
+        stderr = ""
+
+    with patch("ael.adapters.flash_bmda_gdbmi._ensure_local_stlink_gdb_server", return_value={
+        "ok": True,
+        "managed": True,
+        "port_checked": True,
+        "server_log_path": "",
+        "error": "",
+        "diagnostic_code": "",
+        "skip_port_probe": True,
+        "pid": 1234,
+    }), patch("ael.adapters.flash_bmda_gdbmi._run_gdb", return_value=Result()):
+        ok = flash_bmda_gdbmi.run(
+            {"ip": "127.0.0.1", "gdb_port": 4242, "gdb_cmd": "arm-none-eabi-gdb"},
+            str(firmware),
+            flash_json_path=str(flash_json),
+        )
+
+    assert ok is True
+    payload = __import__("json").loads(flash_json.read_text(encoding="utf-8"))
+    assert payload["managed_stlink_server"]["managed"] is True
+    assert payload["managed_stlink_server"]["pid"] == 1234
 
 
 def test_run_bootstraps_local_stlink_server_once_before_flash(tmp_path):
