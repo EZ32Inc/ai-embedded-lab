@@ -58,3 +58,22 @@ def test_manifest_provider_resolves_usb_uart_family():
     assert provider is not None
     assert provider.family == "usb_uart_bridge"
     assert "write_uart" in provider.actions
+
+
+
+def test_helper_profiles_resolve_for_control_and_manifest():
+    from ael.instruments.interfaces.registry import control_native_interface, manifest_native_interface
+
+    control_profile = control_native_interface(
+        {
+            "type_id": "stlink",
+            "ip": "127.0.0.1",
+            "gdb_port": 4242,
+            "communication": {"surfaces": [{"name": "gdb_remote", "endpoint": "127.0.0.1:4242"}]},
+        }
+    )
+    manifest = InstrumentRegistry().get("esp32s3_dev_c_meter")
+    assert manifest is not None
+    manifest_profile = manifest_native_interface(manifest)
+    assert control_profile["instrument_family"] == "stlink"
+    assert manifest_profile["instrument_family"] == "esp32_meter"

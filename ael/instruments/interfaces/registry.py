@@ -64,3 +64,36 @@ def resolve_control_provider(cfg: Dict[str, Any]) -> Optional[InstrumentProvider
     if family is None:
         return None
     return _CONTROL_PROVIDERS.get(family)
+
+
+
+def manifest_family(manifest: Dict[str, Any]) -> Optional[str]:
+    provider = resolve_manifest_provider(manifest)
+    if provider is not None:
+        return provider.family
+    return _manifest_family(manifest)
+
+
+
+def control_family(cfg: Dict[str, Any]) -> Optional[str]:
+    provider = resolve_control_provider(cfg)
+    if provider is not None:
+        return provider.family
+    return _control_family(cfg)
+
+
+
+def manifest_native_interface(manifest: Dict[str, Any]) -> Dict[str, Any]:
+    provider = resolve_manifest_provider(manifest)
+    if provider is not None:
+        return provider.native_interface_profile()
+    native_interface = manifest.get("native_interface")
+    return dict(native_interface) if isinstance(native_interface, dict) else {}
+
+
+
+def control_native_interface(cfg: Dict[str, Any]) -> Dict[str, Any]:
+    provider = resolve_control_provider(cfg)
+    if provider is not None:
+        return provider.native_interface_profile()
+    return {}

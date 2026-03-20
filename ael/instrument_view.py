@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
-from ael.instruments.interfaces.registry import resolve_control_provider, resolve_manifest_provider
+from ael.instruments.interfaces.registry import control_family, control_native_interface, manifest_family, manifest_native_interface
 from ael.pipeline import _simple_yaml_load
 from ael.probe_binding import load_probe_binding
 
@@ -93,8 +93,8 @@ def build_probe_instance_view(
         "instance_id": binding.instance_id,
         "type_id": binding.type_id,
     }
-    provider = resolve_control_provider(probe_cfg)
-    native_interface = provider.native_interface_profile() if provider is not None else {}
+    family = control_family(probe_cfg)
+    native_interface = control_native_interface(probe_cfg)
     native_interface_summary = {}
     if native_interface:
         native_interface_summary = {
@@ -109,7 +109,7 @@ def build_probe_instance_view(
         "id": binding.instance_id,
         "type": binding.type_id,
         "instrument_role": "control",
-        "instrument_family": provider.family if provider is not None else None,
+        "instrument_family": family,
         "config_path": _relpath(root, binding.config_path),
         "instance_path": _relpath(root, binding.instance_path),
         "type_path": _relpath(root, binding.type_path),
@@ -143,8 +143,8 @@ def build_instrument_manifest_view(
         return {"ok": False, "error": f"instrument not found: {instrument_id}"}
     refs = referenced_by or {}
     communication = dict(manifest.get("communication") or {})
-    provider = resolve_manifest_provider(manifest)
-    native_interface = provider.native_interface_profile() if provider is not None else dict(manifest.get("native_interface") or {})
+    family = manifest_family(manifest)
+    native_interface = manifest_native_interface(manifest)
     capability_surfaces = dict(manifest.get("capability_surfaces") or {})
     native_interface_summary = {}
     if native_interface:
@@ -157,7 +157,7 @@ def build_instrument_manifest_view(
     return {
         "kind": "instrument",
         "id": instrument_id,
-        "instrument_family": (provider.family if provider is not None else (native_interface.get("instrument_family") if isinstance(native_interface, dict) else None)),
+        "instrument_family": family,
         "origin": manifest.get("_origin"),
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,

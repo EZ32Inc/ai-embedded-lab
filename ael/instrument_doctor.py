@@ -7,7 +7,7 @@ from typing import Any, Dict, Optional
 from ael.instrument_metadata import capability_names, validate_capability_surfaces, validate_communication
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
-from ael.instruments.interfaces.registry import resolve_control_provider, resolve_manifest_provider
+from ael.instruments.interfaces.registry import control_family, control_native_interface, resolve_control_provider, resolve_manifest_provider
 from ael.instrument_view import build_resolved_instrument_view
 from ael.probe_binding import load_probe_binding
 
@@ -79,7 +79,7 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         }
         overall_ok = False
     provider = resolve_control_provider(probe_cfg)
-    profile = provider.native_interface_profile() if provider is not None else ({})
+    profile = control_native_interface(probe_cfg)
     identify_data = (native_identify.get("data") or {}) if isinstance(native_identify.get("data"), dict) else {}
     control_instrument = {
         "kind": "control_instrument_instance",
@@ -96,7 +96,7 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "legacy_kind": "probe_instance",
         "id": binding.instance_id,
         "type": binding.type_id,
-        "instrument_family": str(identify_data.get("instrument_family") or (provider.family if provider is not None else binding.type_id)),
+        "instrument_family": str(identify_data.get("instrument_family") or (control_family(probe_cfg) or binding.type_id)),
         "instrument_role": str(identify_data.get("instrument_role") or "control"),
         "native_interface": profile,
         "native_identify": native_identify,
