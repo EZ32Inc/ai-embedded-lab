@@ -115,3 +115,38 @@ def test_run_cli_uses_explicit_control_instrument_override(monkeypatch):
 
     assert exc.value.code == 0
     assert captured["probe_path"] == "configs/instrument_instances/esp32jtag_stm32_golden.yaml"
+
+
+def test_run_cli_uses_explicit_controller_alias_override(monkeypatch):
+    captured = {}
+
+    def _fake_run_cli(probe_path, board_id, test_path, wiring=None, output_mode="normal", until_stage="report"):
+        captured.update(
+            {
+                "probe_path": probe_path,
+                "board_id": board_id,
+                "test_path": test_path,
+            }
+        )
+        return 0
+
+    monkeypatch.setattr(ael_main, "run_cli", _fake_run_cli)
+    monkeypatch.setattr(
+        "sys.argv",
+        [
+            "ael",
+            "run",
+            "--board",
+            "stm32f103_uart",
+            "--test",
+            "tests/plans/stm32f103_uart_banner.json",
+            "--controller",
+            "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
+        ],
+    )
+
+    with pytest.raises(SystemExit) as exc:
+        ael_main.main()
+
+    assert exc.value.code == 0
+    assert captured["probe_path"] == "configs/instrument_instances/esp32jtag_stm32_golden.yaml"
