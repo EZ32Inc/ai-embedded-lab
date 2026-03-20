@@ -40,7 +40,7 @@ def main() -> int:
     if not path.exists():
         return _fail("report file not created")
     text = path.read_text(encoding="utf-8")
-    for key in ("Branch:", "Task:", "Task ID:", "Execution Mode:", "## Files Changed", "## Merge Recommendation"):
+    for key in ("Branch:", "Task:", "Task ID:", "Execution Mode:", "## Files Changed", "## Default Verification Review", "## Merge Recommendation"):
         if key not in text:
             return _fail(f"missing field: {key}")
     print("[REVIEW_PACK_SMOKE] OK")

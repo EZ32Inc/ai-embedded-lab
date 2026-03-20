@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 from datetime import date
 from pathlib import Path
 from typing import Dict, List
@@ -137,6 +138,21 @@ def _render_markdown(records: List[Dict]) -> str:
     lines.append("")
 
     return "\n".join(lines)
+
+
+def default_verification_review_summary(repo_root: str | Path | None = None) -> Dict[str, str | bool]:
+    root = Path(repo_root) if repo_root is not None else Path(__file__).resolve().parents[1]
+    proc = subprocess.run(
+        ["python3", "-m", "ael", "verify-default", "review"],
+        cwd=str(root),
+        capture_output=True,
+        text=True,
+    )
+    text = (proc.stdout or "").strip()
+    if proc.returncode == 0 and text:
+        return {"ok": True, "text": text}
+    error = (proc.stderr or proc.stdout or "").strip() or f"verify-default review exited with code {proc.returncode}"
+    return {"ok": False, "text": text, "error": error}
 
 
 def append_task_result(report_root: str | Path, record: Dict) -> Path:

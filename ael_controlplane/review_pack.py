@@ -6,6 +6,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict
 
+from ael_controlplane.reporting import default_verification_review_summary
+
 
 def _repo_root() -> Path:
     return Path(__file__).resolve().parents[1]
@@ -46,6 +48,7 @@ def generate_review_pack(branch: str, task: Dict, artifacts: Dict) -> Path:
         changed = _run_git(["diff", "--name-status", "HEAD~1...HEAD"])
     if not diffstat:
         diffstat = _run_git(["diff", "--stat", "HEAD~1...HEAD"])
+    baseline_review = default_verification_review_summary(_repo_root())
 
     lines = [
         f"Branch: {branch}",
@@ -77,6 +80,11 @@ def generate_review_pack(branch: str, task: Dict, artifacts: Dict) -> Path:
 
     lines.extend(
         [
+            "",
+            "## Default Verification Review",
+            "```text",
+            str(baseline_review.get("text") or baseline_review.get("error") or "(unavailable)"),
+            "```",
             "",
             "## Reproduction Instructions",
             "```bash",
