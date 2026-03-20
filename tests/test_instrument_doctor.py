@@ -32,6 +32,7 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["instrument_role"] == "control"
     assert payload["control_instrument"]["kind"] == "control_instrument_instance"
     assert payload["control_instrument"]["legacy_kind"] == "probe_instance"
+    assert payload["instrument_interface"]["instrument_family"] == "esp32jtag"
     assert payload["native_interface"]["instrument_family"] == "esp32jtag"
     assert payload["checks"]["gdb_remote"]["ok"] is True
     assert payload["checks"]["capture_subsystem"]["ok"] is True
@@ -70,7 +71,7 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["id"] == "esp32s3_dev_c_meter"
     assert payload["instrument_family"] == "esp32_meter"
     assert payload["checks"]["native_doctor"]["status"] == "ok"
-    assert payload["native_interface"]["role"] == "instrument_native_api"
+    assert payload["instrument_interface"]["role"] == "instrument_native_api"
     assert payload["checks"]["reachability"]["ok"] is True
     assert payload["health"] == "healthy"
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
@@ -106,8 +107,8 @@ def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     assert payload["kind"] == "instrument"
     assert payload["id"] == "usb_uart_bridge_daemon"
     assert payload["instrument_family"] == "usb_uart_bridge"
-    assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
-    assert payload["native_interface"]["instrument_family"] == "usb_uart_bridge"
+    assert payload["instrument_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
+    assert payload["instrument_interface"]["instrument_family"] == "usb_uart_bridge"
     assert payload["checks"]["native_doctor"]["status"] == "ok"
     assert payload["checks"]["bridge_service"]["ok"] is True
     assert payload["health"] == "healthy"
@@ -116,7 +117,7 @@ def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     assert "usb_uart_bridge_daemon" in rendered
     assert "health: healthy" in rendered
     assert "bridge_service: ok=True" in rendered
-    assert "native_interface:" in rendered
+    assert "instrument_interface:" in rendered
 
 
 
@@ -174,5 +175,5 @@ def test_doctor_probe_instance_reports_stlink_native_profile():
     assert payload["instrument_family"] == "stlink"
     assert payload["instrument_role"] == "control"
     assert payload["health"] == "healthy"
-    assert payload["native_interface"]["instrument_family"] == "stlink"
-    assert payload["native_interface"]["protocol"] == "ael.local_instrument.stlink_native_api.v0.1"
+    assert payload["instrument_interface"]["instrument_family"] == "stlink"
+    assert payload["instrument_interface"]["protocol"] == "ael.local_instrument.stlink_native_api.v0.1"

@@ -14,6 +14,22 @@ from ael.probe_binding import load_probe_binding
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _payload_instrument_interface(payload: Dict[str, Any]) -> Dict[str, Any]:
+    value = payload.get("instrument_interface")
+    if isinstance(value, dict) and value:
+        return value
+    value = payload.get("native_interface")
+    return value if isinstance(value, dict) else {}
+
+
+def _payload_instrument_interface_summary(payload: Dict[str, Any]) -> Dict[str, Any]:
+    value = payload.get("instrument_interface_summary")
+    if isinstance(value, dict) and value:
+        return value
+    value = payload.get("native_interface_summary")
+    return value if isinstance(value, dict) else {}
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     import json
 
@@ -120,6 +136,8 @@ def build_probe_instance_view(
         if (binding.endpoint_host or binding.endpoint_port is not None)
         else None,
         "communication": dict(binding.communication or {}),
+        "instrument_interface": native_interface,
+        "instrument_interface_summary": native_interface_summary,
         "native_interface": native_interface,
         "native_interface_summary": native_interface_summary,
         "capability_surfaces": dict(binding.capability_surfaces or {}),
@@ -161,6 +179,8 @@ def build_instrument_manifest_view(
         "origin": manifest.get("_origin"),
         "manifest_path": _relpath(root, str(manifest.get("_path") or "")),
         "communication": communication,
+        "instrument_interface": native_interface,
+        "instrument_interface_summary": native_interface_summary,
         "native_interface": native_interface,
         "native_interface_summary": native_interface_summary,
         "capability_surfaces": capability_surfaces,
@@ -296,32 +316,32 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
     if isinstance(communication, dict) and communication:
         lines.append("communication:")
         lines.extend(_render_communication_text(communication, indent="  "))
-    native_interface = payload.get("native_interface")
-    if isinstance(native_interface, dict) and native_interface:
-        lines.append("native_interface:")
-        if native_interface.get("name"):
-            lines.append(f"  - name: {native_interface.get('name')}")
-        if native_interface.get("protocol"):
-            lines.append(f"  - protocol: {native_interface.get('protocol')}")
-        if native_interface.get("role"):
-            lines.append(f"  - role: {native_interface.get('role')}")
-        metadata_commands = native_interface.get("metadata_commands") or []
+    instrument_interface = _payload_instrument_interface(payload)
+    if instrument_interface:
+        lines.append("instrument_interface:")
+        if instrument_interface.get("name"):
+            lines.append(f"  - name: {instrument_interface.get('name')}")
+        if instrument_interface.get("protocol"):
+            lines.append(f"  - protocol: {instrument_interface.get('protocol')}")
+        if instrument_interface.get("role"):
+            lines.append(f"  - role: {instrument_interface.get('role')}")
+        metadata_commands = instrument_interface.get("metadata_commands") or []
         if metadata_commands:
             lines.append(f"  - metadata_commands: {', '.join(str(item) for item in metadata_commands)}")
-        action_commands = native_interface.get("action_commands") or []
+        action_commands = instrument_interface.get("action_commands") or []
         if action_commands:
             lines.append(f"  - action_commands: {', '.join(str(item) for item in action_commands)}")
-        response_model = native_interface.get("response_model")
+        response_model = instrument_interface.get("response_model")
         if response_model is not None:
             lines.append(f"  - response_model: {response_model}")
-        for key, value in native_interface.items():
+        for key, value in instrument_interface.items():
             if key in {"name", "protocol", "role", "metadata_commands", "action_commands", "response_model"}:
                 continue
             lines.append(f"  - {key}: {value}")
-    native_interface_summary = payload.get("native_interface_summary")
-    if isinstance(native_interface_summary, dict) and native_interface_summary:
-        lines.append("native_interface_summary:")
-        for key, value in native_interface_summary.items():
+    instrument_interface_summary = _payload_instrument_interface_summary(payload)
+    if instrument_interface_summary:
+        lines.append("instrument_interface_summary:")
+        for key, value in instrument_interface_summary.items():
             lines.append(f"  - {key}: {value}")
     capability_surfaces = payload.get("capability_surfaces")
     if isinstance(capability_surfaces, dict) and capability_surfaces:
@@ -379,25 +399,25 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
             lines.append(f"primary_surface: {primary}")
         elif communication.get("protocol"):
             lines.append(f"protocol: {communication.get('protocol')}")
-    native_interface = payload.get("native_interface") or {}
-    if isinstance(native_interface, dict) and native_interface.get("protocol"):
-        lines.append(f"native_interface: {native_interface.get('protocol')}")
-        metadata_commands = native_interface.get("metadata_commands") or []
+    instrument_interface = _payload_instrument_interface(payload)
+    if instrument_interface.get("protocol"):
+        lines.append(f"instrument_interface: {instrument_interface.get('protocol')}")
+        metadata_commands = instrument_interface.get("metadata_commands") or []
         if metadata_commands:
-            lines.append(f"native_metadata: {', '.join(str(item) for item in metadata_commands)}")
-        action_commands = native_interface.get("action_commands") or []
+            lines.append(f"instrument_metadata: {', '.join(str(item) for item in metadata_commands)}")
+        action_commands = instrument_interface.get("action_commands") or []
         if action_commands:
-            lines.append(f"native_actions: {', '.join(str(item) for item in action_commands)}")
-    native_interface_summary = payload.get("native_interface_summary") or {}
-    if isinstance(native_interface_summary, dict) and native_interface_summary:
-        if native_interface_summary.get("role"):
-            lines.append(f"native_role: {native_interface_summary.get('role')}")
-        if native_interface_summary.get("protocol"):
-            lines.append(f"native_protocol: {native_interface_summary.get('protocol')}")
-        if native_interface_summary.get("metadata_command_count") is not None:
-            lines.append(f"native_metadata_count: {native_interface_summary.get('metadata_command_count')}")
-        if native_interface_summary.get("action_command_count") is not None:
-            lines.append(f"native_action_count: {native_interface_summary.get('action_command_count')}")
+            lines.append(f"instrument_actions: {', '.join(str(item) for item in action_commands)}")
+    instrument_interface_summary = _payload_instrument_interface_summary(payload)
+    if instrument_interface_summary:
+        if instrument_interface_summary.get("role"):
+            lines.append(f"instrument_role_surface: {instrument_interface_summary.get('role')}")
+        if instrument_interface_summary.get("protocol"):
+            lines.append(f"instrument_protocol: {instrument_interface_summary.get('protocol')}")
+        if instrument_interface_summary.get("metadata_command_count") is not None:
+            lines.append(f"instrument_metadata_count: {instrument_interface_summary.get('metadata_command_count')}")
+        if instrument_interface_summary.get("action_command_count") is not None:
+            lines.append(f"instrument_action_count: {instrument_interface_summary.get('action_command_count')}")
     capability_surfaces = payload.get("capability_surfaces") or {}
     if isinstance(capability_surfaces, dict) and capability_surfaces:
         parts = [f"{key}->{value}" for key, value in capability_surfaces.items()]
@@ -470,24 +490,24 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
         lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
     if payload.get("recovery_hint"):
         lines.append(f"recovery_hint: {payload.get('recovery_hint')}")
-    native_interface = payload.get("native_interface")
-    if isinstance(native_interface, dict) and native_interface:
-        lines.append("native_interface:")
-        if native_interface.get("name"):
-            lines.append(f"  name: {native_interface.get('name')}")
-        if native_interface.get("protocol"):
-            lines.append(f"  protocol: {native_interface.get('protocol')}")
-        if native_interface.get("role"):
-            lines.append(f"  role: {native_interface.get('role')}")
-        metadata_commands = native_interface.get("metadata_commands") or []
+    instrument_interface = _payload_instrument_interface(payload)
+    if instrument_interface:
+        lines.append("instrument_interface:")
+        if instrument_interface.get("name"):
+            lines.append(f"  name: {instrument_interface.get('name')}")
+        if instrument_interface.get("protocol"):
+            lines.append(f"  protocol: {instrument_interface.get('protocol')}")
+        if instrument_interface.get("role"):
+            lines.append(f"  role: {instrument_interface.get('role')}")
+        metadata_commands = instrument_interface.get("metadata_commands") or []
         if metadata_commands:
             lines.append(f"  metadata_commands: {', '.join(str(item) for item in metadata_commands)}")
-        action_commands = native_interface.get("action_commands") or []
+        action_commands = instrument_interface.get("action_commands") or []
         if action_commands:
             lines.append(f"  action_commands: {', '.join(str(item) for item in action_commands)}")
-        if native_interface.get("response_model") is not None:
-            lines.append(f"  response_model: {native_interface.get('response_model')}")
-        for key, value in native_interface.items():
+        if instrument_interface.get("response_model") is not None:
+            lines.append(f"  response_model: {instrument_interface.get('response_model')}")
+        for key, value in instrument_interface.items():
             if key in {"name", "protocol", "role", "metadata_commands", "action_commands", "response_model"}:
                 continue
             lines.append(f"  {key}: {value}")

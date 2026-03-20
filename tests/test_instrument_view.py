@@ -21,8 +21,9 @@ def test_build_resolved_probe_instance_view():
     assert payload["instrument_role"] == "control"
     assert payload["communication"]["primary"] == "gdb_remote"
     assert payload["capability_surfaces"]["swd"] == "gdb_remote"
+    assert payload["instrument_interface"]["instrument_family"] == "esp32jtag"
+    assert payload["instrument_interface_summary"]["metadata_command_count"] == 4
     assert payload["native_interface"]["instrument_family"] == "esp32jtag"
-    assert payload["native_interface_summary"]["metadata_command_count"] == 4
     assert "stm32f103_gpio" in payload["referenced_by"]["boards"]
 
 
@@ -34,10 +35,10 @@ def test_build_resolved_instrument_manifest_view():
     assert payload["instrument_family"] == "esp32_meter"
     assert payload["communication"]["protocol"] == "gpio_meter_v1"
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
-    assert payload["native_interface"]["role"] == "instrument_native_api"
-    assert payload["native_interface_summary"]["metadata_command_count"] == 4
-    assert payload["native_interface_summary"]["action_command_count"] == 3
-    assert "measure_digital" in payload["native_interface"]["action_commands"]
+    assert payload["instrument_interface"]["role"] == "instrument_native_api"
+    assert payload["instrument_interface_summary"]["metadata_command_count"] == 4
+    assert payload["instrument_interface_summary"]["action_command_count"] == 3
+    assert "measure_digital" in payload["instrument_interface"]["action_commands"]
     assert payload["metadata_validation_errors"] == []
 
 
@@ -48,8 +49,8 @@ def test_build_resolved_usb_uart_bridge_manifest_view():
     assert payload["id"] == "usb_uart_bridge_daemon"
     assert payload["instrument_family"] == "usb_uart_bridge"
     assert payload["communication"]["protocol"] == "ael-usb-uart-bridge-v0.1"
-    assert payload["native_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
-    assert payload["native_interface"]["instrument_family"] == "usb_uart_bridge"
+    assert payload["instrument_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
+    assert payload["instrument_interface"]["instrument_family"] == "usb_uart_bridge"
     assert payload["capability_surfaces"]["observe.uart"] == "primary"
     assert payload["capability_surfaces"]["bridge.serial"] == "primary"
     assert payload["metadata_validation_errors"] == []
@@ -73,7 +74,7 @@ def test_instruments_describe_cli_text_output():
     assert "gdb_remote" in res.stdout
     assert "web_api" in res.stdout
     assert "instrument_family: esp32jtag" in res.stdout
-    assert "native_interface:" in res.stdout
+    assert "instrument_interface:" in res.stdout
     assert "capability_surfaces:" in res.stdout
     assert "referenced_by:" in res.stdout
 
@@ -110,13 +111,13 @@ def test_instruments_describe_cli_summary_output():
     assert "instrument_family: esp32_meter" in res.stdout
     assert "endpoint: 192.168.4.1:9000" in res.stdout
     assert "capability_surfaces:" in res.stdout
-    assert "native_actions: measure_digital, measure_voltage, stim_digital" in res.stdout
-    assert "native_protocol:" in res.stdout
-    assert "native_metadata_count: 4" in res.stdout
-    assert "native_action_count: 3" in res.stdout
+    assert "instrument_actions: measure_digital, measure_voltage, stim_digital" in res.stdout
+    assert "instrument_protocol:" in res.stdout
+    assert "instrument_metadata_count: 4" in res.stdout
+    assert "instrument_action_count: 3" in res.stdout
 
 
-def test_instruments_describe_cli_text_output_shows_native_interface():
+def test_instruments_describe_cli_text_output_shows_instrument_interface():
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
     res = subprocess.run(
@@ -127,5 +128,5 @@ def test_instruments_describe_cli_text_output_shows_native_interface():
         env=env,
         check=True,
     )
-    assert "native_interface:" in res.stdout
+    assert "instrument_interface:" in res.stdout
     assert "ael.local_instrument.native_api.v0.1" in res.stdout
