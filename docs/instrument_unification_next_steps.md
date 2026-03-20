@@ -1,5 +1,12 @@
 # Instrument Unification Next Steps
 
+Current Status:
+
+- provider/registry spine is active
+- semantic model v1 is partially live across the main families
+- active runtime surfaces now largely use `controller` / `instrument_interface` vocabulary
+- the remaining work is mostly legacy-seam retirement, not first-pass architecture design
+
 ## Phase 1
 
 Goal:
