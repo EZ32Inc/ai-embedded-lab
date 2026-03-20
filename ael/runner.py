@@ -310,6 +310,8 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
             if step_ok:
                 idx += 1
                 break
+            if out.get("retryable") is False:
+                break
 
         if step_ok:
             continue

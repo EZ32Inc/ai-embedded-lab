@@ -4,6 +4,7 @@ from pathlib import Path
 import socket
 import subprocess
 import time
+from typing import Optional
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -114,41 +115,170 @@ def _wait_for_port(ip: str, port: int, timeout_s: float) -> bool:
     return _port_is_listening(ip, port)
 
 
-def _ensure_local_stlink_gdb_server(probe_cfg, emit, startup_timeout_s: float = 5.0):
+def _stlink_server_log_path(flash_log_path: str) -> str:
+    target = str(flash_log_path or "").strip()
+    if not target:
+        return ""
+    flash_path = Path(target)
+    return str(flash_path.with_name(f"{flash_path.stem}_stlink_server.log"))
+
+
+def _read_recent_text(path: str, limit: int = 1200) -> str:
+    target = str(path or "").strip()
+    if not target:
+        return ""
+    try:
+        text = Path(target).read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    text = text.strip()
+    if len(text) <= limit:
+        return text
+    return text[-limit:]
+
+
+def _classify_stlink_server_issue(text: str) -> dict[str, str]:
+    low = str(text or "").lower()
+    if not low:
+        return {}
+    if "libusb_error_busy" in low or "unable to claim" in low or "already in use" in low:
+        return {
+            "code": "usb_busy",
+            "summary": "Flash: ST-Link USB is busy.",
+            "hint": "Flash: diagnostic - ST-Link USB is busy; another process may still own the probe. Stop other ST-Link/GDB sessions, then unplug/replug the ST-Link and retry.",
+        }
+    if "libusb_error_timeout" in low or "get_version read reply failed" in low:
+        return {
+            "code": "usb_timeout",
+            "summary": "Flash: ST-Link USB timed out.",
+            "hint": "Flash: diagnostic - ST-Link USB timed out while talking to the probe. Unplug/replug the ST-Link, power-cycle the target if needed, then retry.",
+        }
+    if "no st-link devices found" in low:
+        return {
+            "code": "usb_missing",
+            "summary": "Flash: no ST-Link device detected.",
+            "hint": "Flash: diagnostic - no ST-Link device was detected. Check the USB cable and connection, then retry.",
+        }
+    if "more than 1 st-link" in low or "st-link devices found but no target specified" in low:
+        return {
+            "code": "usb_ambiguous",
+            "summary": "Flash: multiple ST-Link devices detected.",
+            "hint": "Flash: diagnostic - multiple ST-Link probes are connected. Select the intended probe explicitly before retrying.",
+        }
+    return {}
+
+
+def _emit_stlink_server_failure(emit, reason: str, server_log_path: str) -> dict[str, str]:
+    emit(reason)
+    recent = _read_recent_text(server_log_path)
+    diagnostic = _classify_stlink_server_issue(recent)
+    if diagnostic.get("summary"):
+        emit(diagnostic["summary"])
+    if diagnostic.get("hint"):
+        emit(diagnostic["hint"])
+    if recent:
+        emit("Flash: local ST-Link GDB server output follows:")
+        emit(recent)
+    elif server_log_path:
+        emit(f"Flash: local ST-Link GDB server log path: {server_log_path}")
+    return diagnostic
+
+
+def _ensure_local_stlink_gdb_server(
+    probe_cfg,
+    emit,
+    flash_log_path: str = "",
+    startup_timeout_s: float = 5.0,
+    stable_grace_s: float = 0.5,
+):
     ip = str(probe_cfg.get("ip") or "").strip()
     port = int(probe_cfg.get("gdb_port") or 0)
-    if not _is_local_host(ip) or port <= 0:
-        return
+    result = {
+        "ok": True,
+        "managed": False,
+        "port_checked": bool(_is_local_host(ip) and port > 0),
+        "server_log_path": _stlink_server_log_path(flash_log_path),
+        "error": "",
+        "diagnostic_code": "",
+    }
+    if not result["port_checked"]:
+        return result
     if _port_is_listening(ip, port):
-        return
+        return result
     if not _STLINK_GDB_SERVER_SCRIPT.exists():
-        emit(f"Flash: local ST-Link GDB server script missing: {_STLINK_GDB_SERVER_SCRIPT}")
-        return
+        msg = f"Flash: local ST-Link GDB server script missing: {_STLINK_GDB_SERVER_SCRIPT}"
+        diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
+        result["ok"] = False
+        result["error"] = diagnostic.get("summary") or msg
+        result["diagnostic_code"] = diagnostic.get("code", "")
+        return result
 
     emit(f"Flash: local ST-Link GDB server not detected at {ip}:{port}; starting it")
     cmd = [str(_STLINK_GDB_SERVER_SCRIPT), "--port", str(port)]
+    log_handle: Optional[object] = None
     try:
+        if result["server_log_path"]:
+            log_handle = open(result["server_log_path"], "a", encoding="utf-8")
         proc = subprocess.Popen(
             cmd,
             cwd=str(_REPO_ROOT),
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
+            stdout=log_handle or subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
             start_new_session=True,
         )
     except Exception as exc:
-        emit(f"Flash: failed to start local ST-Link GDB server ({exc})")
-        return
+        if log_handle:
+            log_handle.close()
+        msg = f"Flash: failed to start local ST-Link GDB server ({exc})"
+        diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
+        result["ok"] = False
+        result["error"] = diagnostic.get("summary") or msg
+        result["diagnostic_code"] = diagnostic.get("code", "")
+        return result
+    finally:
+        if log_handle:
+            log_handle.close()
 
-    if _wait_for_port(ip, port, startup_timeout_s):
-        emit(f"Flash: local ST-Link GDB server ready at {ip}:{port} (pid {proc.pid})")
-        return
+    result["managed"] = True
+    deadline = time.time() + max(0.0, float(startup_timeout_s))
+    while time.time() < deadline:
+        if _port_is_listening(ip, port):
+            break
+        exit_code = proc.poll()
+        if exit_code is not None:
+            msg = f"Flash: local ST-Link GDB server exited during startup with code {exit_code}"
+            diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
+            result["ok"] = False
+            result["error"] = diagnostic.get("summary") or msg
+            result["diagnostic_code"] = diagnostic.get("code", "")
+            return result
+        time.sleep(0.1)
 
-    emit(f"Flash: local ST-Link GDB server did not become ready at {ip}:{port}")
-    try:
-        if proc.poll() is None:
-            proc.terminate()
-    except Exception:
-        pass
+    if not _port_is_listening(ip, port):
+        msg = f"Flash: local ST-Link GDB server did not become ready at {ip}:{port}"
+        diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
+        result["ok"] = False
+        result["error"] = diagnostic.get("summary") or msg
+        result["diagnostic_code"] = diagnostic.get("code", "")
+        try:
+            if proc.poll() is None:
+                proc.terminate()
+        except Exception:
+            pass
+        return result
+
+    time.sleep(max(0.0, float(stable_grace_s)))
+    exit_code = proc.poll()
+    if exit_code is not None:
+        msg = f"Flash: local ST-Link GDB server exited immediately after startup with code {exit_code}"
+        diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
+        result["ok"] = False
+        result["error"] = diagnostic.get("summary") or msg
+        result["diagnostic_code"] = diagnostic.get("code", "")
+        return result
+
+    emit(f"Flash: local ST-Link GDB server ready at {ip}:{port} (pid {proc.pid})")
+    return result
 
 
 def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
@@ -212,15 +342,26 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
         strategies[1]["name"] = reset_strategy
 
     emit("Flash: BMDA via GDB (resilience ladder)")
-    if _is_local_host(ip) and port:
-        _ensure_local_stlink_gdb_server(probe_cfg, emit)
     ok = False
     strategy_used = ""
     last_error = ""
+    stlink_bootstrap = {"ok": True, "managed": False, "port_checked": False, "server_log_path": "", "error": "", "diagnostic_code": ""}
+    if _is_local_host(ip) and port:
+        stlink_bootstrap = _ensure_local_stlink_gdb_server(probe_cfg, emit, flash_log_path=flash_log_path)
+        if not stlink_bootstrap.get("ok", True):
+            last_error = stlink_bootstrap.get("error") or "local ST-Link GDB server startup failed"
 
     for idx, strat in enumerate(strategies, start=1):
-        if _is_local_host(ip) and port:
-            _ensure_local_stlink_gdb_server(probe_cfg, emit)
+        if last_error and not ok and stlink_bootstrap.get("port_checked") and not stlink_bootstrap.get("ok", True):
+            break
+        if stlink_bootstrap.get("port_checked") and not _port_is_listening(ip, port):
+            if stlink_bootstrap.get("managed"):
+                last_error = "local ST-Link GDB server stopped before flash attempt"
+                _emit_stlink_server_failure(emit, f"Flash: {last_error}", stlink_bootstrap.get("server_log_path", ""))
+            else:
+                last_error = f"local ST-Link GDB server unavailable at {ip}:{port}"
+                emit(f"Flash: {last_error}")
+            break
         try:
             res = _run_gdb(
                 gdb_cmd,

@@ -275,7 +275,17 @@ class _LoadAdapter:
                 )
                 ok = payload.get("status") == "ok"
         if not ok:
-            return {"ok": False, "error_summary": "load failed"}
+            error = payload.get("error", {}) if isinstance(payload, dict) else {}
+            details = error.get("details", {}) if isinstance(error, dict) else {}
+            result = {
+                "ok": False,
+                "error_summary": str(error.get("message") or "load failed"),
+            }
+            if "retryable" in error:
+                result["retryable"] = bool(error.get("retryable"))
+            if isinstance(details, dict) and details:
+                result["details"] = details
+            return result
         settle_s = 0.0
         try:
             settle_s = max(0.0, float(flash_cfg.get("post_load_settle_s", 0.0)))

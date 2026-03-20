@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any, Dict, Optional
 
 from ael.adapters import flash_bmda_gdbmi
@@ -26,6 +28,26 @@ def _native_error(code: str, message: str, *, retryable: bool = False, details: 
     if details:
         payload["error"]["details"] = details
     return payload
+
+
+def _flash_failure_details(flash_json_path: Optional[str]) -> Dict[str, Any]:
+    path = str(flash_json_path or "").strip()
+    if not path:
+        return {"retryable": True, "message": "control instrument firmware load failed", "details": {}}
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception:
+        return {"retryable": True, "message": "control instrument firmware load failed", "details": {}}
+    error_summary = str(payload.get("error_summary") or "").strip()
+    details = {}
+    if error_summary:
+        details["flash_error_summary"] = error_summary
+    retryable = True
+    low = error_summary.lower()
+    if "local st-link gdb server" in low or "st-link usb is busy" in low or "st-link usb timed out" in low or "no st-link device detected" in low or "multiple st-link devices detected" in low:
+        retryable = False
+    message = error_summary or "control instrument firmware load failed"
+    return {"retryable": retryable, "message": message, "details": details}
 
 
 def native_interface_profile() -> Dict[str, Any]:
@@ -119,11 +141,13 @@ def program_firmware(
     ok = flash_bmda_gdbmi.run(probe_cfg, firmware_path, flash_cfg=flash_cfg or {}, flash_json_path=flash_json_path)
     if ok:
         return _native_ok({"firmware_path": firmware_path})
+    failure = _flash_failure_details(flash_json_path)
+    details = {"firmware_path": firmware_path, **failure.get("details", {})}
     return _native_error(
         "control_program_failed",
-        "control instrument firmware load failed",
-        retryable=True,
-        details={"firmware_path": firmware_path},
+        str(failure.get("message") or "control instrument firmware load failed"),
+        retryable=bool(failure.get("retryable", True)),
+        details=details,
     )
 
 
