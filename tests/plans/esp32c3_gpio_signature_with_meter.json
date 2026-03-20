@@ -1,7 +1,13 @@
 {
+  "schema_version": "1.0",
   "name": "esp32c3_gpio_signature_with_meter",
+  "test_kind": "instrument_specific",
   "board": "esp32c3_devkit",
   "dut": "esp32c3_devkit",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": true},
+  "labels": ["meter", "instrument_path"],
+  "covers": ["gpio", "voltage"],
   "firmware": "assets_golden/duts/esp32c3_devkit/gpio_signature/firmware",
   "preflight": {
     "enabled": false

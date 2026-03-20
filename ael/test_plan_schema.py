@@ -13,6 +13,35 @@ KNOWN_REQUIRES_KEYS = {
     "mailbox",
     "datacapture",
 }
+KNOWN_LABELS = {
+    "cross_instrument",
+    "instrument_path",
+    "mailbox",
+    "meter",
+    "minimal_runtime",
+    "portable",
+    "selfcheck",
+    "selftest",
+    "selftest_only",
+}
+KNOWN_COVERS = {
+    "adc",
+    "dac",
+    "exti",
+    "gpio",
+    "loopback",
+    "mailbox",
+    "measure",
+    "pwm",
+    "runtime_gate",
+    "spi",
+    "stim",
+    "timer",
+    "timing",
+    "uart",
+    "voltage",
+    "wiring",
+}
 
 
 def extract_plan_metadata(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -61,8 +90,8 @@ def validate_plan_metadata(payload: Dict[str, Any], *, schema_version: str | Non
             errors.append(f"unknown test_kind: {test_kind}")
 
     _validate_string_list(payload, "supported_instruments", errors)
-    _validate_string_list(payload, "labels", errors)
-    _validate_string_list(payload, "covers", errors)
+    _validate_string_list(payload, "labels", errors, allowed_values=KNOWN_LABELS)
+    _validate_string_list(payload, "covers", errors, allowed_values=KNOWN_COVERS)
 
     if "requires" in payload:
         requires = payload.get("requires")
@@ -101,7 +130,13 @@ def _copy_dict(value: Any) -> Dict[str, Any] | None:
     return dict(value)
 
 
-def _validate_string_list(payload: Dict[str, Any], field: str, errors: List[str]) -> None:
+def _validate_string_list(
+    payload: Dict[str, Any],
+    field: str,
+    errors: List[str],
+    *,
+    allowed_values: set[str] | None = None,
+) -> None:
     if field not in payload:
         return
     value = payload.get(field)
@@ -112,3 +147,5 @@ def _validate_string_list(payload: Dict[str, Any], field: str, errors: List[str]
         if not isinstance(item, str) or not item.strip():
             errors.append(f"{field} must be a list of non-empty strings")
             return
+        if allowed_values is not None and item not in allowed_values:
+            errors.append(f"unknown {field} value: {item}")

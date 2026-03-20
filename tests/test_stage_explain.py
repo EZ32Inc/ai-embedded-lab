@@ -61,7 +61,19 @@ def test_explain_preflight_for_meter_disabled_path():
     assert payload['ok'] is True
     assert payload['stage'] == 'pre-flight'
     assert payload['enabled'] is False
+    assert 'instrument-side measurement path' in payload['schema_advisories']
+    assert 'selected instrument type esp32_meter is declared supported' in payload['schema_advisories']
     assert payload['reason_if_skipped'] == 'pre-flight disabled by configuration'
+
+
+def test_explain_preflight_renders_schema_advisories_for_meter_path():
+    payload = stage_explain.explain_stage('esp32c6_devkit', 'tests/plans/esp32c6_gpio_signature_with_meter.json', 'pre-flight', REPO_ROOT)
+
+    text = stage_explain.render_text(payload)
+
+    assert 'schema_advisories:' in text
+    assert 'instrument-side measurement path' in text
+    assert 'selected instrument type esp32_meter is declared supported' in text
 
 
 def test_explain_check_for_meter_path_includes_uart_and_instrument():
@@ -114,12 +126,15 @@ def test_explain_plan_surfaces_structured_test_metadata_for_mailbox_plan():
     assert payload['selected']['covers'] == ['uart']
     assert payload['selected']['verification_mode_summary'] == 'bare-metal mailbox verification'
     assert payload['selected']['requires_summary'] == 'requires mailbox-backed DUT result path'
+    assert payload['selected']['supported_instrument_advisory']['status'] == 'declared_supported'
+    assert payload['selected']['supported_instrument_advisory']['selected_instrument_type'] == 'esp32jtag'
     assert payload['selected']['test_validation_errors'] == []
     text = stage_explain.render_text(payload)
     assert 'plan_schema_kind: structured' in text
     assert 'schema_version: 1.0' in text
     assert 'test_kind: baremetal_mailbox' in text
     assert 'supported_instruments: stlink, esp32jtag' in text
+    assert 'selected instrument type esp32jtag is declared supported' in text
     assert "requires: {'mailbox': True, 'datacapture': False}" in text
 
 
@@ -136,6 +151,8 @@ def test_explain_plan_surfaces_instrument_specific_metadata_for_meter_plan():
     assert payload['selected']['covers'] == ['gpio', 'voltage']
     assert payload['selected']['verification_mode_summary'] == 'instrument-side measurement path'
     assert payload['selected']['requires_summary'] == 'requires instrument-side measurement and no mailbox dependency'
+    assert payload['selected']['supported_instrument_advisory']['status'] == 'declared_supported'
+    assert payload['selected']['supported_instrument_advisory']['selected_instrument_type'] == 'esp32_meter'
     text = stage_explain.render_text(payload)
     assert 'test_kind: instrument_specific' in text
     assert 'supported_instruments: esp32_meter' in text
@@ -154,6 +171,8 @@ def test_explain_plan_for_instrument_owned_selftest():
     assert payload['selected']['plan_schema_kind'] == 'structured'
     assert payload['selected']['test_kind'] == 'instrument_specific'
     assert payload['selected']['supported_instruments'] == ['esp32_meter']
+    assert payload['selected']['supported_instrument_advisory']['status'] == 'declared_supported'
+    assert payload['selected']['supported_instrument_advisory']['selected_instrument_type'] == 'esp32_meter'
     assert payload['selected']['selected_bench_resources']['instrument']['id'] == 'esp32s3_dev_c_meter'
     assert payload['selected']['control_instrument_selection'] is None
     text = stage_explain.render_text(payload)

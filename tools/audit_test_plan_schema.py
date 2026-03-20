@@ -32,12 +32,14 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
     structured_ready: List[str] = []
     missing_required_metadata: List[str] = []
     family_summary: Dict[str, Dict[str, int]] = {}
+    test_kind_summary: Dict[str, int] = {}
 
     for path in sorted(plans_dir.glob("*.json")):
         payload = json.loads(path.read_text(encoding="utf-8"))
         metadata = extract_plan_metadata(payload)
         family = _family_key(payload, path)
         schema_version = metadata.get("schema_version") or "legacy"
+        test_kind = str(metadata.get("test_kind") or "").strip() or None
         validation_errors = list(metadata.get("validation_errors") or [])
         has_mailbox = isinstance(payload.get("mailbox_verify"), dict)
         missing_core = []
@@ -65,6 +67,7 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
         else:
             structured_count += 1
             family_entry["structured_count"] += 1
+            test_kind_summary[test_kind or "structured_unspecified"] = test_kind_summary.get(test_kind or "structured_unspecified", 0) + 1
             if validation_errors:
                 invalid_structured.append(path.relative_to(repo_root).as_posix())
                 family_entry["invalid_structured_count"] += 1
@@ -88,9 +91,23 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
             }
         )
 
+    structured_share = (structured_count / len(plans)) if plans else 0.0
+    readiness = {
+        "status": (
+            "ready"
+            if not invalid_structured and not legacy_mailbox_candidates and not missing_required_metadata
+            else "needs_attention"
+        ),
+        "structured_share": round(structured_share, 3),
+        "invalid_structured_zero": not invalid_structured,
+        "legacy_mailbox_zero": not legacy_mailbox_candidates,
+        "missing_required_metadata_zero": not missing_required_metadata,
+    }
+
     return {
         "ok": True,
         "repo_root": str(repo_root),
+        "readiness": readiness,
         "summary": {
             "plan_count": len(plans),
             "structured_count": structured_count,
@@ -107,6 +124,7 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
             "invalid_structured": invalid_structured,
             "missing_required_metadata": missing_required_metadata,
         },
+        "test_kind_summary": dict(sorted(test_kind_summary.items())),
         "family_summary": dict(sorted(family_summary.items())),
         "plans": plans,
     }
@@ -114,8 +132,15 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
 
 def render_text(report: Dict[str, Any]) -> str:
     summary = report.get("summary") or {}
+    readiness = report.get("readiness") or {}
     lines = [
         "Test plan schema audit",
+        f"readiness_status: {readiness.get('status')}",
+        f"structured_share: {readiness.get('structured_share', 0.0)}",
+        f"invalid_structured_zero: {readiness.get('invalid_structured_zero')}",
+        f"legacy_mailbox_zero: {readiness.get('legacy_mailbox_zero')}",
+        f"missing_required_metadata_zero: {readiness.get('missing_required_metadata_zero')}",
+        "",
         f"plan_count: {summary.get('plan_count', 0)}",
         f"structured_count: {summary.get('structured_count', 0)}",
         f"legacy_count: {summary.get('legacy_count', 0)}",
@@ -130,6 +155,11 @@ def render_text(report: Dict[str, Any]) -> str:
     lines.append("migration:")
     for key in ("structured_ready", "legacy_mailbox_candidates", "invalid_structured", "missing_required_metadata"):
         lines.append(f"  {key}: {len(migration.get(key) or [])}")
+    lines.append("")
+    test_kind_summary = report.get("test_kind_summary") or {}
+    lines.append("test_kind_summary:")
+    for test_kind, count in test_kind_summary.items():
+        lines.append(f"  {test_kind}: {count}")
     lines.append("")
     family_summary = report.get("family_summary") or {}
     lines.append("family_summary:")

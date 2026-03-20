@@ -24,6 +24,7 @@ from ael.strategy_resolver import (
     resolve_run_strategy,
 )
 from ael.test_plan_schema import extract_plan_metadata
+from ael.instruments.registry import InstrumentRegistry
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -47,6 +48,61 @@ def _metadata_explanation(metadata: Dict[str, Any]) -> Dict[str, str | None]:
         "verification_mode_summary": None,
         "requires_summary": None,
     }
+
+
+def _supported_instrument_advisory(
+    supported_instruments: List[str] | None,
+    *,
+    selected_instrument_id: str | None,
+    selected_instrument_type: str | None,
+) -> Dict[str, Any] | None:
+    declared = [item for item in (supported_instruments or []) if isinstance(item, str) and item.strip()]
+    if not declared:
+        return None
+    if not selected_instrument_type:
+        return {
+            "status": "selection_unresolved",
+            "selected_instrument_id": selected_instrument_id,
+            "selected_instrument_type": None,
+            "declared_supported_instruments": declared,
+            "summary": "supported instruments declared, but no selected instrument type was resolved",
+        }
+    status = "declared_supported" if selected_instrument_type in declared else "declared_unsupported"
+    summary = (
+        f"selected instrument type {selected_instrument_type} is declared supported"
+        if status == "declared_supported"
+        else f"selected instrument type {selected_instrument_type} is not in declared support set"
+    )
+    return {
+        "status": status,
+        "selected_instrument_id": selected_instrument_id,
+        "selected_instrument_type": selected_instrument_type,
+        "declared_supported_instruments": declared,
+        "summary": summary,
+    }
+
+
+def _resolved_schema_advisories(ctx: Dict[str, Any]) -> List[str]:
+    resolved = ctx["resolved"]
+    metadata = extract_plan_metadata(ctx["test_raw"])
+    selected_instrument_id = ctx.get("probe_instance_id") or resolved.instrument_id
+    selected_instrument_type = ctx.get("probe_type")
+    if not selected_instrument_type and resolved.instrument_id:
+        selected_instrument_type = _load_instrument_instance_type(REPO_ROOT, resolved.instrument_id) or (InstrumentRegistry().get(resolved.instrument_id) or {}).get("type")
+    advisory = _supported_instrument_advisory(
+        metadata.get("supported_instruments"),
+        selected_instrument_id=selected_instrument_id,
+        selected_instrument_type=selected_instrument_type,
+    )
+    items: List[str] = []
+    explanation = _metadata_explanation(metadata)
+    if explanation.get("verification_mode_summary"):
+        items.append(str(explanation.get("verification_mode_summary")))
+    if explanation.get("requires_summary"):
+        items.append(str(explanation.get("requires_summary")))
+    if isinstance(advisory, dict) and advisory.get("summary"):
+        items.append(str(advisory.get("summary")))
+    return items
 
 
 def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
@@ -161,6 +217,21 @@ def _abs(root: Path, path: str) -> Path:
     return p if p.is_absolute() else root / p
 
 
+def _load_instrument_instance_type(repo_root: Path, instrument_id: str | None) -> str | None:
+    instance_id = str(instrument_id or "").strip()
+    if not instance_id:
+        return None
+    path = repo_root / "configs" / "instrument_instances" / f"{instance_id}.yaml"
+    if not path.exists():
+        return None
+    raw = _simple_yaml_load(str(path))
+    instance = raw.get("instance", {}) if isinstance(raw, dict) else {}
+    if not isinstance(instance, dict):
+        return None
+    type_id = str(instance.get("type") or raw.get("type") or "").strip()
+    return type_id or None
+
+
 def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, Any]:
     board_path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
     test_file = _abs(repo_root, test_path)
@@ -219,6 +290,15 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     test_raw = ctx["test_raw"]
     metadata = extract_plan_metadata(test_raw)
     explanation = _metadata_explanation(metadata)
+    selected_instrument_id = ctx.get("probe_instance_id") or resolved.instrument_id
+    selected_instrument_type = ctx.get("probe_type")
+    if not selected_instrument_type and resolved.instrument_id:
+        selected_instrument_type = _load_instrument_instance_type(REPO_ROOT, resolved.instrument_id) or (InstrumentRegistry().get(resolved.instrument_id) or {}).get("type")
+    supported_instrument_advisory = _supported_instrument_advisory(
+        metadata.get("supported_instruments"),
+        selected_instrument_id=selected_instrument_id,
+        selected_instrument_type=selected_instrument_type,
+    )
     build_kind, known_firmware_path, _build_step = resolve_build_stage(
         board_cfg=board_cfg,
         verify_only=False,
@@ -302,6 +382,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "covers": metadata.get("covers"),
             "verification_mode_summary": explanation.get("verification_mode_summary"),
             "requires_summary": explanation.get("requires_summary"),
+            "supported_instrument_advisory": supported_instrument_advisory,
             "test_validation_errors": list(metadata.get("validation_errors") or []),
             "control_instrument_selection": _control_instrument_selection(ctx),
             "control_instrument": ctx["probe_path"],
@@ -347,6 +428,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
 
 def _preflight_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
+    schema_advisories = _resolved_schema_advisories(ctx)
     step = build_preflight_step(ctx["test_raw"], normalize_probe_cfg(ctx["probe_raw"]), out_json="<preflight_json>", output_mode="quiet", log_path="<preflight_log>")
     enabled = step is not None
     checks: List[str] = []
@@ -381,6 +463,7 @@ def _preflight_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
         "checks": checks,
         "confirms": confirms,
         "does_not_confirm": does_not_confirm,
+        "schema_advisories": schema_advisories,
         "reason_if_skipped": "pre-flight disabled by configuration" if not enabled else None,
         "wiring_assumptions": resolved.wiring_cfg,
         "connection_setup": build_connection_setup(resolved.connection_ctx),
@@ -533,6 +616,10 @@ def render_text(payload: Dict[str, Any]) -> str:
         lines.append("checks:")
         for item in payload.get("checks") or []:
             lines.append(f"  - {json.dumps(item, sort_keys=True)}")
+    if payload.get("schema_advisories"):
+        lines.append("schema_advisories:")
+        for item in payload.get("schema_advisories") or []:
+            lines.append(f"  - {item}")
     if payload.get("includes"):
         lines.append("includes:")
         for item in payload.get("includes") or []:

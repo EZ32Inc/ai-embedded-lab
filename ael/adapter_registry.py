@@ -255,6 +255,7 @@ class _LoadAdapter:
         flash_json_path = inputs.get("flash_json_path")
         output_mode = inputs.get("output_mode", "normal")
         log_path = inputs.get("log_path")
+        payload = None
         if not firmware_path:
             state = _load_runtime_state(ctx)
             firmware_path = state.get("firmware_path")
@@ -263,9 +264,11 @@ class _LoadAdapter:
         if log_path and self.method == "idf_esptool":
             with _tee_output(log_path, output_mode):
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
+            payload = {"ok": bool(ok), "method": "idf_esptool"}
         else:
             if self.method == "idf_esptool":
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
+                payload = {"ok": bool(ok), "method": "idf_esptool"}
             else:
                 payload = native_api_dispatch.program_firmware(
                     probe_cfg,

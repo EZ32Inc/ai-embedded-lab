@@ -48,6 +48,38 @@ def _metadata_explanation(metadata: Dict[str, Any]) -> Dict[str, str | None]:
     }
 
 
+def _supported_instrument_advisory(
+    supported_instruments: List[str] | None,
+    *,
+    selected_instrument_id: str | None,
+    selected_instrument_type: str | None,
+) -> Dict[str, Any] | None:
+    declared = [item for item in (supported_instruments or []) if isinstance(item, str) and item.strip()]
+    if not declared:
+        return None
+    if not selected_instrument_type:
+        return {
+            "status": "selection_unresolved",
+            "selected_instrument_id": selected_instrument_id,
+            "selected_instrument_type": None,
+            "declared_supported_instruments": declared,
+            "summary": "supported instruments declared, but no selected instrument type was resolved",
+        }
+    status = "declared_supported" if selected_instrument_type in declared else "declared_unsupported"
+    summary = (
+        f"selected instrument type {selected_instrument_type} is declared supported"
+        if status == "declared_supported"
+        else f"selected instrument type {selected_instrument_type} is not in declared support set"
+    )
+    return {
+        "status": status,
+        "selected_instrument_id": selected_instrument_id,
+        "selected_instrument_type": selected_instrument_type,
+        "declared_supported_instruments": declared,
+        "summary": summary,
+    }
+
+
 def _load_json(path: Path) -> Dict[str, Any]:
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -62,6 +94,21 @@ def _load_board_cfg(repo_root: Path, board_id: str) -> Dict[str, Any]:
     raw = _simple_yaml_load(str(path))
     board = raw.get("board", {}) if isinstance(raw, dict) else {}
     return board if isinstance(board, dict) else {}
+
+
+def _load_instrument_instance_type(repo_root: Path, instrument_id: str | None) -> str | None:
+    instance_id = str(instrument_id or "").strip()
+    if not instance_id:
+        return None
+    path = repo_root / "configs" / "instrument_instances" / f"{instance_id}.yaml"
+    if not path.exists():
+        return None
+    raw = _simple_yaml_load(str(path))
+    instance = raw.get("instance", {}) if isinstance(raw, dict) else {}
+    if not isinstance(instance, dict):
+        return None
+    type_id = str(instance.get("type") or raw.get("type") or "").strip()
+    return type_id or None
 
 
 def _load_plan_index(repo_root: Path) -> Tuple[Dict[str, Dict[str, Any]], List[Dict[str, Any]]]:
@@ -156,6 +203,7 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
         return {
             "kind": "instrument",
             "id": inst.get("id"),
+            "type": _load_instrument_instance_type(root, str(inst.get("id") or "")) or manifest.get("type"),
             "endpoint": {
                 "host": tcp.get("host"),
                 "port": tcp.get("port"),
@@ -522,6 +570,11 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         required_wiring=["swd", "reset", "verify"],
     )
     selected_instrument = _primary_selected_instrument(_resolve_probe_or_instrument(root, board_id, payload))
+    supported_instrument_advisory = _supported_instrument_advisory(
+        metadata.get("supported_instruments"),
+        selected_instrument_id=selected_instrument.get("id"),
+        selected_instrument_type=selected_instrument.get("type"),
+    )
     connection_setup = build_connection_setup(connection_ctx)
     result = {
         "ok": True,
@@ -539,6 +592,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "covers": metadata.get("covers"),
             "verification_mode_summary": explanation.get("verification_mode_summary"),
             "requires_summary": explanation.get("requires_summary"),
+            "supported_instrument_advisory": supported_instrument_advisory,
             "validation_errors": list(metadata.get("validation_errors") or []),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
@@ -641,6 +695,8 @@ def render_describe_text(payload: Dict[str, Any]) -> str:
         lines.append(f"verification_mode_summary: {test.get('verification_mode_summary')}")
     if test.get("requires_summary"):
         lines.append(f"requires_summary: {test.get('requires_summary')}")
+    if isinstance(test.get("supported_instrument_advisory"), dict):
+        lines.append(f"supported_instrument_advisory: {test.get('supported_instrument_advisory', {}).get('summary')}")
     if test.get("validation_errors"):
         lines.append("test_validation_errors:")
         for item in test.get("validation_errors") or []:

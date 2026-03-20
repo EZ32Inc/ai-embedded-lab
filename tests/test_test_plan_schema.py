@@ -100,3 +100,29 @@ def test_extract_plan_metadata_rejects_unknown_requires_key():
     )
 
     assert "unknown requires key: uart_console" in metadata["validation_errors"]
+
+
+def test_extract_plan_metadata_rejects_unknown_label_value():
+    metadata = extract_plan_metadata(
+        {
+            "schema_version": "1.0",
+            "name": "broken_plan",
+            "test_kind": "baremetal_mailbox",
+            "labels": ["mailbox", "unexpected_label"],
+        }
+    )
+
+    assert "unknown labels value: unexpected_label" in metadata["validation_errors"]
+
+
+def test_extract_plan_metadata_rejects_unknown_cover_value():
+    metadata = extract_plan_metadata(
+        {
+            "schema_version": "1.0",
+            "name": "broken_plan",
+            "test_kind": "instrument_specific",
+            "covers": ["gpio", "banana"],
+        }
+    )
+
+    assert "unknown covers value: banana" in metadata["validation_errors"]

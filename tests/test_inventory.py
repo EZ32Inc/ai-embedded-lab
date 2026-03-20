@@ -323,6 +323,8 @@ def test_describe_test_surfaces_structured_plan_metadata():
     assert test["covers"] == ["uart"]
     assert test["verification_mode_summary"] == "bare-metal mailbox verification"
     assert test["requires_summary"] == "requires mailbox-backed DUT result path"
+    assert test["supported_instrument_advisory"]["status"] == "declared_supported"
+    assert test["supported_instrument_advisory"]["selected_instrument_type"] == "esp32jtag"
     assert test["validation_errors"] == []
     rendered = inventory.render_describe_text(payload)
     assert "plan_schema_kind: structured" in rendered
@@ -331,6 +333,7 @@ def test_describe_test_surfaces_structured_plan_metadata():
     assert "supported_instruments: stlink, esp32jtag" in rendered
     assert 'requires: {"datacapture": false, "mailbox": true}' in rendered
     assert "verification_mode_summary: bare-metal mailbox verification" in rendered
+    assert "supported_instrument_advisory: selected instrument type esp32jtag is declared supported" in rendered
 
 
 def test_describe_test_surfaces_instrument_specific_metadata():
@@ -346,6 +349,8 @@ def test_describe_test_surfaces_instrument_specific_metadata():
     assert test["covers"] == ["gpio", "voltage"]
     assert test["verification_mode_summary"] == "instrument-side measurement path"
     assert test["requires_summary"] == "requires instrument-side measurement and no mailbox dependency"
+    assert test["supported_instrument_advisory"]["status"] == "declared_supported"
+    assert test["supported_instrument_advisory"]["selected_instrument_type"] == "esp32_meter"
     assert test["validation_errors"] == []
 
 
@@ -361,6 +366,8 @@ def test_describe_test_surfaces_instrument_selftest_metadata():
     assert test["labels"] == ["meter", "selftest"]
     assert test["covers"] == ["stim", "measure", "loopback"]
     assert test["verification_mode_summary"] == "instrument-side measurement path"
+    assert test["supported_instrument_advisory"]["status"] == "declared_supported"
+    assert test["supported_instrument_advisory"]["selected_instrument_type"] == "esp32_meter"
     assert test["validation_errors"] == []
 
 
