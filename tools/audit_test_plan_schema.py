@@ -105,11 +105,36 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
         "legacy_mailbox_zero": not legacy_mailbox_candidates,
         "missing_required_metadata_zero": not missing_required_metadata,
     }
+    review_status = "aligned"
+    if invalid_structured or missing_required_metadata:
+        review_status = "warnings_present"
+    elif legacy_count:
+        review_status = "partial_structured_coverage"
+    warning_messages: List[str] = []
+    if invalid_structured:
+        warning_messages.append(f"invalid structured plans present ({len(invalid_structured)})")
+    if missing_required_metadata:
+        warning_messages.append(f"missing required metadata present ({len(missing_required_metadata)})")
+    if legacy_mailbox_candidates:
+        warning_messages.append(f"legacy mailbox candidates present ({len(legacy_mailbox_candidates)})")
+    schema_review = {
+        "status": review_status,
+        "structured_coverage": {
+            "structured_count": structured_count,
+            "legacy_count": legacy_count,
+        },
+        "test_kind_distribution": dict(sorted(test_kind_summary.items())),
+        "warning_summary": {
+            "count": len(warning_messages),
+            "messages": warning_messages,
+        },
+    }
 
     return {
         "ok": True,
         "repo_root": str(repo_root),
         "readiness": readiness,
+        "schema_review": schema_review,
         "summary": {
             "plan_count": len(plans),
             "structured_count": structured_count,
@@ -135,9 +160,11 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
 def render_text(report: Dict[str, Any]) -> str:
     summary = report.get("summary") or {}
     readiness = report.get("readiness") or {}
+    schema_review = report.get("schema_review") or {}
     lines = [
         "Test plan schema audit",
         f"readiness_status: {readiness.get('status')}",
+        f"schema_review_status: {schema_review.get('status')}",
         f"structured_share: {readiness.get('structured_share', 0.0)}",
         f"invalid_structured_zero: {readiness.get('invalid_structured_zero')}",
         f"legacy_mailbox_zero: {readiness.get('legacy_mailbox_zero')}",
@@ -153,6 +180,16 @@ def render_text(report: Dict[str, Any]) -> str:
         f"missing_required_metadata_count: {summary.get('missing_required_metadata_count', 0)}",
         "",
     ]
+    lines.append("schema_review:")
+    coverage = schema_review.get("structured_coverage") or {}
+    lines.append(
+        f"  structured_coverage: structured={coverage.get('structured_count', 0)} legacy={coverage.get('legacy_count', 0)}"
+    )
+    warning_summary = schema_review.get("warning_summary") or {}
+    lines.append(f"  warning_summary: {warning_summary.get('count', 0)}")
+    for item in warning_summary.get("messages") or []:
+        lines.append(f"    - {item}")
+    lines.append("")
     migration = report.get("migration") or {}
     lines.append("migration:")
     for key in ("structured_ready", "legacy_mailbox_candidates", "invalid_structured", "missing_required_metadata"):

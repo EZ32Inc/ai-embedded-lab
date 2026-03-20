@@ -37,6 +37,9 @@ def test_audit_test_plan_schema_counts_structured_and_legacy_plans():
     assert report["summary"]["invalid_structured_count"] == 0
     assert report["readiness"]["status"] in {"ready", "needs_attention"}
     assert report["readiness"]["invalid_structured_zero"] is True
+    assert report["schema_review"]["status"] in {"aligned", "partial_structured_coverage", "warnings_present"}
+    assert report["schema_review"]["structured_coverage"]["structured_count"] == report["summary"]["structured_count"]
+    assert report["schema_review"]["structured_coverage"]["legacy_count"] == report["summary"]["legacy_count"]
     assert "test_kind_summary" in report
     assert report["test_kind_summary"]["baremetal_mailbox"] >= 1
     assert report["test_kind_summary"]["instrument_specific"] >= 1
@@ -52,6 +55,10 @@ def test_audit_test_plan_schema_renders_text_summary():
 
     assert "Test plan schema audit" in text
     assert "readiness_status:" in text
+    assert "schema_review_status:" in text
+    assert "schema_review:" in text
+    assert "structured_coverage: structured=" in text
+    assert "warning_summary:" in text
     assert "test_kind_summary:" in text
     assert "structured_count:" in text
     assert "legacy_count:" in text

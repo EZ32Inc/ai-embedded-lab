@@ -11,6 +11,7 @@ from unittest.mock import patch
 from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
 from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
+from tools.audit_test_plan_schema import build_report
 
 
 def test_worker_logs_failure_summary_details():
@@ -1213,6 +1214,38 @@ def test_verify_default_review_cli_outputs_compact_summary(tmp_path):
     assert "schema_review_status: aligned" in res.stdout
     assert "structured_coverage: structured=1 legacy=0" in res.stdout
     assert "warning_summary: none" in res.stdout
+
+
+def test_audit_and_verify_default_surfaces_use_consistent_review_vocabulary(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    state = _verify_default_state(str(setting_path), str(runs_root))
+    review_text = _render_verify_default_review_text(state)
+    audit_report = build_report(REPO_ROOT)
+
+    assert "schema_review_status" in state
+    assert "structured_coverage:" in review_text
+    assert "warning_summary:" in review_text
+    assert "schema_review" in audit_report
+    assert "status" in audit_report["schema_review"]
+    assert "structured_coverage" in audit_report["schema_review"]
+    assert "warning_summary" in audit_report["schema_review"]
 
 
 def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
