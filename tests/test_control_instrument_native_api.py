@@ -7,9 +7,12 @@ def test_control_identify_and_capabilities():
     probe_cfg = {"name": "ESP32JTAG", "ip": "192.168.2.98", "gdb_port": 4242, "web_api_protocol": "esp32jtag_web_api_v1"}
     profile = control_instrument_native_api.native_interface_profile()
     assert profile["protocol"] == control_instrument_native_api.NATIVE_API_PROTOCOL
+    assert profile["role"] == "instrument_backend_legacy"
+    assert profile["legacy_backend"] is True
     ident = control_instrument_native_api.identify(probe_cfg)
     assert ident["status"] == "ok"
     assert ident["data"]["endpoint"] == "192.168.2.98:4242"
+    assert ident["data"]["legacy_backend"] is True
     caps = control_instrument_native_api.get_capabilities(probe_cfg)
     assert caps["status"] == "ok"
     assert "capture.signature" in caps["data"]["capabilities"]

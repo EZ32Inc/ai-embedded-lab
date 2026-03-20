@@ -52,9 +52,10 @@ def _flash_failure_details(flash_json_path: Optional[str]) -> Dict[str, Any]:
 
 def native_interface_profile() -> Dict[str, Any]:
     return {
-        "name": "Local Instrument Interface",
+        "name": "Legacy Control Instrument Backend",
         "protocol": NATIVE_API_PROTOCOL,
-        "role": "instrument_native_api",
+        "role": "instrument_backend_legacy",
+        "legacy_backend": True,
         "metadata_commands": ["identify", "get_capabilities", "get_status", "doctor"],
         "action_commands": ["preflight_probe", "program_firmware", "capture_signature", "observe_gpio"],
         "response_model": {
@@ -71,6 +72,7 @@ def identify(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
     return _native_ok(
         {
             "device_type": "control_instrument",
+            "legacy_backend": True,
             "model": str(probe_cfg.get("name") or "ESP32JTAG"),
             "protocol_version": NATIVE_API_PROTOCOL,
             "endpoint": f"{probe_cfg.get('ip', 'unknown')}:{probe_cfg.get('gdb_port', 'unknown')}",
