@@ -1,10 +1,14 @@
 import json
+import os
+import subprocess
+import sys
 import time
 import threading
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from ael.__main__ import _render_verify_default_state_text, _verify_default_state
 from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
 
@@ -839,6 +843,44 @@ def test_serial_default_verification_surfaces_schema_advisory_summary(tmp_path):
     }
 
 
+def test_serial_default_verification_prints_schema_warning_overview(tmp_path, capsys):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "serial"},
+        "steps": [
+            {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+            {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+        ],
+    }
+
+    with patch(
+        "ael.default_verification._run_step_action",
+        side_effect=[
+            (
+                2,
+                {
+                    "ok": False,
+                    "plan_schema_kind": "structured",
+                    "test_kind": "instrument_specific",
+                    "supported_instrument_advisory": {"status": "declared_unsupported"},
+                    "schema_warning_messages": [
+                        "selected instrument type esp32_meter is not in declared support set"
+                    ],
+                },
+            ),
+            (0, {"ok": True, "plan_schema_kind": "legacy"}),
+        ],
+    ):
+        code, payload = default_verification.run_default_setting(path=_write_setting(tmp_path, setting))
+
+    out = capsys.readouterr().out
+    assert code == 2
+    assert payload["schema_advisory_summary"]["supported_instrument_status_counts"] == {"declared_unsupported": 1}
+    assert "default_verification: schema warnings present" in out
+    assert "default_verification: schema warning - selected instrument type esp32_meter is not in declared support set" in out
+
+
 def test_parallel_repeat_until_fail_surfaces_schema_advisory_summary(tmp_path):
     setting = {
         "version": 1,
@@ -907,6 +949,294 @@ def test_parallel_repeat_until_fail_surfaces_schema_advisory_summary(tmp_path):
         "warning_messages": ["selected instrument type esp32_meter is not in declared support set"],
         "instrument_specific_steps": ["esp32c6_uart_banner"],
     }
+
+
+def test_parallel_repeat_until_fail_summary_handles_mixed_supported_and_unsupported(tmp_path):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "parallel"},
+        "steps": [
+            {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+            {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_spi_banner.json"},
+        ],
+    }
+    cfg_path = _write_setting(tmp_path, setting)
+
+    def fake_worker(repo_root, task, output_mode, max_iterations, stop_after_failure, log_lock):
+        status = "declared_supported" if task.name == "esp32c6_spi_banner" else "declared_unsupported"
+        warnings = [] if status == "declared_supported" else ["selected instrument type esp32_meter is not in declared support set"]
+        payload = {
+            "name": task.name,
+            "board": task.board,
+            "requested_iterations": max_iterations,
+            "completed_iterations": 1,
+            "pass_count": 1 if status == "declared_supported" else 0,
+            "fail_count": 0 if status == "declared_supported" else 1,
+            "ok": status == "declared_supported",
+            "results": [
+                {
+                    "name": task.name,
+                    "board": task.board,
+                    "iteration": 1,
+                    "code": 0 if status == "declared_supported" else 2,
+                    "ok": status == "declared_supported",
+                    "result": {
+                        "ok": status == "declared_supported",
+                        "plan_schema_kind": "structured",
+                        "test_kind": "instrument_specific",
+                        "supported_instrument_advisory": {"status": status},
+                        "schema_warning_messages": warnings,
+                    },
+                }
+            ],
+        }
+        return SimpleNamespace(run=lambda: SimpleNamespace(to_dict=lambda: payload))
+
+    with patch("ael.default_verification._worker_for_task", side_effect=fake_worker):
+        code, payload = default_verification.run_until_fail(limit=1, path=cfg_path)
+
+    assert code == 2
+    assert payload["schema_advisory_summary"] == {
+        "structured_step_count": 2,
+        "legacy_step_count": 0,
+        "test_kind_counts": {"instrument_specific": 2},
+        "supported_instrument_status_counts": {"declared_supported": 1, "declared_unsupported": 1},
+        "warning_messages": ["selected instrument type esp32_meter is not in declared support set"],
+        "instrument_specific_steps": ["esp32c6_spi_banner", "esp32c6_uart_banner"],
+    }
+
+
+def test_verify_default_state_surfaces_schema_advisory_summary(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                    {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(
+        json.dumps(
+            {
+                "ok": True,
+                "results": [
+                    {
+                        "name": "esp32c6_uart_banner",
+                        "ok": True,
+                        "result": {
+                            "plan_schema_kind": "structured",
+                            "test_kind": "instrument_specific",
+                            "supported_instrument_advisory": {"status": "declared_supported"},
+                            "schema_warning_messages": [],
+                        },
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    bad = runs_root / "2026-03-19_21-58-00_rp2040_pico_rp2040_gpio_signature"
+    bad.mkdir(parents=True)
+    (bad / "result.json").write_text(json.dumps({"ok": False, "error_summary": "old failure", "results": []}), encoding="utf-8")
+
+    payload = _verify_default_state(str(setting_path), str(runs_root))
+
+    assert payload["schema_advisory_summary"] == {
+        "structured_step_count": 1,
+        "legacy_step_count": 1,
+        "test_kind_counts": {"instrument_specific": 1},
+        "supported_instrument_status_counts": {"declared_supported": 1},
+        "warning_messages": [],
+        "instrument_specific_steps": ["esp32c6_uart_banner"],
+    }
+    assert payload["schema_review_status"] == "partial_structured_coverage"
+    assert payload["schema_warning_messages"] == []
+
+
+def test_verify_default_state_prefers_schema_warning_next_action(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    with patch(
+        "ael.__main__.inventory_view.describe_test",
+        return_value={
+            "ok": True,
+            "test": {
+                "schema_version": "1.0",
+                "test_kind": "instrument_specific",
+                "supported_instrument_advisory": {
+                    "status": "declared_unsupported",
+                    "summary": "selected instrument type esp32_meter is not in declared support set",
+                },
+            },
+        },
+    ):
+        payload = _verify_default_state(str(setting_path), str(runs_root))
+
+    assert payload["health_status"] == "pass"
+    assert payload["schema_review_status"] == "warnings_present"
+    assert payload["schema_warning_messages"] == ["selected instrument type esp32_meter is not in declared support set"]
+    assert payload["next_recommended_action"] == "all steps passing, but review instrument support declarations and schema warnings"
+
+
+def test_render_verify_default_state_text_includes_schema_summary():
+    text = _render_verify_default_state_text(
+        {
+            "name": "Default Verification",
+            "type": "system_baseline",
+            "health_status": "pass",
+            "configured_steps": 2,
+            "current_blocker": "",
+            "next_recommended_action": "all steps passing, but review instrument support declarations and schema warnings",
+            "last_successful_run": {"step": "esp32c6_devkit/esp32c6_uart_banner", "run_id": "run123"},
+            "state_basis": "last_known_run_results",
+            "schema_advisory_summary": {
+                "structured_step_count": 1,
+                "legacy_step_count": 1,
+                "test_kind_counts": {"instrument_specific": 1},
+                "supported_instrument_status_counts": {"declared_unsupported": 1},
+                "warning_messages": ["selected instrument type esp32_meter is not in declared support set"],
+                "instrument_specific_steps": ["esp32c6_uart_banner"],
+            },
+            "validated_tests": [{"step": "esp32c6_devkit/esp32c6_uart_banner", "run_id": "run123"}],
+            "failing_tests": [],
+        }
+    )
+
+    assert "schema_advisory_summary:" in text
+    assert "schema_review_status: warnings_present" in text
+    assert "schema_review:" in text
+    assert "alignment: schema warnings present (1)" in text
+    assert "structured_step_count: 1" in text
+    assert "legacy_step_count: 1" in text
+    assert "test_kind_counts:" in text
+    assert "instrument_specific: 1" in text
+    assert "supported_instrument_status_counts:" in text
+    assert "declared_unsupported: 1" in text
+    assert "warning_messages:" in text
+    assert "selected instrument type esp32_meter is not in declared support set" in text
+
+
+def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ael",
+            "verify-default",
+            "state",
+            "--file",
+            str(setting_path),
+            "--runs-root",
+            str(runs_root),
+            "--format",
+            "text",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+
+    assert "schema_advisory_summary:" in res.stdout
+    assert "schema_review_status: aligned" in res.stdout
+    assert "schema_review:" in res.stdout
+    assert "structured_step_count: 1" in res.stdout
+    assert "supported_instrument_status_counts:" in res.stdout
+
+
+def test_verify_default_state_cli_json_includes_schema_summary(tmp_path):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    res = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "ael",
+            "verify-default",
+            "state",
+            "--file",
+            str(setting_path),
+            "--runs-root",
+            str(runs_root),
+            "--format",
+            "json",
+        ],
+        cwd=str(REPO_ROOT),
+        capture_output=True,
+        text=True,
+        env=env,
+        check=True,
+    )
+    payload = json.loads(res.stdout)
+
+    assert payload["schema_review_status"] == "aligned"
+    assert "schema_advisory_summary" in payload
+    assert payload["schema_advisory_summary"]["structured_step_count"] == 1
 
 
 def test_sequence_setting_materializes_suite_and_tasks():

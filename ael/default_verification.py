@@ -318,6 +318,18 @@ def _print_schema_advisory_summary(lock: threading.Lock, summary: Dict[str, Any]
     warnings = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
     if warnings:
         _log_line(lock, f"[SUMMARY] schema_warnings count={len(warnings)}")
+        _log_line(lock, "[SUMMARY] schema_warning_messages " + " | ".join(str(item) for item in warnings))
+
+
+def _print_schema_warning_overview(summary: Dict[str, Any]) -> None:
+    warnings = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+    if not warnings:
+        return
+    print("default_verification: schema warnings present")
+    for item in warnings:
+        text = str(item or "").strip()
+        if text:
+            print(f"default_verification: schema warning - {text}")
 
 
 def load_setting(path: str | None = None) -> Dict[str, Any]:
@@ -870,7 +882,7 @@ def _run_serial_suite_once(
                 if stop_on_fail:
                     break
 
-    return (0 if overall_ok else last_code or 1), {
+    payload = {
         "ok": overall_ok,
         "mode": "sequence",
         "suite": {"name": suite.name, "tasks": [task.name for task in suite.tasks]},
@@ -879,6 +891,8 @@ def _run_serial_suite_once(
         "results": results,
         "schema_advisory_summary": _summarize_schema_advisories(results),
     }
+    _print_schema_warning_overview(payload["schema_advisory_summary"])
+    return (0 if overall_ok else last_code or 1), payload
 
 
 def _run_parallel_repeat_until_fail(
@@ -980,14 +994,23 @@ def run_default_setting(
     if mode == "preflight_only":
         code, result = _run_preflight_only(repo_root, setting)
         results.append({"name": "preflight_only", "code": code, "ok": code == 0, "result": result})
-        return code, {"ok": code == 0, "mode": mode, "selected_dut_tests": [], "results": results}
+        payload = {"ok": code == 0, "mode": mode, "selected_dut_tests": [], "results": results}
+        return code, payload
 
     if mode == "single_run":
         code, result = _run_single(repo_root, setting, output_mode)
         selected_test = _canonical_test_name(_resolve_path(repo_root, setting.get("test")))
         print(f"default_verification: selected DUT tests: {selected_test}")
         results.append({"name": selected_test, "code": code, "ok": code == 0, "result": result})
-        return code, {"ok": code == 0, "mode": mode, "selected_dut_tests": [selected_test], "results": results}
+        payload = {
+            "ok": code == 0,
+            "mode": mode,
+            "selected_dut_tests": [selected_test],
+            "results": results,
+            "schema_advisory_summary": _summarize_schema_advisories(results),
+        }
+        _print_schema_warning_overview(payload["schema_advisory_summary"])
+        return code, payload
 
     if mode == "sequence":
         ok, error = _validate_sequence_steps(repo_root, setting)

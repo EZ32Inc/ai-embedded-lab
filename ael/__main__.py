@@ -19,6 +19,8 @@ from ael.config_resolver import (
 from ael.probe_binding import load_probe_binding
 from ael.default_verification import (
     DEFAULT_CONFIG_PATH as DEFAULT_VERIFY_CONFIG_PATH,
+    _schema_advisory_payload,
+    _summarize_schema_advisories,
     load_setting as load_default_verification_setting,
     preset_payload as default_verification_preset_payload,
     run_until_fail as run_default_until_fail,
@@ -32,6 +34,7 @@ from ael import inventory
 from ael import instrument_doctor
 from ael import instrument_view
 from ael import connection_doctor
+from ael import inventory as inventory_view
 from ael.pack_loader import load_pack
 from ael import stage_explain
 from tools.audit_test_plan_schema import build_report as build_test_plan_schema_report, render_text as render_test_plan_schema_report_text
@@ -823,26 +826,7 @@ def main():
         if args.verify_default_cmd == "state":
             state = _verify_default_state(args.file, args.runs_root)
             if args.format == "text":
-                print(f"name: {state['name']}")
-                print(f"type: {state['type']}")
-                print(f"health_status: {state['health_status']}")
-                print(f"configured_steps: {state['configured_steps']}")
-                print(f"current_blocker: {state['current_blocker'] or 'none'}")
-                print(f"next_recommended_action: {state['next_recommended_action']}")
-                if state["last_successful_run"]:
-                    r = state["last_successful_run"]
-                    print(f"last_successful_run: {r.get('step', '')} ({r.get('run_id', '')})")
-                print(f"state_basis: {state['state_basis']}")
-                if state["validated_tests"]:
-                    print("validated_tests:")
-                    for t in state["validated_tests"]:
-                        run_id = t.get("run_id") or "unknown"
-                        print(f"  - {t['step']} (run: {run_id})")
-                if state["failing_tests"]:
-                    print("failing_tests:")
-                    for t in state["failing_tests"]:
-                        run_id = t.get("run_id") or "no_run_found"
-                        print(f"  - {t['step']} (run: {run_id})")
+                print(_render_verify_default_state_text(state))
             else:
                 print(json.dumps(state, indent=2, sort_keys=True))
             health = state["health_status"]
@@ -1973,6 +1957,8 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     last_successful: dict = {}
     last_failure: dict = {}
     current_blocker = ""
+    schema_results: list[dict] = []
+    repo_root = Path(__file__).resolve().parents[1]
 
     for step in steps:
         if not isinstance(step, dict):
@@ -1985,6 +1971,29 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         # Derive test name from path: tests/plans/foo_bar.json -> foo_bar
         test_name = Path(test_path).stem
         step_label = f"{board}/{test_name}"
+
+        schema_result = None
+        try:
+            described = inventory_view.describe_test(board_id=board, test_path=test_path, repo_root=repo_root)
+        except Exception:
+            described = {}
+        if isinstance(described, dict) and described.get("ok"):
+            test_payload = described.get("test") if isinstance(described.get("test"), dict) else {}
+            schema_result = {
+                "plan_schema_kind": "structured" if test_payload.get("schema_version") not in (None, "", "legacy") else "legacy",
+                "schema_version": test_payload.get("schema_version"),
+                "test_kind": test_payload.get("test_kind"),
+                "supported_instrument_advisory": test_payload.get("supported_instrument_advisory") if isinstance(test_payload.get("supported_instrument_advisory"), dict) else None,
+                "schema_warning_messages": [
+                    str((test_payload.get("supported_instrument_advisory") or {}).get("summary") or "").strip()
+                ] if isinstance(test_payload.get("supported_instrument_advisory"), dict) and str((test_payload.get("supported_instrument_advisory") or {}).get("status") or "").strip() == "declared_unsupported" else [],
+            }
+        else:
+            fallback = _schema_advisory_payload(repo_root, board, test_path)
+            if isinstance(fallback, dict) and fallback:
+                schema_result = fallback
+        if isinstance(schema_result, dict):
+            schema_results.append({"name": test_name, "board": board, "result": schema_result})
 
         # Find matching run dirs sorted newest first
         if runs_dir.exists():
@@ -2052,6 +2061,14 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     elif health == "pass":
         next_action = "all steps passing — consider adding next board/test to suite"
 
+    schema_advisory_summary = _summarize_schema_advisories(schema_results)
+    schema_review_status = _schema_review_status(schema_advisory_summary)
+    schema_warning_messages = list(schema_advisory_summary.get("warning_messages") or [])
+    if schema_warning_messages and not current_blocker:
+        current_blocker = schema_warning_messages[0]
+    if schema_warning_messages and not failing:
+        next_action = "all steps passing, but review instrument support declarations and schema warnings"
+
     return {
         "name": "Default Verification",
         "type": "system_baseline",
@@ -2064,12 +2081,105 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         "validated_tests": validated,
         "failing_tests": failing,
         "optional_failing_tests": optional_failing,
+        "schema_review_status": schema_review_status,
+        "schema_advisory_summary": schema_advisory_summary,
+        "schema_warning_messages": schema_warning_messages,
         "next_recommended_action": next_action,
         "key_refs": [
             setting_file,
             "docs/default_verification_baseline.md",
         ],
     }
+
+
+def _render_verify_default_state_text(state: dict) -> str:
+    summary = state.get("schema_advisory_summary") if isinstance(state.get("schema_advisory_summary"), dict) else {}
+    schema_review_status = str(state.get("schema_review_status") or "").strip() or _schema_review_status(summary)
+    lines = [
+        f"name: {state['name']}",
+        f"type: {state['type']}",
+        f"health_status: {state['health_status']}",
+        f"schema_review_status: {schema_review_status}",
+        f"configured_steps: {state['configured_steps']}",
+        f"current_blocker: {state['current_blocker'] or 'none'}",
+        f"next_recommended_action: {state['next_recommended_action']}",
+    ]
+    if state["last_successful_run"]:
+        r = state["last_successful_run"]
+        lines.append(f"last_successful_run: {r.get('step', '')} ({r.get('run_id', '')})")
+    lines.append(f"state_basis: {state['state_basis']}")
+    if summary:
+        structured = int(summary.get("structured_step_count", 0))
+        legacy = int(summary.get("legacy_step_count", 0))
+        warnings = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+        status_counts = summary.get("supported_instrument_status_counts") if isinstance(summary.get("supported_instrument_status_counts"), dict) else {}
+        supported = int(status_counts.get("declared_supported", 0))
+        unsupported = int(status_counts.get("declared_unsupported", 0))
+        if structured and not legacy:
+            coverage = "full structured coverage"
+        elif structured:
+            coverage = "partial structured coverage"
+        else:
+            coverage = "no structured coverage"
+        if warnings:
+            alignment = f"schema warnings present ({len(warnings)})"
+        elif unsupported:
+            alignment = "instrument support declarations need review"
+        elif supported:
+            alignment = "instrument support declarations aligned"
+        else:
+            alignment = "no instrument support declaration signals"
+        lines.append("schema_review:")
+        lines.append(f"  coverage: {coverage}")
+        lines.append(f"  alignment: {alignment}")
+    if summary:
+        lines.append("schema_advisory_summary:")
+        lines.append(f"  structured_step_count: {summary.get('structured_step_count', 0)}")
+        lines.append(f"  legacy_step_count: {summary.get('legacy_step_count', 0)}")
+        test_kind_counts = summary.get("test_kind_counts") if isinstance(summary.get("test_kind_counts"), dict) else {}
+        if test_kind_counts:
+            lines.append("  test_kind_counts:")
+            for key in sorted(test_kind_counts):
+                lines.append(f"    {key}: {test_kind_counts[key]}")
+        status_counts = summary.get("supported_instrument_status_counts") if isinstance(summary.get("supported_instrument_status_counts"), dict) else {}
+        if status_counts:
+            lines.append("  supported_instrument_status_counts:")
+            for key in sorted(status_counts):
+                lines.append(f"    {key}: {status_counts[key]}")
+        warning_messages = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+        if warning_messages:
+            lines.append("  warning_messages:")
+            for item in warning_messages:
+                lines.append(f"    - {item}")
+    if state["validated_tests"]:
+        lines.append("validated_tests:")
+        for t in state["validated_tests"]:
+            run_id = t.get("run_id") or "unknown"
+            lines.append(f"  - {t['step']} (run: {run_id})")
+    if state["failing_tests"]:
+        lines.append("failing_tests:")
+        for t in state["failing_tests"]:
+            run_id = t.get("run_id") or "no_run_found"
+            lines.append(f"  - {t['step']} (run: {run_id})")
+    return "\n".join(lines)
+
+
+def _schema_review_status(summary: dict) -> str:
+    if not isinstance(summary, dict):
+        return "no_schema_signals"
+    warnings = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+    if warnings:
+        return "warnings_present"
+    structured = int(summary.get("structured_step_count", 0) or 0)
+    legacy = int(summary.get("legacy_step_count", 0) or 0)
+    status_counts = summary.get("supported_instrument_status_counts") if isinstance(summary.get("supported_instrument_status_counts"), dict) else {}
+    if int(status_counts.get("declared_unsupported", 0) or 0) > 0:
+        return "warnings_present"
+    if structured and not legacy:
+        return "aligned"
+    if structured and legacy:
+        return "partial_structured_coverage"
+    return "no_schema_signals"
 
 
 def _project_yaml_load(path: Path) -> dict:
