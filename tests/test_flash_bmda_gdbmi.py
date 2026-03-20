@@ -116,6 +116,60 @@ def test_classify_stlink_server_issue_timeout():
     assert "timed out" in diag["summary"].lower()
 
 
+def test_local_stlink_server_available_uses_managed_flag():
+    assert flash_bmda_gdbmi._local_stlink_server_available(
+        "127.0.0.1", 4242, {"managed": True}
+    ) is True
+
+
+def test_local_stlink_server_available_checks_port_for_unmanaged_server():
+    with patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", return_value=True) as port_check:
+        ok = flash_bmda_gdbmi._local_stlink_server_available(
+            "127.0.0.1", 4242, {"managed": False}
+        )
+
+    assert ok is True
+    port_check.assert_called_once()
+
+
+def test_find_stale_stlink_pids_parses_ps_output():
+    class Result:
+        returncode = 0
+        stdout = "aes 123 1 0 00:00 ? 00:00:00 /path/st-util --listen_port 4242\naes 456 1 0 00:00 ? 00:00:00 /path/st-util --listen_port 4343\n"
+
+    with patch("ael.adapters.flash_bmda_gdbmi.subprocess.run", return_value=Result()):
+        pids = flash_bmda_gdbmi._find_stale_stlink_pids(4242)
+
+    assert pids == [123]
+
+
+def test_terminate_stale_stlink_processes_emits_and_kills():
+    emitted = []
+    with patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[123, 456]), patch(
+        "ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[False, False]
+    ), patch("ael.adapters.flash_bmda_gdbmi.os.kill") as kill_mock, patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ):
+        flash_bmda_gdbmi._terminate_stale_stlink_processes(4242, emitted.append)
+
+    assert any("found stale local ST-Link server process(es)" in line for line in emitted)
+    assert kill_mock.call_count == 2
+
+
+
+def test_terminate_stale_stlink_processes_escalates_to_sigkill():
+    emitted = []
+    with patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[123]), patch(
+        "ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=True
+    ), patch("ael.adapters.flash_bmda_gdbmi.os.kill") as kill_mock, patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ):
+        flash_bmda_gdbmi._terminate_stale_stlink_processes(4242, emitted.append)
+
+    assert any("ignored SIGTERM" in line for line in emitted)
+    assert kill_mock.call_count == 2
+
+
 def test_run_writes_flash_log_when_path_configured(tmp_path):
     firmware = tmp_path / "fw.elf"
     firmware.write_text("stub", encoding="utf-8")
@@ -170,9 +224,11 @@ def test_ensure_local_stlink_gdb_server_starts_when_port_missing(tmp_path):
     flash_log = tmp_path / "flash.log"
     with patch.object(flash_bmda_gdbmi, "_STLINK_GDB_SERVER_SCRIPT", Path("/tmp/fake_gdb_server.sh")), patch(
         "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
-    ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, True, True]), patch(
-        "ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()
-    ) as popen, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
+    ), patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[]), patch(
+        "ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, False, True, True]
+    ), patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()) as popen, patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ):
         result = flash_bmda_gdbmi._ensure_local_stlink_gdb_server(
             {"ip": "127.0.0.1", "gdb_port": 4242},
             emitted.append,
@@ -182,6 +238,7 @@ def test_ensure_local_stlink_gdb_server_starts_when_port_missing(tmp_path):
     popen.assert_called_once()
     assert result["ok"] is True
     assert result["managed"] is True
+    assert result["skip_port_probe"] is True
     assert any("starting it" in line for line in emitted)
     assert any("ready at 127.0.0.1:4242" in line for line in emitted)
 
@@ -270,21 +327,20 @@ def test_run_bootstraps_local_stlink_server_once_before_flash(tmp_path):
     ensure_server.assert_called_once()
 
 
-def test_run_stops_when_managed_local_server_disappears_before_attempt(tmp_path):
+def test_run_stops_when_unmanaged_local_server_is_unavailable_before_attempt(tmp_path):
     firmware = tmp_path / "fw.elf"
     firmware.write_text("stub", encoding="utf-8")
     flash_log = tmp_path / "flash.log"
-    server_log = tmp_path / "flash_stlink_server.log"
-    server_log.write_text("WRITEREG send request failed: LIBUSB_ERROR_BUSY\n", encoding="utf-8")
 
     with patch(
         "ael.adapters.flash_bmda_gdbmi._ensure_local_stlink_gdb_server",
         return_value={
             "ok": True,
-            "managed": True,
+            "managed": False,
             "port_checked": True,
-            "server_log_path": str(server_log),
+            "server_log_path": "",
             "error": "",
+            "skip_port_probe": False,
         },
     ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", return_value=False), patch(
         "ael.adapters.flash_bmda_gdbmi.subprocess.run"
@@ -308,7 +364,39 @@ def test_run_stops_when_managed_local_server_disappears_before_attempt(tmp_path)
     assert ok is False
     run_gdb.assert_not_called()
     text = flash_log.read_text(encoding="utf-8")
-    assert "local ST-Link GDB server stopped before flash attempt" in text
-    assert "Flash: ST-Link USB is busy." in text
-    assert "another process may still own the probe" in text
-    assert "LIBUSB_ERROR_BUSY" in text
+    assert "local ST-Link GDB server unavailable at 127.0.0.1:4242" in text
+
+
+def test_ensure_local_stlink_gdb_server_clears_stale_process_before_start(tmp_path):
+    emitted = []
+
+    class Proc:
+        pid = 4321
+
+        @staticmethod
+        def poll():
+            return None
+
+        @staticmethod
+        def terminate():
+            return None
+
+    flash_log = tmp_path / "flash.log"
+    with patch.object(flash_bmda_gdbmi, "_STLINK_GDB_SERVER_SCRIPT", Path("/tmp/fake_gdb_server.sh")), patch(
+        "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
+    ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[False, False, True, True]), patch(
+        "ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[999]
+    ), patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=False), patch(
+        "ael.adapters.flash_bmda_gdbmi.os.kill"
+    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()
+    ) as popen, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
+        result = flash_bmda_gdbmi._ensure_local_stlink_gdb_server(
+            {"ip": "127.0.0.1", "gdb_port": 4242},
+            emitted.append,
+            flash_log_path=str(flash_log),
+        )
+
+    assert result["ok"] is True
+    kill_mock.assert_called_once()
+    popen.assert_called_once()
+    assert any("found stale local ST-Link server process(es)" in line for line in emitted)

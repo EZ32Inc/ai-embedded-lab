@@ -1,5 +1,6 @@
 import json
 import os
+import signal
 from pathlib import Path
 import socket
 import subprocess
@@ -184,6 +185,74 @@ def _emit_stlink_server_failure(emit, reason: str, server_log_path: str) -> dict
     return diagnostic
 
 
+def _find_stale_stlink_pids(port: int) -> list[int]:
+    try:
+        res = subprocess.run(["ps", "-ef"], capture_output=True, text=True, timeout=2)
+    except Exception:
+        return []
+    if res.returncode != 0:
+        return []
+    pids: list[int] = []
+    token = f"--listen_port {int(port)}"
+    for line in (res.stdout or "").splitlines():
+        if "st-util" not in line or token not in line:
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            pids.append(int(parts[1]))
+        except Exception:
+            continue
+    return pids
+
+
+def _pid_exists(pid: int) -> bool:
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except Exception:
+        return True
+
+
+def _terminate_stale_stlink_processes(port: int, emit) -> None:
+    pids = _find_stale_stlink_pids(port)
+    if not pids:
+        return
+    emit(f"Flash: found stale local ST-Link server process(es) on port {int(port)}: {', '.join(str(pid) for pid in pids)}")
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            continue
+        except Exception as exc:
+            emit(f"Flash: failed to terminate stale local ST-Link server pid {pid} ({exc})")
+    time.sleep(0.2)
+    for pid in pids:
+        if not _pid_exists(pid):
+            continue
+        emit(f"Flash: stale local ST-Link server pid {pid} ignored SIGTERM; sending SIGKILL")
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except ProcessLookupError:
+            continue
+        except Exception as exc:
+            emit(f"Flash: failed to SIGKILL stale local ST-Link server pid {pid} ({exc})")
+    time.sleep(0.1)
+
+
+def _local_stlink_server_available(ip: str, port: int, bootstrap: dict | None = None) -> bool:
+    state = bootstrap if isinstance(bootstrap, dict) else {}
+    if not _is_local_host(ip) or int(port or 0) <= 0:
+        return False
+    if state.get("managed"):
+        # Let GDB be the first real client after we spawn st-util locally.
+        return True
+    return _port_is_listening(ip, port)
+
+
 def _ensure_local_stlink_gdb_server(
     probe_cfg,
     emit,
@@ -200,9 +269,13 @@ def _ensure_local_stlink_gdb_server(
         "server_log_path": _stlink_server_log_path(flash_log_path),
         "error": "",
         "diagnostic_code": "",
+        "skip_port_probe": False,
     }
     if not result["port_checked"]:
         return result
+    if _port_is_listening(ip, port):
+        return result
+    _terminate_stale_stlink_processes(port, emit)
     if _port_is_listening(ip, port):
         return result
     if not _STLINK_GDB_SERVER_SCRIPT.exists():
@@ -240,10 +313,9 @@ def _ensure_local_stlink_gdb_server(
             log_handle.close()
 
     result["managed"] = True
+    result["skip_port_probe"] = True
     deadline = time.time() + max(0.0, float(startup_timeout_s))
     while time.time() < deadline:
-        if _port_is_listening(ip, port):
-            break
         exit_code = proc.poll()
         if exit_code is not None:
             msg = f"Flash: local ST-Link GDB server exited during startup with code {exit_code}"
@@ -253,19 +325,6 @@ def _ensure_local_stlink_gdb_server(
             result["diagnostic_code"] = diagnostic.get("code", "")
             return result
         time.sleep(0.1)
-
-    if not _port_is_listening(ip, port):
-        msg = f"Flash: local ST-Link GDB server did not become ready at {ip}:{port}"
-        diagnostic = _emit_stlink_server_failure(emit, msg, result["server_log_path"])
-        result["ok"] = False
-        result["error"] = diagnostic.get("summary") or msg
-        result["diagnostic_code"] = diagnostic.get("code", "")
-        try:
-            if proc.poll() is None:
-                proc.terminate()
-        except Exception:
-            pass
-        return result
 
     time.sleep(max(0.0, float(stable_grace_s)))
     exit_code = proc.poll()
@@ -345,7 +404,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     ok = False
     strategy_used = ""
     last_error = ""
-    stlink_bootstrap = {"ok": True, "managed": False, "port_checked": False, "server_log_path": "", "error": "", "diagnostic_code": ""}
+    stlink_bootstrap = {"ok": True, "managed": False, "port_checked": False, "server_log_path": "", "error": "", "diagnostic_code": "", "skip_port_probe": False}
     if _is_local_host(ip) and port:
         stlink_bootstrap = _ensure_local_stlink_gdb_server(probe_cfg, emit, flash_log_path=flash_log_path)
         if not stlink_bootstrap.get("ok", True):
@@ -354,7 +413,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     for idx, strat in enumerate(strategies, start=1):
         if last_error and not ok and stlink_bootstrap.get("port_checked") and not stlink_bootstrap.get("ok", True):
             break
-        if stlink_bootstrap.get("port_checked") and not _port_is_listening(ip, port):
+        if stlink_bootstrap.get("port_checked") and not _local_stlink_server_available(ip, port, stlink_bootstrap):
             if stlink_bootstrap.get("managed"):
                 last_error = "local ST-Link GDB server stopped before flash attempt"
                 _emit_stlink_server_failure(emit, f"Flash: {last_error}", stlink_bootstrap.get("server_log_path", ""))
