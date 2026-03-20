@@ -9,6 +9,9 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
+from ael_controlplane.nightly_report import write_nightly_report
+from ael_controlplane.reporting import default_verification_review_highlights
+from ael_controlplane.review_pack import generate_review_pack
 from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
 from tools.audit_test_plan_schema import build_report
@@ -2070,3 +2073,133 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
     assert code == 0
     assert result["local_instrument_interface_path"] == "meter_native_api"
     guard_mock.assert_called_once()
+
+
+def test_default_verification_review_highlights_extracts_status_and_warning_summary():
+    review = {
+        "ok": True,
+        "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+    }
+
+    highlights = default_verification_review_highlights(review)
+
+    assert highlights == {"schema_review_status": "aligned", "warning_summary": "none"}
+
+
+def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, tmp_path):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "reports").mkdir()
+    monkeypatch.setattr(
+        "ael_controlplane.review_pack.default_verification_review_summary",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+        },
+    )
+    monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
+
+    path = generate_review_pack(
+        branch="agent/report-review",
+        task={
+            "title": "report task",
+            "task_id": "task_1",
+            "execution_mode": "offline",
+            "prompt": "review prompt",
+            "merge_ready": "no",
+            "summary": "review summary",
+        },
+        artifacts={"run_dir": "runs/report-task"},
+    )
+
+    text = path.read_text(encoding="utf-8")
+    assert "## Default Verification Review" in text
+    assert "- schema_review_status: aligned" in text
+    assert "- warning_summary: none" in text
+    assert "schema_review_status: aligned" in text
+    assert "warning_summary: none" in text
+
+
+def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        "ael_controlplane.nightly_report.default_verification_review_summary",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nwarning_summary: none\n",
+        },
+    )
+
+    path = tmp_path / "reports" / "nightly_2026-03-19.md"
+    write_nightly_report(
+        "2026-03-19",
+        {
+            "started_at": "2026-03-19T00:00:00",
+            "finished_at": "2026-03-19T00:10:00",
+            "ok": True,
+            "plans": [],
+        },
+        path,
+    )
+
+    text = path.read_text(encoding="utf-8")
+    assert "## Default Verification Review" in text
+    assert "- schema_review_status: aligned" in text
+    assert "- warning_summary: none" in text
+    assert "schema_review_status: aligned" in text
+    assert "warning_summary: none" in text
+
+
+def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp_path):
+    review_text = (
+        "Default Verification Review\n"
+        "health_status: pass\n"
+        "schema_review_status: warnings_present\n"
+        "structured_coverage: structured=3 legacy=1\n"
+        "warning_summary: 1 schema warning(s)\n"
+    )
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "reports").mkdir()
+    monkeypatch.setattr(
+        "ael_controlplane.review_pack.default_verification_review_summary",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    monkeypatch.setattr(
+        "ael_controlplane.nightly_report.default_verification_review_summary",
+        lambda *_args, **_kwargs: {"ok": True, "text": review_text},
+    )
+    monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
+
+    pack_path = generate_review_pack(
+        branch="agent/report-review",
+        task={
+            "title": "report task",
+            "task_id": "task_1",
+            "execution_mode": "offline",
+            "prompt": "review prompt",
+            "merge_ready": "no",
+            "summary": "review summary",
+        },
+        artifacts={"run_dir": "runs/report-task"},
+    )
+    nightly_path = tmp_path / "reports" / "nightly_2026-03-19.md"
+    write_nightly_report(
+        "2026-03-19",
+        {
+            "started_at": "2026-03-19T00:00:00",
+            "finished_at": "2026-03-19T00:10:00",
+            "ok": True,
+            "plans": [],
+        },
+        nightly_path,
+    )
+
+    pack_text = pack_path.read_text(encoding="utf-8")
+    nightly_text = nightly_path.read_text(encoding="utf-8")
+    for expected in (
+        "- schema_review_status: warnings_present",
+        "- warning_summary: 1 schema warning(s)",
+        "schema_review_status: warnings_present",
+        "structured_coverage: structured=3 legacy=1",
+        "warning_summary: 1 schema warning(s)",
+    ):
+        assert expected in pack_text
+        assert expected in nightly_text

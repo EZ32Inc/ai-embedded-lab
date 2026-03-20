@@ -155,6 +155,20 @@ def default_verification_review_summary(repo_root: str | Path | None = None) -> 
     return {"ok": False, "text": text, "error": error}
 
 
+def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dict[str, str]:
+    text = str(review.get("text") or "")
+    highlights = {"schema_review_status": "unavailable", "warning_summary": "unavailable"}
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("schema_review_status:"):
+            highlights["schema_review_status"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("warning_summary:"):
+            highlights["warning_summary"] = stripped.split(":", 1)[1].strip() or "unavailable"
+    if not bool(review.get("ok", False)) and highlights["warning_summary"] == "unavailable":
+        highlights["warning_summary"] = "review unavailable"
+    return highlights
+
+
 def append_task_result(report_root: str | Path, record: Dict) -> Path:
     md_path = _today_report_path(report_root)
     data_path = _today_data_path(report_root)

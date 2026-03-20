@@ -3,13 +3,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, List
 
-from ael_controlplane.reporting import default_verification_review_summary
+from ael_controlplane.reporting import default_verification_review_highlights, default_verification_review_summary
 
 
 def write_nightly_report(date_str: str, summary: dict, path: Path) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     plans: List[Dict] = summary.get("plans", []) if isinstance(summary.get("plans"), list) else []
     baseline_review = default_verification_review_summary(Path(__file__).resolve().parents[1])
+    baseline_highlights = default_verification_review_highlights(baseline_review)
     lines = [
         f"# AEL Nightly Report — {date_str}",
         f"- Started: {summary.get('started_at', '')}",
@@ -44,6 +45,8 @@ def write_nightly_report(date_str: str, summary: dict, path: Path) -> Path:
         [
             "",
             "## Default Verification Review",
+            f"- schema_review_status: {baseline_highlights['schema_review_status']}",
+            f"- warning_summary: {baseline_highlights['warning_summary']}",
             "```text",
             str(baseline_review.get("text") or baseline_review.get("error") or "(unavailable)"),
             "```",
