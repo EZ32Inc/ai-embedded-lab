@@ -107,6 +107,7 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
         "plans": [],
         "report_path": "",
         "review_pack_paths": [],
+        "baseline_readiness_status": "unavailable",
         "schema_review_status": "unavailable",
         "structured_coverage": "unavailable",
         "warning_summary": "unavailable",
@@ -122,6 +123,7 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
 
     plans = _collect_backlog(cfg)
     summary["default_verification_review"] = default_verification_review_payload(default_verification_review_snapshot(repo_root()))
+    summary["baseline_readiness_status"] = "ready" if str(summary["default_verification_review"].get("schema_review_status", "")) in ("aligned", "no_schema_signals") and str(summary["default_verification_review"].get("warning_summary", "")) == "none" else "needs_attention"
     summary["schema_review_status"] = str(summary["default_verification_review"].get("schema_review_status", "unavailable"))
     summary["structured_coverage"] = str(summary["default_verification_review"].get("structured_coverage", "unavailable"))
     summary["warning_summary"] = str(summary["default_verification_review"].get("warning_summary", "unavailable"))

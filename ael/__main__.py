@@ -1749,12 +1749,15 @@ def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") ->
         n_total = dv_state.get("configured_steps", 0)
         n_pass = len(dv_state.get("validated_tests", []))
         health = dv_state.get("health_status", "")
+        readiness = str(dv_state.get("baseline_readiness_status") or "").strip()
         schema_review = str(dv_state.get("schema_review_status") or "").strip()
         structured_coverage = str((dv_state.get("schema_advisory_summary") or {}).get("structured_step_count", "")).strip()
         legacy_coverage = str((dv_state.get("schema_advisory_summary") or {}).get("legacy_step_count", "")).strip()
         warning_messages = dv_state.get("schema_warning_messages", []) if isinstance(dv_state.get("schema_warning_messages"), list) else []
         next_action = str(dv_state.get("next_recommended_action") or "").strip()
         dv_summary = f"{n_pass}/{n_total} passing  [{health}]"
+        if readiness:
+            dv_summary += f"  readiness={readiness}"
         if schema_review:
             dv_summary += f"  schema={schema_review}"
         if structured_coverage or legacy_coverage:
@@ -2084,6 +2087,7 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     schema_advisory_summary = _summarize_schema_advisories(schema_results)
     schema_review_status = _schema_review_status(schema_advisory_summary)
     schema_warning_messages = list(schema_advisory_summary.get("warning_messages") or [])
+    baseline_readiness_status = _baseline_readiness_status(health, schema_review_status, schema_warning_messages)
     if schema_warning_messages and not current_blocker:
         current_blocker = schema_warning_messages[0]
     if schema_warning_messages and not failing:
@@ -2094,6 +2098,7 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         "type": "system_baseline",
         "state_basis": "last_known_run_results",
         "health_status": health,
+        "baseline_readiness_status": baseline_readiness_status,
         "configured_steps": len(steps),
         "current_blocker": current_blocker,
         "last_successful_run": last_successful,
@@ -2119,6 +2124,7 @@ def _render_verify_default_state_text(state: dict) -> str:
         f"name: {state['name']}",
         f"type: {state['type']}",
         f"health_status: {state['health_status']}",
+        f"baseline_readiness_status: {state.get('baseline_readiness_status', '') or _baseline_readiness_status(state.get('health_status', ''), schema_review_status, state.get('schema_warning_messages') if isinstance(state.get('schema_warning_messages'), list) else [])}",
         f"schema_review_status: {schema_review_status}",
         f"configured_steps: {state['configured_steps']}",
         f"current_blocker: {state['current_blocker'] or 'none'}",
@@ -2195,6 +2201,7 @@ def _render_verify_default_review_text(state: dict) -> str:
     lines = [
         "Default Verification Review",
         f"health_status: {state.get('health_status', '')}",
+        f"baseline_readiness_status: {state.get('baseline_readiness_status', '') or _baseline_readiness_status(state.get('health_status', ''), str(state.get('schema_review_status', '') or _schema_review_status(summary)), summary.get('warning_messages') if isinstance(summary.get('warning_messages'), list) else [])}",
         f"schema_review_status: {state.get('schema_review_status', '') or _schema_review_status(summary)}",
         f"structured_coverage: structured={structured} legacy={legacy}",
     ]
@@ -2231,6 +2238,23 @@ def _schema_review_status(summary: dict) -> str:
     if structured and legacy:
         return "partial_structured_coverage"
     return "no_schema_signals"
+
+
+def _baseline_readiness_status(health_status: str, schema_review_status: str, warning_messages: list) -> str:
+    health = str(health_status or "").strip()
+    schema = str(schema_review_status or "").strip()
+    warnings = warning_messages if isinstance(warning_messages, list) else []
+    if health in ("fail", "partial_pass"):
+        return "needs_attention"
+    if health == "unknown":
+        return "unavailable"
+    if warnings:
+        return "needs_attention"
+    if schema in ("warnings_present", "partial_structured_coverage"):
+        return "needs_attention"
+    if health == "pass" and schema in ("aligned", "no_schema_signals"):
+        return "ready"
+    return "needs_attention"
 
 
 def _project_yaml_load(path: Path) -> dict:

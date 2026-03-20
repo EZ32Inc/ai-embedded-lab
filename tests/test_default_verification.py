@@ -1377,6 +1377,7 @@ def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
             setting_path.write_text(backup, encoding="utf-8")
 
     assert "default verification:" in res.stdout
+    assert "readiness=ready" in res.stdout
     assert "schema=aligned" in res.stdout
     assert "coverage=1/0" in res.stdout
     assert "warnings=0" in res.stdout
@@ -1426,6 +1427,7 @@ def test_verify_default_state_cli_text_renders_schema_summary(tmp_path):
     )
 
     assert "schema_advisory_summary:" in res.stdout
+    assert "baseline_readiness_status: ready" in res.stdout
     assert "schema_review_status: aligned" in res.stdout
     assert "schema_review:" in res.stdout
     assert "structured_step_count: 1" in res.stdout
@@ -1475,6 +1477,7 @@ def test_verify_default_state_cli_json_includes_schema_summary(tmp_path):
     )
     payload = json.loads(res.stdout)
 
+    assert payload["baseline_readiness_status"] == "ready"
     assert payload["schema_review_status"] == "aligned"
     assert "schema_advisory_summary" in payload
     assert payload["schema_advisory_summary"]["structured_step_count"] == 1
@@ -2264,6 +2267,7 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
 
     summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
 
+    assert summary["baseline_readiness_status"] == "needs_attention"
     assert summary["schema_review_status"] == "warnings_present"
     assert summary["structured_coverage"] == "structured=3 legacy=1"
     assert summary["warning_summary"] == "1 schema warning(s)"
@@ -2404,6 +2408,7 @@ def test_run_nightly_surfaces_top_level_review_keys_and_review_pack_paths(monkey
 
     summary = run_nightly(NightlyConfig(dry_run=True, allow_on_master=True, report_root=str(tmp_path / "reports")))
 
+    assert summary["baseline_readiness_status"] == "ready"
     assert summary["schema_review_status"] == "aligned"
     assert summary["structured_coverage"] == "structured=4 legacy=0"
     assert summary["warning_summary"] == "none"
@@ -2449,6 +2454,26 @@ def test_ael_status_surfaces_schema_coverage_and_warning_count(tmp_path):
             setting_path.write_text(backup, encoding="utf-8")
 
     assert "default verification:" in res.stdout
+    assert "readiness=needs_attention" in res.stdout
     assert "schema=partial_structured_coverage" in res.stdout
     assert "coverage=1/1" in res.stdout
     assert "warnings=0" in res.stdout
+
+
+def test_verify_default_review_text_includes_baseline_readiness_status():
+    text = _render_verify_default_review_text(
+        {
+            "health_status": "pass",
+            "schema_review_status": "aligned",
+            "schema_advisory_summary": {
+                "structured_step_count": 1,
+                "legacy_step_count": 0,
+                "warning_messages": [],
+            },
+            "baseline_readiness_status": "ready",
+            "current_blocker": "",
+            "next_recommended_action": "all steps passing — consider adding next board/test to suite",
+        }
+    )
+
+    assert "baseline_readiness_status: ready" in text
