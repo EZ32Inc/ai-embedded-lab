@@ -20,9 +20,13 @@ class TestLaCheck(unittest.TestCase):
         self.assertTrue(out["ok"])
         self.assertTrue(out["toggling"])
         self.assertEqual(8, out["edges"])
+        self.assertEqual("configs/esp32jtag.yaml", out["controller_config"])
         self.assertEqual("configs/esp32jtag.yaml", out["control_instrument_config"])
+        self.assertEqual("ESP32JTAG", out["controller_name"])
         self.assertEqual("ESP32JTAG", out["control_instrument_name"])
+        self.assertEqual("192.168.2.98", out["controller_host"])
         self.assertEqual("192.168.2.98", out["control_instrument_host"])
+        self.assertEqual("configs/esp32jtag.yaml", out["controller"]["config"])
         self.assertEqual("configs/esp32jtag.yaml", out["control_instrument"]["config"])
 
     def test_run_reports_not_toggling_when_zero_edges(self):
@@ -40,6 +44,7 @@ class TestLaCheck(unittest.TestCase):
         self.assertTrue(out["ok"])
         self.assertFalse(out["toggling"])
         self.assertEqual(0, out["edges"])
+        self.assertEqual("ESP32JTAG", out["controller"]["name"])
         self.assertEqual("ESP32JTAG", out["control_instrument"]["name"])
 
 
