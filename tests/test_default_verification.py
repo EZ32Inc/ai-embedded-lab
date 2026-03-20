@@ -10,9 +10,9 @@ from unittest.mock import patch
 
 from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
 from ael_controlplane.nightly import NightlyConfig, run_nightly
-from ael_controlplane.nightly_report import write_nightly_report
-from ael_controlplane.reporting import default_verification_review_highlights
-from ael_controlplane.review_pack import generate_review_pack
+from ael_controlplane.nightly_report import build_nightly_report_payload, write_nightly_report
+from ael_controlplane.reporting import default_verification_review_highlights, default_verification_review_payload
+from ael_controlplane.review_pack import build_review_pack_payload, generate_review_pack
 from ael import default_verification
 from ael.verification_model import VerificationTask, VerificationWorker, summarize_resource_keys
 from tools.audit_test_plan_schema import build_report
@@ -2076,6 +2076,22 @@ def test_run_single_reports_local_instrument_interface_path_for_default_targets(
     guard_mock.assert_called_once()
 
 
+def test_default_verification_review_payload_normalizes_review_fields():
+    payload = default_verification_review_payload(
+        {
+            "ok": True,
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+        }
+    )
+
+    assert payload["ok"] is True
+    assert payload["schema_review_status"] == "aligned"
+    assert payload["structured_coverage"] == "structured=3 legacy=0"
+    assert payload["warning_summary"] == "none"
+    assert payload["text"].startswith("Default Verification Review")
+    assert payload["error"] == ""
+
+
 def test_default_verification_review_highlights_extracts_status_and_warning_summary():
     review = {
         "ok": True,
@@ -2256,3 +2272,51 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
     assert "- structured_coverage: structured=3 legacy=1" in report_text
     assert "- warning_summary: 1 schema warning(s)" in report_text
     assert "structured_coverage: structured=3 legacy=1" in report_text
+
+
+def test_build_review_pack_payload_exposes_machine_readable_review(monkeypatch):
+    monkeypatch.setattr(
+        "ael_controlplane.review_pack.default_verification_review_snapshot",
+        lambda *_args, **_kwargs: {
+            "ok": True,
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+        },
+    )
+    monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
+
+    payload = build_review_pack_payload(
+        branch="agent/report-review",
+        task={
+            "title": "report task",
+            "task_id": "task_1",
+            "execution_mode": "offline",
+            "prompt": "review prompt",
+            "merge_ready": "no",
+            "summary": "review summary",
+        },
+        artifacts={"run_dir": "runs/report-task"},
+    )
+
+    assert payload["default_verification_review"]["schema_review_status"] == "aligned"
+    assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=0"
+    assert payload["default_verification_review"]["warning_summary"] == "none"
+
+
+def test_build_nightly_report_payload_exposes_machine_readable_review():
+    payload = build_nightly_report_payload(
+        "2026-03-20",
+        {
+            "started_at": "2026-03-20T00:00:00",
+            "finished_at": "2026-03-20T00:10:00",
+            "ok": True,
+            "plans": [],
+            "default_verification_review": {
+                "ok": True,
+                "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: warnings_present\nstructured_coverage: structured=3 legacy=1\nwarning_summary: 1 schema warning(s)\n",
+            },
+        },
+    )
+
+    assert payload["default_verification_review"]["schema_review_status"] == "warnings_present"
+    assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
+    assert payload["default_verification_review"]["warning_summary"] == "1 schema warning(s)"

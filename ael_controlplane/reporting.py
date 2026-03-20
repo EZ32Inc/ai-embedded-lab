@@ -171,10 +171,18 @@ def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dic
     return highlights
 
 
+def default_verification_review_payload(review: Dict[str, str | bool]) -> Dict[str, str | bool]:
+    payload = dict(review)
+    payload.update(default_verification_review_highlights(payload))
+    payload["ok"] = bool(payload.get("ok", False))
+    payload["text"] = str(payload.get("text") or payload.get("error") or "")
+    if payload["text"] and not str(payload.get("error") or ""):
+        payload["error"] = ""
+    return payload
+
+
 def default_verification_review_snapshot(repo_root: str | Path | None = None) -> Dict[str, str | bool]:
-    review = default_verification_review_summary(repo_root)
-    review.update(default_verification_review_highlights(review))
-    return review
+    return default_verification_review_payload(default_verification_review_summary(repo_root))
 
 
 def append_task_result(report_root: str | Path, record: Dict) -> Path:
