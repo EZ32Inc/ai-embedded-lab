@@ -83,6 +83,8 @@ def build_report(repo_root: Path) -> Dict[str, Any]:
                 "name": payload.get("name") or path.stem,
                 "schema_version": schema_version,
                 "test_kind": metadata.get("test_kind"),
+                "labels": metadata.get("labels"),
+                "covers": metadata.get("covers"),
                 "requires": metadata.get("requires"),
                 "supported_instruments": metadata.get("supported_instruments"),
                 "validation_errors": validation_errors,
@@ -177,6 +179,10 @@ def render_text(report: Dict[str, Any]) -> str:
             lines.append(f"  test_kind: {plan.get('test_kind')}")
         if plan.get("supported_instruments"):
             lines.append("  supported_instruments: " + ", ".join(plan.get("supported_instruments") or []))
+        if plan.get("labels"):
+            lines.append("  labels: " + ", ".join(plan.get("labels") or []))
+        if plan.get("covers"):
+            lines.append("  covers: " + ", ".join(plan.get("covers") or []))
         if isinstance(plan.get("requires"), dict) and plan.get("requires"):
             lines.append("  requires: " + json.dumps(plan.get("requires"), sort_keys=True))
         if plan.get("validation_errors"):

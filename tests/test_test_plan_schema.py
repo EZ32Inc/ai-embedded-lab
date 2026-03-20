@@ -126,3 +126,16 @@ def test_extract_plan_metadata_rejects_unknown_cover_value():
     )
 
     assert "unknown covers value: banana" in metadata["validation_errors"]
+
+
+def test_extract_plan_metadata_accepts_i2c_cover_value():
+    metadata = extract_plan_metadata(
+        {
+            "schema_version": "1.0",
+            "name": "i2c_plan",
+            "test_kind": "instrument_specific",
+            "covers": ["i2c", "voltage"],
+        }
+    )
+
+    assert metadata["validation_errors"] == []

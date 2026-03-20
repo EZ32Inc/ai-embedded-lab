@@ -29,6 +29,7 @@ KNOWN_COVERS = {
     "dac",
     "exti",
     "gpio",
+    "i2c",
     "loopback",
     "mailbox",
     "measure",

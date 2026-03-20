@@ -263,6 +263,63 @@ def _schema_advisory_payload(repo_root: Path, board: str, test: str) -> Dict[str
     return payload
 
 
+def _summarize_schema_advisories(results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    summary: Dict[str, Any] = {
+        "structured_step_count": 0,
+        "legacy_step_count": 0,
+        "test_kind_counts": {},
+        "supported_instrument_status_counts": {},
+        "warning_messages": [],
+        "instrument_specific_steps": [],
+    }
+    seen_warnings: set[str] = set()
+    for item in results:
+        if not isinstance(item, dict):
+            continue
+        result = item.get("result") if isinstance(item.get("result"), dict) else {}
+        schema_kind = str(result.get("plan_schema_kind") or "").strip()
+        if schema_kind == "structured":
+            summary["structured_step_count"] += 1
+        elif schema_kind == "legacy":
+            summary["legacy_step_count"] += 1
+        test_kind = str(result.get("test_kind") or "").strip()
+        if test_kind:
+            summary["test_kind_counts"][test_kind] = int(summary["test_kind_counts"].get(test_kind, 0)) + 1
+            if test_kind == "instrument_specific":
+                summary["instrument_specific_steps"].append(str(item.get("name") or ""))
+        advisory = result.get("supported_instrument_advisory") if isinstance(result.get("supported_instrument_advisory"), dict) else {}
+        advisory_status = str(advisory.get("status") or "").strip()
+        if advisory_status:
+            counts = summary["supported_instrument_status_counts"]
+            counts[advisory_status] = int(counts.get(advisory_status, 0)) + 1
+        warnings = result.get("schema_warning_messages") if isinstance(result.get("schema_warning_messages"), list) else []
+        for message in warnings:
+            text = str(message or "").strip()
+            if not text or text in seen_warnings:
+                continue
+            seen_warnings.add(text)
+            summary["warning_messages"].append(text)
+    summary["instrument_specific_steps"] = sorted(item for item in summary["instrument_specific_steps"] if item)
+    return summary
+
+
+def _print_schema_advisory_summary(lock: threading.Lock, summary: Dict[str, Any]) -> None:
+    structured = int(summary.get("structured_step_count", 0))
+    legacy = int(summary.get("legacy_step_count", 0))
+    _log_line(lock, f"[SUMMARY] schema structured={structured} legacy={legacy}")
+    test_kind_counts = summary.get("test_kind_counts") if isinstance(summary.get("test_kind_counts"), dict) else {}
+    if test_kind_counts:
+        parts = [f"{name}={test_kind_counts[name]}" for name in sorted(test_kind_counts)]
+        _log_line(lock, f"[SUMMARY] schema_test_kinds {' '.join(parts)}")
+    status_counts = summary.get("supported_instrument_status_counts") if isinstance(summary.get("supported_instrument_status_counts"), dict) else {}
+    if status_counts:
+        parts = [f"{name}={status_counts[name]}" for name in sorted(status_counts)]
+        _log_line(lock, f"[SUMMARY] schema_instrument_support {' '.join(parts)}")
+    warnings = summary.get("warning_messages") if isinstance(summary.get("warning_messages"), list) else []
+    if warnings:
+        _log_line(lock, f"[SUMMARY] schema_warnings count={len(warnings)}")
+
+
 def load_setting(path: str | None = None) -> Dict[str, Any]:
     cfg = Path(path) if path else DEFAULT_CONFIG_PATH
     if not cfg.exists():
@@ -747,6 +804,8 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
     if isinstance(counts, dict) and counts:
         parts = [f"{name}={counts[name]}" for name in sorted(counts)]
         _log_line(lock, f"[SUMMARY] degraded_instruments {' '.join(parts)}")
+    results = [item for worker in workers for item in worker.get("results", [])]
+    _print_schema_advisory_summary(lock, _summarize_schema_advisories(results))
 
 
 def _run_parallel_suite_once(
@@ -781,6 +840,7 @@ def _run_parallel_suite_once(
         "optional_steps": sorted(optional_names),
         "workers": workers,
         "results": results,
+        "schema_advisory_summary": _summarize_schema_advisories(results),
     }
 
 
@@ -817,6 +877,7 @@ def _run_serial_suite_once(
         "execution_policy": {"kind": suite.execution_policy.get("kind", "serial"), "iterations_per_worker": 1},
         "selected_dut_tests": [task.name for task in suite.tasks],
         "results": results,
+        "schema_advisory_summary": _summarize_schema_advisories(results),
     }
 
 
@@ -855,6 +916,7 @@ def _run_parallel_repeat_until_fail(
         "workers": workers,
         "results": results,
         "health_summary": summarize_worker_health(workers),
+        "schema_advisory_summary": _summarize_schema_advisories(results),
     }
     if first_failure is not None:
         first_result = first_failure.get("result") if isinstance(first_failure.get("result"), dict) else {}

@@ -31,6 +31,7 @@ def test_audit_test_plan_schema_counts_structured_and_legacy_plans():
     i2c_meter = next(item for item in report["plans"] if item["path"] == "tests/plans/esp32c6_i2c_banner.json")
     assert i2c_meter["schema_version"] == "1.0"
     assert i2c_meter["test_kind"] == "instrument_specific"
+    assert i2c_meter["covers"] == ["i2c", "voltage"]
     assert report["summary"]["structured_ready_count"] >= 1
     assert report["summary"]["legacy_mailbox_candidate_count"] >= 0
     assert report["summary"]["invalid_structured_count"] == 0

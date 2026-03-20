@@ -799,6 +799,116 @@ def test_serial_default_verification_prints_selected_dut_tests(tmp_path, capsys)
     assert "default_verification: selected DUT tests: stm32f103_gpio_signature" in out
 
 
+def test_serial_default_verification_surfaces_schema_advisory_summary(tmp_path):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "serial"},
+        "steps": [
+            {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+            {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
+        ],
+    }
+
+    with patch(
+        "ael.default_verification._run_step_action",
+        side_effect=[
+            (
+                0,
+                {
+                    "ok": True,
+                    "plan_schema_kind": "structured",
+                    "test_kind": "instrument_specific",
+                    "supported_instrument_advisory": {"status": "declared_supported"},
+                    "schema_warning_messages": [],
+                },
+            ),
+            (0, {"ok": True, "plan_schema_kind": "legacy"}),
+        ],
+    ):
+        code, payload = default_verification.run_default_setting(path=_write_setting(tmp_path, setting))
+
+    assert code == 0
+    assert payload["schema_advisory_summary"] == {
+        "structured_step_count": 1,
+        "legacy_step_count": 1,
+        "test_kind_counts": {"instrument_specific": 1},
+        "supported_instrument_status_counts": {"declared_supported": 1},
+        "warning_messages": [],
+        "instrument_specific_steps": ["esp32c6_uart_banner"],
+    }
+
+
+def test_parallel_repeat_until_fail_surfaces_schema_advisory_summary(tmp_path):
+    setting = {
+        "version": 1,
+        "mode": "sequence",
+        "execution_policy": {"kind": "parallel"},
+        "steps": [
+            {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+            {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+        ],
+    }
+    cfg_path = _write_setting(tmp_path, setting)
+
+    def fake_worker(repo_root, task, output_mode, max_iterations, stop_after_failure, log_lock):
+        if task.name == "esp32c6_uart_banner":
+            payload = {
+                "name": task.name,
+                "board": task.board,
+                "requested_iterations": max_iterations,
+                "completed_iterations": 1,
+                "pass_count": 0,
+                "fail_count": 1,
+                "ok": False,
+                "results": [
+                    {
+                        "name": task.name,
+                        "board": task.board,
+                        "iteration": 1,
+                        "code": 2,
+                        "ok": False,
+                        "result": {
+                            "ok": False,
+                            "plan_schema_kind": "structured",
+                            "test_kind": "instrument_specific",
+                            "supported_instrument_advisory": {"status": "declared_unsupported"},
+                            "schema_warning_messages": [
+                                "selected instrument type esp32_meter is not in declared support set"
+                            ],
+                        },
+                    }
+                ],
+            }
+        else:
+            payload = {
+                "name": task.name,
+                "board": task.board,
+                "requested_iterations": max_iterations,
+                "completed_iterations": 1,
+                "pass_count": 1,
+                "fail_count": 0,
+                "ok": True,
+                "results": [
+                    {"name": task.name, "board": task.board, "iteration": 1, "code": 0, "ok": True, "result": {"ok": True, "plan_schema_kind": "legacy"}}
+                ],
+            }
+        return SimpleNamespace(run=lambda: SimpleNamespace(to_dict=lambda: payload))
+
+    with patch("ael.default_verification._worker_for_task", side_effect=fake_worker):
+        code, payload = default_verification.run_until_fail(limit=1, path=cfg_path)
+
+    assert code == 2
+    assert payload["schema_advisory_summary"] == {
+        "structured_step_count": 1,
+        "legacy_step_count": 1,
+        "test_kind_counts": {"instrument_specific": 1},
+        "supported_instrument_status_counts": {"declared_unsupported": 1},
+        "warning_messages": ["selected instrument type esp32_meter is not in declared support set"],
+        "instrument_specific_steps": ["esp32c6_uart_banner"],
+    }
+
+
 def test_sequence_setting_materializes_suite_and_tasks():
     setting = {
         "version": 1,
