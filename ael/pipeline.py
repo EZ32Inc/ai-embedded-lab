@@ -415,15 +415,19 @@ def _bench_selection_digest(payload):
             items.append(f"instrument_id:{instrument_id}")
         if endpoint.get("host") and endpoint.get("port") is not None:
             items.append(f"instrument_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
-    control = payload.get("control_instrument")
+    control = payload.get("controller") or payload.get("control_instrument")
     if isinstance(control, dict):
         instance = control.get("instance")
         if instance:
+            items.append(f"controller_instance:{instance}")
             items.append(f"control_instrument_instance:{instance}")
         endpoint = control.get("endpoint")
         if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
-            items.append(f"control_instrument_endpoint:{endpoint.get('host')}:{endpoint.get('port')}")
+            endpoint_text = f"{endpoint.get('host')}:{endpoint.get('port')}"
+            items.append(f"controller_endpoint:{endpoint_text}")
+            items.append(f"control_instrument_endpoint:{endpoint_text}")
         elif isinstance(endpoint, str) and endpoint:
+            items.append(f"controller_endpoint:{endpoint}")
             items.append(f"control_instrument_endpoint:{endpoint}")
     return items
 
@@ -465,6 +469,16 @@ def _selected_bench_resources_payload(
             "communication": dict(instrument_communication or {}),
             "capability_surfaces": dict(instrument_capability_surfaces or {}),
         } if any([instrument_id, instrument_host, instrument_port, instrument_communication, instrument_capability_surfaces]) else None,
+        "controller": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint={
+                "host": probe_host or None,
+                "port": probe_port if probe_port is not None else None,
+            },
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -537,6 +551,13 @@ def _build_validation_summary(
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
+        "controller": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint=(f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None),
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -544,10 +565,15 @@ def _build_validation_summary(
             communication=probe_communication,
             capability_surfaces=probe_capability_surfaces,
         ),
+        "controller_instance": probe_instance_id or None,
         "control_instrument_instance": probe_instance_id or None,
+        "controller_type": probe_type or None,
         "control_instrument_type": probe_type or None,
+        "controller_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "control_instrument_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
+        "controller_communication": dict(probe_communication or {}),
         "control_instrument_communication": dict(probe_communication or {}),
+        "controller_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument_capability_surfaces": dict(probe_capability_surfaces or {}),
         "key_artifact_paths": {
             "run_plan": (result.get("json") or {}).get("run_plan"),
@@ -621,6 +647,16 @@ def _build_current_setup(
         "instrument_profile": instrument_id or None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
+        "controller": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint={
+                "host": probe_host or None,
+                "port": probe_port if probe_port is not None else None,
+            },
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -631,13 +667,21 @@ def _build_current_setup(
             communication=probe_communication,
             capability_surfaces=probe_capability_surfaces,
         ),
+        "controller_instance": probe_instance_id or None,
         "control_instrument_instance": probe_instance_id or None,
+        "controller_type": probe_type or None,
         "control_instrument_type": probe_type or None,
+        "controller_endpoint": {
+            "host": probe_host or None,
+            "port": probe_port if probe_port is not None else None,
+        },
         "control_instrument_endpoint": {
             "host": probe_host or None,
             "port": probe_port if probe_port is not None else None,
         },
+        "controller_communication": dict(probe_communication or {}),
         "control_instrument_communication": dict(probe_communication or {}),
+        "controller_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument_capability_surfaces": dict(probe_capability_surfaces or {}),
         "selected_endpoint": {
             "host": instrument_host or None,
@@ -672,6 +716,7 @@ def _bench_resource_signature(payload):
         "selected_ap_ssid": payload.get("selected_ap_ssid"),
         "serial_port": payload.get("serial_port"),
         "instrument_endpoint": None,
+        "controller_endpoint": None,
         "control_instrument_endpoint": None,
     }
     instrument = payload.get("instrument")
@@ -679,11 +724,13 @@ def _bench_resource_signature(payload):
         endpoint = instrument.get("endpoint")
         if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
             out["instrument_endpoint"] = f"{endpoint.get('host')}:{endpoint.get('port')}"
-    control = payload.get("control_instrument")
+    control = payload.get("controller") or payload.get("control_instrument")
     if isinstance(control, dict):
         endpoint = control.get("endpoint")
         if isinstance(endpoint, dict) and endpoint.get("host") and endpoint.get("port") is not None:
-            out["control_instrument_endpoint"] = f"{endpoint.get('host')}:{endpoint.get('port')}"
+            endpoint_text = f"{endpoint.get('host')}:{endpoint.get('port')}"
+            out["controller_endpoint"] = endpoint_text
+            out["control_instrument_endpoint"] = endpoint_text
     return out
 
 
@@ -703,6 +750,8 @@ def _bench_resource_drift(current_setup, last_known_good):
         "selected_ap_ssid",
         "serial_port",
         "instrument_endpoint",
+        "controller_endpoint",
+        "controller_endpoint",
         "control_instrument_endpoint",
     ):
         if current.get(key) != last.get(key):
@@ -834,6 +883,13 @@ def _build_last_known_good_setup(
         "endpoint": f"{instrument_host}:{instrument_port}" if instrument_host and instrument_port is not None else None,
         "instrument_communication": dict(instrument_communication or {}),
         "instrument_capability_surfaces": dict(instrument_capability_surfaces or {}),
+        "controller": _control_instrument_payload(
+            instance_id=probe_instance_id,
+            type_id=probe_type,
+            endpoint=(f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None),
+            communication=probe_communication,
+            capability_surfaces=probe_capability_surfaces,
+        ),
         "control_instrument": _control_instrument_payload(
             instance_id=probe_instance_id,
             type_id=probe_type,
@@ -841,10 +897,15 @@ def _build_last_known_good_setup(
             communication=probe_communication,
             capability_surfaces=probe_capability_surfaces,
         ),
+        "controller_instance": probe_instance_id or None,
         "control_instrument_instance": probe_instance_id or None,
+        "controller_type": probe_type or None,
         "control_instrument_type": probe_type or None,
+        "controller_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
         "control_instrument_endpoint": f"{probe_host}:{probe_port}" if probe_host and probe_port is not None else None,
+        "controller_communication": dict(probe_communication or {}),
         "control_instrument_communication": dict(probe_communication or {}),
+        "controller_capability_surfaces": dict(probe_capability_surfaces or {}),
         "control_instrument_capability_surfaces": dict(probe_capability_surfaces or {}),
         "run_id": run_id,
         "artifact_or_evidence_location": (result.get("json") or {}).get("evidence"),
@@ -886,10 +947,10 @@ def _print_success_summary(summary, last_known_good, current_setup):
         summary.get("selected_board_profile") if isinstance(summary.get("selected_board_profile"), dict) else {}
     )
     summary_board_name = summary_dut.get("name") or summary_dut.get("id")
-    summary_control_instance = summary.get("control_instrument_instance")
-    summary_control_type = summary.get("control_instrument_type")
-    summary_control_endpoint = summary.get("control_instrument_endpoint")
-    summary_control_surfaces = summary.get("control_instrument_capability_surfaces")
+    summary_control_instance = summary.get("controller_instance") or summary.get("control_instrument_instance")
+    summary_control_type = summary.get("controller_type") or summary.get("control_instrument_type")
+    summary_control_endpoint = summary.get("controller_endpoint") or summary.get("control_instrument_endpoint")
+    summary_control_surfaces = summary.get("controller_capability_surfaces") or summary.get("control_instrument_capability_surfaces")
     print(
         "Summary: validation "
         f"board={summary_board_name} test={summary.get('test')} run_id={summary.get('run_id')} "
@@ -915,7 +976,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         if surfaces:
             print(f"Summary: instrument_surfaces={surfaces}")
     if summary_control_instance:
-        line = f"Summary: control_instrument_instance={summary_control_instance}"
+        line = f"Summary: controller_instance={summary_control_instance}"
         if summary_control_type:
             line += f" type={summary_control_type}"
         if summary_control_endpoint:
@@ -923,7 +984,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(line)
         surfaces = _format_capability_surfaces(summary_control_surfaces)
         if surfaces:
-            print(f"Summary: control_instrument_surfaces={surfaces}")
+            print(f"Summary: controller_surfaces={surfaces}")
     print(
         "Summary: artifacts "
         f"result={summary.get('key_artifact_paths', {}).get('result')} "
@@ -937,7 +998,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
     if summary.get("cleanup_items"):
         print(f"Summary: caveats={', '.join(summary.get('cleanup_items', []))}")
     endpoint = current_setup.get("selected_endpoint", {}) if isinstance(current_setup.get("selected_endpoint"), dict) else {}
-    raw_control_endpoint = current_setup.get("control_instrument_endpoint")
+    raw_control_endpoint = current_setup.get("controller_endpoint") or current_setup.get("control_instrument_endpoint")
     control_endpoint = raw_control_endpoint if isinstance(raw_control_endpoint, dict) else {}
     setup_line = "Summary: setup"
     if current_setup.get("serial_or_flash_port"):
@@ -989,12 +1050,12 @@ def _print_success_summary(summary, last_known_good, current_setup):
         surfaces = _format_capability_surfaces(last_known_good.get("instrument_capability_surfaces"))
         if surfaces:
             print(f"LKG: instrument_surfaces={surfaces}")
-    lkg_control_instance = last_known_good.get("control_instrument_instance")
-    lkg_control_type = last_known_good.get("control_instrument_type")
-    lkg_control_endpoint = last_known_good.get("control_instrument_endpoint")
-    lkg_control_surfaces = last_known_good.get("control_instrument_capability_surfaces")
+    lkg_control_instance = last_known_good.get("controller_instance") or last_known_good.get("control_instrument_instance")
+    lkg_control_type = last_known_good.get("controller_type") or last_known_good.get("control_instrument_type")
+    lkg_control_endpoint = last_known_good.get("controller_endpoint") or last_known_good.get("control_instrument_endpoint")
+    lkg_control_surfaces = last_known_good.get("controller_capability_surfaces") or last_known_good.get("control_instrument_capability_surfaces")
     if lkg_control_instance:
-        line = f"LKG: control_instrument_instance={lkg_control_instance}"
+        line = f"LKG: controller_instance={lkg_control_instance}"
         if lkg_control_type:
             line += f" type={lkg_control_type}"
         if lkg_control_endpoint:
@@ -1002,7 +1063,7 @@ def _print_success_summary(summary, last_known_good, current_setup):
         print(line)
         surfaces = _format_capability_surfaces(lkg_control_surfaces)
         if surfaces:
-            print(f"LKG: control_instrument_surfaces={surfaces}")
+            print(f"LKG: controller_surfaces={surfaces}")
     if last_known_good.get("wiring_assumptions"):
         print(f"LKG: wiring={'; '.join(last_known_good.get('wiring_assumptions', []))}")
     conn = last_known_good.get("connection_setup", {}) if isinstance(last_known_good.get("connection_setup"), dict) else {}

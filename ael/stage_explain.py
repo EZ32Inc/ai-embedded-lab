@@ -164,13 +164,15 @@ def _bench_selection_digest(payload: Dict[str, Any]) -> List[str]:
         endpoint = communication.get("endpoint") if isinstance(communication, dict) else None
         if endpoint:
             items.append(f"instrument_endpoint:{endpoint}")
-    control = payload.get("control_instrument")
+    control = payload.get("controller") or payload.get("control_instrument")
     if isinstance(control, dict):
         instance = control.get("instance")
         if instance:
+            items.append(f"controller_instance:{instance}")
             items.append(f"control_instrument_instance:{instance}")
         config_path = control.get("config")
         if config_path:
+            items.append(f"controller_config:{config_path}")
             items.append(f"control_instrument_config:{config_path}")
     return items
 
@@ -191,6 +193,7 @@ def _selected_bench_resources_payload(ctx: Dict[str, Any]) -> Dict[str, Any]:
         resource_keys.append(f"instrument:{resolved.instrument_id}:{resolved.instrument_host}:{resolved.instrument_port}")
     payload = {
         "contract_version": 1,
+        "controller": control,
         "control_instrument": control,
         "instrument": {
             "id": resolved.instrument_id,
@@ -384,11 +387,17 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
             "requires_summary": explanation.get("requires_summary"),
             "supported_instrument_advisory": supported_instrument_advisory,
             "test_validation_errors": list(metadata.get("validation_errors") or []),
+            "controller_selection": _control_instrument_selection(ctx),
             "control_instrument_selection": _control_instrument_selection(ctx),
+            "controller": ctx["probe_path"],
             "control_instrument": ctx["probe_path"],
+            "controller_instance": ctx.get("probe_instance_id"),
             "control_instrument_instance": ctx.get("probe_instance_id"),
+            "controller_type": ctx.get("probe_type"),
             "control_instrument_type": ctx.get("probe_type"),
+            "controller_communication": ctx.get("probe_communication"),
             "control_instrument_communication": ctx.get("probe_communication"),
+            "controller_capability_surfaces": ctx.get("probe_capability_surfaces"),
             "control_instrument_capability_surfaces": ctx.get("probe_capability_surfaces"),
             "instrument_communication": resolved.instrument_communication,
             "instrument_capability_surfaces": resolved.instrument_capability_surfaces,
@@ -556,8 +565,8 @@ def render_text(payload: Dict[str, Any]) -> str:
     if payload.get("selected"):
         lines.append("selected:")
         selected = payload.get("selected") or {}
-        has_control_selection = isinstance(selected.get("control_instrument_selection"), dict) and bool(
-            selected.get("control_instrument_selection")
+        has_control_selection = isinstance(selected.get("controller_selection") or selected.get("control_instrument_selection"), dict) and bool(
+            selected.get("controller_selection") or selected.get("control_instrument_selection")
         )
         for k, v in (payload.get("selected") or {}).items():
             if has_control_selection and k in (
@@ -569,8 +578,10 @@ def render_text(payload: Dict[str, Any]) -> str:
             ):
                 continue
             if k in (
+                "controller_communication",
                 "control_instrument_communication",
                 "instrument_communication",
+                "controller_capability_surfaces",
                 "control_instrument_capability_surfaces",
                 "instrument_capability_surfaces",
                 "probe_communication",
@@ -585,7 +596,7 @@ def render_text(payload: Dict[str, Any]) -> str:
                 for item in v:
                     lines.append(f"    {json.dumps(item, sort_keys=True)}")
                 continue
-            if k == "control_instrument_selection" and isinstance(v, dict):
+            if k in ("controller_selection", "control_instrument_selection") and isinstance(v, dict):
                 lines.append(f"  - {k}:")
                 for inner_k, inner_v in v.items():
                     lines.append(f"    {inner_k}: {inner_v}")

@@ -120,6 +120,7 @@ def test_worker_result_includes_resource_keys_and_summary():
     ]
     assert payload["resource_summary"]["dut_ids"] == ["rp2040_pico"]
     assert payload["resource_summary"]["control_instrument_endpoints"] == ["192.168.2.63:4242"]
+    assert payload["resource_summary"]["controller_endpoints"] == ["192.168.2.63:4242"]
     assert payload["resource_summary"]["serial_ports"] == ["/dev/ttyACM0"]
     assert payload["resource_summary"]["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
 
@@ -1773,6 +1774,8 @@ def test_task_resource_keys_for_esp32c6_default_do_not_include_probe(tmp_path):
     assert not any(key.startswith("probe:") or key.startswith("probe_path:") for key in keys)
     assert summary["control_instrument_endpoints"] == []
     assert summary["control_instrument_configs"] == []
+    assert summary["controller_endpoints"] == []
+    assert summary["controller_configs"] == []
     assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
 
 
@@ -1791,6 +1794,8 @@ def test_summarize_resource_keys_groups_known_types():
     assert summary["dut_ids"] == ["stm32f103"]
     assert summary["control_instrument_endpoints"] == ["192.168.2.99:4242"]
     assert summary["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
+    assert summary["controller_endpoints"] == ["192.168.2.99:4242"]
+    assert summary["controller_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
     assert summary["serial_ports"] == ["/dev/ttyACM1"]
     assert summary["instrument_endpoints"] == ["esp32s3_dev_c_meter:192.168.4.1:9000"]
     assert summary["other"] == ["custom:thing"]

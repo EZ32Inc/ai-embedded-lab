@@ -20,21 +20,21 @@ def test_explain_plan_for_stm32f401():
     assert payload['selected']['check_model'] == 'signal_verify'
     assert payload['selected']['verification_views']['signal']['resolved_to'] == 'P0.0'
     assert 'led' not in payload['selected']['verification_views']
-    assert payload['selected']['control_instrument_selection']['instance'] == 'esp32jtag_stm32_golden'
-    assert payload['selected']['control_instrument_selection']['type'] == 'esp32jtag'
-    assert payload['selected']['control_instrument'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
-    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_golden'
-    assert payload['selected']['control_instrument_type'] == 'esp32jtag'
-    assert payload['selected']['control_instrument_communication']['primary'] == 'gdb_remote'
-    assert payload['selected']['control_instrument_capability_surfaces']['swd'] == 'gdb_remote'
+    assert payload['selected']['controller_selection']['instance'] == 'esp32jtag_stm32_golden'
+    assert payload['selected']['controller_selection']['type'] == 'esp32jtag'
+    assert payload['selected']['controller'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
+    assert payload['selected']['controller_instance'] == 'esp32jtag_stm32_golden'
+    assert payload['selected']['controller_type'] == 'esp32jtag'
+    assert payload['selected']['controller_communication']['primary'] == 'gdb_remote'
+    assert payload['selected']['controller_capability_surfaces']['swd'] == 'gdb_remote'
     assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_stm32_golden.yaml'
     assert payload['selected']['compatibility']['probe_instance'] == 'esp32jtag_stm32_golden'
     assert payload['selected']['compatibility']['probe_type'] == 'esp32jtag'
     assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
     assert payload['selected']['compatibility']['probe_capability_surfaces']['swd'] == 'gdb_remote'
-    assert payload["selected"]["selected_bench_resources"]["control_instrument"]["instance"] == "esp32jtag_stm32_golden"
+    assert payload["selected"]["selected_bench_resources"]["controller"]["instance"] == "esp32jtag_stm32_golden"
     assert payload["selected"]["selected_bench_resources"]["contract_version"] == 1
-    assert "control_instrument_instance:esp32jtag_stm32_golden" in payload["selected"]["selected_bench_resources"]["selection_digest"]
+    assert "controller_instance:esp32jtag_stm32_golden" in payload["selected"]["selected_bench_resources"]["selection_digest"]
     assert "probe_path:configs/instrument_instances/esp32jtag_stm32_golden.yaml" in payload["selected"]["selected_bench_resources"]["resource_keys"]
     assert payload["selected"]["selected_bench_resources"]["resource_summary"]["control_instrument_configs"] == ["configs/instrument_instances/esp32jtag_stm32_golden.yaml"]
     assert any(item['capability'] == 'swd' and item['surface'] == 'gdb_remote' for item in payload['selected']['capability_surface_plan'])
@@ -48,8 +48,8 @@ def test_explain_plan_for_rp2040_uses_board_probe_config():
     assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/rp2040_pico.yaml"
     assert payload["selected"]["selected_board_profile"]["role"] == "runtime_policy"
-    assert payload['selected']['control_instrument_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
-    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_rp2040_lab'
+    assert payload['selected']['controller_selection']['config'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
+    assert payload['selected']['controller_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['compatibility']['probe'] == 'configs/instrument_instances/esp32jtag_rp2040_lab.yaml'
     assert payload['selected']['compatibility']['probe_instance'] == 'esp32jtag_rp2040_lab'
     assert payload['selected']['compatibility']['probe_communication']['primary'] == 'gdb_remote'
@@ -90,9 +90,9 @@ def test_explain_plan_for_meter_path_includes_instrument_surface_plan():
     assert payload["selected"]["selected_dut"]["runtime_binding"] == "board_profile_driven"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/esp32c6_devkit.yaml"
     assert payload["selected"]["selected_board_profile"]["role"] == "runtime_policy"
-    assert payload['selected']['control_instrument_selection'] is None
+    assert payload['selected']['controller_selection'] is None
     assert payload['selected']['control_instrument'] is None
-    assert payload['selected']['control_instrument_instance'] is None
+    assert payload['selected']['controller_instance'] is None
     assert payload['selected']['compatibility']['probe'] is None
     assert payload['selected']['compatibility']['probe_instance'] is None
     assert payload["selected"]["selected_bench_resources"]["instrument"]["id"] == "esp32s3_dev_c_meter"
@@ -110,7 +110,7 @@ def test_explain_plan_for_stm32_uart_instance_uses_uart_bench_profile():
     assert payload["selected"]["selected_dut"]["id"] == "stm32f103_uart"
     assert payload["selected"]["selected_board_profile"]["id"] == "stm32f103_uart"
     assert payload["selected"]["selected_board_profile"]["config"] == "configs/boards/stm32f103_uart.yaml"
-    assert payload['selected']['control_instrument_instance'] == 'esp32jtag_stm32_uart'
+    assert payload['selected']['controller_instance'] == 'esp32jtag_stm32_uart'
 
 
 def test_explain_plan_surfaces_structured_test_metadata_for_mailbox_plan():
@@ -174,7 +174,7 @@ def test_explain_plan_for_instrument_owned_selftest():
     assert payload['selected']['supported_instrument_advisory']['status'] == 'declared_supported'
     assert payload['selected']['supported_instrument_advisory']['selected_instrument_type'] == 'esp32_meter'
     assert payload['selected']['selected_bench_resources']['instrument']['id'] == 'esp32s3_dev_c_meter'
-    assert payload['selected']['control_instrument_selection'] is None
+    assert payload['selected']['controller_selection'] is None
     text = stage_explain.render_text(payload)
     assert 'ownership_kind: instrument_owned' in text
     assert 'runtime_binding: instrument_owned_plan' in text
@@ -191,6 +191,7 @@ def test_render_text_includes_communication_blocks_readably():
                 "selected_dut": {"id": "stm32f401rct6", "name": "STM32F401"},
                 "selected_board_profile": {"id": "stm32f401rct6", "config": "configs/boards/stm32f401rct6.yaml"},
                 "selected_bench_resources": {
+                    "controller": {"instance": "esp32jtag_stm32_golden"},
                     "control_instrument": {"instance": "esp32jtag_stm32_golden"},
                     "connection_setup": {
                         "source_summary": {"bench_setup": "test.bench_setup"},
@@ -205,8 +206,11 @@ def test_render_text_includes_communication_blocks_readably():
                 "labels": ["mailbox", "portable"],
                 "covers": ["uart"],
                 "test_validation_errors": [],
+                "controller": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
                 "control_instrument": "configs/instrument_instances/esp32jtag_stm32_golden.yaml",
+                "controller_communication": {"primary": "gdb_remote"},
                 "control_instrument_communication": {"primary": "gdb_remote"},
+                "controller_capability_surfaces": {"swd": "gdb_remote"},
                 "control_instrument_capability_surfaces": {"swd": "gdb_remote"},
                 "instrument_communication": {"transport": "wifi", "endpoint": "192.168.4.1:9000"},
                 "instrument_capability_surfaces": {"measure.digital": "primary"},
@@ -220,9 +224,9 @@ def test_render_text_includes_communication_blocks_readably():
             },
         }
     )
-    assert "control_instrument_communication:" in text
+    assert "controller_communication:" in text
     assert "primary: gdb_remote" in text
-    assert "control_instrument_capability_surfaces:" in text
+    assert "controller_capability_surfaces:" in text
     assert "instrument_communication:" in text
     assert "instrument_capability_surfaces:" in text
     assert "selected_dut:" in text

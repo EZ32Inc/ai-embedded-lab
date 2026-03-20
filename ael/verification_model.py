@@ -18,6 +18,8 @@ def summarize_resource_keys(keys: List[str] | None) -> Dict[str, Any]:
         "dut_ids": [],
         "control_instrument_endpoints": [],
         "control_instrument_configs": [],
+        "controller_endpoints": [],
+        "controller_configs": [],
         "serial_ports": [],
         "instrument_endpoints": [],
         "other": [],
@@ -29,9 +31,17 @@ def summarize_resource_keys(keys: List[str] | None) -> Dict[str, Any]:
         if text.startswith("dut:"):
             summary["dut_ids"].append(text.split(":", 1)[1])
         elif text.startswith("probe:"):
-            summary["control_instrument_endpoints"].append(text.split(":", 1)[1])
+            value = text.split(":", 1)[1]
+            summary["control_instrument_endpoints"].append(value)
+            summary["controller_endpoints"].append(value)
         elif text.startswith("probe_path:"):
-            summary["control_instrument_configs"].append(text.split(":", 1)[1])
+            value = text.split(":", 1)[1]
+            summary["control_instrument_configs"].append(value)
+            summary["controller_configs"].append(value)
+        elif text.startswith("controller:"):
+            summary["controller_endpoints"].append(text.split(":", 1)[1])
+        elif text.startswith("controller_path:"):
+            summary["controller_configs"].append(text.split(":", 1)[1])
         elif text.startswith("serial:"):
             summary["serial_ports"].append(text.split(":", 1)[1])
         elif text.startswith("instrument:"):
