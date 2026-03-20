@@ -1750,10 +1750,16 @@ def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") ->
         n_pass = len(dv_state.get("validated_tests", []))
         health = dv_state.get("health_status", "")
         schema_review = str(dv_state.get("schema_review_status") or "").strip()
+        structured_coverage = str((dv_state.get("schema_advisory_summary") or {}).get("structured_step_count", "")).strip()
+        legacy_coverage = str((dv_state.get("schema_advisory_summary") or {}).get("legacy_step_count", "")).strip()
+        warning_messages = dv_state.get("schema_warning_messages", []) if isinstance(dv_state.get("schema_warning_messages"), list) else []
         next_action = str(dv_state.get("next_recommended_action") or "").strip()
         dv_summary = f"{n_pass}/{n_total} passing  [{health}]"
         if schema_review:
             dv_summary += f"  schema={schema_review}"
+        if structured_coverage or legacy_coverage:
+            dv_summary += f"  coverage={structured_coverage or '0'}/{legacy_coverage or '0'}"
+        dv_summary += f"  warnings={len(warning_messages)}"
         if next_action:
             dv_summary += f"  next={next_action}"
     except Exception:

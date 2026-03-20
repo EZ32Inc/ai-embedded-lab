@@ -1378,6 +1378,8 @@ def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
 
     assert "default verification:" in res.stdout
     assert "schema=aligned" in res.stdout
+    assert "coverage=1/0" in res.stdout
+    assert "warnings=0" in res.stdout
     assert "next=all steps passing" in res.stdout
 
 
@@ -2406,3 +2408,47 @@ def test_run_nightly_surfaces_top_level_review_keys_and_review_pack_paths(monkey
     assert summary["structured_coverage"] == "structured=4 legacy=0"
     assert summary["warning_summary"] == "none"
     assert summary["review_pack_paths"] == []
+
+
+def test_ael_status_surfaces_schema_coverage_and_warning_count(tmp_path):
+    setting_path = REPO_ROOT / "configs" / "default_verification_setting.yaml"
+    backup = setting_path.read_text(encoding="utf-8") if setting_path.exists() else None
+    setting_path.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "mode": "sequence",
+                "steps": [
+                    {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_uart_banner.json"},
+                    {"board": "stm32f103_gpio", "test": "tests/plans/stm32f103_gpio_signature.json"},
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
+    good.mkdir(parents=True)
+    (good / "result.json").write_text(json.dumps({"ok": True, "results": []}), encoding="utf-8")
+
+    env = os.environ.copy()
+    env["PYTHONPATH"] = "."
+    try:
+        res = subprocess.run(
+            [sys.executable, "-m", "ael", "status", "--runs-root", str(runs_root)],
+            cwd=str(REPO_ROOT),
+            capture_output=True,
+            text=True,
+            env=env,
+            check=True,
+        )
+    finally:
+        if backup is None:
+            setting_path.unlink(missing_ok=True)
+        else:
+            setting_path.write_text(backup, encoding="utf-8")
+
+    assert "default verification:" in res.stdout
+    assert "schema=partial_structured_coverage" in res.stdout
+    assert "coverage=1/1" in res.stdout
+    assert "warnings=0" in res.stdout
