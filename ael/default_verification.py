@@ -12,7 +12,7 @@ from typing import Any, Dict, List, Tuple
 from ael import paths as ael_paths
 from ael import inventory as inventory_view
 from ael import strategy_resolver
-from ael.config_resolver import resolve_control_instrument_config, resolve_control_instrument_instance
+from ael.config_resolver import resolve_controller_config, resolve_controller_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
 from ael.pipeline import _extract_verify_result_details, _normalize_probe_cfg, _simple_yaml_load, run_pipeline
@@ -559,7 +559,7 @@ def _validate_sequence_groups(repo_root: Path, setting: Dict[str, Any]) -> Tuple
 
 def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[Dict[str, Any], str | None]:
     config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
-    instance_id = str(step.get("instrument_instance") or "").strip() or resolve_control_instrument_instance(
+    instance_id = str(step.get("instrument_instance") or "").strip() or resolve_controller_instance(
         str(config_root),
         args=None,
         board_id=str(step.get("board") or ""),
@@ -567,7 +567,7 @@ def _resolve_step_probe_binding(repo_root: Path, step: Dict[str, Any]) -> Tuple[
     probe_path = _resolve_path(
         config_root,
         step.get("probe"),
-        resolve_control_instrument_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
+        resolve_controller_config(str(config_root), args=None, board_id=str(step.get("board") or "")),
     )
     if not instance_id and not probe_path:
         binding = empty_probe_binding()
@@ -617,7 +617,7 @@ def _instrument_interface_family(repo_root: Path, board: str | None, test_path: 
     if probe_path or str(probe_cfg.get("host") or "").strip():
         try:
             config_root = repo_root if (repo_root / "configs").exists() else ael_paths.repo_root()
-            instance_id = resolve_control_instrument_instance(
+            instance_id = resolve_controller_instance(
                 str(config_root),
                 args=None,
                 board_id=board_id,
