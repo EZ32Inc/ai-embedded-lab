@@ -6,6 +6,7 @@ from typing import Any, Callable, Dict, Optional
 CONTRACT_VERSION = "instrument_action/v1"
 CAPABILITY_TAXONOMY_VERSION = "instrument_capabilities/v1"
 STATUS_MODEL_VERSION = "instrument_status/v1"
+STATUS_HEALTH_SCHEMA_VERSION = "instrument_status_health/v1"
 DOCTOR_MODEL_VERSION = "instrument_doctor/v1"
 DOCTOR_CHECK_SCHEMA_VERSION = "instrument_doctor_checks/v1"
 
@@ -78,6 +79,47 @@ def enforce_status_health_domains(health_domains: Dict[str, Dict[str, Any]]) -> 
             raise ValueError(f"unknown status health-domain key: {name}")
         normalized[name] = dict(value or {})
     return normalized
+
+
+def normalize_status_health_entry(name: str, detail: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(detail or {})
+    ok = payload.get("ok")
+    if ok is not None and not isinstance(ok, bool):
+        ok = bool(ok)
+    summary = payload.get("summary")
+    if summary is None:
+        if payload.get("error"):
+            summary = str(payload.get("error"))
+        elif payload.get("state") is not None:
+            summary = str(payload.get("state"))
+        elif ok is True:
+            summary = "ok"
+        elif ok is False:
+            summary = "failed"
+    detail_text = payload.get("detail")
+    if detail_text is None and payload.get("error"):
+        detail_text = str(payload.get("error"))
+    evidence = payload.get("evidence") if isinstance(payload.get("evidence"), dict) else {}
+    for key, value in payload.items():
+        if key in {"ok", "summary", "detail", "evidence"}:
+            continue
+        evidence.setdefault(key, value)
+    normalized = {
+        "ok": ok,
+        "summary": summary,
+        "detail": detail_text,
+        "evidence": evidence,
+    }
+    for key, value in payload.items():
+        if key in normalized:
+            continue
+        normalized[key] = value
+    return normalized
+
+
+def normalize_status_health_domains(health_domains: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
+    normalized = enforce_status_health_domains(health_domains)
+    return {name: normalize_status_health_entry(name, detail) for name, detail in normalized.items()}
 
 
 def enforce_doctor_check_keys(checks: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
@@ -228,10 +270,11 @@ def normalize_status_result(
     endpoints: Optional[Dict[str, Any]] = None,
     observations: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
-    health_domains = enforce_status_health_domains(health_domains)
+    health_domains = normalize_status_health_domains(health_domains)
     result: Dict[str, Any] = {
         "instrument_family": family,
         "status_model_version": STATUS_MODEL_VERSION,
+        "status_health_schema_version": STATUS_HEALTH_SCHEMA_VERSION,
         "status_taxonomy_enforced": True,
         "reachable": reachable,
         "health": derive_status_health(reachable=reachable, health_domains=health_domains),

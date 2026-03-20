@@ -2,7 +2,7 @@ from pathlib import Path
 
 from ael.instruments.registry import InstrumentRegistry
 from ael.instruments import native_api_dispatch
-from ael.instruments.interfaces.model import normalize_capabilities_result, normalize_doctor_check_entry, normalize_doctor_result, normalize_status_result
+from ael.instruments.interfaces.model import normalize_capabilities_result, normalize_doctor_check_entry, normalize_doctor_result, normalize_status_health_entry, normalize_status_result
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -231,7 +231,10 @@ def test_control_status_returns_unified_envelope_for_esp32jtag(monkeypatch):
     assert payload["action"] == "get_status"
     assert payload["result"]["health"] == "ready"
     assert payload["result"]["status_model_version"] == "instrument_status/v1"
+    assert payload["result"]["status_health_schema_version"] == "instrument_status_health/v1"
     assert payload["result"]["status_taxonomy_enforced"] is True
+    assert payload["result"]["health_domains"]["network"]["summary"] == "ok"
+    assert payload["result"]["health_domains"]["network"]["evidence"] == {}
 
 
 
@@ -468,3 +471,15 @@ def test_normalize_doctor_check_entry_canonicalizes_summary_detail_and_evidence(
     assert payload["detail"] == "timeout"
     assert payload["evidence"]["error"] == "timeout"
     assert payload["evidence"]["attempts"] == 2
+
+
+def test_normalize_status_health_entry_canonicalizes_summary_detail_and_evidence():
+    payload = normalize_status_health_entry(
+        "network",
+        {"ok": False, "error": "unreachable", "endpoint": "10.0.0.8"},
+    )
+    assert payload["ok"] is False
+    assert payload["summary"] == "unreachable"
+    assert payload["detail"] == "unreachable"
+    assert payload["evidence"]["error"] == "unreachable"
+    assert payload["evidence"]["endpoint"] == "10.0.0.8"
