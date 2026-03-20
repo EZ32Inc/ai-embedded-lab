@@ -385,6 +385,13 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
     observe_uart_cfg = dict(observe_uart_cfg)
     bench_setup = resolve_bench_setup(effective)
     if isinstance(bench_setup, dict):
+        serial_console = bench_setup.get("serial_console")
+        if isinstance(serial_console, dict):
+            serial_port = str(serial_console.get("port") or "").strip()
+            if serial_port and not str(observe_uart_cfg.get("port") or "").strip():
+                observe_uart_cfg["port"] = serial_port
+            if observe_uart_cfg.get("baud") is None and serial_console.get("baud") is not None:
+                observe_uart_cfg["baud"] = serial_console.get("baud")
         for item in bench_setup.get("instrument_roles", []) if isinstance(bench_setup.get("instrument_roles"), list) else []:
             if not isinstance(item, dict):
                 continue

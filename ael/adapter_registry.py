@@ -366,11 +366,13 @@ class _UartCheckAdapter:
                     "evidence": [evidence_item],
                     "recovery_hint": recovery_hint,
                 }
-        if not cfg.get("port") and flash_json_path:
+        port_value = str(cfg.get("port") or "").strip()
+        if flash_json_path and (not port_value or port_value.startswith("auto_")):
             try:
                 flash_payload = json.loads(Path(flash_json_path).read_text(encoding="utf-8"))
-                if flash_payload.get("port"):
-                    cfg["port"] = flash_payload.get("port")
+                flash_port = str(flash_payload.get("port") or "").strip()
+                if flash_port:
+                    cfg["port"] = flash_port
             except Exception:
                 pass
         if log_path:

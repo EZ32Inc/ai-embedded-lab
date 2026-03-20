@@ -192,6 +192,36 @@ class TestStrategyResolver(unittest.TestCase):
         self.assertEqual(cfg["bridge_endpoint"], "127.0.0.1:8767")
         self.assertEqual(cfg["bridge_instrument_id"], "usb_uart_bridge_daemon")
 
+    def test_build_uart_step_uses_serial_console_when_uart_port_unset(self):
+        test_raw = {
+            "observe_uart": {
+                "enabled": True,
+                "port": None,
+                "baud": None,
+            },
+            "bench_setup": {
+                "serial_console": {
+                    "port": "auto_usb_serial_jtag",
+                    "baud": 115200,
+                }
+            },
+        }
+
+        step = strategy_resolver.build_uart_step(
+            effective=test_raw,
+            board_cfg={},
+            output_mode="normal",
+            observe_uart_log="/tmp/uart.log",
+            uart_json="/tmp/uart.json",
+            flash_json="/tmp/flash.json",
+            observe_uart_step_log="/tmp/uart_step.log",
+        )
+
+        self.assertIsNotNone(step)
+        cfg = step["inputs"]["observe_uart_cfg"]
+        self.assertEqual(cfg["port"], "auto_usb_serial_jtag")
+        self.assertEqual(cfg["baud"], 115200)
+
 
 if __name__ == "__main__":
     unittest.main()

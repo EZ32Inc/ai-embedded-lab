@@ -117,6 +117,45 @@ class TestPhaseFRecoveryCoverage(unittest.TestCase):
         self.assertFalse(step_entries[0].get("ok"))
         self.assertFalse(step_entries[1].get("ok"))
 
+    def test_uart_check_uses_flash_port_for_auto_serial_symbol(self):
+        registry = AdapterRegistry()
+        self.run_dir.mkdir(parents=True, exist_ok=True)
+        flash_json = self.run_dir / "flash.json"
+        flash_json.write_text('{"ok": true, "port": "/dev/ttyACM0"}', encoding="utf-8")
+        plan = {
+            "steps": [
+                {
+                    "name": "check_uart",
+                    "type": "check.uart_log",
+                    "inputs": {
+                        "observe_uart_cfg": {
+                            "enabled": True,
+                            "port": "auto_usb_serial_jtag",
+                            "baud": 115200,
+                            "expect_patterns": ["AEL_READY"],
+                        },
+                        "raw_log_path": str(self.run_dir / "uart.log"),
+                        "out_json": str(self.run_dir / "uart.json"),
+                        "flash_json_path": str(flash_json),
+                        "output_mode": "normal",
+                        "log_path": "",
+                    },
+                }
+            ]
+        }
+
+        seen = {}
+
+        def _fake_run_serial_log(cfg, raw_log_path):
+            seen["cfg"] = dict(cfg)
+            return {"ok": True, "bytes": 10, "lines": 1, "port": cfg.get("port"), "baud": cfg.get("baud"), "matched": {"expect": {"AEL_READY": 1}, "boot": {}}, "missing_expect": [], "forbid_matched": [], "crash_detected": False, "reboot_loop_suspected": False, "download_mode_detected": False, "error_summary": ""}
+
+        with patch("ael.adapter_registry.observe_log.run_serial_log", side_effect=_fake_run_serial_log):
+            res = runner.run_plan(plan, self.run_dir, registry)
+
+        self.assertTrue(res.get("ok"))
+        self.assertEqual(seen["cfg"]["port"], "/dev/ttyACM0")
+
 
 if __name__ == "__main__":
     unittest.main()
