@@ -10,12 +10,12 @@ Status legend:
 
 - `identify`: OK
   - family and backend role are exposed consistently; legacy backend is explicitly marked
-- `get_capabilities`: PARTIAL
-  - capability keys are exposed, but taxonomy enforcement is still soft
-- `get_status`: PARTIAL
-  - normalized top-level envelope exists; health domains still need stricter shared taxonomy
-- `doctor`: PARTIAL
-  - normalized health, failure boundary, and recovery hint are present; check bodies still vary by family
+- `get_capabilities`: OK
+  - taxonomy enforcement is live; capability keys pass `enforce_capability_taxonomy`
+- `get_status`: OK
+  - taxonomy-enforced health domains; health_domain keys align with `STATUS_HEALTH_DOMAIN_KEYS`
+- `doctor`: OK
+  - taxonomy-enforced checks; check keys align with `DOCTOR_CHECK_KEYS`
 - `preflight_probe`: PARTIAL
   - action is usable and routable, but response details remain backend-shaped
 - `program_firmware`: OK
@@ -31,12 +31,12 @@ Status legend:
 
 - `identify`: OK
   - family, interface, and controller metadata are stable on active paths
-- `get_capabilities`: PARTIAL
-  - capability keys are exposed, but family-local detail still leaks under result payloads
-- `get_status`: PARTIAL
-  - normalized top-level envelope exists; health domains still need stricter shared taxonomy
-- `doctor`: PARTIAL
-  - normalized health, failure boundary, and recovery hint are present; checks are not yet fully canonicalized
+- `get_capabilities`: OK
+  - taxonomy enforcement is live; capability keys pass `enforce_capability_taxonomy`
+- `get_status`: OK
+  - taxonomy-enforced health domains; capture and logic_analyzer replace old subsystem names
+- `doctor`: OK
+  - taxonomy-enforced checks; capture_control and logic_analyzer replace old subsystem names
 - `preflight_probe`: PARTIAL
   - action is useful and provider-routed, but detailed payload shape remains legacy-heavy
 - `program_firmware`: OK
@@ -52,12 +52,12 @@ Status legend:
 
 - `identify`: OK
   - interface and provider routing is aligned with the shared model
-- `get_capabilities`: PARTIAL
-  - taxonomy keys are exposed, but some result details still use meter-specific naming
-- `get_status`: PARTIAL
-  - normalized top-level envelope exists; health semantics still need stronger cross-family alignment
-- `doctor`: PARTIAL
-  - normalized health and recovery fields are present; detailed checks remain family-shaped
+- `get_capabilities`: OK
+  - taxonomy enforcement is live; capability keys pass `enforce_capability_taxonomy`
+- `get_status`: OK
+  - taxonomy-enforced health domains; all keys in `STATUS_HEALTH_DOMAIN_KEYS`
+- `doctor`: OK
+  - taxonomy-enforced checks; meter_service and stimulation_surface added to `DOCTOR_CHECK_KEYS`
 - `measure_digital`: OK
   - unified action envelope is live with compatibility aliases retained
 - `measure_voltage`: OK
@@ -73,12 +73,12 @@ Status legend:
 
 - `identify`: OK
   - interface and provider routing is aligned with the shared model
-- `get_capabilities`: PARTIAL
-  - stable top-level keys exist, but capability taxonomy is still soft-enforced
-- `get_status`: PARTIAL
-  - normalized top-level envelope exists; health domains remain simpler than other families
-- `doctor`: PARTIAL
-  - normalized health and recovery fields are present; detailed checks remain bridge-specific
+- `get_capabilities`: OK
+  - taxonomy enforcement is live; capability keys pass `enforce_capability_taxonomy`
+- `get_status`: OK
+  - taxonomy-enforced health domains; bridge_service key aligned to `STATUS_HEALTH_DOMAIN_KEYS`
+- `doctor`: OK
+  - taxonomy-enforced checks; invalid "doctor" key removed; data folded into bridge_service evidence
 - `open`: OK
   - unified action envelope is live with compatibility aliases retained
 - `close`: OK
@@ -97,8 +97,11 @@ Status legend:
 - unified provider spine: OK
 - unified dispatch routing: OK
 - unified action envelope: PARTIAL
-- stable capability taxonomy: PARTIAL
-- normalized doctor and status semantics: PARTIAL
+- stable capability taxonomy: OK
+  - all four families pass `enforce_capability_taxonomy`
+- normalized doctor and status semantics: OK
+  - all four families emit taxonomy-enforced health domains and check keys
+  - `normalize_status_result` and `normalize_doctor_result` enforce this at the interface layer
 - reporting vocabulary: OK
 - fallback and degradation model: PARTIAL
 - public controller and instrument naming: OK
