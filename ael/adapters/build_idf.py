@@ -30,6 +30,14 @@ def run(board_cfg):
         build_dir = os.path.join(root, build_dir_override)
     else:
         build_dir = os.path.join(root, "artifacts", f"build_{target_name}")
+    # If the build dir exists but lacks CMakeCache.txt it is a partial or stale
+    # directory.  IDF's fullclean (triggered by set-target) refuses to remove
+    # directories it cannot identify as a CMake build tree, causing a hard
+    # failure.  Remove it ourselves so IDF can start clean.
+    cmake_cache = os.path.join(build_dir, "CMakeCache.txt")
+    if os.path.isdir(build_dir) and not os.path.exists(cmake_cache):
+        print(f"Build: removing partial build dir {build_dir}")
+        shutil.rmtree(build_dir)
     os.makedirs(build_dir, exist_ok=True)
 
     try:
