@@ -1148,7 +1148,7 @@ def test_verify_default_state_prefers_schema_warning_next_action(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "capability_taxonomy_version_counts": {"instrument_capabilities/v1": 1}, "status_health_schema_version_counts": {"instrument_status_health/v1": 1}, "doctor_check_schema_version_counts": {"instrument_doctor_checks/v1": 1}, "capability_taxonomy_enforced_counts": {"true": 1}, "status_taxonomy_enforced_counts": {"true": 1}, "doctor_checks_enforced_counts": {"true": 1}, "results": []}), encoding="utf-8")
 
     with patch(
         "ael.__main__.inventory_view.describe_test",
@@ -1420,7 +1420,7 @@ def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
     runs_root = tmp_path / "runs"
     good = runs_root / "2026-03-19_21-57-16_esp32c6_devkit_esp32c6_uart_banner"
     good.mkdir(parents=True)
-    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}), encoding="utf-8")
+    (good / "result.json").write_text(json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "capability_taxonomy_version_counts": {"instrument_capabilities/v1": 1}, "status_health_schema_version_counts": {"instrument_status_health/v1": 1}, "doctor_check_schema_version_counts": {"instrument_doctor_checks/v1": 1}, "capability_taxonomy_enforced_counts": {"true": 1}, "status_taxonomy_enforced_counts": {"true": 1}, "doctor_checks_enforced_counts": {"true": 1}, "results": []}), encoding="utf-8")
 
     env = os.environ.copy()
     env["PYTHONPATH"] = "."
@@ -1444,6 +1444,12 @@ def test_ael_status_surfaces_default_verification_schema_review(tmp_path):
     assert "schema=aligned" in res.stdout
     assert "coverage=1/0" in res.stdout
     assert "warnings=0" in res.stdout
+    assert "capabilities=instrument_capabilities/v1=1" in res.stdout
+    assert "status_schema=instrument_status_health/v1=1" in res.stdout
+    assert "doctor_schema=instrument_doctor_checks/v1=1" in res.stdout
+    assert "cap_enforced=true=1" in res.stdout
+    assert "status_enforced=true=1" in res.stdout
+    assert "doctor_enforced=true=1" in res.stdout
     assert "next=all steps passing" in res.stdout
 
 
@@ -2343,6 +2349,12 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
         "merge_advisory: warning-only: baseline readiness needs attention",
         "- structured_coverage: structured=3 legacy=1",
         "- warning_summary: 1 schema warning(s)",
+        "- capability_taxonomy_versions: instrument_capabilities/v1=1",
+        "- status_health_schema_versions: instrument_status_health/v1=1",
+        "- doctor_check_schema_versions: instrument_doctor_checks/v1=1",
+        "- capability_taxonomy_enforced: true=1",
+        "- status_taxonomy_enforced: true=1",
+        "- doctor_checks_enforced: true=1",
         "schema_review_status: warnings_present",
         "structured_coverage: structured=3 legacy=1",
         "warning_summary: 1 schema warning(s)",
@@ -2387,6 +2399,12 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
     assert summary["default_verification_review"]["schema_review_status"] == "warnings_present"
     assert summary["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
     assert summary["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
+    assert summary["capability_taxonomy_versions"] == "instrument_capabilities/v1=1"
+    assert summary["status_health_schema_versions"] == "instrument_status_health/v1=1"
+    assert summary["doctor_check_schema_versions"] == "instrument_doctor_checks/v1=1"
+    assert summary["capability_taxonomy_enforced"] == "true=1"
+    assert summary["status_taxonomy_enforced"] == "true=1"
+    assert summary["doctor_checks_enforced"] == "true=1"
     assert summary["review_pack_paths"] == []
 
     report_text = Path(summary["report_path"]).read_text(encoding="utf-8")
@@ -2394,6 +2412,12 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
     assert "- schema_review_status: warnings_present" in report_text
     assert "- structured_coverage: structured=3 legacy=1" in report_text
     assert "- warning_summary: 1 schema warning(s)" in report_text
+    assert "- capability_taxonomy_versions: instrument_capabilities/v1=1" in report_text
+    assert "- status_health_schema_versions: instrument_status_health/v1=1" in report_text
+    assert "- doctor_check_schema_versions: instrument_doctor_checks/v1=1" in report_text
+    assert "- capability_taxonomy_enforced: true=1" in report_text
+    assert "- status_taxonomy_enforced: true=1" in report_text
+    assert "- doctor_checks_enforced: true=1" in report_text
     assert "structured_coverage: structured=3 legacy=1" in report_text
 
 
@@ -2424,6 +2448,12 @@ def test_build_review_pack_payload_exposes_machine_readable_review(monkeypatch):
     assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=0"
     assert payload["default_verification_review"]["warning_summary"] == "none"
     assert payload["baseline_readiness_status"] == "ready"
+    assert payload["capability_taxonomy_versions"] == "instrument_capabilities/v1=1"
+    assert payload["status_health_schema_versions"] == "instrument_status_health/v1=1"
+    assert payload["doctor_check_schema_versions"] == "instrument_doctor_checks/v1=1"
+    assert payload["capability_taxonomy_enforced"] == "true=1"
+    assert payload["status_taxonomy_enforced"] == "true=1"
+    assert payload["doctor_checks_enforced"] == "true=1"
 
 
 def test_build_nightly_report_payload_exposes_machine_readable_review():
@@ -2445,6 +2475,12 @@ def test_build_nightly_report_payload_exposes_machine_readable_review():
     assert payload["default_verification_review"]["structured_coverage"] == "structured=3 legacy=1"
     assert payload["default_verification_review"]["warning_summary"] == "1 schema warning(s)"
     assert payload["baseline_readiness_status"] == "needs_attention"
+    assert payload["capability_taxonomy_versions"] == "instrument_capabilities/v1=1"
+    assert payload["status_health_schema_versions"] == "instrument_status_health/v1=1"
+    assert payload["doctor_check_schema_versions"] == "instrument_doctor_checks/v1=1"
+    assert payload["capability_taxonomy_enforced"] == "true=1"
+    assert payload["status_taxonomy_enforced"] == "true=1"
+    assert payload["doctor_checks_enforced"] == "true=1"
 
 
 def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consistent(monkeypatch, tmp_path):

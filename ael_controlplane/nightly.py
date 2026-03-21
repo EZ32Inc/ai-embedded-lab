@@ -127,6 +127,12 @@ def run_nightly(cfg: NightlyConfig) -> Dict:
     summary["schema_review_status"] = str(summary["default_verification_review"].get("schema_review_status", "unavailable"))
     summary["structured_coverage"] = str(summary["default_verification_review"].get("structured_coverage", "unavailable"))
     summary["warning_summary"] = str(summary["default_verification_review"].get("warning_summary", "unavailable"))
+    summary["capability_taxonomy_versions"] = str(summary["default_verification_review"].get("capability_taxonomy_versions", "unavailable"))
+    summary["status_health_schema_versions"] = str(summary["default_verification_review"].get("status_health_schema_versions", "unavailable"))
+    summary["doctor_check_schema_versions"] = str(summary["default_verification_review"].get("doctor_check_schema_versions", "unavailable"))
+    summary["capability_taxonomy_enforced"] = str(summary["default_verification_review"].get("capability_taxonomy_enforced", "unavailable"))
+    summary["status_taxonomy_enforced"] = str(summary["default_verification_review"].get("status_taxonomy_enforced", "unavailable"))
+    summary["doctor_checks_enforced"] = str(summary["default_verification_review"].get("doctor_checks_enforced", "unavailable"))
     smoke_ok = True
     if not cfg.dry_run:
         smoke_ok = _smoke_gates_pass()

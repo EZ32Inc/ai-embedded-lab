@@ -1693,6 +1693,12 @@ Fill in all PLACEHOLDER fields before attempting to run.
     return 0
 
 
+def _format_counts(counts: dict) -> str:
+    if not isinstance(counts, dict) or not counts:
+        return ""
+    return " ".join(f"{key}={counts[key]}" for key in sorted(counts))
+
+
 def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") -> int:
     """Print unified system domain + user project domain status overview."""
     import yaml as _yaml  # type: ignore
@@ -1755,6 +1761,12 @@ def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") ->
         legacy_coverage = str((dv_state.get("schema_advisory_summary") or {}).get("legacy_step_count", "")).strip()
         warning_messages = dv_state.get("schema_warning_messages", []) if isinstance(dv_state.get("schema_warning_messages"), list) else []
         next_action = str(dv_state.get("next_recommended_action") or "").strip()
+        capability_versions = str(_format_counts(dv_state.get("capability_taxonomy_version_counts") if isinstance(dv_state.get("capability_taxonomy_version_counts"), dict) else {})).strip()
+        status_versions = str(_format_counts(dv_state.get("status_health_schema_version_counts") if isinstance(dv_state.get("status_health_schema_version_counts"), dict) else {})).strip()
+        doctor_versions = str(_format_counts(dv_state.get("doctor_check_schema_version_counts") if isinstance(dv_state.get("doctor_check_schema_version_counts"), dict) else {})).strip()
+        capability_enforced = str(_format_counts(dv_state.get("capability_taxonomy_enforced_counts") if isinstance(dv_state.get("capability_taxonomy_enforced_counts"), dict) else {})).strip()
+        status_enforced = str(_format_counts(dv_state.get("status_taxonomy_enforced_counts") if isinstance(dv_state.get("status_taxonomy_enforced_counts"), dict) else {})).strip()
+        doctor_enforced = str(_format_counts(dv_state.get("doctor_checks_enforced_counts") if isinstance(dv_state.get("doctor_checks_enforced_counts"), dict) else {})).strip()
         dv_summary = f"{n_pass}/{n_total} passing  [{health}]"
         if readiness:
             dv_summary += f"  readiness={readiness}"
@@ -1763,6 +1775,18 @@ def _ael_status_cmd(projects_root: str = "projects", runs_root: str = "runs") ->
         if structured_coverage or legacy_coverage:
             dv_summary += f"  coverage={structured_coverage or '0'}/{legacy_coverage or '0'}"
         dv_summary += f"  warnings={len(warning_messages)}"
+        if capability_versions:
+            dv_summary += f"  capabilities={capability_versions}"
+        if status_versions:
+            dv_summary += f"  status_schema={status_versions}"
+        if doctor_versions:
+            dv_summary += f"  doctor_schema={doctor_versions}"
+        if capability_enforced:
+            dv_summary += f"  cap_enforced={capability_enforced}"
+        if status_enforced:
+            dv_summary += f"  status_enforced={status_enforced}"
+        if doctor_enforced:
+            dv_summary += f"  doctor_enforced={doctor_enforced}"
         if next_action:
             dv_summary += f"  next={next_action}"
     except Exception:
@@ -2108,18 +2132,36 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
             latest_failure_boundaries.append(str(latest_fields.get("failure_boundary")))
         if latest_fields.get("recovery_hint"):
             latest_recovery_hints.append(str(latest_fields.get("recovery_hint")))
-        if latest_fields.get("capability_taxonomy_version"):
-            latest_capability_taxonomy_versions.append(str(latest_fields.get("capability_taxonomy_version")))
-        if latest_fields.get("status_health_schema_version"):
-            latest_status_health_schema_versions.append(str(latest_fields.get("status_health_schema_version")))
-        if latest_fields.get("doctor_check_schema_version"):
-            latest_doctor_check_schema_versions.append(str(latest_fields.get("doctor_check_schema_version")))
-        if result.get("capability_taxonomy_enforced") is not None:
-            latest_capability_taxonomy_enforced.append(str(bool(result.get("capability_taxonomy_enforced"))).lower())
-        if result.get("status_taxonomy_enforced") is not None:
-            latest_status_taxonomy_enforced.append(str(bool(result.get("status_taxonomy_enforced"))).lower())
-        if result.get("doctor_checks_enforced") is not None:
-            latest_doctor_checks_enforced.append(str(bool(result.get("doctor_checks_enforced"))).lower())
+        capability_taxonomy_version = latest_fields.get("capability_taxonomy_version")
+        if not capability_taxonomy_version and isinstance(result.get("capability_taxonomy_version_counts"), dict):
+            capability_taxonomy_version = next(iter(result.get("capability_taxonomy_version_counts", {})), "")
+        if capability_taxonomy_version:
+            latest_capability_taxonomy_versions.append(str(capability_taxonomy_version))
+        status_health_schema_version = latest_fields.get("status_health_schema_version")
+        if not status_health_schema_version and isinstance(result.get("status_health_schema_version_counts"), dict):
+            status_health_schema_version = next(iter(result.get("status_health_schema_version_counts", {})), "")
+        if status_health_schema_version:
+            latest_status_health_schema_versions.append(str(status_health_schema_version))
+        doctor_check_schema_version = latest_fields.get("doctor_check_schema_version")
+        if not doctor_check_schema_version and isinstance(result.get("doctor_check_schema_version_counts"), dict):
+            doctor_check_schema_version = next(iter(result.get("doctor_check_schema_version_counts", {})), "")
+        if doctor_check_schema_version:
+            latest_doctor_check_schema_versions.append(str(doctor_check_schema_version))
+        capability_taxonomy_enforced = result.get("capability_taxonomy_enforced")
+        if capability_taxonomy_enforced is None and isinstance(result.get("capability_taxonomy_enforced_counts"), dict):
+            capability_taxonomy_enforced = next(iter(result.get("capability_taxonomy_enforced_counts", {})), None)
+        if capability_taxonomy_enforced is not None:
+            latest_capability_taxonomy_enforced.append(str(capability_taxonomy_enforced).lower())
+        status_taxonomy_enforced = result.get("status_taxonomy_enforced")
+        if status_taxonomy_enforced is None and isinstance(result.get("status_taxonomy_enforced_counts"), dict):
+            status_taxonomy_enforced = next(iter(result.get("status_taxonomy_enforced_counts", {})), None)
+        if status_taxonomy_enforced is not None:
+            latest_status_taxonomy_enforced.append(str(status_taxonomy_enforced).lower())
+        doctor_checks_enforced = result.get("doctor_checks_enforced")
+        if doctor_checks_enforced is None and isinstance(result.get("doctor_checks_enforced_counts"), dict):
+            doctor_checks_enforced = next(iter(result.get("doctor_checks_enforced_counts", {})), None)
+        if doctor_checks_enforced is not None:
+            latest_doctor_checks_enforced.append(str(doctor_checks_enforced).lower())
 
         if ok:
             validated.append({"step": step_label, "run_id": run_id, "optional": optional, **latest_fields})
