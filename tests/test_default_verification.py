@@ -2165,7 +2165,7 @@ def test_default_verification_review_payload_normalizes_review_fields():
     payload = default_verification_review_payload(
         {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\ncapability_taxonomy_versions: instrument_capabilities/v1=1\nstatus_health_schema_versions: instrument_status_health/v1=1\ndoctor_check_schema_versions: instrument_doctor_checks/v1=1\ncapability_taxonomy_enforced: true=1\nstatus_taxonomy_enforced: true=1\ndoctor_checks_enforced: true=1\n",
         }
     )
 
@@ -2203,7 +2203,7 @@ def test_generate_review_pack_includes_review_highlights_and_body(monkeypatch, t
         "ael_controlplane.review_pack.default_verification_review_snapshot",
         lambda *_args, **_kwargs: {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\ncapability_taxonomy_versions: instrument_capabilities/v1=1\nstatus_health_schema_versions: instrument_status_health/v1=1\ndoctor_check_schema_versions: instrument_doctor_checks/v1=1\ncapability_taxonomy_enforced: true=1\nstatus_taxonomy_enforced: true=1\ndoctor_checks_enforced: true=1\n",
         },
     )
     monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
@@ -2241,7 +2241,7 @@ def test_write_nightly_report_includes_review_highlights_and_body(monkeypatch, t
         "ael_controlplane.nightly_report.default_verification_review_snapshot",
         lambda *_args, **_kwargs: {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\ncapability_taxonomy_versions: instrument_capabilities/v1=1\nstatus_health_schema_versions: instrument_status_health/v1=1\ndoctor_check_schema_versions: instrument_doctor_checks/v1=1\ncapability_taxonomy_enforced: true=1\nstatus_taxonomy_enforced: true=1\ndoctor_checks_enforced: true=1\n",
         },
     )
 
@@ -2280,6 +2280,12 @@ def test_review_pack_and_nightly_report_match_review_vocabulary(monkeypatch, tmp
         "instrument_health: degraded=1\n"
         "failure_boundaries: instrument_service=1\n"
         "recovery_hints: recover instrument transport or API availability and retry once=1\n"
+        "capability_taxonomy_versions: instrument_capabilities/v1=1\n"
+        "status_health_schema_versions: instrument_status_health/v1=1\n"
+        "doctor_check_schema_versions: instrument_doctor_checks/v1=1\n"
+        "capability_taxonomy_enforced: true=1\n"
+        "status_taxonomy_enforced: true=1\n"
+        "doctor_checks_enforced: true=1\n"
     )
     monkeypatch.chdir(tmp_path)
     (tmp_path / "reports").mkdir()
@@ -2352,6 +2358,12 @@ def test_run_nightly_surfaces_default_verification_review_summary_and_report(mon
         "schema_review_status: warnings_present\n"
         "structured_coverage: structured=3 legacy=1\n"
         "warning_summary: 1 schema warning(s)\n"
+        "capability_taxonomy_versions: instrument_capabilities/v1=1\n"
+        "status_health_schema_versions: instrument_status_health/v1=1\n"
+        "doctor_check_schema_versions: instrument_doctor_checks/v1=1\n"
+        "capability_taxonomy_enforced: true=1\n"
+        "status_taxonomy_enforced: true=1\n"
+        "doctor_checks_enforced: true=1\n"
     )
     monkeypatch.setattr("ael_controlplane.nightly.current_branch", lambda: "feature/nightly-test")
     monkeypatch.setattr("ael_controlplane.nightly._collect_backlog", lambda _cfg: [])
@@ -2390,7 +2402,7 @@ def test_build_review_pack_payload_exposes_machine_readable_review(monkeypatch):
         "ael_controlplane.review_pack.default_verification_review_snapshot",
         lambda *_args, **_kwargs: {
             "ok": True,
-            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\n",
+            "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: aligned\nstructured_coverage: structured=3 legacy=0\nwarning_summary: none\ncapability_taxonomy_versions: instrument_capabilities/v1=1\nstatus_health_schema_versions: instrument_status_health/v1=1\ndoctor_check_schema_versions: instrument_doctor_checks/v1=1\ncapability_taxonomy_enforced: true=1\nstatus_taxonomy_enforced: true=1\ndoctor_checks_enforced: true=1\n",
         },
     )
     monkeypatch.setattr("ael_controlplane.review_pack._run_git", lambda *_args, **_kwargs: "")
@@ -2424,7 +2436,7 @@ def test_build_nightly_report_payload_exposes_machine_readable_review():
             "plans": [],
             "default_verification_review": {
                 "ok": True,
-                "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: warnings_present\nstructured_coverage: structured=3 legacy=1\nwarning_summary: 1 schema warning(s)\n",
+                "text": "Default Verification Review\nhealth_status: pass\nschema_review_status: warnings_present\nstructured_coverage: structured=3 legacy=1\nwarning_summary: 1 schema warning(s)\ncapability_taxonomy_versions: instrument_capabilities/v1=1\nstatus_health_schema_versions: instrument_status_health/v1=1\ndoctor_check_schema_versions: instrument_doctor_checks/v1=1\ncapability_taxonomy_enforced: true=1\nstatus_taxonomy_enforced: true=1\ndoctor_checks_enforced: true=1\n",
             },
         },
     )
@@ -2446,6 +2458,12 @@ def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consis
         "instrument_health: degraded=1\n"
         "failure_boundaries: instrument_service=1\n"
         "recovery_hints: recover instrument transport or API availability and retry once=1\n"
+        "capability_taxonomy_versions: instrument_capabilities/v1=1\n"
+        "status_health_schema_versions: instrument_status_health/v1=1\n"
+        "doctor_check_schema_versions: instrument_doctor_checks/v1=1\n"
+        "capability_taxonomy_enforced: true=1\n"
+        "status_taxonomy_enforced: true=1\n"
+        "doctor_checks_enforced: true=1\n"
     )
     expected = {
         "schema_review_status": "warnings_present",
@@ -2455,6 +2473,12 @@ def test_review_text_review_pack_payload_nightly_payload_and_summary_stay_consis
         "instrument_health": "degraded=1",
         "failure_boundaries": "instrument_service=1",
         "recovery_hints": "recover instrument transport or API availability and retry once=1",
+        "capability_taxonomy_versions": "instrument_capabilities/v1=1",
+        "status_health_schema_versions": "instrument_status_health/v1=1",
+        "doctor_check_schema_versions": "instrument_doctor_checks/v1=1",
+        "capability_taxonomy_enforced": "true=1",
+        "status_taxonomy_enforced": "true=1",
+        "doctor_checks_enforced": "true=1",
     }
     review_payload = default_verification_review_payload({"ok": True, "text": review_text})
 
@@ -2509,6 +2533,12 @@ def test_run_nightly_surfaces_top_level_review_keys_and_review_pack_paths(monkey
         "schema_review_status: aligned\n"
         "structured_coverage: structured=4 legacy=0\n"
         "warning_summary: none\n"
+        "capability_taxonomy_versions: instrument_capabilities/v1=1\n"
+        "status_health_schema_versions: instrument_status_health/v1=1\n"
+        "doctor_check_schema_versions: instrument_doctor_checks/v1=1\n"
+        "capability_taxonomy_enforced: true=1\n"
+        "status_taxonomy_enforced: true=1\n"
+        "doctor_checks_enforced: true=1\n"
     )
     monkeypatch.setattr("ael_controlplane.nightly.current_branch", lambda: "feature/nightly-test")
     monkeypatch.setattr("ael_controlplane.nightly._collect_backlog", lambda _cfg: [])
@@ -2597,6 +2627,12 @@ def test_review_pack_and_nightly_report_surface_baseline_readiness_advisory(monk
         "schema_review_status: partial_structured_coverage\n"
         "structured_coverage: structured=3 legacy=1\n"
         "warning_summary: none\n"
+        "capability_taxonomy_versions: instrument_capabilities/v1=1\n"
+        "status_health_schema_versions: instrument_status_health/v1=1\n"
+        "doctor_check_schema_versions: instrument_doctor_checks/v1=1\n"
+        "capability_taxonomy_enforced: true=1\n"
+        "status_taxonomy_enforced: true=1\n"
+        "doctor_checks_enforced: true=1\n"
     )
     monkeypatch.chdir(tmp_path)
     (tmp_path / "reports").mkdir()
@@ -2654,6 +2690,12 @@ def test_print_worker_totals_includes_unified_instrument_semantics(capsys):
                         "instrument_health": "degraded",
                         "failure_boundary": "instrument_service",
                         "recovery_hint": "recover instrument transport or API availability and retry once",
+                        "capability_taxonomy_version": "instrument_capabilities/v1",
+                        "status_health_schema_version": "instrument_status_health/v1",
+                        "doctor_check_schema_version": "instrument_doctor_checks/v1",
+                        "capability_taxonomy_enforced": True,
+                        "status_taxonomy_enforced": True,
+                        "doctor_checks_enforced": True,
                         "instrument_condition": "instrument_api_unavailable",
                         "failure_class": "network_meter_api",
                     }
@@ -2667,6 +2709,12 @@ def test_print_worker_totals_includes_unified_instrument_semantics(capsys):
     assert "[SUMMARY] instrument_health degraded=1" in out
     assert "[SUMMARY] failure_boundaries instrument_service=1" in out
     assert "[SUMMARY] recovery_hints recover instrument transport or API availability and retry once=1" in out
+    assert "[SUMMARY] capability_taxonomy_versions instrument_capabilities/v1=1" in out
+    assert "[SUMMARY] status_health_schema_versions instrument_status_health/v1=1" in out
+    assert "[SUMMARY] doctor_check_schema_versions instrument_doctor_checks/v1=1" in out
+    assert "[SUMMARY] capability_taxonomy_enforced true=1" in out
+    assert "[SUMMARY] status_taxonomy_enforced true=1" in out
+    assert "[SUMMARY] doctor_checks_enforced true=1" in out
 
 
 def test_run_single_uses_controller_alias_when_present(tmp_path):

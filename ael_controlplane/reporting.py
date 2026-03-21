@@ -166,6 +166,12 @@ def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dic
         "instrument_health": "unavailable",
         "failure_boundaries": "unavailable",
         "recovery_hints": "unavailable",
+        "capability_taxonomy_versions": "unavailable",
+        "status_health_schema_versions": "unavailable",
+        "doctor_check_schema_versions": "unavailable",
+        "capability_taxonomy_enforced": "unavailable",
+        "status_taxonomy_enforced": "unavailable",
+        "doctor_checks_enforced": "unavailable",
     }
     for line in text.splitlines():
         stripped = line.strip()
@@ -185,6 +191,18 @@ def default_verification_review_highlights(review: Dict[str, str | bool]) -> Dic
             highlights["failure_boundaries"] = stripped.split(":", 1)[1].strip() or "unavailable"
         elif stripped.startswith("recovery_hints:"):
             highlights["recovery_hints"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("capability_taxonomy_versions:"):
+            highlights["capability_taxonomy_versions"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("status_health_schema_versions:"):
+            highlights["status_health_schema_versions"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("doctor_check_schema_versions:"):
+            highlights["doctor_check_schema_versions"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("capability_taxonomy_enforced:"):
+            highlights["capability_taxonomy_enforced"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("status_taxonomy_enforced:"):
+            highlights["status_taxonomy_enforced"] = stripped.split(":", 1)[1].strip() or "unavailable"
+        elif stripped.startswith("doctor_checks_enforced:"):
+            highlights["doctor_checks_enforced"] = stripped.split(":", 1)[1].strip() or "unavailable"
     if not bool(review.get("ok", False)) and highlights["warning_summary"] == "unavailable":
         highlights["warning_summary"] = "review unavailable"
     return highlights

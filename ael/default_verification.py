@@ -937,6 +937,30 @@ def _print_worker_totals(lock: threading.Lock, workers: List[Dict[str, Any]]) ->
     if isinstance(recovery_hints, dict) and recovery_hints:
         parts = [f"{name}={recovery_hints[name]}" for name in sorted(recovery_hints)]
         _log_line(lock, f"[SUMMARY] recovery_hints {' | '.join(parts)}")
+    capability_taxonomy_versions = health.get("capability_taxonomy_version_counts")
+    if isinstance(capability_taxonomy_versions, dict) and capability_taxonomy_versions:
+        parts = [f"{name}={capability_taxonomy_versions[name]}" for name in sorted(capability_taxonomy_versions)]
+        _log_line(lock, f"[SUMMARY] capability_taxonomy_versions {' '.join(parts)}")
+    status_health_schema_versions = health.get("status_health_schema_version_counts")
+    if isinstance(status_health_schema_versions, dict) and status_health_schema_versions:
+        parts = [f"{name}={status_health_schema_versions[name]}" for name in sorted(status_health_schema_versions)]
+        _log_line(lock, f"[SUMMARY] status_health_schema_versions {' '.join(parts)}")
+    doctor_check_schema_versions = health.get("doctor_check_schema_version_counts")
+    if isinstance(doctor_check_schema_versions, dict) and doctor_check_schema_versions:
+        parts = [f"{name}={doctor_check_schema_versions[name]}" for name in sorted(doctor_check_schema_versions)]
+        _log_line(lock, f"[SUMMARY] doctor_check_schema_versions {' '.join(parts)}")
+    capability_taxonomy_enforced = health.get("capability_taxonomy_enforced_counts")
+    if isinstance(capability_taxonomy_enforced, dict) and capability_taxonomy_enforced:
+        parts = [f"{name}={capability_taxonomy_enforced[name]}" for name in sorted(capability_taxonomy_enforced)]
+        _log_line(lock, f"[SUMMARY] capability_taxonomy_enforced {' '.join(parts)}")
+    status_taxonomy_enforced = health.get("status_taxonomy_enforced_counts")
+    if isinstance(status_taxonomy_enforced, dict) and status_taxonomy_enforced:
+        parts = [f"{name}={status_taxonomy_enforced[name]}" for name in sorted(status_taxonomy_enforced)]
+        _log_line(lock, f"[SUMMARY] status_taxonomy_enforced {' '.join(parts)}")
+    doctor_checks_enforced = health.get("doctor_checks_enforced_counts")
+    if isinstance(doctor_checks_enforced, dict) and doctor_checks_enforced:
+        parts = [f"{name}={doctor_checks_enforced[name]}" for name in sorted(doctor_checks_enforced)]
+        _log_line(lock, f"[SUMMARY] doctor_checks_enforced {' '.join(parts)}")
     counts = health.get("instrument_condition_counts")
     if isinstance(counts, dict) and counts:
         parts = [f"{name}={counts[name]}" for name in sorted(counts)]

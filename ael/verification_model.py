@@ -207,6 +207,12 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
     instrument_health_counts: Dict[str, int] = {}
     failure_boundary_counts: Dict[str, int] = {}
     recovery_hint_counts: Dict[str, int] = {}
+    capability_taxonomy_version_counts: Dict[str, int] = {}
+    status_health_schema_version_counts: Dict[str, int] = {}
+    doctor_check_schema_version_counts: Dict[str, int] = {}
+    capability_taxonomy_enforced_counts: Dict[str, int] = {}
+    status_taxonomy_enforced_counts: Dict[str, int] = {}
+    doctor_checks_enforced_counts: Dict[str, int] = {}
     worker_pass_counts: Dict[str, int] = {}
     worker_fail_counts: Dict[str, int] = {}
     degraded_workers: List[Dict[str, Any]] = []
@@ -241,6 +247,24 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
         recovery_hint = _infer_result_recovery_hint(result)
         if recovery_hint:
             recovery_hint_counts[recovery_hint] = recovery_hint_counts.get(recovery_hint, 0) + 1
+        capability_taxonomy_version = str(result.get("capability_taxonomy_version") or "").strip()
+        if capability_taxonomy_version:
+            capability_taxonomy_version_counts[capability_taxonomy_version] = capability_taxonomy_version_counts.get(capability_taxonomy_version, 0) + 1
+        status_health_schema_version = str(result.get("status_health_schema_version") or "").strip()
+        if status_health_schema_version:
+            status_health_schema_version_counts[status_health_schema_version] = status_health_schema_version_counts.get(status_health_schema_version, 0) + 1
+        doctor_check_schema_version = str(result.get("doctor_check_schema_version") or "").strip()
+        if doctor_check_schema_version:
+            doctor_check_schema_version_counts[doctor_check_schema_version] = doctor_check_schema_version_counts.get(doctor_check_schema_version, 0) + 1
+        if result.get("capability_taxonomy_enforced") is not None:
+            key = str(bool(result.get("capability_taxonomy_enforced"))).lower()
+            capability_taxonomy_enforced_counts[key] = capability_taxonomy_enforced_counts.get(key, 0) + 1
+        if result.get("status_taxonomy_enforced") is not None:
+            key = str(bool(result.get("status_taxonomy_enforced"))).lower()
+            status_taxonomy_enforced_counts[key] = status_taxonomy_enforced_counts.get(key, 0) + 1
+        if result.get("doctor_checks_enforced") is not None:
+            key = str(bool(result.get("doctor_checks_enforced"))).lower()
+            doctor_checks_enforced_counts[key] = doctor_checks_enforced_counts.get(key, 0) + 1
         failure_class = str(result.get("failure_class") or observations.get("failure_class") or "").strip()
         if failure_class:
             failure_class_counts[failure_class] = failure_class_counts.get(failure_class, 0) + 1
@@ -287,6 +311,12 @@ def summarize_worker_health(workers: List[Dict[str, Any]] | None) -> Dict[str, A
         "instrument_health_counts": instrument_health_counts,
         "failure_boundary_counts": failure_boundary_counts,
         "recovery_hint_counts": recovery_hint_counts,
+        "capability_taxonomy_version_counts": capability_taxonomy_version_counts,
+        "status_health_schema_version_counts": status_health_schema_version_counts,
+        "doctor_check_schema_version_counts": doctor_check_schema_version_counts,
+        "capability_taxonomy_enforced_counts": capability_taxonomy_enforced_counts,
+        "status_taxonomy_enforced_counts": status_taxonomy_enforced_counts,
+        "doctor_checks_enforced_counts": doctor_checks_enforced_counts,
         "degraded_workers": degraded_workers,
     }
 

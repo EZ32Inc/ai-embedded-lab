@@ -1980,6 +1980,9 @@ def _state_latest_instrument_fields(result: dict) -> dict:
         "instrument_health",
         "failure_boundary",
         "recovery_hint",
+        "capability_taxonomy_version",
+        "status_health_schema_version",
+        "doctor_check_schema_version",
     )
     out = {}
     for name in field_names:
@@ -2024,6 +2027,12 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     latest_instrument_health: list[str] = []
     latest_failure_boundaries: list[str] = []
     latest_recovery_hints: list[str] = []
+    latest_capability_taxonomy_versions: list[str] = []
+    latest_status_health_schema_versions: list[str] = []
+    latest_doctor_check_schema_versions: list[str] = []
+    latest_capability_taxonomy_enforced: list[str] = []
+    latest_status_taxonomy_enforced: list[str] = []
+    latest_doctor_checks_enforced: list[str] = []
 
     for step in steps:
         if not isinstance(step, dict):
@@ -2099,6 +2108,18 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
             latest_failure_boundaries.append(str(latest_fields.get("failure_boundary")))
         if latest_fields.get("recovery_hint"):
             latest_recovery_hints.append(str(latest_fields.get("recovery_hint")))
+        if latest_fields.get("capability_taxonomy_version"):
+            latest_capability_taxonomy_versions.append(str(latest_fields.get("capability_taxonomy_version")))
+        if latest_fields.get("status_health_schema_version"):
+            latest_status_health_schema_versions.append(str(latest_fields.get("status_health_schema_version")))
+        if latest_fields.get("doctor_check_schema_version"):
+            latest_doctor_check_schema_versions.append(str(latest_fields.get("doctor_check_schema_version")))
+        if result.get("capability_taxonomy_enforced") is not None:
+            latest_capability_taxonomy_enforced.append(str(bool(result.get("capability_taxonomy_enforced"))).lower())
+        if result.get("status_taxonomy_enforced") is not None:
+            latest_status_taxonomy_enforced.append(str(bool(result.get("status_taxonomy_enforced"))).lower())
+        if result.get("doctor_checks_enforced") is not None:
+            latest_doctor_checks_enforced.append(str(bool(result.get("doctor_checks_enforced"))).lower())
 
         if ok:
             validated.append({"step": step_label, "run_id": run_id, "optional": optional, **latest_fields})
@@ -2149,6 +2170,12 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     instrument_health_counts = _state_count_summary(latest_instrument_health)
     failure_boundary_counts = _state_count_summary(latest_failure_boundaries)
     recovery_hint_counts = _state_count_summary(latest_recovery_hints)
+    capability_taxonomy_version_counts = _state_count_summary(latest_capability_taxonomy_versions)
+    status_health_schema_version_counts = _state_count_summary(latest_status_health_schema_versions)
+    doctor_check_schema_version_counts = _state_count_summary(latest_doctor_check_schema_versions)
+    capability_taxonomy_enforced_counts = _state_count_summary(latest_capability_taxonomy_enforced)
+    status_taxonomy_enforced_counts = _state_count_summary(latest_status_taxonomy_enforced)
+    doctor_checks_enforced_counts = _state_count_summary(latest_doctor_checks_enforced)
 
     return {
         "name": "Default Verification",
@@ -2171,6 +2198,12 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         "instrument_health_counts": instrument_health_counts,
         "failure_boundary_counts": failure_boundary_counts,
         "recovery_hint_counts": recovery_hint_counts,
+        "capability_taxonomy_version_counts": capability_taxonomy_version_counts,
+        "status_health_schema_version_counts": status_health_schema_version_counts,
+        "doctor_check_schema_version_counts": doctor_check_schema_version_counts,
+        "capability_taxonomy_enforced_counts": capability_taxonomy_enforced_counts,
+        "status_taxonomy_enforced_counts": status_taxonomy_enforced_counts,
+        "doctor_checks_enforced_counts": doctor_checks_enforced_counts,
         "key_refs": [
             setting_file,
             "docs/default_verification_baseline.md",
@@ -2223,6 +2256,24 @@ def _render_verify_default_state_text(state: dict) -> str:
     instrument_health_counts = state.get("instrument_health_counts") if isinstance(state.get("instrument_health_counts"), dict) else {}
     failure_boundary_counts = state.get("failure_boundary_counts") if isinstance(state.get("failure_boundary_counts"), dict) else {}
     recovery_hint_counts = state.get("recovery_hint_counts") if isinstance(state.get("recovery_hint_counts"), dict) else {}
+    capability_taxonomy_version_counts = state.get("capability_taxonomy_version_counts") if isinstance(state.get("capability_taxonomy_version_counts"), dict) else {}
+    status_health_schema_version_counts = state.get("status_health_schema_version_counts") if isinstance(state.get("status_health_schema_version_counts"), dict) else {}
+    doctor_check_schema_version_counts = state.get("doctor_check_schema_version_counts") if isinstance(state.get("doctor_check_schema_version_counts"), dict) else {}
+    capability_taxonomy_enforced_counts = state.get("capability_taxonomy_enforced_counts") if isinstance(state.get("capability_taxonomy_enforced_counts"), dict) else {}
+    status_taxonomy_enforced_counts = state.get("status_taxonomy_enforced_counts") if isinstance(state.get("status_taxonomy_enforced_counts"), dict) else {}
+    doctor_checks_enforced_counts = state.get("doctor_checks_enforced_counts") if isinstance(state.get("doctor_checks_enforced_counts"), dict) else {}
+    capability_taxonomy_version_counts = state.get("capability_taxonomy_version_counts") if isinstance(state.get("capability_taxonomy_version_counts"), dict) else {}
+    status_health_schema_version_counts = state.get("status_health_schema_version_counts") if isinstance(state.get("status_health_schema_version_counts"), dict) else {}
+    doctor_check_schema_version_counts = state.get("doctor_check_schema_version_counts") if isinstance(state.get("doctor_check_schema_version_counts"), dict) else {}
+    capability_taxonomy_enforced_counts = state.get("capability_taxonomy_enforced_counts") if isinstance(state.get("capability_taxonomy_enforced_counts"), dict) else {}
+    status_taxonomy_enforced_counts = state.get("status_taxonomy_enforced_counts") if isinstance(state.get("status_taxonomy_enforced_counts"), dict) else {}
+    doctor_checks_enforced_counts = state.get("doctor_checks_enforced_counts") if isinstance(state.get("doctor_checks_enforced_counts"), dict) else {}
+    capability_taxonomy_version_counts = state.get("capability_taxonomy_version_counts") if isinstance(state.get("capability_taxonomy_version_counts"), dict) else {}
+    status_health_schema_version_counts = state.get("status_health_schema_version_counts") if isinstance(state.get("status_health_schema_version_counts"), dict) else {}
+    doctor_check_schema_version_counts = state.get("doctor_check_schema_version_counts") if isinstance(state.get("doctor_check_schema_version_counts"), dict) else {}
+    capability_taxonomy_enforced_counts = state.get("capability_taxonomy_enforced_counts") if isinstance(state.get("capability_taxonomy_enforced_counts"), dict) else {}
+    status_taxonomy_enforced_counts = state.get("status_taxonomy_enforced_counts") if isinstance(state.get("status_taxonomy_enforced_counts"), dict) else {}
+    doctor_checks_enforced_counts = state.get("doctor_checks_enforced_counts") if isinstance(state.get("doctor_checks_enforced_counts"), dict) else {}
     lines.append(_render_count_line("instrument_families", instrument_family_counts))
     lines.append(_render_count_line("instrument_health", instrument_health_counts))
     lines.append(_render_count_line("failure_boundaries", failure_boundary_counts))
@@ -2284,6 +2335,12 @@ def _render_verify_default_review_text(state: dict) -> str:
     instrument_health_counts = state.get("instrument_health_counts") if isinstance(state.get("instrument_health_counts"), dict) else {}
     failure_boundary_counts = state.get("failure_boundary_counts") if isinstance(state.get("failure_boundary_counts"), dict) else {}
     recovery_hint_counts = state.get("recovery_hint_counts") if isinstance(state.get("recovery_hint_counts"), dict) else {}
+    capability_taxonomy_version_counts = state.get("capability_taxonomy_version_counts") if isinstance(state.get("capability_taxonomy_version_counts"), dict) else {}
+    status_health_schema_version_counts = state.get("status_health_schema_version_counts") if isinstance(state.get("status_health_schema_version_counts"), dict) else {}
+    doctor_check_schema_version_counts = state.get("doctor_check_schema_version_counts") if isinstance(state.get("doctor_check_schema_version_counts"), dict) else {}
+    capability_taxonomy_enforced_counts = state.get("capability_taxonomy_enforced_counts") if isinstance(state.get("capability_taxonomy_enforced_counts"), dict) else {}
+    status_taxonomy_enforced_counts = state.get("status_taxonomy_enforced_counts") if isinstance(state.get("status_taxonomy_enforced_counts"), dict) else {}
+    doctor_checks_enforced_counts = state.get("doctor_checks_enforced_counts") if isinstance(state.get("doctor_checks_enforced_counts"), dict) else {}
     if instrument_family_counts:
         parts = [f"{key}={instrument_family_counts[key]}" for key in sorted(instrument_family_counts)]
         lines.append("instrument_families: " + " ".join(parts))
@@ -2296,6 +2353,24 @@ def _render_verify_default_review_text(state: dict) -> str:
     if recovery_hint_counts:
         parts = [f"{key}={recovery_hint_counts[key]}" for key in sorted(recovery_hint_counts)]
         lines.append("recovery_hints: " + " | ".join(parts))
+    if capability_taxonomy_version_counts:
+        parts = [f"{key}={capability_taxonomy_version_counts[key]}" for key in sorted(capability_taxonomy_version_counts)]
+        lines.append("capability_taxonomy_versions: " + " ".join(parts))
+    if status_health_schema_version_counts:
+        parts = [f"{key}={status_health_schema_version_counts[key]}" for key in sorted(status_health_schema_version_counts)]
+        lines.append("status_health_schema_versions: " + " ".join(parts))
+    if doctor_check_schema_version_counts:
+        parts = [f"{key}={doctor_check_schema_version_counts[key]}" for key in sorted(doctor_check_schema_version_counts)]
+        lines.append("doctor_check_schema_versions: " + " ".join(parts))
+    if capability_taxonomy_enforced_counts:
+        parts = [f"{key}={capability_taxonomy_enforced_counts[key]}" for key in sorted(capability_taxonomy_enforced_counts)]
+        lines.append("capability_taxonomy_enforced: " + " ".join(parts))
+    if status_taxonomy_enforced_counts:
+        parts = [f"{key}={status_taxonomy_enforced_counts[key]}" for key in sorted(status_taxonomy_enforced_counts)]
+        lines.append("status_taxonomy_enforced: " + " ".join(parts))
+    if doctor_checks_enforced_counts:
+        parts = [f"{key}={doctor_checks_enforced_counts[key]}" for key in sorted(doctor_checks_enforced_counts)]
+        lines.append("doctor_checks_enforced: " + " ".join(parts))
     if warning_messages:
         lines.append(f"warning_summary: {len(warning_messages)} schema warning(s)")
         for item in warning_messages:
