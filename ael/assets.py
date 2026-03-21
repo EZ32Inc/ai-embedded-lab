@@ -153,6 +153,106 @@ def find_golden_reference(query):
     return candidates[0] if candidates and score(candidates[0]) > 0 else None
 
 
+_VALID_MCU_ROLES = {"dut", "debugger", "coprocessor"}
+_VALID_BUILD_TYPES = {"arm_debug", "idf", "cmake", "pico"}
+_VALID_FLASH_METHODS = {"gdb_swd", "gdb_stutil", "idf_esptool"}
+_VALID_INSTRUMENT_FAMILIES = {"esp32jtag", "stlink", "esp32_meter", "none"}
+_VALID_LIFECYCLE_STAGES = {"golden", "draft", "runnable", "validated"}
+
+
+def validate_dut_manifest(manifest):
+    """
+    Validate a DUT manifest against the new board-centric spec (dut_spec_v0_1).
+
+    Checks the new structured fields: name, mcus[], board_configs[],
+    lifecycle_stage, and their enum constraints.
+
+    Returns a list of error strings. Empty list means valid.
+    This is separate from _validate_manifest(), which covers legacy required fields.
+    """
+    if not isinstance(manifest, dict):
+        return ["manifest must be a dict"]
+
+    errors = []
+
+    # name is required in the new spec
+    if not manifest.get("name"):
+        errors.append("name: required")
+
+    # lifecycle_stage
+    ls = manifest.get("lifecycle_stage")
+    if ls is not None and ls not in _VALID_LIFECYCLE_STAGES:
+        errors.append(f"lifecycle_stage: '{ls}' not in {sorted(_VALID_LIFECYCLE_STAGES)}")
+
+    # mcus[]
+    mcus = manifest.get("mcus")
+    if mcus is not None:
+        if not isinstance(mcus, list) or len(mcus) == 0:
+            errors.append("mcus: must be a non-empty list")
+        else:
+            for i, mcu in enumerate(mcus):
+                prefix = f"mcus[{i}]"
+                if not isinstance(mcu, dict):
+                    errors.append(f"{prefix}: must be a dict")
+                    continue
+                if not mcu.get("id"):
+                    errors.append(f"{prefix}.id: required")
+                if not mcu.get("mcu"):
+                    errors.append(f"{prefix}.mcu: required")
+                if not mcu.get("family"):
+                    errors.append(f"{prefix}.family: required")
+                role = mcu.get("role")
+                if not role:
+                    errors.append(f"{prefix}.role: required")
+                elif role not in _VALID_MCU_ROLES:
+                    errors.append(f"{prefix}.role: '{role}' not in {sorted(_VALID_MCU_ROLES)}")
+                # build and flash required for dut role
+                if role == "dut":
+                    build = mcu.get("build")
+                    if not isinstance(build, dict):
+                        errors.append(f"{prefix}.build: required for role=dut")
+                    else:
+                        bt = build.get("type")
+                        if not bt:
+                            errors.append(f"{prefix}.build.type: required")
+                        elif bt not in _VALID_BUILD_TYPES:
+                            errors.append(f"{prefix}.build.type: '{bt}' not in {sorted(_VALID_BUILD_TYPES)}")
+                        if not build.get("project_dir"):
+                            errors.append(f"{prefix}.build.project_dir: required")
+                    flash = mcu.get("flash")
+                    if not isinstance(flash, dict):
+                        errors.append(f"{prefix}.flash: required for role=dut")
+                    else:
+                        fm = flash.get("method")
+                        if not fm:
+                            errors.append(f"{prefix}.flash.method: required")
+                        elif fm not in _VALID_FLASH_METHODS:
+                            errors.append(f"{prefix}.flash.method: '{fm}' not in {sorted(_VALID_FLASH_METHODS)}")
+
+    # board_configs[]
+    board_configs = manifest.get("board_configs")
+    if board_configs is not None:
+        if not isinstance(board_configs, list) or len(board_configs) == 0:
+            errors.append("board_configs: must be a non-empty list")
+        else:
+            for i, bc in enumerate(board_configs):
+                prefix = f"board_configs[{i}]"
+                if not isinstance(bc, dict):
+                    errors.append(f"{prefix}: must be a dict")
+                    continue
+                if not bc.get("id"):
+                    errors.append(f"{prefix}.id: required")
+                if not bc.get("path"):
+                    errors.append(f"{prefix}.path: required")
+                idf = bc.get("instrument_family")
+                if not idf:
+                    errors.append(f"{prefix}.instrument_family: required")
+                elif idf not in _VALID_INSTRUMENT_FAMILIES:
+                    errors.append(f"{prefix}.instrument_family: '{idf}' not in {sorted(_VALID_INSTRUMENT_FAMILIES)}")
+
+    return errors
+
+
 def copy_dut_skeleton(src_dut_path, dst_dut_path):
     src = Path(src_dut_path)
     dst = Path(dst_dut_path)
