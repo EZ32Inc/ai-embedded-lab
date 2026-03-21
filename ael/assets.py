@@ -5,7 +5,7 @@ from pathlib import Path
 
 _REQUIRED_FIELDS = [
     "id",
-    "mcu",
+    "mcu_or_processors",   # accepts mcu (legacy) or processors[] (new)
     "family",
     "description",
     ("build", "type"),
@@ -60,6 +60,12 @@ def _validate_manifest(manifest):
                 cur = cur.get(key)
             if cur is None:
                 missing.append(".".join(field))
+        elif field == "mcu_or_processors":
+            # Accept either processors[] (new) or mcu (legacy)
+            if not isinstance(manifest, dict):
+                missing.append("mcu")
+            elif not manifest.get("processors") and not manifest.get("mcu"):
+                missing.append("mcu (or processors)")
         else:
             if not isinstance(manifest, dict) or field not in manifest:
                 missing.append(field)
@@ -116,12 +122,26 @@ def find_golden_reference(query):
     mcu = (query or {}).get("mcu")
     family = (query or {}).get("family")
     tags = set((query or {}).get("tags", []) or [])
+    # Build target_ids: accepts both mcu (legacy) and processors[] (new)
+    processors = (query or {}).get("processors") or []
+    target_ids = {p.get("id") or p.get("target") for p in processors if isinstance(p, dict)} - {None}
+    if mcu:
+        target_ids.add(mcu)
     candidates = list_duts("assets_golden/duts")
 
     def score(entry):
         manifest = entry.get("manifest") or {}
         s = 0
-        if mcu and manifest.get("mcu") == mcu:
+        # Match against manifest's processors[] or legacy mcu field
+        manifest_procs = manifest.get("processors") or []
+        manifest_ids = {p.get("id") for p in manifest_procs if isinstance(p, dict)} - {None}
+        if not manifest_ids:
+            legacy_mcu = manifest.get("mcu")
+            if legacy_mcu:
+                manifest_ids = {legacy_mcu}
+        if target_ids and manifest_ids and target_ids & manifest_ids:
+            s += 100
+        elif mcu and manifest.get("mcu") == mcu:
             s += 100
         if family and manifest.get("family") == family:
             s += 50

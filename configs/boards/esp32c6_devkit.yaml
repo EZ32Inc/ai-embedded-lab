@@ -1,6 +1,11 @@
 board:
   name: ESP32-C6 DevKit
   target: esp32c6
+  processors:
+    - id: esp32c6
+      arch: riscv
+      role: primary
+      clock_hz: 160000000
   probe_required: true
   allow_legacy_probe_fallback: false
   build:

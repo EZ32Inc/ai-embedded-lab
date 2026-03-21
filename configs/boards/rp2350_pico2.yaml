@@ -1,6 +1,11 @@
 board:
   name: Raspberry Pi Pico 2
   target: rp2350
+  processors:
+    - id: rp2350
+      arch: arm
+      role: primary
+      clock_hz: 150000000
   instrument_instance: esp32jtag_rp2040_lab
   build:
     type: cmake

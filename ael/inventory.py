@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 from ael import assets
+from ael.dut.model import DUTConfig
+from ael.dut.registry import load_dut_from_file
 from ael.connection_model import (
     build_connection_digest,
     build_connection_rows,
@@ -87,13 +89,12 @@ def _load_json(path: Path) -> Dict[str, Any]:
         return {}
 
 
-def _load_board_cfg(repo_root: Path, board_id: str) -> Dict[str, Any]:
-    path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
-    if not path.exists():
-        return {}
-    raw = _simple_yaml_load(str(path))
-    board = raw.get("board", {}) if isinstance(raw, dict) else {}
-    return board if isinstance(board, dict) else {}
+def _load_board_cfg(repo_root: Path, board_id: str) -> DUTConfig:
+    """Load board config. Returns DUTConfig (was: raw dict)."""
+    try:
+        return load_dut_from_file(repo_root, board_id)
+    except FileNotFoundError:
+        return DUTConfig(board_id=board_id, name=board_id, processors=[])
 
 
 def _load_instrument_instance_type(repo_root: Path, instrument_id: str | None) -> str | None:
@@ -221,16 +222,17 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
         }
     override_instance_id, override_probe_rel = resolve_control_instrument_override(root, payload)
     board_cfg = _load_board_cfg(root, board_id)
+    board_dict = board_cfg.to_legacy_dict()
     instance_id = str(
         override_instance_id
-        or board_cfg.get("control_instrument_instance")
-        or board_cfg.get("instrument_instance")
+        or board_dict.get("control_instrument_instance")
+        or board_dict.get("instrument_instance")
         or ""
     ).strip() or None
     probe_path = str(
         override_probe_rel
-        or board_cfg.get("control_instrument_config")
-        or board_cfg.get("probe_config")
+        or board_dict.get("control_instrument_config")
+        or board_dict.get("probe_config")
         or ""
     ).strip() or None
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
@@ -271,26 +273,26 @@ def _primary_selected_instrument(poi: Dict[str, Any]) -> Dict[str, Any]:
     return dict(poi)
 
 
-def _selected_dut_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _selected_dut_payload(root: Path, board_id: str, board_cfg: DUTConfig) -> Dict[str, Any]:
     dut = assets.load_dut_prefer_user(board_id)
     manifest = dut.get("manifest") if isinstance(dut, dict) and isinstance(dut.get("manifest"), dict) else {}
     return {
         "id": board_id,
-        "name": manifest.get("description") or board_cfg.get("name"),
-        "target": board_cfg.get("target"),
-        "mcu": manifest.get("mcu") or board_cfg.get("target"),
+        "name": manifest.get("description") or board_cfg.name,
+        "target": board_cfg.target,
+        "mcu": manifest.get("mcu") or board_cfg.mcu,
         "family": manifest.get("family"),
         "source": "user" if isinstance(dut, dict) and "/assets_user/" in str(dut.get("path") or "") else ("golden" if dut else None),
         "runtime_binding": "board_profile_driven",
     }
 
 
-def _selected_board_profile_payload(root: Path, board_id: str, board_cfg: Dict[str, Any]) -> Dict[str, Any]:
+def _selected_board_profile_payload(root: Path, board_id: str, board_dict: Dict[str, Any]) -> Dict[str, Any]:
     board_path = root / "configs" / "boards" / f"{board_id}.yaml"
     return {
         "id": board_id,
-        "name": board_cfg.get("name"),
-        "target": board_cfg.get("target"),
+        "name": board_dict.get("name"),
+        "target": board_dict.get("target"),
         "config": board_path.relative_to(root).as_posix() if board_path.exists() else None,
         "role": "runtime_policy",
     }
@@ -579,8 +581,9 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
     metadata = extract_plan_metadata(payload)
     explanation = _metadata_explanation(metadata)
     board_cfg = _load_board_cfg(root, board_id)
+    board_dict = board_cfg.to_legacy_dict()
     connection_ctx = normalize_connection_context(
-        board_cfg,
+        board_dict,
         payload,
         required_wiring=["swd", "reset", "verify"],
     )
@@ -611,14 +614,14 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "validation_errors": list(metadata.get("validation_errors") or []),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
-        "selected_board_profile": _selected_board_profile_payload(root, board_id, board_cfg),
+        "selected_board_profile": _selected_board_profile_payload(root, board_id, board_dict),
         "selected_instrument": selected_instrument,
         "selected_bench_resources": _selected_bench_resources_payload(selected_instrument, connection_setup),
         "connections": build_connection_rows(connection_ctx, payload),
-        "expected_checks": _build_expected_checks(board_cfg, payload),
+        "expected_checks": _build_expected_checks(board_dict, payload),
         "board_context": {
-            "target": board_cfg.get("target"),
-            "clock_hz": board_cfg.get("clock_hz"),
+            "target": board_dict.get("target"),
+            "clock_hz": board_dict.get("clock_hz"),
             "observe_map": dict(connection_ctx.observe_map),
             "verification_views": dict(connection_ctx.verification_views),
             "default_wiring": dict(connection_ctx.default_wiring),

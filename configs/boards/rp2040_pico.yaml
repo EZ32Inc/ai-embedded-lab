@@ -1,6 +1,11 @@
 board:
   name: RP2040 Pico
   target: rp2040
+  processors:
+    - id: rp2040
+      arch: arm
+      role: primary
+      clock_hz: 125000000
   instrument_instance: esp32jtag_rp2040_lab
   build:
     project_dir: firmware/targets/rp2040_pico

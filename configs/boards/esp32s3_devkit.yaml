@@ -1,6 +1,11 @@
 board:
   name: ESP32-S3 DevKit
   target: esp32s3
+  processors:
+    - id: esp32s3
+      arch: xtensa
+      role: primary
+      clock_hz: 240000000
   build:
     type: idf
     project_dir: firmware/targets/esp32s3
