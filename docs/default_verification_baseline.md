@@ -13,8 +13,10 @@ for:
 
 ## Current configured steps
 
-The current baseline is one six-worker parallel batch defined in
+The current baseline is one eight-worker parallel batch defined in
 [configs/default_verification_setting.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/default_verification_setting.yaml).
+
+### Required (6)
 
 - DUT: `esp32c6_devkit`
 - DUT test: `esp32c6_gpio_signature_with_meter`
@@ -36,9 +38,22 @@ The current baseline is one six-worker parallel batch defined in
 - DUT test: `stm32h750_wiring_verify`
 - Plan: `tests/plans/stm32h750_wiring_verify.json`
 
-- DUT: `stm32f103_gpio_stlink` *(optional — pending hardware validation)*
+- DUT: `stm32f103_gpio_stlink`
 - DUT test: `stm32f103_gpio_no_external_capture_stlink`
 - Plan: `tests/plans/stm32f103_gpio_no_external_capture_stlink.json`
+
+### Optional candidates (2)
+
+These run in parallel with the required batch but do not affect the PASS/FAIL
+result. They skip gracefully when hardware is not on bench.
+
+- DUT: `stm32f407_discovery` *(optional — onboard ST-Link, hardware-gated)*
+- DUT test: `stm32f407_mailbox`
+- Plan: `tests/plans/stm32f407_mailbox.json`
+
+- DUT: `stm32f401rct6` *(optional — ESP32JTAG, hardware-gated)*
+- DUT test: `stm32f401_gpio_signature`
+- Plan: `tests/plans/stm32f401_gpio_signature.json`
 
 ## Current validated result
 
@@ -47,28 +62,22 @@ validation as a parallel regression line.
 
 Representative evidence:
 
-- first full six-way parallel pass:
-  - `2026-03-20_10-33-07`
-- three consecutive repeated six-way parallel passes:
-  - `2026-03-20_10-36-49`
-  - `2026-03-20_10-37-43`
-  - `2026-03-20_10-38-37`
+- first full six-way parallel pass: `2026-03-20_10-33-07`
+- three consecutive repeated passes: `2026-03-20_10-36-49`, `10-37-43`, `10-38-37`
+- ST-Link USB freeze fixed (SIGKILL + USBDEVFS_RESET ioctl); 3/3 consecutive passes confirmed `2026-03-21`
+- ST-Link promoted from optional to required; suite confirmed `6/6 PASS` on `2026-03-21`
+- Optional candidates (F407 Discovery, F401RCT6) added; suite confirmed `PASS (6/8)` on `2026-03-21`
 
-Each run set passed all six experiments, including the previously unstable
-local ST-Link path `stm32f103_gpio_no_external_capture_stlink`.
-
-A later regression on `2026-03-20` temporarily broke all four `ESP32JTAG`-backed
-default-verification runs at preflight time. The benches were healthy; the
-run-time `probe_cfg` had lost provider-resolution metadata after interface
-standardization. That regression was repaired, and the baseline again returned
-to `6/6 PASS` in run set `2026-03-20_13-10-38`.
+A regression on `2026-03-20` temporarily broke all four `ESP32JTAG`-backed runs
+at preflight (lost provider-resolution metadata after interface standardization);
+repaired and baseline returned to `6/6 PASS` in run `2026-03-20_13-10-38`.
 
 ## Current baseline meaning
 
 At the current project stage, this baseline should be treated as:
 
 - the default regression health line for schema and execution-model changes
-- the main repeated live-bench stability line for the current six-board setup
+- the main repeated live-bench stability line for the current eight-board setup (6 required + 2 optional)
 - the primary readiness signal before expanding to broader mixed-instrument
   coverage
 
