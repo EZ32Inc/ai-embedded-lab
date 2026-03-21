@@ -32,6 +32,16 @@
         {
           "board": "stm32f103_gpio_stlink",
           "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
+        },
+        {
+          "board": "stm32f407_discovery",
+          "test": "tests/plans/stm32f407_mailbox.json",
+          "optional": true
+        },
+        {
+          "board": "stm32f401rct6",
+          "test": "tests/plans/stm32f401_gpio_signature.json",
+          "optional": true
         }
       ]
     }
