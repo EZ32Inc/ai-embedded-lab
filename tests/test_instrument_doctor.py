@@ -11,16 +11,16 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 def test_doctor_probe_instance_reports_probe_health():
     with patch(
         "ael.instrument_doctor.native_api_dispatch.control_doctor",
-        return_value={"status": "ok", "data": {"reachable": True, "checks": {"debug_remote": {"ok": True}, "capture_control": {"ok": True}, "preflight": {"ok": True, "detail": "ok"}}}},
+        return_value={"status": "ok", "result": {"reachable": True, "doctor_model_version": "instrument_doctor/v1", "doctor_check_schema_version": "instrument_doctor_checks/v1", "doctor_checks_enforced": True, "checks": {"debug_remote": {"ok": True}, "capture_control": {"ok": True}, "preflight": {"ok": True, "detail": "ok"}}}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_get_status",
-        return_value={"status": "ok", "data": {"reachable": True}},
+        return_value={"status": "ok", "result": {"reachable": True, "status_model_version": "instrument_status/v1", "status_health_schema_version": "instrument_status_health/v1", "status_taxonomy_enforced": True}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_identify",
         return_value={"status": "ok", "data": {"instrument_family": "esp32jtag"}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_get_capabilities",
-        return_value={"status": "ok", "data": {"capability_families": {"debug_remote": {}, "capture_control": {}}}},
+        return_value={"status": "ok", "result": {"capability_taxonomy_version": "instrument_capabilities/v1", "capability_taxonomy_enforced": True, "capability_keys": ["debug.flash"]}},
     ):
         payload = instrument_doctor.doctor(REPO_ROOT, "esp32jtag_stm32_golden")
 
@@ -34,6 +34,15 @@ def test_doctor_probe_instance_reports_probe_health():
     assert payload["control_instrument"]["legacy_kind"] == "probe_instance"
     assert payload["instrument_interface"]["instrument_family"] == "esp32jtag"
     assert payload["native_interface"]["instrument_family"] == "esp32jtag"
+
+    assert payload["capability_taxonomy_version"] == "instrument_capabilities/v1"
+    assert payload["capability_taxonomy_enforced"] is True
+    assert payload["status_model_version"] == "instrument_status/v1"
+    assert payload["status_health_schema_version"] == "instrument_status_health/v1"
+    assert payload["status_taxonomy_enforced"] is True
+    assert payload["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["doctor_check_schema_version"] == "instrument_doctor_checks/v1"
+    assert payload["doctor_checks_enforced"] is True
     assert payload["checks"]["gdb_remote"]["ok"] is True
     assert payload["checks"]["capture_subsystem"]["ok"] is True
     assert payload["health"] == "healthy"
@@ -46,16 +55,27 @@ def test_doctor_probe_instance_reports_probe_health():
     assert "checks:" in rendered
     assert "instrument_family: esp32jtag" in rendered
     assert "health: healthy" in rendered
+    assert "status_health_schema_version: instrument_status_health/v1" in rendered
+    assert "doctor_check_schema_version: instrument_doctor_checks/v1" in rendered
     assert "gdb_remote: ok=True" in rendered
 
 
 def test_doctor_meter_manifest_reports_reachability():
     with patch(
+        "ael.instrument_doctor.native_api_dispatch.get_status",
+        return_value={"status": "ok", "result": {"status_model_version": "instrument_status/v1", "status_health_schema_version": "instrument_status_health/v1", "status_taxonomy_enforced": True}},
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.get_capabilities",
+        return_value={"status": "ok", "result": {"capability_taxonomy_version": "instrument_capabilities/v1", "capability_taxonomy_enforced": True}},
+    ), patch(
         "ael.instrument_doctor.native_api_dispatch.doctor",
         return_value={
             "status": "ok",
-            "data": {
+            "result": {
                 "reachable": True,
+                "doctor_model_version": "instrument_doctor/v1",
+                "doctor_check_schema_version": "instrument_doctor_checks/v1",
+                "doctor_checks_enforced": True,
                 "checks": {
                     "network": {"ok": True},
                     "reachability": {"ok": True, "host": "192.168.4.1", "tcp_port": 9000},
@@ -72,6 +92,15 @@ def test_doctor_meter_manifest_reports_reachability():
     assert payload["instrument_family"] == "esp32_meter"
     assert payload["checks"]["native_doctor"]["status"] == "ok"
     assert payload["instrument_interface"]["role"] == "instrument_native_api"
+
+    assert payload["capability_taxonomy_version"] == "instrument_capabilities/v1"
+    assert payload["capability_taxonomy_enforced"] is True
+    assert payload["status_model_version"] == "instrument_status/v1"
+    assert payload["status_health_schema_version"] == "instrument_status_health/v1"
+    assert payload["status_taxonomy_enforced"] is True
+    assert payload["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["doctor_check_schema_version"] == "instrument_doctor_checks/v1"
+    assert payload["doctor_checks_enforced"] is True
     assert payload["checks"]["reachability"]["ok"] is True
     assert payload["health"] == "healthy"
     assert payload["capability_surfaces"]["measure.digital"] == "primary"
@@ -81,6 +110,7 @@ def test_doctor_meter_manifest_reports_reachability():
     assert "esp32s3_dev_c_meter" in rendered
     assert "instrument_family: esp32_meter" in rendered
     assert "health: healthy" in rendered
+    assert "capability_taxonomy_enforced: True" in rendered
     assert "native_doctor: ok=None" in rendered
     assert "reachability: ok=True" in rendered
     assert "action_commands: measure_digital, measure_voltage, stim_digital" in rendered
@@ -88,11 +118,20 @@ def test_doctor_meter_manifest_reports_reachability():
 
 def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     with patch(
+        "ael.instrument_doctor.native_api_dispatch.get_status",
+        return_value={"status": "ok", "result": {"status_model_version": "instrument_status/v1", "status_health_schema_version": "instrument_status_health/v1", "status_taxonomy_enforced": True}},
+    ), patch(
+        "ael.instrument_doctor.native_api_dispatch.get_capabilities",
+        return_value={"status": "ok", "result": {"capability_taxonomy_version": "instrument_capabilities/v1", "capability_taxonomy_enforced": True}},
+    ), patch(
         "ael.instrument_doctor.native_api_dispatch.doctor",
         return_value={
             "status": "ok",
-            "data": {
+            "result": {
                 "reachable": True,
+                "doctor_model_version": "instrument_doctor/v1",
+                "doctor_check_schema_version": "instrument_doctor_checks/v1",
+                "doctor_checks_enforced": True,
                 "checks": {
                     "tcp": {"ok": True},
                     "bridge_service": {"ok": True},
@@ -109,6 +148,15 @@ def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     assert payload["instrument_family"] == "usb_uart_bridge"
     assert payload["instrument_interface"]["protocol"] == "ael.local_instrument.native_api.v0.1"
     assert payload["instrument_interface"]["instrument_family"] == "usb_uart_bridge"
+
+    assert payload["capability_taxonomy_version"] == "instrument_capabilities/v1"
+    assert payload["capability_taxonomy_enforced"] is True
+    assert payload["status_model_version"] == "instrument_status/v1"
+    assert payload["status_health_schema_version"] == "instrument_status_health/v1"
+    assert payload["status_taxonomy_enforced"] is True
+    assert payload["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["doctor_check_schema_version"] == "instrument_doctor_checks/v1"
+    assert payload["doctor_checks_enforced"] is True
     assert payload["checks"]["native_doctor"]["status"] == "ok"
     assert payload["checks"]["bridge_service"]["ok"] is True
     assert payload["health"] == "healthy"
@@ -116,6 +164,7 @@ def test_doctor_usb_uart_bridge_manifest_reports_provider_health():
     rendered = instrument_view.render_doctor_text(payload)
     assert "usb_uart_bridge_daemon" in rendered
     assert "health: healthy" in rendered
+    assert "doctor_checks_enforced: True" in rendered
     assert "bridge_service: ok=True" in rendered
     assert "instrument_interface:" in rendered
 
@@ -155,16 +204,16 @@ def test_doctor_probe_instance_reports_stlink_native_profile():
         return_value=_Binding(),
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_doctor",
-        return_value={"status": "ok", "data": {"reachable": True, "checks": {"gdb_remote": {"ok": True}}}},
+        return_value={"status": "ok", "result": {"reachable": True, "doctor_model_version": "instrument_doctor/v1", "doctor_check_schema_version": "instrument_doctor_checks/v1", "doctor_checks_enforced": True, "checks": {"gdb_remote": {"ok": True}}}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_get_status",
-        return_value={"status": "ok", "data": {"reachable": True}},
+        return_value={"status": "ok", "result": {"reachable": True, "status_model_version": "instrument_status/v1", "status_health_schema_version": "instrument_status_health/v1", "status_taxonomy_enforced": True}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_identify",
         return_value={"status": "ok", "data": {"instrument_family": "stlink", "instrument_role": "control"}},
     ), patch(
         "ael.instrument_doctor.native_api_dispatch.control_get_capabilities",
-        return_value={"status": "ok", "data": {"capability_families": {"debug_remote": {}}}},
+        return_value={"status": "ok", "result": {"capability_taxonomy_version": "instrument_capabilities/v1", "capability_taxonomy_enforced": True, "capability_keys": ["debug.flash"]}},
     ), patch(
         "ael.instrument_doctor.resolve_control_provider",
         return_value=_Provider(),
@@ -177,3 +226,12 @@ def test_doctor_probe_instance_reports_stlink_native_profile():
     assert payload["health"] == "healthy"
     assert payload["instrument_interface"]["instrument_family"] == "stlink"
     assert payload["instrument_interface"]["protocol"] == "ael.local_instrument.stlink_native_api.v0.1"
+
+    assert payload["capability_taxonomy_version"] == "instrument_capabilities/v1"
+    assert payload["capability_taxonomy_enforced"] is True
+    assert payload["status_model_version"] == "instrument_status/v1"
+    assert payload["status_health_schema_version"] == "instrument_status_health/v1"
+    assert payload["status_taxonomy_enforced"] is True
+    assert payload["doctor_model_version"] == "instrument_doctor/v1"
+    assert payload["doctor_check_schema_version"] == "instrument_doctor_checks/v1"
+    assert payload["doctor_checks_enforced"] is True

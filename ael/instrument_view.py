@@ -291,6 +291,22 @@ def render_resolved_instrument_text(payload: Dict[str, Any]) -> str:
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
     if payload.get("health"):
         lines.append(f"health: {payload.get('health')}")
+    if payload.get("capability_taxonomy_version"):
+        lines.append(f"capability_taxonomy_version: {payload.get('capability_taxonomy_version')}")
+    if payload.get("capability_taxonomy_enforced") is not None:
+        lines.append(f"capability_taxonomy_enforced: {payload.get('capability_taxonomy_enforced')}")
+    if payload.get("status_model_version"):
+        lines.append(f"status_model_version: {payload.get('status_model_version')}")
+    if payload.get("status_health_schema_version"):
+        lines.append(f"status_health_schema_version: {payload.get('status_health_schema_version')}")
+    if payload.get("status_taxonomy_enforced") is not None:
+        lines.append(f"status_taxonomy_enforced: {payload.get('status_taxonomy_enforced')}")
+    if payload.get("doctor_model_version"):
+        lines.append(f"doctor_model_version: {payload.get('doctor_model_version')}")
+    if payload.get("doctor_check_schema_version"):
+        lines.append(f"doctor_check_schema_version: {payload.get('doctor_check_schema_version')}")
+    if payload.get("doctor_checks_enforced") is not None:
+        lines.append(f"doctor_checks_enforced: {payload.get('doctor_checks_enforced')}")
     if payload.get("failure_boundary"):
         lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
     if payload.get("recovery_hint"):
@@ -379,6 +395,22 @@ def render_resolved_instrument_summary_text(payload: Dict[str, Any]) -> str:
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
     if payload.get("health"):
         lines.append(f"health: {payload.get('health')}")
+    if payload.get("capability_taxonomy_version"):
+        lines.append(f"capability_taxonomy_version: {payload.get('capability_taxonomy_version')}")
+    if payload.get("capability_taxonomy_enforced") is not None:
+        lines.append(f"capability_taxonomy_enforced: {payload.get('capability_taxonomy_enforced')}")
+    if payload.get("status_model_version"):
+        lines.append(f"status_model_version: {payload.get('status_model_version')}")
+    if payload.get("status_health_schema_version"):
+        lines.append(f"status_health_schema_version: {payload.get('status_health_schema_version')}")
+    if payload.get("status_taxonomy_enforced") is not None:
+        lines.append(f"status_taxonomy_enforced: {payload.get('status_taxonomy_enforced')}")
+    if payload.get("doctor_model_version"):
+        lines.append(f"doctor_model_version: {payload.get('doctor_model_version')}")
+    if payload.get("doctor_check_schema_version"):
+        lines.append(f"doctor_check_schema_version: {payload.get('doctor_check_schema_version')}")
+    if payload.get("doctor_checks_enforced") is not None:
+        lines.append(f"doctor_checks_enforced: {payload.get('doctor_checks_enforced')}")
     if payload.get("failure_boundary"):
         lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
     if payload.get("recovery_hint"):
@@ -486,6 +518,22 @@ def render_doctor_text(payload: Dict[str, Any]) -> str:
         lines.append(f"instrument_family: {payload.get('instrument_family')}")
     if payload.get("health"):
         lines.append(f"health: {payload.get('health')}")
+    if payload.get("capability_taxonomy_version"):
+        lines.append(f"capability_taxonomy_version: {payload.get('capability_taxonomy_version')}")
+    if payload.get("capability_taxonomy_enforced") is not None:
+        lines.append(f"capability_taxonomy_enforced: {payload.get('capability_taxonomy_enforced')}")
+    if payload.get("status_model_version"):
+        lines.append(f"status_model_version: {payload.get('status_model_version')}")
+    if payload.get("status_health_schema_version"):
+        lines.append(f"status_health_schema_version: {payload.get('status_health_schema_version')}")
+    if payload.get("status_taxonomy_enforced") is not None:
+        lines.append(f"status_taxonomy_enforced: {payload.get('status_taxonomy_enforced')}")
+    if payload.get("doctor_model_version"):
+        lines.append(f"doctor_model_version: {payload.get('doctor_model_version')}")
+    if payload.get("doctor_check_schema_version"):
+        lines.append(f"doctor_check_schema_version: {payload.get('doctor_check_schema_version')}")
+    if payload.get("doctor_checks_enforced") is not None:
+        lines.append(f"doctor_checks_enforced: {payload.get('doctor_checks_enforced')}")
     if payload.get("failure_boundary"):
         lines.append(f"failure_boundary: {payload.get('failure_boundary')}")
     if payload.get("recovery_hint"):

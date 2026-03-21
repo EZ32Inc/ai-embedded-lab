@@ -66,6 +66,8 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
     native_identify = native_api_dispatch.control_identify(probe_cfg)
     native_capabilities = native_api_dispatch.control_get_capabilities(probe_cfg)
     doctor_data = (native_doctor.get("result") or native_doctor.get("data") or {}) if isinstance(native_doctor, dict) else {}
+    status_data = (native_status.get("result") or native_status.get("data") or {}) if isinstance(native_status, dict) else {}
+    capabilities_data = (native_capabilities.get("result") or native_capabilities.get("data") or {}) if isinstance(native_capabilities, dict) else {}
     checks = {}
     if native_doctor.get("status") == "ok":
         checks = (doctor_data.get("checks") or {}) if isinstance(doctor_data, dict) else {}
@@ -111,6 +113,14 @@ def doctor_probe_instance(repo_root: str | Path, instance_id: str) -> Dict[str, 
         "capability_surfaces": dict(binding.capability_surfaces or {}),
         "metadata_validation_errors": list(binding.metadata_validation_errors),
         "checks": checks,
+        "capability_taxonomy_version": capabilities_data.get("capability_taxonomy_version") if isinstance(capabilities_data, dict) else None,
+        "capability_taxonomy_enforced": capabilities_data.get("capability_taxonomy_enforced") if isinstance(capabilities_data, dict) else None,
+        "status_model_version": status_data.get("status_model_version") if isinstance(status_data, dict) else None,
+        "status_health_schema_version": status_data.get("status_health_schema_version") if isinstance(status_data, dict) else None,
+        "status_taxonomy_enforced": status_data.get("status_taxonomy_enforced") if isinstance(status_data, dict) else None,
+        "doctor_model_version": doctor_data.get("doctor_model_version") if isinstance(doctor_data, dict) else None,
+        "doctor_check_schema_version": doctor_data.get("doctor_check_schema_version") if isinstance(doctor_data, dict) else None,
+        "doctor_checks_enforced": doctor_data.get("doctor_checks_enforced") if isinstance(doctor_data, dict) else None,
         "health": (doctor_data.get("health") if isinstance(doctor_data, dict) and doctor_data.get("health") else derive_doctor_health(reachable=bool(overall_ok), checks=checks)),
         "recovery_hint": doctor_data.get("recovery_hint") if isinstance(doctor_data, dict) else None,
         "failure_boundary": doctor_data.get("failure_boundary") if isinstance(doctor_data, dict) else None,
@@ -127,9 +137,15 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
     provider = resolve_manifest_provider(manifest)
     checks: Dict[str, Any] = {}
     doctor_data: Dict[str, Any] = {}
+    status_data: Dict[str, Any] = {}
+    capabilities_data: Dict[str, Any] = {}
 
     if provider is not None:
+        native_status = native_api_dispatch.get_status(manifest)
+        native_capabilities = native_api_dispatch.get_capabilities(manifest)
         native_doctor = native_api_dispatch.doctor(manifest)
+        status_data = native_status.get("result", {}) if isinstance(native_status.get("result"), dict) else (native_status.get("data", {}) if isinstance(native_status.get("data"), dict) else {})
+        capabilities_data = native_capabilities.get("result", {}) if isinstance(native_capabilities.get("result"), dict) else (native_capabilities.get("data", {}) if isinstance(native_capabilities.get("data"), dict) else {})
         checks["native_doctor"] = native_doctor
         doctor_data = native_doctor.get("result", {}) if isinstance(native_doctor.get("result"), dict) else (native_doctor.get("data", {}) if isinstance(native_doctor.get("data"), dict) else {})
         if native_doctor.get("status") == "ok":
@@ -171,6 +187,14 @@ def doctor_instrument_manifest(instrument_id: str) -> Dict[str, Any]:
             )
         ),
         "checks": checks,
+        "capability_taxonomy_version": capabilities_data.get("capability_taxonomy_version") if isinstance(capabilities_data, dict) else None,
+        "capability_taxonomy_enforced": capabilities_data.get("capability_taxonomy_enforced") if isinstance(capabilities_data, dict) else None,
+        "status_model_version": status_data.get("status_model_version") if isinstance(status_data, dict) else None,
+        "status_health_schema_version": status_data.get("status_health_schema_version") if isinstance(status_data, dict) else None,
+        "status_taxonomy_enforced": status_data.get("status_taxonomy_enforced") if isinstance(status_data, dict) else None,
+        "doctor_model_version": doctor_data.get("doctor_model_version") if isinstance(doctor_data, dict) else None,
+        "doctor_check_schema_version": doctor_data.get("doctor_check_schema_version") if isinstance(doctor_data, dict) else None,
+        "doctor_checks_enforced": doctor_data.get("doctor_checks_enforced") if isinstance(doctor_data, dict) else None,
         "health": (doctor_data.get("health") if isinstance(doctor_data, dict) and doctor_data.get("health") else derive_doctor_health(reachable=bool(overall_ok), checks=checks)),
         "recovery_hint": doctor_data.get("recovery_hint") if isinstance(doctor_data, dict) else None,
         "failure_boundary": doctor_data.get("failure_boundary") if isinstance(doctor_data, dict) else None,
