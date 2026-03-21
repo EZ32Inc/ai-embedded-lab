@@ -184,6 +184,7 @@ def main():
     verify_default_run.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_run.add_argument("--skip-if-docs-only", action="store_true")
     verify_default_run.add_argument("--docs-check-mode", choices=["changed", "staged"], default="changed")
+    verify_default_run.add_argument("--report-root", default="reports")
 
     verify_default_repeat = verify_default_sub.add_parser("repeat-until-fail")
     verify_default_repeat.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
@@ -203,6 +204,7 @@ def main():
     verify_default_review = verify_default_sub.add_parser("review", help="show concise default verification review summary")
     verify_default_review.add_argument("--file", default=str(DEFAULT_VERIFY_CONFIG_PATH))
     verify_default_review.add_argument("--runs-root", default="runs")
+    verify_default_review.add_argument("--report-root", default="reports")
 
     inventory_p = sub.add_parser("inventory")
     inventory_sub = inventory_p.add_subparsers(dest="inventory_cmd", required=True)
@@ -815,6 +817,8 @@ def main():
                 docs_check_mode=str(args.docs_check_mode),
             )
             print(json.dumps(payload, indent=2, sort_keys=True))
+            _autosave_regression_snapshot(args.file, runs_root="runs", report_root=args.report_root)
+            _print_actionable_hints(args.file, runs_root="runs")
             sys.exit(int(code))
         if args.verify_default_cmd in ("repeat-until-fail", "repeat"):
             code, payload = run_default_until_fail(
@@ -837,6 +841,7 @@ def main():
         if args.verify_default_cmd == "review":
             state = _verify_default_state(args.file, args.runs_root)
             print(_render_verify_default_review_text(state))
+            _print_regression_history_section(args.report_root)
             health = state["health_status"]
             sys.exit(0 if health in ("pass", "partial_pass") else 1)
 
@@ -2024,6 +2029,29 @@ def _render_count_line(prefix: str, counts: dict) -> str:
     return f"{prefix}: {' '.join(parts)}"
 
 
+from ael.verify_default_snapshot import (
+    autosave_regression_snapshot as _autosave_regression_snapshot_impl,
+    print_actionable_hints as _print_actionable_hints_impl,
+    print_regression_history_section as _print_regression_history_section_impl,
+)
+
+
+def _autosave_regression_snapshot(setting_file: str, runs_root: str = "runs", report_root: str = "reports") -> None:
+    """Build, save, and print a regression snapshot after a verify-default run."""
+    state = _verify_default_state(setting_file, runs_root)
+    _autosave_regression_snapshot_impl(state, setting_file, report_root=report_root)
+
+
+def _print_actionable_hints(setting_file: str, runs_root: str = "runs") -> None:
+    """Scan flash.log of failed boards and print an ACTION REQUIRED block if any diagnostic hints are found."""
+    state = _verify_default_state(setting_file, runs_root)
+    _print_actionable_hints_impl(state, runs_root=runs_root)
+
+
+def _print_regression_history_section(report_root: str = "reports", count: int = 5) -> None:
+    """Print the last `count` regression snapshots as a history section for verify-default review."""
+    _print_regression_history_section_impl(report_root=report_root, count=count)
+
 
 def _verify_default_state(setting_file: str, runs_root: str) -> dict:
     """Build a state object for default verification from config + recent run artifacts."""
@@ -2036,6 +2064,10 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
         raw = {}
 
     steps = raw.get("steps", []) if isinstance(raw.get("steps"), list) else []
+    if not steps and isinstance(raw.get("groups"), list):
+        for _group in raw["groups"]:
+            if isinstance(_group, dict) and isinstance(_group.get("steps"), list):
+                steps.extend(_group["steps"])
     runs_dir = Path(runs_root)
 
     # For each step, find the most recent run result
@@ -2087,7 +2119,10 @@ def _verify_default_state(setting_file: str, runs_root: str) -> dict:
                 ] if isinstance(test_payload.get("supported_instrument_advisory"), dict) and str((test_payload.get("supported_instrument_advisory") or {}).get("status") or "").strip() == "declared_unsupported" else [],
             }
         else:
-            fallback = _schema_advisory_payload(repo_root, board, test_path)
+            try:
+                fallback = _schema_advisory_payload(repo_root, board, test_path)
+            except Exception:
+                fallback = {}
             if isinstance(fallback, dict) and fallback:
                 schema_result = fallback
         if isinstance(schema_result, dict):

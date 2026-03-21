@@ -8,7 +8,14 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from ael.__main__ import _render_verify_default_review_text, _render_verify_default_state_text, _verify_default_state
+from ael.__main__ import (
+    _autosave_regression_snapshot,
+    _print_actionable_hints,
+    _print_regression_history_section,
+    _render_verify_default_review_text,
+    _render_verify_default_state_text,
+    _verify_default_state,
+)
 from ael_controlplane.nightly import NightlyConfig, run_nightly
 from ael_controlplane.nightly_report import build_nightly_report_payload, write_nightly_report
 from ael_controlplane.reporting import default_verification_review_highlights, default_verification_review_payload
@@ -2790,3 +2797,234 @@ connection:
     assert result["instrument_interface_family"] == "esp32jtag"
     guard_mock.assert_not_called()
     assert run_mock.call_args.kwargs["probe_path"] is None
+
+
+def test_autosave_regression_snapshot_saves_to_report_root(tmp_path, capsys):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps({
+            "version": 1,
+            "mode": "sequence",
+            "steps": [
+                {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    run_dir = runs_root / "2026-03-21_10-00-00_esp32c6_devkit_esp32c6_gpio_signature_with_meter"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(
+        json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}),
+        encoding="utf-8",
+    )
+    report_root = tmp_path / "reports"
+
+    _autosave_regression_snapshot(str(setting_path), runs_root=str(runs_root), report_root=str(report_root))
+
+    log_path = report_root / "bench_regression_log.json"
+    assert log_path.exists()
+    history = json.loads(log_path.read_text(encoding="utf-8"))
+    assert len(history) == 1
+    snap = history[0]
+    assert snap["ok"] is True
+    assert snap["pass_count"] == 1
+    assert snap["fail_count"] == 0
+    assert snap["total_count"] == 1
+    assert snap["health_status"] == "pass"
+
+    out = capsys.readouterr().out
+    assert "bench_regression_run:" in out
+    assert "trend: no_history" in out
+    assert "regression_snapshot saved:" in out
+
+
+def test_autosave_regression_snapshot_prints_trend_on_second_run(tmp_path, capsys):
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps({
+            "version": 1,
+            "mode": "sequence",
+            "steps": [
+                {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
+            ],
+        }),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    run_dir = runs_root / "2026-03-21_10-00-00_esp32c6_devkit_esp32c6_gpio_signature_with_meter"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(
+        json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}),
+        encoding="utf-8",
+    )
+    report_root = tmp_path / "reports"
+
+    _autosave_regression_snapshot(str(setting_path), runs_root=str(runs_root), report_root=str(report_root))
+    capsys.readouterr()  # consume first run output
+
+    _autosave_regression_snapshot(str(setting_path), runs_root=str(runs_root), report_root=str(report_root))
+    out = capsys.readouterr().out
+    assert "trend: stable_pass" in out
+
+    log_path = report_root / "bench_regression_log.json"
+    history = json.loads(log_path.read_text(encoding="utf-8"))
+    assert len(history) == 2
+
+
+def test_print_regression_history_section_shows_history(tmp_path, capsys):
+    from ael_controlplane.bench_regression import save_regression_snapshot as _save
+
+    def _snap(ok, ts):
+        return {
+            "timestamp": ts,
+            "run_id": f"run_{ts}",
+            "ok": ok,
+            "pass_count": 1 if ok else 0,
+            "fail_count": 0 if ok else 1,
+            "total_count": 1,
+            "health_status": "pass" if ok else "fail",
+            "baseline_readiness_status": "ready" if ok else "needs_attention",
+            "failure_boundary_counts": {} if ok else {"probe_health": 1},
+            "failure_class_counts": {},
+            "recovery_hint_counts": {},
+            "instrument_health_counts": {},
+            "instrument_family_counts": {},
+            "schema_review_status": "aligned",
+            "capability_taxonomy_version_counts": {},
+            "status_health_schema_version_counts": {},
+            "doctor_check_schema_version_counts": {},
+        }
+
+    report_root = tmp_path / "reports"
+    _save(_snap(True, "2026-03-21T08:00:00Z"), report_root)
+    _save(_snap(True, "2026-03-21T09:00:00Z"), report_root)
+
+    _print_regression_history_section(str(report_root), count=5)
+    out = capsys.readouterr().out
+
+    assert "regression_history: last 2 snapshot(s)" in out
+    assert "2026-03-21T08:00:00Z" in out
+    assert "2026-03-21T09:00:00Z" in out
+
+
+def test_print_regression_history_section_prints_no_history_when_missing(tmp_path, capsys):
+    _print_regression_history_section(str(tmp_path / "nonexistent"), count=5)
+    out = capsys.readouterr().out
+    assert "no snapshots recorded" in out
+
+
+def test_verify_default_state_reads_steps_from_groups_format(tmp_path):
+    """_verify_default_state must handle the groups-based setting format (not just flat steps)."""
+    setting_path = tmp_path / "default_verification_setting.json"
+    setting_path.write_text(
+        json.dumps({
+            "version": 1,
+            "mode": "sequence",
+            "stop_on_fail": True,
+            "groups": [
+                {
+                    "name": "parallel_batch",
+                    "execution_policy": {"kind": "parallel"},
+                    "steps": [
+                        {"board": "esp32c6_devkit", "test": "tests/plans/esp32c6_gpio_signature_with_meter.json"},
+                        {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+                    ],
+                }
+            ],
+        }),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    good1 = runs_root / "2026-03-21_10-00-00_esp32c6_devkit_esp32c6_gpio_signature_with_meter"
+    good1.mkdir(parents=True)
+    (good1 / "result.json").write_text(
+        json.dumps({"ok": True, "instrument_family": "esp32_meter", "instrument_health": "ready", "results": []}),
+        encoding="utf-8",
+    )
+    good2 = runs_root / "2026-03-21_10-00-00_rp2040_pico_rp2040_gpio_signature"
+    good2.mkdir(parents=True)
+    (good2 / "result.json").write_text(
+        json.dumps({"ok": True, "instrument_family": "esp32jtag", "instrument_health": "ready", "results": []}),
+        encoding="utf-8",
+    )
+
+    state = _verify_default_state(str(setting_path), str(runs_root))
+
+    assert state["health_status"] == "pass"
+    assert len(state["validated_tests"]) == 2
+    assert len(state["failing_tests"]) == 0
+    assert state["configured_steps"] == 2
+
+
+def test_print_actionable_hints_shows_usb_transport_hint(tmp_path, capsys):
+    """_print_actionable_hints extracts USB transport frozen hint from flash.log and prints ACTION REQUIRED block."""
+    setting_path = tmp_path / "setting.json"
+    setting_path.write_text(
+        json.dumps({
+            "groups": [
+                {
+                    "steps": [
+                        {"board": "stm32f103_gpio_stlink", "test": "tests/plans/stm32f103_gpio.json", "optional": True},
+                    ]
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    run_dir = runs_root / "2026-03-21_11-00-00_stm32f103_gpio_stlink_stm32f103_gpio"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"ok": False}), encoding="utf-8")
+    (run_dir / "flash.log").write_text(
+        "Flash: FAIL\n"
+        "Flash: ST-Link USB transport is frozen (LIBUSB_ERROR_TIMEOUT on USB commands).\n"
+        "Flash: diagnostic - the ST-Link probe is not responding to USB commands "
+        "(GET_CURRENT_MODE / ENTER_SWD are timing out). "
+        "The probe firmware is frozen; unplug the ST-Link USB cable, wait 2 seconds, then replug it. "
+        "Do NOT power-cycle the DUT — the issue is the probe, not the target.\n"
+        # Duplicate lines (from retries) — should be deduplicated
+        "Flash: ST-Link USB transport is frozen (LIBUSB_ERROR_TIMEOUT on USB commands).\n"
+        "Flash: diagnostic - the ST-Link probe is not responding to USB commands "
+        "(GET_CURRENT_MODE / ENTER_SWD are timing out). "
+        "The probe firmware is frozen; unplug the ST-Link USB cable, wait 2 seconds, then replug it. "
+        "Do NOT power-cycle the DUT — the issue is the probe, not the target.\n",
+        encoding="utf-8",
+    )
+
+    _print_actionable_hints(str(setting_path), runs_root=str(runs_root))
+
+    out = capsys.readouterr().out
+    assert "ACTION REQUIRED" in out
+    assert "stm32f103_gpio_stlink" in out
+    # Duplicate lines must be deduplicated — each unique hint appears exactly once
+    assert out.count("Flash: ST-Link USB transport is frozen") == 1
+    assert out.count("Flash: diagnostic") == 1
+    assert "unplug" in out
+
+
+def test_print_actionable_hints_silent_when_all_pass(tmp_path, capsys):
+    """_print_actionable_hints prints nothing when no boards failed."""
+    setting_path = tmp_path / "setting.json"
+    setting_path.write_text(
+        json.dumps({
+            "groups": [
+                {
+                    "steps": [
+                        {"board": "rp2040_pico", "test": "tests/plans/rp2040_gpio_signature.json"},
+                    ]
+                }
+            ]
+        }),
+        encoding="utf-8",
+    )
+    runs_root = tmp_path / "runs"
+    run_dir = runs_root / "2026-03-21_11-00-00_rp2040_pico_rp2040_gpio_signature"
+    run_dir.mkdir(parents=True)
+    (run_dir / "result.json").write_text(json.dumps({"ok": True}), encoding="utf-8")
+
+    _print_actionable_hints(str(setting_path), runs_root=str(runs_root))
+
+    out = capsys.readouterr().out
+    assert "ACTION REQUIRED" not in out
+    assert out.strip() == ""

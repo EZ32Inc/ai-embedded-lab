@@ -34,10 +34,17 @@ FAILURE_BOUNDARY_POLICY: Dict[str, Dict[str, str]] = {
         "repeated_occurrence": "escalate to human; service may need a manual restart or reprobe",
         "ai_action": "bounded_auto_retry",
     },
-    "instrument_measurement": {
-        "boundary": "instrument_measurement",
+    "measurement": {
+        "boundary": "measurement",
         "description": "instrument responded but measurement result was unexpected",
         "first_occurrence": "stop retrying; open technical investigation of test logic or DUT state",
+        "repeated_occurrence": "file as regression; do not auto-retry",
+        "ai_action": "open_investigation",
+    },
+    "stimulus": {
+        "boundary": "stimulus",
+        "description": "instrument responded but digital stimulus operation failed",
+        "first_occurrence": "verify stimulus parameters and DUT state; retry once",
         "repeated_occurrence": "file as regression; do not auto-retry",
         "ai_action": "open_investigation",
     },
