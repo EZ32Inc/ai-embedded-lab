@@ -52,6 +52,31 @@ def test_runner_retries_when_failure_is_retryable_by_default(tmp_path):
     assert len(result["steps"]) == 3
 
 
+def test_runner_surfaces_failure_boundary_from_failed_step_error_envelope(tmp_path):
+    adapter = _FailOnceAdapter({
+        "ok": False,
+        "error_summary": "probe health check failed",
+        "retryable": False,
+        "error": {"code": "preflight_failed", "message": "unreachable", "boundary": "probe_health", "retryable": False},
+    })
+    plan = {"steps": [{"name": "preflight", "type": "check.preflight"}]}
+
+    result = run_plan(plan, Path(tmp_path), _Registry(adapter))
+
+    assert result["ok"] is False
+    assert result["failure_boundary"] == "probe_health"
+
+
+def test_runner_does_not_set_failure_boundary_when_no_error_envelope(tmp_path):
+    adapter = _FailOnceAdapter({"ok": False, "error_summary": "something failed", "retryable": False})
+    plan = {"steps": [{"name": "load", "type": "load.gdbmi"}]}
+
+    result = run_plan(plan, Path(tmp_path), _Registry(adapter))
+
+    assert result["ok"] is False
+    assert "failure_boundary" not in result
+
+
 def test_runner_cleans_up_managed_local_stlink_server_after_plan(tmp_path):
     artifacts = Path(tmp_path) / "artifacts"
     artifacts.mkdir(parents=True, exist_ok=True)

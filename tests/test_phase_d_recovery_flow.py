@@ -56,13 +56,14 @@ class TestPhaseDRecoveryFlow(unittest.TestCase):
             ],
             "recovery_policy": {"enabled": True, "allowed_actions": ["reset.serial"], "retries": {"check": 2}},
         }
-        def _fake_observe(_probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out, verify_edges):
-            capture_out["blob"] = b"\x00\xff" * 64
-            capture_out["sample_rate_hz"] = 1000
-            capture_out["bit"] = 0
-            return True
+        def _fake_capture(_probe_cfg, **_kwargs):
+            return {
+                "ok": True,
+                "status": "ok",
+                "result": {"blob": b"\x00\xff" * 64, "sample_rate_hz": 1000, "bit": 0},
+            }
 
-        with patch("ael.adapter_registry.observe_gpio_pin.run", side_effect=_fake_observe), patch(
+        with patch("ael.adapter_registry.native_api_dispatch.capture_signature", side_effect=_fake_capture), patch(
             "ael.adapter_registry.la_verify.analyze_capture_bytes",
             return_value={"ok": True, "metrics": {"freq_hz": 10.0, "duty": 0.5}, "reasons": []},
         ), patch("ael.adapter_registry.time.sleep", return_value=None), patch("serial.Serial", _FakeSerial):

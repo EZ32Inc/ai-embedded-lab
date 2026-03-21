@@ -42,11 +42,11 @@ def test_failure_boundary_policy_covers_all_canonical_boundaries():
     expected = {
         "instrument_connectivity",
         "instrument_service",
-        "instrument_measurement",
+        "measurement",
+        "stimulus",
         "probe_health",
         "firmware_programming",
         "signal_capture",
-        "instrument_health",
         "instrument_capabilities",
         "instrument_status",
         "interface_contract",

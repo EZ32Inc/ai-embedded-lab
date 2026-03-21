@@ -826,6 +826,7 @@ def _extract_verify_result_details(result_payload):
         "verify_substage": verify_result.get("verify_substage"),
         "failure_class": verify_result.get("failure_class") or verify_result.get("failure_kind"),
         "instrument_condition": verify_result.get("instrument_condition"),
+        "failure_boundary": verify_result.get("failure_boundary"),
         "observations": observations,
     }
     if not details.get("instrument_condition"):

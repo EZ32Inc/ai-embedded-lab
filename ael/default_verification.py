@@ -732,7 +732,7 @@ def _run_single(repo_root: Path, step: Dict[str, Any], output_mode: str) -> Tupl
                 out["instrument_interface_family"] = interface_family
             out.update({k: v for k, v in schema_payload.items() if v not in (None, "", [], {})})
             if not bool(out["ok"]):
-                for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "observations"):
+                for key in ("error", "error_summary", "verify_substage", "failure_class", "instrument_condition", "failure_boundary", "observations"):
                     if key in payload and payload.get(key) not in (None, "", {}, []):
                         out[key] = payload.get(key)
                 if not any(key in out for key in ("error_summary", "verify_substage", "failure_class", "instrument_condition", "observations")):

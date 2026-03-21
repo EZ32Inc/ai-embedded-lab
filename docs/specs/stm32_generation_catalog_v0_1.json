@@ -6,7 +6,8 @@
       "stm32f1",
       "stm32f4",
       "stm32f7",
-      "stm32g4"
+      "stm32g4",
+      "stm32h7"
     ],
     "generation_class": [
       "verified_local_baseline",
@@ -36,9 +37,9 @@
   },
   "targets": [
     {
-      "board_id": "stm32f103",
+      "board_id": "stm32f103_gpio",
       "target_id": "stm32f103c8t6",
-      "display_name": "STM32F103 Bluepill",
+      "display_name": "STM32F103 Bluepill GPIO Bench",
       "family": "stm32f1",
       "generation_class": "verified_local_baseline",
       "validation_status": "hardware_verified_repeated",
@@ -46,7 +47,7 @@
       "notes": [
         "Current golden GPIO baseline in default verification.",
         "Known stable BMDA attach-load-attach-detach flash sequence.",
-        "Board id is stm32f103 even though the MCU is stm32f103c8t6."
+        "Bench wired to ESP32-JTAG instrument; GPIO-only bench connections."
       ],
       "pilot_assessment": {
         "process_hardening": {
@@ -56,6 +57,98 @@
         "cross_family_proof": {
           "recommendation": "not_selected",
           "reason": "Does not broaden family coverage beyond existing F1 baseline."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f103_gpio_stlink",
+      "target_id": "stm32f103c8t6",
+      "display_name": "STM32F103 Bluepill GPIO Bench via ST-Link",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_single",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "ST-Link variant of the stm32f103_gpio bench.",
+        "Exercises the local-managed ST-Link GDB server path."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Instrument variant of the existing F1 baseline; adds no new family coverage."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f103_uart",
+      "target_id": "stm32f103c8t6",
+      "display_name": "STM32F103 Bluepill UART Bench",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_repeated",
+      "baseline_recommendation": "recommended",
+      "notes": [
+        "UART loopback bench variant of the STM32F103 Bluepill.",
+        "Exercises USART stimulus and capture paths via ESP32-JTAG."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Bench wiring variant of existing F1 baseline; not a new target for pilot purposes."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f103rct6",
+      "target_id": "stm32f103rct6",
+      "display_name": "STM32F103RCT6",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "build_and_plan_verified",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "Larger F103 variant (RCT6) with more flash and RAM than the C8T6 Bluepill.",
+        "Bench wired to ESP32-JTAG instrument."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Same STM32F1 family as existing baseline; adds marginal process coverage."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage beyond existing F1."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f103rct6_stlink",
+      "target_id": "stm32f103rct6",
+      "display_name": "STM32F103RCT6 (ST-Link)",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "build_and_plan_verified",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "ST-Link instrument variant of the STM32F103RCT6 bench.",
+        "Exercises the local-managed ST-Link GDB server path on an RCT6 target."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Instrument variant of RCT6; adds no new family coverage."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage."
         }
       }
     },
@@ -80,6 +173,98 @@
         "cross_family_proof": {
           "recommendation": "not_selected",
           "reason": "Does not expand the process beyond the STM32F4 family."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f401ce_draft",
+      "target_id": "stm32f401ce",
+      "display_name": "STM32F401CE (Draft)",
+      "family": "stm32f4",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Draft placeholder for STM32F401CE bench configuration.",
+        "Bench connections not yet wired; placeholder pins only."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Draft config only; not ready for pilot use."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not add new family coverage over existing F4 baselines."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f407_discovery",
+      "target_id": "stm32f407_discovery",
+      "display_name": "STM32F4 Discovery",
+      "family": "stm32f4",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_single",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "ST STM32F4 Discovery board via ST-Link instrument.",
+        "Cortex-M4 at 16 MHz; hardware verified in bench sessions."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Same STM32F4 family as stm32f401rct6 primary candidate; less suitable."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage beyond existing F4."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f407_discovery_esp32jtag",
+      "target_id": "stm32f407_discovery",
+      "display_name": "STM32F4 Discovery via ESP32-JTAG",
+      "family": "stm32f4",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "hardware_verified_single",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "ESP32-JTAG instrument variant of the STM32F4 Discovery bench.",
+        "Same target as stm32f407_discovery but exercises a different instrument path."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Instrument variant of F407 Discovery; adds no new family coverage."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not broaden family coverage beyond existing F4."
+        }
+      }
+    },
+    {
+      "board_id": "stm32f407vg_draft",
+      "target_id": "stm32f407vg",
+      "display_name": "STM32F407VG (Draft)",
+      "family": "stm32f4",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Draft placeholder for STM32F407VG bench configuration.",
+        "Bench connections not yet wired; placeholder pins only."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Draft config only; not ready for pilot use."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Does not add new family coverage over existing F4 baselines."
         }
       }
     },
@@ -136,6 +321,29 @@
       }
     },
     {
+      "board_id": "stm32g431cbu6_draft",
+      "target_id": "stm32g431cbu6",
+      "display_name": "STM32G431CBU6 (Draft)",
+      "family": "stm32g4",
+      "generation_class": "provisional_template_based",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "Draft placeholder for STM32G431CBU6 bench configuration.",
+        "Bench connections not yet wired; placeholder pins only."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Draft config only; use stm32g431cbu6 for pilot planning."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Draft config only; use stm32g431cbu6 for pilot planning."
+        }
+      }
+    },
+    {
       "board_id": "stm32f756bgt6",
       "target_id": "stm32f756bgt6",
       "display_name": "STM32F756BGT6",
@@ -155,6 +363,30 @@
         "cross_family_proof": {
           "recommendation": "secondary",
           "reason": "Useful eventually, but less controlled than STM32G431 for the next family expansion."
+        }
+      }
+    },
+    {
+      "board_id": "stm32h750vbt6",
+      "target_id": "stm32h750vbt6",
+      "display_name": "STM32H750VBT6 YD",
+      "family": "stm32h7",
+      "generation_class": "provisional_template_based",
+      "validation_status": "build_and_plan_verified",
+      "baseline_recommendation": "not_recommended_yet",
+      "notes": [
+        "YD-STM32H750VBT6 board with ESP32-JTAG instrument.",
+        "Cortex-M7 at 64 MHz; higher complexity MCU class.",
+        "Build verified; bench connections require hardware validation."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Too large a jump in MCU class for the immediate next process-hardening pilot."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "STM32H7 is a heavier jump than STM32G4 for the next family expansion."
         }
       }
     },

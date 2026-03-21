@@ -391,6 +391,17 @@ def run_plan(plan: dict, run_dir: Path, registry: Any) -> dict:
                     last_failure = kind
                     break
             result["failure_kind"] = last_failure
+        for entry in reversed(result.get("steps", [])):
+            if not isinstance(entry, dict):
+                continue
+            out = entry.get("result", {})
+            if not isinstance(out, dict) or bool(out.get("ok")):
+                continue
+            error = out.get("error") if isinstance(out.get("error"), dict) else {}
+            boundary = str(error.get("boundary") or "").strip()
+            if boundary:
+                result["failure_boundary"] = boundary
+                break
 
     _cleanup_managed_local_stlink_server(Path(run_dir))
     _write_json(ctx.artifacts_dir / "result.json", result)

@@ -45,6 +45,8 @@ board:
       to: P0.2
     - from: PC13
       to: LED
+    - from: PC13
+      to: P0.3
     - from: GND
       to: probe GND
   safe_pins:

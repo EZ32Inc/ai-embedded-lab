@@ -180,7 +180,7 @@ def test_describe_test_for_stm32f401_gpio_signature():
     assert any(conn["from"] == "PA3" and conn["to"] == "P0.1" for conn in payload["connections"])
     assert any(conn["from"] == "PB13" and conn["to"] == "P0.2" for conn in payload["connections"])
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
-    assert payload["warnings"] == []
+    assert not any("resolves" in w for w in payload["warnings"])
     assert payload["board_context"]["clock_hz"] == 16000000
     assert payload["board_context"]["verification_views"]["signal"]["resolved_to"] == "P0.0"
     assert payload["connection_setup"]["resolved_wiring"]["verify"] == "P0.0"
@@ -207,8 +207,8 @@ def test_describe_test_for_stm32f401_gpio_signature():
 
 def test_describe_test_warns_on_duplicate_mcu_pin_connections():
     payload = inventory.describe_test("stm32f401rct6", "tests/plans/stm32f401_gpio_signature.json", REPO_ROOT)
-    assert payload["warnings"] == []
-    assert payload["connection_setup"]["warnings"] == []
+    assert any("PC13 is connected to 2 observation points" in w for w in payload["warnings"])
+    assert any("PC13 is connected to 2 observation points" in w for w in payload["connection_setup"]["warnings"])
 
 
 def test_describe_test_for_meter_path():
@@ -466,4 +466,5 @@ def test_describe_test_for_stm32f401_led_blink():
     assert any(conn["from"] == "PC13" and conn["to"] == "LED" for conn in payload["connections"])
     assert any(check["type"] == "led" and check["pin"] == "led" for check in payload["expected_checks"])
     assert any(check["type"] == "signal" and check["pin"] == "led" for check in payload["expected_checks"])
-    assert payload["warnings"] == ["warning: test pin led resolves to LED, but verification_views.signal resolves to P0.0"]
+    assert any("test pin led resolves to LED" in w for w in payload["warnings"])
+    assert any("PC13 is connected to 2 observation points" in w for w in payload["warnings"])
