@@ -18,7 +18,7 @@
 | 层 | 状态 |
 |---|---|
 | DUT | ✔ 部分存在 |
-| Instrument | ✔ 部分标准化 |
+| Instrument | ✔ 完全标准化 (Model-v1) |
 | Test | ✔ |
 | Process（pre-flight / execution） | ✔ |
 | Schema | ✔ 已强化 |
@@ -58,13 +58,17 @@ dut =
 
 ---
 
-### 🔥 2.3 Instrument Backend + Interface 统一（正在做）
+### ✅ 2.3 Instrument Backend + Interface 统一（已完成）
 
-**问题：**
+**原问题：**
 
 - ESP32 meter / JTAG / ST-Link 不对称
 
-**目标结构：**
+**当前状态：**
+
+已完成。所有四个 instrument（esp32_meter、esp32jtag、stlink、usb_uart_bridge）均实现统一结构，legacy `*_native_api.py` 模块已全部删除并内联到各自的 interface 层。
+
+**已实现结构：**
 
 ```
 instrument =
@@ -119,18 +123,18 @@ AEL System
   Process Layer
   Schema Layer
   Insight Layer      （下一步）
-  Regression Layer   （下一步）
+  Regression Layer   （已实现）
 ```
 
 ## 4. 推荐实施顺序
 
 | 优先级 | 步骤 | 内容 |
 |---|---|---|
-| 🥇 Step 1（立即） | Instrument 统一 | ✔ backend/interface 统一 |
-| 🥈 Step 2（紧接） | Connection Layer | ✔ 最小实现 → **最大稳定性收益** |
-| 🥉 Step 3 | DUT 标准化 | ✔ 最小 contract |
-| Step 4 | Mapping Layer | ✔ 显式化兼容性 |
-| Step 5 | Insight / Regression | ✔ Exploration |
+| ~~🥇 Step 1~~ | ~~Instrument 统一~~ | ✔ 已完成（Model-v1，legacy API 已删除） |
+| 🥇 Step 1（当前优先） | Connection Layer | 最小实现 → **最大稳定性收益** |
+| 🥈 Step 2 | DUT 标准化 | 最小 contract |
+| 🥉 Step 3 | Mapping Layer | 显式化兼容性 |
+| ~~Step 5~~ | ~~Insight / Regression~~ | ✔ 已完成（bench_regression.py 已实现） |
 
 ## 5. 核心原则（必须坚持）
 
