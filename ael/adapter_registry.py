@@ -864,9 +864,9 @@ class _SignalVerifyAdapter:
                 min_edges=min_edges,
                 max_edges=max_edges,
             )
-            if native_capture.get("status") != "ok":
+            if not (native_capture.get("ok") if native_capture.get("ok") is not None else native_capture.get("status") == "ok"):
                 return False
-            payload = native_capture.get("data", {})
+            payload = native_capture.get("result") or native_capture.get("data") or {}
             if isinstance(payload, dict):
                 local_capture.update(payload)
             return True
@@ -949,8 +949,8 @@ class _SignalVerifyAdapter:
                     return False, {"ok": False, "metrics": {"attempts": attempt}, "reasons": ["led_capture_failed"], "samples": samples}, first_capture
                 if first_capture is None:
                     first_capture = dict(local_capture)
-                high = int(local_capture.get("high", 0))
-                low = int(local_capture.get("low", 0))
+                high = int(local_capture.get("high_count") or local_capture.get("high", 0))
+                low = int(local_capture.get("low_count") or local_capture.get("low", 0))
                 level = 1 if high >= low else 0
                 seen_levels.add(level)
                 samples.append({"attempt": attempt, "level": level, "high": high, "low": low})
