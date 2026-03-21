@@ -222,17 +222,17 @@ def _resolve_probe_or_instrument(root: Path, board_id: str, payload: Dict[str, A
         }
     override_instance_id, override_probe_rel = resolve_control_instrument_override(root, payload)
     board_cfg = _load_board_cfg(root, board_id)
-    board_dict = board_cfg.to_legacy_dict()
+    extra = board_cfg.extra
     instance_id = str(
         override_instance_id
-        or board_dict.get("control_instrument_instance")
-        or board_dict.get("instrument_instance")
+        or extra.get("control_instrument_instance")
+        or extra.get("instrument_instance")
         or ""
     ).strip() or None
     probe_path = str(
         override_probe_rel
-        or board_dict.get("control_instrument_config")
-        or board_dict.get("probe_config")
+        or extra.get("control_instrument_config")
+        or extra.get("probe_config")
         or ""
     ).strip() or None
     binding = load_probe_binding(root, probe_path=probe_path, instance_id=instance_id)
@@ -287,12 +287,12 @@ def _selected_dut_payload(root: Path, board_id: str, board_cfg: DUTConfig) -> Di
     }
 
 
-def _selected_board_profile_payload(root: Path, board_id: str, board_dict: Dict[str, Any]) -> Dict[str, Any]:
+def _selected_board_profile_payload(root: Path, board_id: str, board_cfg: DUTConfig) -> Dict[str, Any]:
     board_path = root / "configs" / "boards" / f"{board_id}.yaml"
     return {
         "id": board_id,
-        "name": board_dict.get("name"),
-        "target": board_dict.get("target"),
+        "name": board_cfg.name,
+        "target": board_cfg.mcu,
         "config": board_path.relative_to(root).as_posix() if board_path.exists() else None,
         "role": "runtime_policy",
     }
@@ -350,7 +350,7 @@ def _selected_bench_resources_payload(selected_instrument: Dict[str, Any], conne
     return payload
 
 
-def _build_expected_checks(board_cfg: Dict[str, Any], payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+def _build_expected_checks(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
     checks: List[Dict[str, Any]] = []
     signal_checks = payload.get("signal_checks")
     if isinstance(signal_checks, list) and signal_checks:
@@ -581,9 +581,8 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
     metadata = extract_plan_metadata(payload)
     explanation = _metadata_explanation(metadata)
     board_cfg = _load_board_cfg(root, board_id)
-    board_dict = board_cfg.to_legacy_dict()
     connection_ctx = normalize_connection_context(
-        board_dict,
+        board_cfg,
         payload,
         required_wiring=["swd", "reset", "verify"],
     )
@@ -594,6 +593,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
         selected_instrument_type=selected_instrument.get("type"),
     )
     connection_setup = build_connection_setup(connection_ctx)
+    clock_hz = board_cfg.primary_processor.clock_hz if board_cfg.processors else None
     result = {
         "ok": True,
         "board": board_id,
@@ -614,14 +614,14 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "validation_errors": list(metadata.get("validation_errors") or []),
         },
         "selected_dut": _selected_dut_payload(root, board_id, board_cfg),
-        "selected_board_profile": _selected_board_profile_payload(root, board_id, board_dict),
+        "selected_board_profile": _selected_board_profile_payload(root, board_id, board_cfg),
         "selected_instrument": selected_instrument,
         "selected_bench_resources": _selected_bench_resources_payload(selected_instrument, connection_setup),
         "connections": build_connection_rows(connection_ctx, payload),
-        "expected_checks": _build_expected_checks(board_dict, payload),
+        "expected_checks": _build_expected_checks(payload),
         "board_context": {
-            "target": board_dict.get("target"),
-            "clock_hz": board_dict.get("clock_hz"),
+            "target": board_cfg.mcu,
+            "clock_hz": clock_hz,
             "observe_map": dict(connection_ctx.observe_map),
             "verification_views": dict(connection_ctx.verification_views),
             "default_wiring": dict(connection_ctx.default_wiring),

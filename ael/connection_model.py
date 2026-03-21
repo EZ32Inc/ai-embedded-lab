@@ -8,6 +8,25 @@ from typing import Any, Dict, List, Optional
 from ael.connection_metadata import validate_connection_metadata
 
 
+def _as_board_dict(board_cfg: Any) -> Dict[str, Any]:
+    """
+    Coerce a board_cfg value to a plain dict.
+
+    Accepts:
+    - A plain dict (returned as-is)
+    - A DUTConfig (or any object with to_legacy_dict()) — calls to_legacy_dict()
+    - Anything else — returns {}
+
+    This allows connection_model to work with both the old raw-dict path
+    (strategy_resolver / pipeline) and the new DUTConfig path (inventory).
+    """
+    if isinstance(board_cfg, dict):
+        return board_cfg
+    if hasattr(board_cfg, "to_legacy_dict") and callable(board_cfg.to_legacy_dict):
+        return board_cfg.to_legacy_dict()
+    return {}
+
+
 class SetupComponentStatus(str, Enum):
     VERIFIED = "verified"                                    # confirmed by discovery or prior run
     PROVISIONED_UNVERIFIED = "provisioned_unverified"        # wired but not auto-confirmed
@@ -300,7 +319,7 @@ def connection_warnings(
     resolved_wiring: Dict[str, Any] | Any,
 ) -> List[str]:
     warnings: List[str] = []
-    board = board_cfg if isinstance(board_cfg, dict) else {}
+    board = _as_board_dict(board_cfg)
     test = test_raw if isinstance(test_raw, dict) else {}
 
     missing = [key for key in ("swd", "reset", "verify") if str((resolved_wiring or {}).get(key) or "").strip() == "UNKNOWN"]
@@ -348,7 +367,7 @@ def normalize_connection_context(
     *,
     required_wiring: List[str] | None = None,
 ) -> NormalizedConnectionContext:
-    board = board_cfg if isinstance(board_cfg, dict) else {}
+    board = _as_board_dict(board_cfg)
     defaults = _normalize_mapping(board.get("default_wiring"))
     overrides = parse_wiring_override(wiring)
     resolved_wiring = merge_wiring(defaults, overrides, required=required_wiring or [])
