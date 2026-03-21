@@ -1,7 +1,33 @@
 id: rp2350_pico2
+name: Raspberry Pi Pico 2
 mcu: rp2350
 family: rp2
 description: Raspberry Pi Pico 2 (RP2350) GPIO signature + ESP32JTAG SWD verify
+
+board:
+  vendor: Raspberry Pi Foundation
+  form_factor: pico
+
+mcus:
+  - id: main
+    mcu: rp2350
+    family: rp2
+    role: dut
+    clock_hz: 150000000
+    build:
+      type: pico
+      project_dir: firmware
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/rp2350_pico2.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: draft
+
 build:
   type: pico
   project_dir: firmware

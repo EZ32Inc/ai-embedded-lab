@@ -1,7 +1,33 @@
 id: stm32h750vbt6
+name: STM32H750VBT6 YD
 mcu: stm32h750vbt6
 family: stm32h7
 description: STM32H750VBT6 YD board
+
+board:
+  vendor: YD
+  form_factor: devkit
+
+mcus:
+  - id: main
+    mcu: stm32h750vbt6
+    family: stm32h7
+    role: dut
+    clock_hz: 64000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32h750_minimal_runtime_mailbox
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32h750vbt6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: arm_debug
   project_dir: firmware/targets/stm32h750_minimal_runtime_mailbox

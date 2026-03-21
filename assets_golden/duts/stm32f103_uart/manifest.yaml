@@ -1,7 +1,33 @@
 id: stm32f103_uart
+name: STM32F103 Bluepill UART Bench
 mcu: stm32f103c8t6
 family: stm32f1
 description: STM32F103C8T6 Bluepill UART bridge bench DUT
+
+board:
+  vendor: Generic
+  form_factor: bluepill
+
+mcus:
+  - id: main
+    mcu: stm32f103c8t6
+    family: stm32f1
+    role: dut
+    clock_hz: 8000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f103_uart
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f103_uart.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: cmake
   project_dir: firmware

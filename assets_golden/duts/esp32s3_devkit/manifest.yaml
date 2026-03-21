@@ -1,7 +1,33 @@
 id: esp32s3_devkit
+name: ESP32-S3 DevKit
 mcu: esp32s3
 family: esp32
 description: ESP32-S3 DevKit GPIO waveform + UART banner
+
+board:
+  vendor: Espressif
+  form_factor: devkit
+
+mcus:
+  - id: main
+    mcu: esp32s3
+    family: esp32
+    role: dut
+    clock_hz: 240000000
+    build:
+      type: idf
+      project_dir: firmware
+    flash:
+      method: idf_esptool
+
+board_configs:
+  - id: default
+    path: configs/boards/esp32s3_devkit.yaml
+    instrument_family: esp32_meter
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: idf
   project_dir: firmware

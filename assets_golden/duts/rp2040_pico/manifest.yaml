@@ -1,7 +1,33 @@
 id: rp2040_pico
+name: RP2040 Pico
 mcu: rp2040
 family: rp2040
 description: Raspberry Pi Pico (RP2040) blink + LA verify
+
+board:
+  vendor: Raspberry Pi Foundation
+  form_factor: pico
+
+mcus:
+  - id: main
+    mcu: rp2040
+    family: rp2040
+    role: dut
+    clock_hz: 125000000
+    build:
+      type: pico
+      project_dir: firmware
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/rp2040_pico.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: pico
   project_dir: firmware

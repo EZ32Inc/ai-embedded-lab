@@ -1,7 +1,33 @@
 id: stm32f401rct6
+name: STM32F401RCT6
 mcu: stm32f401rct6
 family: stm32f4
 description: STM32F401RCT6 GPIO waveform + LED
+
+board:
+  vendor: Generic
+  form_factor: devkit
+
+mcus:
+  - id: main
+    mcu: stm32f401rct6
+    family: stm32f4
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f401rct6
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f401rct6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: arm_debug
   project_dir: firmware

@@ -1,7 +1,40 @@
 id: stm32f407_discovery
+name: STM32F4 Discovery
 mcu: stm32f407vgt6
 family: stm32f4
 description: STM32F4 Discovery board — ST-Link direct integration
+
+board:
+  vendor: STMicroelectronics
+  form_factor: discovery
+
+mcus:
+  - id: main
+    mcu: stm32f407vgt6
+    family: stm32f4
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f407_discovery
+    flash:
+      method: gdb_stutil
+  - id: stlink
+    mcu: stm32f103cbt6
+    family: stm32f1
+    role: debugger
+
+board_configs:
+  - id: stlink_onboard
+    path: configs/boards/stm32f407_discovery.yaml
+    instrument_family: stlink
+    primary: true
+  - id: esp32jtag
+    path: configs/boards/stm32f407_discovery_esp32jtag.yaml
+    instrument_family: esp32jtag
+
+lifecycle_stage: golden
+
 build:
   type: arm_debug
   project_dir: firmware/targets/stm32f407_discovery
@@ -12,3 +45,7 @@ tags:
   - stm32f4
   - stm32f407
   - stlink
+verified:
+  status: true
+  date: 2026-03-18
+  bench_id: stlink_f407_discovery

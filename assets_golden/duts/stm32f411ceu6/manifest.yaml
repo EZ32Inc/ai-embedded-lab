@@ -1,7 +1,33 @@
 id: stm32f411ceu6
+name: STM32F411CEU6 WeAct Black Pill V2.0
 mcu: stm32f411ceu6
 family: stm32f4
 description: STM32F411CEU6 WeAct Black Pill V2.0 GPIO/signature and self-check bench DUT
+
+board:
+  vendor: WeAct Studio
+  form_factor: bluepill
+
+mcus:
+  - id: main
+    mcu: stm32f411ceu6
+    family: stm32f4
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f411ceu6
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f411ceu6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: arm_debug
   project_dir: firmware

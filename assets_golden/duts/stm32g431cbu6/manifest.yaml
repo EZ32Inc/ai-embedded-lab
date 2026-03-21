@@ -1,7 +1,33 @@
 id: stm32g431cbu6
+name: STM32G431CBU6
 mcu: stm32g431cbu6
 family: stm32g4
 description: STM32G431CBU6 GPIO waveform + LED (WeAct Black Pill style)
+
+board:
+  vendor: WeAct Studio
+  form_factor: bluepill
+
+mcus:
+  - id: main
+    mcu: stm32g431cbu6
+    family: stm32g4
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32g431cbu6
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32g431cbu6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: golden
+
 build:
   type: arm_debug
   project_dir: firmware/targets/stm32g431cbu6
