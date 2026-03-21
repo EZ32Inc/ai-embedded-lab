@@ -1,10 +1,145 @@
 from __future__ import annotations
 
 from collections import Counter
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from ael.connection_metadata import validate_connection_metadata
+
+
+class SetupComponentStatus(str, Enum):
+    VERIFIED = "verified"                                    # confirmed by discovery or prior run
+    PROVISIONED_UNVERIFIED = "provisioned_unverified"        # wired but not auto-confirmed
+    DEFINED_NOT_PROVISIONED = "defined_not_provisioned"      # in config, not yet wired
+    MANUALLY_UNSPECIFIED = "manually_unspecified"            # manual step required, status unknown
+    NOT_APPLICABLE = "not_applicable"
+
+
+@dataclass
+class SetupComponentEntry:
+    component_type: str          # "instrument_role", "external_input", "dut_to_instrument"
+    component_id: str            # role name or source name
+    status: SetupComponentStatus
+    required: bool
+    notes: str = ""
+
+
+@dataclass
+class SetupReadinessSummary:
+    overall: SetupComponentStatus          # worst-case rollup across required components
+    components: List[SetupComponentEntry]
+    blocking_issues: List[str]             # human-readable list of what blocks execution
+    warnings: List[str]                    # non-blocking issues
+    ready_to_run: bool                     # True only if all required components are VERIFIED or PROVISIONED_UNVERIFIED
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "overall": self.overall.value,
+            "ready_to_run": self.ready_to_run,
+            "blocking_issues": list(self.blocking_issues),
+            "warnings": list(self.warnings),
+            "components": [
+                {
+                    "component_type": c.component_type,
+                    "component_id": c.component_id,
+                    "status": c.status.value,
+                    "required": c.required,
+                    "notes": c.notes,
+                }
+                for c in self.components
+            ],
+        }
+
+
+_STATUS_MAP: Dict[str, SetupComponentStatus] = {
+    "manual_loopback_required": SetupComponentStatus.MANUALLY_UNSPECIFIED,
+    "defined_not_provisioned": SetupComponentStatus.DEFINED_NOT_PROVISIONED,
+    "provisioned": SetupComponentStatus.PROVISIONED_UNVERIFIED,
+    "verified": SetupComponentStatus.VERIFIED,
+}
+
+
+def build_setup_readiness(bench_setup: Dict[str, Any]) -> SetupReadinessSummary:
+    """Build a SetupReadinessSummary from a bench_setup dict.
+
+    Maps existing status strings from external_inputs / instrument_roles to
+    SetupComponentStatus enum values and computes a worst-case rollup.
+    """
+    if not isinstance(bench_setup, dict):
+        return SetupReadinessSummary(
+            overall=SetupComponentStatus.NOT_APPLICABLE,
+            components=[],
+            blocking_issues=[],
+            warnings=[],
+            ready_to_run=True,
+        )
+
+    components: List[SetupComponentEntry] = []
+
+    for role in bench_setup.get("instrument_roles", []) or []:
+        if not isinstance(role, dict):
+            continue
+        status_str = str(role.get("status") or "provisioned")
+        components.append(SetupComponentEntry(
+            component_type="instrument_role",
+            component_id=str(role.get("role") or "unknown"),
+            status=_STATUS_MAP.get(status_str, SetupComponentStatus.PROVISIONED_UNVERIFIED),
+            required=bool(role.get("required", True)),
+            notes=str(role.get("notes") or ""),
+        ))
+
+    for ext in bench_setup.get("external_inputs", []) or []:
+        if not isinstance(ext, dict):
+            continue
+        status_str = str(ext.get("status") or "defined_not_provisioned")
+        components.append(SetupComponentEntry(
+            component_type="external_input",
+            component_id=str(ext.get("source") or "unknown"),
+            status=_STATUS_MAP.get(status_str, SetupComponentStatus.DEFINED_NOT_PROVISIONED),
+            required=bool(ext.get("required", True)),
+            notes=str(ext.get("notes") or ""),
+        ))
+
+    for conn in bench_setup.get("dut_to_instrument", []) or []:
+        if not isinstance(conn, dict):
+            continue
+        components.append(SetupComponentEntry(
+            component_type="dut_to_instrument",
+            component_id=str(conn.get("dut_gpio") or "unknown"),
+            status=SetupComponentStatus.PROVISIONED_UNVERIFIED,
+            required=True,
+        ))
+
+    _blocking_statuses = {
+        SetupComponentStatus.DEFINED_NOT_PROVISIONED,
+        SetupComponentStatus.MANUALLY_UNSPECIFIED,
+    }
+    blocking = [
+        f"{c.component_type} '{c.component_id}': {c.status.value}"
+        for c in components
+        if c.required and c.status in _blocking_statuses
+    ]
+
+    required_statuses = [c.status for c in components if c.required]
+    if not required_statuses:
+        overall = SetupComponentStatus.NOT_APPLICABLE
+    elif SetupComponentStatus.MANUALLY_UNSPECIFIED in required_statuses:
+        overall = SetupComponentStatus.MANUALLY_UNSPECIFIED
+    elif SetupComponentStatus.DEFINED_NOT_PROVISIONED in required_statuses:
+        overall = SetupComponentStatus.DEFINED_NOT_PROVISIONED
+    elif SetupComponentStatus.PROVISIONED_UNVERIFIED in required_statuses:
+        overall = SetupComponentStatus.PROVISIONED_UNVERIFIED
+    else:
+        overall = SetupComponentStatus.VERIFIED
+
+    return SetupReadinessSummary(
+        overall=overall,
+        components=components,
+        blocking_issues=blocking,
+        warnings=[],
+        ready_to_run=len(blocking) == 0,
+    )
 
 
 @dataclass(frozen=True)
@@ -18,6 +153,7 @@ class NormalizedConnectionContext:
     warnings: List[str]
     validation_errors: List[str]
     source_summary: Dict[str, Any]
+    setup_readiness: Optional[SetupReadinessSummary] = None
 
 
 def parse_wiring_override(wiring: Optional[str]) -> Dict[str, str]:
@@ -248,6 +384,7 @@ def normalize_connection_context(
             ),
             "wiring_override": "cli.wiring" if overrides else None,
         },
+        setup_readiness=build_setup_readiness(bench_setup),
     )
 
 
@@ -419,7 +556,7 @@ def wiring_assumption_lines(ctx: NormalizedConnectionContext) -> List[str]:
 
 
 def build_connection_setup(ctx: NormalizedConnectionContext) -> Dict[str, Any]:
-    return {
+    result: Dict[str, Any] = {
         "resolved_wiring": dict(ctx.resolved_wiring),
         "default_wiring": dict(ctx.default_wiring),
         "bench_connections": [dict(item) for item in ctx.bench_connections],
@@ -430,6 +567,9 @@ def build_connection_setup(ctx: NormalizedConnectionContext) -> Dict[str, Any]:
         "validation_errors": list(ctx.validation_errors),
         "source_summary": dict(ctx.source_summary),
     }
+    if ctx.setup_readiness is not None:
+        result["setup_readiness"] = ctx.setup_readiness.to_dict()
+    return result
 
 
 def render_connection_setup_text(connection_setup: Dict[str, Any] | Any, *, indent: str = "") -> List[str]:

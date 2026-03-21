@@ -168,6 +168,34 @@ def validate_bench_setup(raw: Dict[str, Any] | Any, *, source_name: str = "bench
     return errors
 
 
+VALID_RESET_STRATEGIES = {"connect_under_reset", "pulse_reset", "none"}
+VALID_BOOT_MODES = {"normal", "bootloader", "isp"}
+
+
+def validate_power_and_boot(power_and_boot: Dict[str, Any] | Any) -> List[str]:
+    """Validate the optional power_and_boot section in a board config."""
+    if power_and_boot is None:
+        return []
+    if not isinstance(power_and_boot, dict):
+        return ["power_and_boot must be a mapping"]
+    errors: List[str] = []
+    strategy = power_and_boot.get("reset_strategy")
+    if strategy is not None and str(strategy) not in VALID_RESET_STRATEGIES:
+        errors.append(f"power_and_boot.reset_strategy '{strategy}' not in {sorted(VALID_RESET_STRATEGIES)}")
+    boot_mode = power_and_boot.get("boot_mode_default")
+    if boot_mode is not None and str(boot_mode) not in VALID_BOOT_MODES:
+        errors.append(f"power_and_boot.boot_mode_default '{boot_mode}' not in {sorted(VALID_BOOT_MODES)}")
+    for index, rail in enumerate(power_and_boot.get("power_rails", []) or []):
+        if not isinstance(rail, dict):
+            errors.append(f"power_and_boot.power_rails[{index}] must be a mapping")
+            continue
+        if not str(rail.get("name") or "").strip():
+            errors.append(f"power_and_boot.power_rails[{index}].name is required")
+        if rail.get("nominal_v") is None:
+            errors.append(f"power_and_boot.power_rails[{index}].nominal_v is required")
+    return errors
+
+
 def validate_connection_metadata(
     board_cfg: Dict[str, Any] | Any,
     test_raw: Dict[str, Any] | Any,
@@ -179,6 +207,7 @@ def validate_connection_metadata(
     errors.extend(validate_bench_connections(board.get("bench_connections")))
     errors.extend(validate_observe_map(board.get("observe_map")))
     errors.extend(validate_verification_views(board.get("verification_views")))
+    errors.extend(validate_power_and_boot(board.get("power_and_boot")))
     if "bench_setup" in test:
         errors.extend(validate_bench_setup(test.get("bench_setup"), source_name="bench_setup"))
     if "connections" in test:

@@ -20,3 +20,9 @@ board:
       - "load"
       - "set *(unsigned int*)0xE000EDF0 = 0xA05F0001"
       - "detach"
+  power_and_boot:
+    reset_strategy: connect_under_reset
+    boot_mode_default: normal
+    power_rails:
+      - name: VDD
+        nominal_v: 3.3

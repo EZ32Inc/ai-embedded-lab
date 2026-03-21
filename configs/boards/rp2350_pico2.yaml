@@ -34,3 +34,9 @@ board:
       to: P0.3
     - from: GND
       to: probe GND
+  power_and_boot:
+    reset_strategy: pulse_reset
+    boot_mode_default: normal
+    power_rails:
+      - name: 3V3
+        nominal_v: 3.3

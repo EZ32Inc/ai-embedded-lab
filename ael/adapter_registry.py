@@ -186,12 +186,28 @@ def _extract_voltage_v(payload):
 
 class _PreflightAdapter:
     def execute(self, step, plan, ctx):
+        from ael.adapters.preflight import check_connection_readiness
+
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
         probe_cfg = inputs.get("probe_cfg", {})
+        bench_setup = inputs.get("bench_setup", {})
         out_json = inputs.get("out_json")
         output_mode = inputs.get("output_mode", "normal")
         log_path = inputs.get("log_path")
+
         def _run_preflight_native():
+            # Connection readiness check first
+            if isinstance(bench_setup, dict) and bench_setup:
+                conn_issues = check_connection_readiness(bench_setup)
+                blocking = [i for i in conn_issues if i.severity == "blocking"]
+                advisory = [i for i in conn_issues if i.severity == "advisory"]
+                for issue in advisory:
+                    print(f"Preflight: advisory: {issue.message}")
+                if blocking:
+                    for issue in blocking:
+                        print(f"Preflight: FAIL connection setup: {issue.message}")
+                    return False, {"connection_issues": [{"kind": i.kind, "severity": i.severity, "message": i.message} for i in conn_issues]}
+
             payload = native_api_dispatch.preflight_probe(probe_cfg)
             if payload.get("status") == "ok":
                 return True, payload.get("data", {})

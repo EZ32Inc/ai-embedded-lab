@@ -270,11 +270,13 @@ def build_preflight_step(test_raw: Dict[str, Any] | Any, probe_cfg: Dict[str, An
     preflight_enabled = True if preflight_cfg.get("enabled") is None else bool(preflight_cfg.get("enabled"))
     if not preflight_enabled:
         return None
+    bench_setup = resolve_bench_setup(test_raw)
     return {
         "name": "preflight",
         "type": "preflight.probe",
         "inputs": {
             "probe_cfg": probe_cfg,
+            "bench_setup": bench_setup,
             "out_json": out_json,
             "output_mode": output_mode,
             "log_path": log_path,

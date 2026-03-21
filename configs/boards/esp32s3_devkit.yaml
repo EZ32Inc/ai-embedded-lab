@@ -34,3 +34,9 @@ board:
     swd: "P3"
     reset: "NC"
     verify: "P0.0"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3

@@ -624,6 +624,7 @@ def describe_test(board_id: str, test_path: str, repo_root: Path | None = None) 
             "default_wiring": dict(connection_ctx.default_wiring),
         },
         "connection_setup": connection_setup,
+        "setup_readiness": connection_ctx.setup_readiness.to_dict() if connection_ctx.setup_readiness is not None else None,
         "notes": payload.get("notes"),
         "warnings": [f"warning: {item}" for item in connection_ctx.warnings],
     }
@@ -642,6 +643,7 @@ def describe_connection(board_id: str, test_path: str, repo_root: Path | None = 
         "board": payload.get("board"),
         "test": payload.get("test"),
         "connection_setup": payload.get("connection_setup"),
+        "setup_readiness": payload.get("setup_readiness"),
         "connections": payload.get("connections"),
         "warnings": payload.get("warnings"),
         "validation_errors": (

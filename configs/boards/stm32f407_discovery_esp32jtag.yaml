@@ -27,3 +27,9 @@ board:
     swd: "P3"
     reset: "NC"
     verify: "NC"
+  power_and_boot:
+    reset_strategy: connect_under_reset
+    boot_mode_default: normal
+    power_rails:
+      - name: VDD
+        nominal_v: 3.3

@@ -2,9 +2,75 @@ import socket
 import subprocess
 import shutil
 import time
+from dataclasses import dataclass
+from typing import List
 
 import requests
 from requests.auth import HTTPBasicAuth
+
+
+@dataclass
+class PreflightIssue:
+    kind: str        # e.g. "connection_setup_incomplete", "instrument_role_unreachable", "wiring_not_verified"
+    severity: str    # "blocking" or "advisory"
+    message: str
+
+
+def _tcp_ping(endpoint: str) -> bool:
+    """Return True if host:port is reachable via TCP within 1 second."""
+    if not endpoint or ":" not in endpoint:
+        return False
+    try:
+        host, port_str = endpoint.rsplit(":", 1)
+        port = int(port_str)
+        with socket.create_connection((host, port), timeout=1.0):
+            return True
+    except Exception:
+        return False
+
+
+def check_connection_readiness(bench_setup: dict) -> List[PreflightIssue]:
+    """Check connection/setup readiness before run.
+
+    Returns a list of PreflightIssue items (blocking or advisory).
+    Blocking issues prevent execution; advisory issues are warnings only.
+    """
+    from ael.connection_model import build_setup_readiness
+
+    issues: List[PreflightIssue] = []
+    if not isinstance(bench_setup, dict):
+        return issues
+
+    readiness = build_setup_readiness(bench_setup)
+
+    for issue_text in readiness.blocking_issues:
+        issues.append(PreflightIssue(
+            kind="connection_setup_incomplete",
+            severity="blocking",
+            message=issue_text,
+        ))
+
+    for role in bench_setup.get("instrument_roles", []) or []:
+        if not isinstance(role, dict):
+            continue
+        endpoint = str(role.get("endpoint") or "").strip()
+        required = bool(role.get("required", True))
+        if endpoint and required:
+            if not _tcp_ping(endpoint):
+                issues.append(PreflightIssue(
+                    kind="instrument_role_unreachable",
+                    severity="blocking",
+                    message=f"instrument_role '{role.get('role')}' endpoint {endpoint} not reachable",
+                ))
+
+    if bench_setup.get("dut_to_instrument") and not bench_setup.get("discovery_status"):
+        issues.append(PreflightIssue(
+            kind="wiring_not_verified",
+            severity="advisory",
+            message="dut_to_instrument mappings declared but wiring not verified by auto-discovery",
+        ))
+
+    return issues
 
 
 def _maybe_disable_ssl_warnings(verify_ssl: bool, suppress: bool) -> None:
