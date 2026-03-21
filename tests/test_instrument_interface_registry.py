@@ -92,3 +92,49 @@ def test_control_provider_resolves_legacy_minimal_esp32jtag_shape():
     )
     assert provider is not None
     assert provider.family == "esp32jtag"
+
+
+
+def test_invoke_action_warns_on_non_model_v1_result(caplog):
+    import logging
+    from ael.instruments.interfaces.base import InstrumentProvider
+    from ael.instruments.interfaces.model import action_unsupported
+
+    def _legacy_handler(config, **kwargs):
+        return {"status": "ok", "data": {"foo": "bar"}}
+
+    provider = InstrumentProvider(
+        family="test_family",
+        native_interface_profile=lambda: {},
+        identify=lambda cfg: {},
+        get_capabilities=lambda cfg: {},
+        get_status=lambda cfg: {},
+        doctor=lambda cfg: {},
+        actions={"legacy_action": _legacy_handler},
+    )
+    with caplog.at_level(logging.WARNING, logger="ael.instruments.interfaces.base"):
+        result = provider.invoke_action({}, "legacy_action")
+    assert result["status"] == "ok"
+    assert any("non-model-v1" in r.message for r in caplog.records)
+
+
+def test_invoke_action_no_warning_on_model_v1_result():
+    import logging
+    from ael.instruments.interfaces.base import InstrumentProvider
+    from ael.instruments.interfaces.model import action_success
+
+    def _v1_handler(config, **kwargs):
+        return action_success(family="test_family", action="test_action")
+
+    provider = InstrumentProvider(
+        family="test_family",
+        native_interface_profile=lambda: {},
+        identify=lambda cfg: {},
+        get_capabilities=lambda cfg: {},
+        get_status=lambda cfg: {},
+        doctor=lambda cfg: {},
+        actions={"test_action": _v1_handler},
+    )
+    result = provider.invoke_action({}, "test_action")
+    assert result["ok"] is True
+    assert result["outcome"] == "success"
