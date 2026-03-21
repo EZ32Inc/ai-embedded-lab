@@ -31,8 +31,7 @@
         },
         {
           "board": "stm32f103_gpio_stlink",
-          "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json",
-          "optional": true
+          "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
         }
       ]
     }
