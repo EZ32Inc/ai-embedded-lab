@@ -949,8 +949,8 @@ class _SignalVerifyAdapter:
                     return False, {"ok": False, "metrics": {"attempts": attempt}, "reasons": ["led_capture_failed"], "samples": samples}, first_capture
                 if first_capture is None:
                     first_capture = dict(local_capture)
-                high = int(local_capture.get("high_count") or local_capture.get("high", 0))
-                low = int(local_capture.get("low_count") or local_capture.get("low", 0))
+                high = int(local_capture.get("high_count") or 0)
+                low = int(local_capture.get("low_count") or 0)
                 level = 1 if high >= low else 0
                 seen_levels.add(level)
                 samples.append({"attempt": attempt, "level": level, "high": high, "low": low})

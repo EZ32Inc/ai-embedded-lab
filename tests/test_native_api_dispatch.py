@@ -317,8 +317,6 @@ def test_capture_signature_returns_unified_envelope_for_esp32jtag(monkeypatch):
     assert payload["family"] == "esp32jtag"
     assert payload["action"] == "capture_signature"
     assert payload["result"]["edge_count"] == 8
-    assert payload["result"]["edges"] == 8
-    assert payload["data"]["edges"] == 8
     assert payload["result"]["capture_blob_present"] is True
     assert payload["fallback"]["strategy"] == "rerun_capture_after_preflight"
 

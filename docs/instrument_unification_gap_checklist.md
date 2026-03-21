@@ -41,8 +41,8 @@ Status legend:
   - wrapped through _preflight_probe() with wrap_legacy_action; emits model-v1 envelope with targets/monitor_ok/logic_analyzer_ok
 - `program_firmware`: OK
   - unified envelope is live in interface layer and backed by controller facade
-- `capture_signature`: PARTIAL
-  - unified envelope is live; compat aliases (edges/high/low) retained; adapter_registry migrated to prefer new names
+- `capture_signature`: OK
+  - unified envelope is live; compat aliases (edges/high/low) removed; only canonical names (edge_count/high_count/low_count) emitted
 - naming consistency: PARTIAL
   - public and runtime naming is clean; `jtag_native_api.py` remains a family backend detail
 - error consistency: PARTIAL
@@ -108,6 +108,6 @@ Status legend:
 - fallback and degradation model: OK
   - `bench_regression.py` provides FAILURE_BOUNDARY_POLICY action table and recurring run governance
 - public controller and instrument naming: OK
-- legacy backend isolation: PARTIAL
-  - `control_instrument_native_api.py` still imported by `controller_backend.py`
-  - compat field aliases (edges/high/low) still present in capture_signature result; active callers migrated to prefer new names
+- legacy backend isolation: OK
+  - `controller_backend.py` now imports `flash_bmda_gdbmi` and `observe_gpio_pin` directly; `control_instrument_native_api.py` is no longer in the runtime import chain
+  - compat field aliases (edges/high/low) removed from capture_signature success_mapper; only canonical names (edge_count/high_count/low_count) are emitted; adapter_registry fallback cleaned up
