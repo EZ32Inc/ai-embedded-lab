@@ -38,6 +38,12 @@ PROGRAM_FIRMWARE_FALLBACK = {
 }
 
 
+PREFLIGHT_FALLBACK = {
+    "strategy": "retry_after_probe_recovery",
+    "suggestion": "confirm the local ST-Link GDB endpoint is reachable before scheduling probe work",
+}
+
+
 
 def _capability_map(probe_cfg):
     capability_surfaces = probe_cfg.get("capability_surfaces") if isinstance(probe_cfg.get("capability_surfaces"), dict) else {}
@@ -103,6 +109,23 @@ def _doctor(probe_cfg):
 
 
 
+def _preflight_probe(probe_cfg):
+    payload = stlink_native_api.preflight_probe(probe_cfg)
+    return wrap_legacy_action(
+        payload,
+        family="stlink",
+        action="preflight_probe",
+        success_mapper=lambda data: {
+            "transport": "gdb_remote",
+            "gdb_remote": (data.get("preflight") or {}).get("gdb_remote"),
+            "preflight": data.get("preflight") if isinstance(data.get("preflight"), dict) else {},
+        },
+        failure_boundary="probe_health",
+        fallback=PREFLIGHT_FALLBACK,
+    )
+
+
+
 def _program_firmware(probe_cfg, **kwargs):
     requested = {
         "firmware_path": kwargs.get("firmware_path"),
@@ -132,7 +155,7 @@ PROVIDER = InstrumentProvider(
     get_status=_get_status,
     doctor=_doctor,
     actions={
-        "preflight_probe": stlink_native_api.preflight_probe,
+        "preflight_probe": _preflight_probe,
         "program_firmware": _program_firmware,
     },
 )

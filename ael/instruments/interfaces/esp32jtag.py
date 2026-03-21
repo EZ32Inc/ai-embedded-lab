@@ -44,6 +44,34 @@ CAPTURE_SIGNATURE_FALLBACK = {
 }
 
 
+PREFLIGHT_FALLBACK = {
+    "strategy": "rerun_preflight_then_retry",
+    "suggestion": "rerun ESP32 JTAG preflight and inspect monitor targets before retrying",
+}
+
+
+
+def _preflight_probe(probe_cfg):
+    payload = jtag_native_api.preflight_probe(probe_cfg)
+    return wrap_legacy_action(
+        payload,
+        family="esp32jtag",
+        action="preflight_probe",
+        success_mapper=lambda data: {
+            "transport": "gdb_remote",
+            "targets": list((data.get("preflight") or {}).get("targets") or []),
+            "monitor_ok": bool((data.get("preflight") or {}).get("monitor_ok")),
+            "logic_analyzer_ok": bool(
+                (data.get("preflight") or {}).get("la_ok")
+                or (data.get("preflight") or {}).get("logic_analyzer")
+            ),
+            "preflight": data.get("preflight") if isinstance(data.get("preflight"), dict) else {},
+        },
+        failure_boundary="probe_health",
+        fallback=PREFLIGHT_FALLBACK,
+    )
+
+
 
 def _capability_map(probe_cfg):
     capability_surfaces = probe_cfg.get("capability_surfaces", {}) if isinstance(probe_cfg.get("capability_surfaces"), dict) else {}
@@ -178,7 +206,7 @@ PROVIDER = InstrumentProvider(
     get_status=_get_status,
     doctor=_doctor,
     actions={
-        "preflight_probe": jtag_native_api.preflight_probe,
+        "preflight_probe": _preflight_probe,
         "program_firmware": _program_firmware,
         "capture_signature": _capture_signature,
     },
