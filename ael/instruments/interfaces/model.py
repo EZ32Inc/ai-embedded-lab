@@ -61,6 +61,37 @@ DOCTOR_CHECK_KEYS = frozenset({
     "web_api",
 })
 
+ERROR_BOUNDARY_KEYS = frozenset({
+    "backend",
+    "firmware_programming",
+    "instrument_capabilities",
+    "instrument_status",
+    "interface_contract",
+    "measurement",
+    "probe_health",
+    "signal_capture",
+    "stimulus",
+    "uart_io",
+    "uart_session",
+})
+
+ERROR_CODE_KEYS = frozenset({
+    "action_failed",
+    "backend_error",
+    "capture_signature_failed",
+    "connection_timeout",
+    "doctor_failed",
+    "endpoint_missing",
+    "firmware_programming_failed",
+    "invalid_request",
+    "measurement_failed",
+    "preflight_failed",
+    "stimulus_failed",
+    "transport_error",
+    "transport_unreachable",
+    "unsupported_action",
+})
+
 
 def enforce_capability_taxonomy(capabilities: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     normalized: Dict[str, Dict[str, Any]] = {}
@@ -178,6 +209,24 @@ def normalize_doctor_check_entry(name: str, detail: Dict[str, Any]) -> Dict[str,
 def normalize_doctor_checks(checks: Dict[str, Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
     normalized = enforce_doctor_check_keys(checks)
     return {name: normalize_doctor_check_entry(name, detail) for name, detail in normalized.items()}
+
+
+def enforce_error_boundary(boundary: Optional[str]) -> Optional[str]:
+    if boundary is None:
+        return None
+    name = str(boundary).strip()
+    if not name:
+        return None
+    if name not in ERROR_BOUNDARY_KEYS:
+        raise ValueError(f"unknown error boundary: {name}")
+    return name
+
+
+def enforce_error_code(code: str) -> str:
+    name = str(code).strip()
+    if name not in ERROR_CODE_KEYS:
+        raise ValueError(f"unknown error code: {name}")
+    return name
 
 
 def _fallback_payload(payload: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
@@ -364,13 +413,15 @@ def action_failure(
     unsupported: bool = False,
     legacy: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
+    code = enforce_error_code(code)
+    boundary = enforce_error_boundary(failure_boundary)
     error: Dict[str, Any] = {
-        "code": str(code),
+        "code": code,
         "message": str(message),
         "retryable": bool(retryable),
     }
-    if failure_boundary:
-        error["boundary"] = str(failure_boundary)
+    if boundary:
+        error["boundary"] = boundary
     if details:
         error["details"] = dict(details)
     payload: Dict[str, Any] = {

@@ -88,7 +88,7 @@ def _endpoint(manifest: Dict[str, Any]) -> str:
 def _http_call(manifest: Dict[str, Any], path: str, *, payload: Optional[Dict[str, Any]] = None, timeout_s: float = 3.0) -> Dict[str, Any]:
     endpoint = _endpoint(manifest)
     if not endpoint:
-        return _native_error("usb_uart_missing_endpoint", "usb-uart bridge endpoint missing", details={"path": path})
+        return _native_error("endpoint_missing", "usb-uart bridge endpoint missing", details={"path": path})
     url = endpoint if endpoint.startswith("http://") or endpoint.startswith("https://") else f"http://{endpoint}"
     url = f"{url}{path}"
     data = None
@@ -101,14 +101,14 @@ def _http_call(manifest: Dict[str, Any], path: str, *, payload: Optional[Dict[st
         with urllib_request.urlopen(req, timeout=timeout_s) as resp:  # nosec B310 - local explicit endpoint
             raw = json.loads(resp.read().decode("utf-8"))
     except urllib_error.URLError as exc:
-        return _native_error("usb_uart_http_unreachable", str(exc), retryable=True, details={"path": path, "endpoint": endpoint})
+        return _native_error("transport_unreachable", str(exc), retryable=True, details={"path": path, "endpoint": endpoint})
     except Exception as exc:
-        return _native_error("usb_uart_http_error", str(exc), retryable=True, details={"path": path, "endpoint": endpoint})
+        return _native_error("transport_error", str(exc), retryable=True, details={"path": path, "endpoint": endpoint})
     if isinstance(raw, dict) and raw.get("status") in {"ok", "error"}:
         return raw
     if isinstance(raw, dict) and raw.get("ok") is True:
         return _native_ok(raw)
-    return _native_error("usb_uart_action_failed", str((raw or {}).get("error") or f"usb-uart action failed at {path}"), retryable=True, details={"path": path, "response": raw})
+    return _native_error("action_failed", str((raw or {}).get("error") or f"usb-uart action failed at {path}"), retryable=True, details={"path": path, "response": raw})
 
 
 
@@ -219,26 +219,26 @@ def doctor(manifest: Dict[str, Any]) -> Dict[str, Any]:
                     "out_of_scope": ["signal_capture", "firmware_programming"],
                 },
                 recovery_hint="restore bridge reachability or restart the USB-UART daemon before retrying UART actions",
-                failure_boundary="instrument_health",
+                failure_boundary="probe_health",
             )
         )
         return wrap_legacy_action(
             wrapped,
             family="usb_uart_bridge",
             action="doctor",
-            failure_boundary="instrument_health",
+            failure_boundary="probe_health",
             fallback=DOCTOR_FALLBACK,
         )
     return wrap_legacy_action(
         _native_error(
-            "usb_uart_doctor_failed",
+            "doctor_failed",
             str(((payload.get("error") or {}).get("message") or "usb-uart doctor failed")),
             retryable=True,
             details={"endpoint": _endpoint(manifest), "doctor": payload},
         ),
         family="usb_uart_bridge",
         action="doctor",
-        failure_boundary="instrument_health",
+        failure_boundary="probe_health",
         fallback=DOCTOR_FALLBACK,
     )
 

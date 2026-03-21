@@ -97,7 +97,7 @@ def program_firmware(
     failure = _flash_failure_details(flash_json_path)
     details = {"firmware_path": firmware_path, **failure.get("details", {})}
     return _native_error(
-        "control_program_failed",
+        "firmware_programming_failed",
         str(failure.get("message") or "control instrument firmware load failed"),
         retryable=bool(failure.get("retryable", True)),
         details=details,

@@ -33,7 +33,7 @@ def test_program_firmware_returns_error_on_flash_failure(monkeypatch):
     out = controller_backend.program_firmware(probe_cfg, firmware_path="/tmp/fake.elf")
 
     assert out["status"] == "error"
-    assert out["error"]["code"] == "control_program_failed"
+    assert out["error"]["code"] == "firmware_programming_failed"
 
 
 def test_capture_signature_calls_gpio_adapter(monkeypatch):

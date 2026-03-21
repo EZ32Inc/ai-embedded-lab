@@ -32,7 +32,7 @@ def _jtag_cfg():
 
 def test_stlink_preflight_probe_emits_model_v1_envelope(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.stlink_native_api.preflight_probe",
+        "ael.instruments.interfaces.stlink._stlink_preflight_probe",
         lambda cfg: {"status": "ok", "data": {"protocol_version": "v0.1", "preflight": {"gdb_remote": {"ok": True}}}},
     )
     result = stlink._preflight_probe(_stlink_cfg())
@@ -46,21 +46,21 @@ def test_stlink_preflight_probe_emits_model_v1_envelope(monkeypatch):
 
 def test_stlink_preflight_probe_failure_emits_model_v1_envelope(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.stlink_native_api.preflight_probe",
-        lambda cfg: {"status": "error", "error": {"code": "stlink_preflight_failed", "message": "unreachable", "retryable": True}},
+        "ael.instruments.interfaces.stlink._stlink_preflight_probe",
+        lambda cfg: {"status": "error", "error": {"code": "preflight_failed", "message": "unreachable", "retryable": True}},
     )
     result = stlink._preflight_probe(_stlink_cfg())
     assert result["ok"] is False
     assert result["outcome"] == "failure"
     assert result["action"] == "preflight_probe"
     assert result["family"] == "stlink"
-    assert result["error"]["code"] == "stlink_preflight_failed"
+    assert result["error"]["code"] == "preflight_failed"
     assert result["fallback"]["strategy"] == "retry_after_probe_recovery"
 
 
 def test_esp32jtag_preflight_probe_emits_model_v1_envelope(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.jtag_native_api.preflight_probe",
+        "ael.instruments.interfaces.esp32jtag._jtag_preflight_probe",
         lambda cfg: {
             "status": "ok",
             "data": {
@@ -82,13 +82,13 @@ def test_esp32jtag_preflight_probe_emits_model_v1_envelope(monkeypatch):
 
 def test_esp32jtag_preflight_probe_failure_emits_model_v1_envelope(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.jtag_native_api.preflight_probe",
-        lambda cfg: {"status": "error", "error": {"code": "jtag_preflight_failed", "message": "preflight failed", "retryable": True}},
+        "ael.instruments.interfaces.esp32jtag._jtag_preflight_probe",
+        lambda cfg: {"status": "error", "error": {"code": "preflight_failed", "message": "preflight failed", "retryable": True}},
     )
     result = esp32jtag._preflight_probe(_jtag_cfg())
     assert result["ok"] is False
     assert result["outcome"] == "failure"
     assert result["action"] == "preflight_probe"
     assert result["family"] == "esp32jtag"
-    assert result["error"]["code"] == "jtag_preflight_failed"
+    assert result["error"]["code"] == "preflight_failed"
     assert result["fallback"]["strategy"] == "rerun_preflight_then_retry"

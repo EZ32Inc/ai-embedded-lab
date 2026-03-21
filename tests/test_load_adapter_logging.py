@@ -10,7 +10,7 @@ def test_load_gdbmi_does_not_wrap_flash_in_tee(tmp_path):
     plan = {"stage_execution": {"requested_until": "run"}}
     step = {
         "inputs": {
-            "probe_cfg": {"ip": "192.168.2.98"},
+            "probe_cfg": {"type_id": "stlink", "ip": "127.0.0.1", "gdb_port": 4242},
             "firmware_path": str(tmp_path / "fw.elf"),
             "flash_cfg": {"flash_log_path": str(tmp_path / "flash.log")},
             "flash_json_path": str(tmp_path / "flash.json"),
@@ -20,7 +20,7 @@ def test_load_gdbmi_does_not_wrap_flash_in_tee(tmp_path):
     }
     Path(step["inputs"]["firmware_path"]).write_text("stub", encoding="utf-8")
 
-    with patch("ael.adapter_registry.flash_bmda_gdbmi.run", return_value=True) as flash_run, patch(
+    with patch("ael.adapters.flash_bmda_gdbmi.run", return_value=True) as flash_run, patch(
         "ael.adapter_registry._tee_output"
     ) as tee_output:
         result = adapter.execute(step, plan, ctx)

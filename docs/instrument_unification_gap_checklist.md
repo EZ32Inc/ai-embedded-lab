@@ -22,10 +22,10 @@ Status legend:
   - unified envelope is live in interface layer and backed by controller facade
 - `capture_signature`: OK
   - standardized unsupported envelope is emitted with fallback guidance
-- naming consistency: PARTIAL
-  - public and runtime naming is clean; legacy backend module names still exist internally
-- error consistency: PARTIAL
-  - error envelope is unified, but boundary taxonomy is not fully enforced everywhere
+- naming consistency: OK
+  - public and runtime naming is clean; legacy backend module `control_instrument_native_api.py` deleted; `stlink_native_api.py` deleted and inlined into `stlink.py`
+- error consistency: OK
+  - `ERROR_BOUNDARY_KEYS` and `ERROR_CODE_KEYS` enforced in `action_failure()`; `doctor_failed` and `preflight_failed` replace family-specific codes
 
 ## ESP32 JTAG
 
@@ -43,10 +43,10 @@ Status legend:
   - unified envelope is live in interface layer and backed by controller facade
 - `capture_signature`: OK
   - unified envelope is live; compat aliases (edges/high/low) removed; only canonical names (edge_count/high_count/low_count) emitted
-- naming consistency: PARTIAL
-  - public and runtime naming is clean; `jtag_native_api.py` remains a family backend detail
-- error consistency: PARTIAL
-  - envelope is shared, but no full family-independent error code set exists yet
+- naming consistency: OK
+  - public and runtime naming is clean; `jtag_native_api.py` deleted and inlined into `esp32jtag.py`
+- error consistency: OK
+  - canonical codes enforced; `doctor_failed` and `preflight_failed` replace `jtag_*` family-specific names
 
 ## ESP32 Meter
 
@@ -64,10 +64,10 @@ Status legend:
   - unified action envelope is live with compatibility aliases retained
 - `stim_digital`: OK
   - unified action envelope is live with compatibility aliases retained
-- naming consistency: PARTIAL
-  - public and runtime naming is clean; `meter_native_api.py` remains an internal backend module
-- error consistency: PARTIAL
-  - result and error envelope is shared, but taxonomy-backed boundaries are not fully enforced
+- naming consistency: OK
+  - public and runtime naming is clean; `meter_native_api.py` deleted and inlined into `esp32_meter.py`
+- error consistency: OK
+  - boundaries renamed to canonical names (`probe_health`, `measurement`, `stimulus`); `_execute_action` fallback uses `action_failed`; `meter_*` codes replaced with canonical equivalents
 
 ## USB UART Bridge
 
@@ -87,10 +87,10 @@ Status legend:
   - unified action envelope is live with compatibility aliases retained
 - `read_uart`: OK
   - unified action envelope is live with compatibility aliases retained
-- naming consistency: PARTIAL
-  - public and runtime naming is clean; internal daemon and backend naming still exists below the interface layer
-- error consistency: PARTIAL
-  - result and error envelope is shared, but shared boundary taxonomy is not fully enforced
+- naming consistency: OK
+  - public and runtime naming is clean; internal daemon and backend naming is below the interface layer and not part of the runtime seam
+- error consistency: OK
+  - boundaries renamed to canonical names (`probe_health`, `uart_session`, `uart_io`); `usb_uart_*` codes replaced with canonical equivalents (`endpoint_missing`, `transport_unreachable`, `transport_error`, `action_failed`, `doctor_failed`)
 
 ## Cross-Cutting Summary
 
@@ -107,7 +107,9 @@ Status legend:
 - reporting vocabulary: OK
 - fallback and degradation model: OK
   - `bench_regression.py` provides FAILURE_BOUNDARY_POLICY action table and recurring run governance
+- error code and boundary taxonomy: OK
+  - `ERROR_BOUNDARY_KEYS` and `ERROR_CODE_KEYS` in `model.py`; `enforce_error_boundary()` and `enforce_error_code()` called from `action_failure()`; all four families emit only canonical codes and boundaries; `bench_regression.FAILURE_BOUNDARY_POLICY` updated with `measurement` and `stimulus` entries
 - public controller and instrument naming: OK
 - legacy backend isolation: OK
-  - `controller_backend.py` now imports `flash_bmda_gdbmi` and `observe_gpio_pin` directly; `control_instrument_native_api.py` is no longer in the runtime import chain
+  - `controller_backend.py` now imports `flash_bmda_gdbmi` and `observe_gpio_pin` directly; all `*_native_api.py` modules deleted; content inlined into their respective interface files (`stlink.py`, `esp32jtag.py`, `esp32_meter.py`)
   - compat field aliases (edges/high/low) removed from capture_signature success_mapper; only canonical names (edge_count/high_count/low_count) are emitted; adapter_registry fallback cleaned up

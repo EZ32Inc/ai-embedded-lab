@@ -25,7 +25,7 @@ ERROR_CODE_MAP = {
     InvalidRequest: "invalid_request",
     TransportUnavailable: "connection_timeout",
     MeasurementFailure: "measurement_failed",
-    StimulusFailure: "program_failed",
+    StimulusFailure: "stimulus_failed",
     Esp32MeterError: "backend_error",
 }
 

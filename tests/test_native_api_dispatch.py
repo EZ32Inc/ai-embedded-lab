@@ -145,7 +145,7 @@ def test_native_api_dispatch_supports_usb_uart_manifest_via_provider(monkeypatch
 
 def test_program_firmware_returns_unified_envelope_for_esp32jtag(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.jtag_native_api.program_firmware",
+        "ael.instruments.controller_backend.program_firmware",
         lambda probe_cfg, **kwargs: {
             "status": "ok",
             "data": {"firmware_path": kwargs["firmware_path"]},
@@ -171,11 +171,11 @@ def test_program_firmware_returns_unified_envelope_for_esp32jtag(monkeypatch):
 
 def test_program_firmware_returns_unified_envelope_for_stlink(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.stlink_native_api.program_firmware",
+        "ael.instruments.controller_backend.program_firmware",
         lambda probe_cfg, **kwargs: {
             "status": "error",
             "error": {
-                "code": "control_program_failed",
+                "code": "firmware_programming_failed",
                 "message": "usb busy",
                 "retryable": False,
                 "details": {"firmware_path": kwargs["firmware_path"]},
@@ -203,7 +203,7 @@ def test_program_firmware_returns_unified_envelope_for_stlink(monkeypatch):
 
 def test_control_status_returns_unified_envelope_for_esp32jtag(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.jtag_native_api.get_status",
+        "ael.instruments.interfaces.esp32jtag._jtag_get_status",
         lambda probe_cfg: {
             "status": "ok",
             "data": {
@@ -240,7 +240,7 @@ def test_control_status_returns_unified_envelope_for_esp32jtag(monkeypatch):
 
 def test_control_doctor_returns_unified_semantics_for_stlink(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.stlink_native_api.doctor",
+        "ael.instruments.interfaces.stlink._stlink_doctor",
         lambda probe_cfg: {
             "status": "ok",
             "data": {
@@ -279,7 +279,7 @@ def test_control_doctor_returns_unified_semantics_for_stlink(monkeypatch):
 
 def test_manifest_capabilities_return_unified_taxonomy_for_meter(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.meter_native_api.get_capabilities",
+        "ael.instruments.interfaces.esp32_meter._meter_get_capabilities",
         lambda manifest: {"status": "ok", "data": {"capabilities": {"measure.digital": {}}}},
     )
     payload = native_api_dispatch.get_capabilities(_manifest("esp32s3_dev_c_meter"))
@@ -293,7 +293,7 @@ def test_manifest_capabilities_return_unified_taxonomy_for_meter(monkeypatch):
 
 def test_capture_signature_returns_unified_envelope_for_esp32jtag(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.jtag_native_api.capture_signature",
+        "ael.instruments.controller_backend.capture_signature",
         lambda probe_cfg, **kwargs: {
             "status": "ok",
             "data": {"pin": kwargs["pin"], "edges": 8, "high": 100, "low": 120, "blob": b"x"},
@@ -348,7 +348,7 @@ def test_capture_signature_returns_unified_unsupported_for_stlink():
 
 def test_measure_digital_returns_unified_envelope_for_meter(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.meter_native_api.measure_digital",
+        "ael.instruments.interfaces.esp32_meter._meter_measure_digital",
         lambda manifest, **kwargs: {
             "status": "ok",
             "data": {"pins": [{"gpio": 11, "state": "toggle", "transitions": 9}], "duration_ms": kwargs["duration_ms"]},
@@ -370,7 +370,7 @@ def test_measure_digital_returns_unified_envelope_for_meter(monkeypatch):
 
 def test_measure_voltage_returns_unified_envelope_for_meter(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.meter_native_api.measure_voltage",
+        "ael.instruments.interfaces.esp32_meter._meter_measure_voltage",
         lambda manifest, **kwargs: {
             "status": "ok",
             "data": {"gpio": kwargs["gpio"], "avg": kwargs["avg"], "voltage_v": 3.31},
@@ -392,7 +392,7 @@ def test_measure_voltage_returns_unified_envelope_for_meter(monkeypatch):
 
 def test_stim_digital_returns_unified_envelope_for_meter(monkeypatch):
     monkeypatch.setattr(
-        "ael.instruments.meter_native_api.stim_digital",
+        "ael.instruments.interfaces.esp32_meter._meter_stim_digital",
         lambda manifest, **kwargs: {
             "status": "ok",
             "data": {
