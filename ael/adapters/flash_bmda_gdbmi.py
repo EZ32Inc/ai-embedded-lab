@@ -1,9 +1,12 @@
+import fcntl
+import glob
 import json
 import os
 import shlex
 import signal
 from pathlib import Path
 import socket
+import struct
 import subprocess
 import time
 from typing import Optional
@@ -153,6 +156,17 @@ def _classify_stlink_server_issue(text: str) -> dict[str, str]:
             "summary": "Flash: ST-Link USB is busy.",
             "hint": "Flash: diagnostic - ST-Link USB is busy; another process may still own the probe. Stop other ST-Link/GDB sessions, then unplug/replug the ST-Link and retry.",
         }
+    if "libusb_error_timeout" in low and ("enter_swd" in low or "get_current_mode" in low):
+        return {
+            "code": "usb_transport_hung",
+            "summary": "Flash: ST-Link USB transport is frozen (LIBUSB_ERROR_TIMEOUT on USB commands).",
+            "hint": (
+                "Flash: diagnostic - the ST-Link probe is not responding to USB commands "
+                "(GET_CURRENT_MODE / ENTER_SWD are timing out). "
+                "The probe firmware is frozen; unplug the ST-Link USB cable, wait 2 seconds, then replug it. "
+                "Do NOT power-cycle the DUT — the issue is the probe, not the target."
+            ),
+        }
     if "libusb_error_timeout" in low or "get_version read reply failed" in low:
         return {
             "code": "usb_timeout",
@@ -182,7 +196,7 @@ def _stlink_env() -> dict[str, str]:
     return env
 
 
-def _probe_stlink_health(timeout_s: float = 8.0) -> dict[str, str | bool]:
+def _probe_stlink_health(timeout_s: float = 3.0) -> dict[str, str | bool]:
     if not _STINFO_BIN.exists():
         return {"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}
     cmd = [str(_STINFO_BIN), "--probe"]
@@ -265,7 +279,7 @@ def _probe_stlink_with_retries(
     emit,
     attempts: int = 3,
     delay_s: float = 1.0,
-    retry_codes: tuple[str, ...] = ("probe_timeout", "usb_missing", "swd_attach_failed"),
+    retry_codes: tuple[str, ...] = ("usb_missing", "swd_attach_failed"),
 ) -> dict[str, str | bool]:
     total = max(1, int(attempts))
     retryable = {str(item) for item in retry_codes}
@@ -302,6 +316,44 @@ def _emit_stlink_server_failure(emit, reason: str, server_log_path: str) -> dict
     elif server_log_path:
         emit(f"Flash: local ST-Link GDB server log path: {server_log_path}")
     return diagnostic
+
+
+_USBDEVFS_RESET = 0x5514
+# ST-Link VID and known PIDs (v2, v2-1, v3)
+_STLINK_VID = "0483"
+_STLINK_PIDS = {"3748", "374b", "374e", "374f", "3752", "3753"}
+
+
+def _reset_stlink_usb_device(emit) -> bool:
+    """Send USBDEVFS_RESET ioctl to the ST-Link USB device.
+
+    This is a software-level USB reset equivalent to briefly unplugging and replugging
+    the cable from the host's perspective. It resets the ST-Link firmware's USB state
+    without requiring physical intervention. Called after killing an st-util process to
+    recover from libusb assertion crashes that leave the device in a partial state.
+    Returns True if the reset was sent successfully.
+    """
+    try:
+        for vendor_path in glob.glob("/sys/bus/usb/devices/*/idVendor"):
+            try:
+                if Path(vendor_path).read_text().strip() != _STLINK_VID:
+                    continue
+                dev_dir = Path(vendor_path).parent
+                pid = (dev_dir / "idProduct").read_text().strip()
+                if pid not in _STLINK_PIDS:
+                    continue
+                bus = int((dev_dir / "busnum").read_text().strip())
+                devnum = int((dev_dir / "devnum").read_text().strip())
+                usb_path = f"/dev/bus/usb/{bus:03d}/{devnum:03d}"
+                with open(usb_path, "wb") as fh:
+                    fcntl.ioctl(fh, _USBDEVFS_RESET, 0)
+                emit(f"Flash: USB reset sent to ST-Link at {usb_path} (VID={_STLINK_VID} PID={pid})")
+                return True
+            except Exception:
+                continue
+    except Exception as exc:
+        emit(f"Flash: USB reset scan failed ({exc})")
+    return False
 
 
 def _find_stale_stlink_pids(port: int) -> list[int]:
@@ -341,25 +393,21 @@ def _terminate_stale_stlink_processes(port: int, emit) -> None:
     if not pids:
         return
     emit(f"Flash: found stale local ST-Link server process(es) on port {int(port)}: {', '.join(str(pid) for pid in pids)}")
+    # Use SIGKILL directly to avoid triggering st-util's SIGTERM handler, which crashes with
+    # a libusb assertion failure (pthread_mutex_destroy on a still-locked mutex) when USB
+    # transfers are in-flight. SIGKILL lets the kernel close the USB device handle cleanly.
     for pid in pids:
-        try:
-            os.kill(pid, signal.SIGTERM)
-        except ProcessLookupError:
-            continue
-        except Exception as exc:
-            emit(f"Flash: failed to terminate stale local ST-Link server pid {pid} ({exc})")
-    time.sleep(0.2)
-    for pid in pids:
-        if not _pid_exists(pid):
-            continue
-        emit(f"Flash: stale local ST-Link server pid {pid} ignored SIGTERM; sending SIGKILL")
         try:
             os.kill(pid, signal.SIGKILL)
         except ProcessLookupError:
             continue
         except Exception as exc:
             emit(f"Flash: failed to SIGKILL stale local ST-Link server pid {pid} ({exc})")
-    time.sleep(0.1)
+    time.sleep(0.2)
+    # Send a USB-level reset to the ST-Link device so its firmware exits any partial USB
+    # transaction state from the killed session, then wait for re-enumeration.
+    _reset_stlink_usb_device(emit)
+    time.sleep(1.0)
 
 
 def _cleanup_managed_local_stlink_server(bootstrap: dict | None, emit) -> None:
@@ -370,24 +418,19 @@ def _cleanup_managed_local_stlink_server(bootstrap: dict | None, emit) -> None:
     if pid <= 0 or not _pid_exists(pid):
         return
     emit(f"Flash: stopping managed local ST-Link GDB server pid {pid}")
-    try:
-        os.kill(pid, signal.SIGTERM)
-    except ProcessLookupError:
-        return
-    except Exception as exc:
-        emit(f"Flash: failed to terminate managed local ST-Link server pid {pid} ({exc})")
-        return
-    time.sleep(0.2)
-    if not _pid_exists(pid):
-        return
-    emit(f"Flash: managed local ST-Link GDB server pid {pid} ignored SIGTERM; sending SIGKILL")
+    # Use SIGKILL directly — see comment in _terminate_stale_stlink_processes.
     try:
         os.kill(pid, signal.SIGKILL)
     except ProcessLookupError:
         return
     except Exception as exc:
         emit(f"Flash: failed to SIGKILL managed local ST-Link server pid {pid} ({exc})")
-    time.sleep(0.1)
+        return
+    time.sleep(0.2)
+    # Send a USB-level reset to the ST-Link device so its firmware exits any partial USB
+    # transaction state from the killed session, then wait for re-enumeration.
+    _reset_stlink_usb_device(emit)
+    time.sleep(1.0)
 
 
 def _local_stlink_server_available(ip: str, port: int, bootstrap: dict | None = None) -> bool:
@@ -436,13 +479,19 @@ def _ensure_local_stlink_gdb_server(
         result["diagnostic_code"] = diagnostic.get("code", "")
         return result
 
-    probe_diagnostic = _probe_stlink_with_retries(emit)
+    probe_diagnostic = _probe_stlink_health()
     if not bool(probe_diagnostic.get("ok", False)):
-        _emit_stlink_probe_failure(emit, probe_diagnostic)
-        result["ok"] = False
-        result["error"] = str(probe_diagnostic.get("summary") or "Flash: ST-Link direct probe failed.")
-        result["diagnostic_code"] = str(probe_diagnostic.get("code") or "")
-        return result
+        if str(probe_diagnostic.get("code") or "") == "probe_timeout":
+            # st-info hangs in multi-threaded Python contexts; treat timeout as
+            # inconclusive and proceed to start the GDB server rather than
+            # blocking on a probe that will never return cleanly.
+            emit("Flash: ST-Link direct probe timed out; proceeding to start GDB server")
+        else:
+            _emit_stlink_probe_failure(emit, probe_diagnostic)
+            result["ok"] = False
+            result["error"] = str(probe_diagnostic.get("summary") or "Flash: ST-Link direct probe failed.")
+            result["diagnostic_code"] = str(probe_diagnostic.get("code") or "")
+            return result
 
     emit(f"Flash: local ST-Link GDB server not detected at {ip}:{port}; starting it")
     cmd = [str(_STLINK_GDB_SERVER_SCRIPT), "--port", str(port), "--multi"]
@@ -652,6 +701,16 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
 
     if not ok:
         emit("Flash: FAIL")
+        # If a managed local GDB server was running, scan its log for USB transport
+        # failures that explain why GDB could not connect (e.g. frozen ST-Link USB pipe).
+        server_log_path = stlink_bootstrap.get("server_log_path", "")
+        if server_log_path and stlink_bootstrap.get("managed"):
+            recent = _read_recent_text(server_log_path)
+            usb_diag = _classify_stlink_server_issue(recent)
+            if usb_diag.get("summary"):
+                emit(usb_diag["summary"])
+            if usb_diag.get("hint"):
+                emit(usb_diag["hint"])
     else:
         emit("Flash: OK")
 

@@ -1,3 +1,4 @@
+import signal
 from pathlib import Path
 from unittest.mock import patch
 
@@ -184,24 +185,16 @@ def test_probe_stlink_health_reports_swd_attach_failure():
 
 def test_cleanup_managed_local_stlink_server_terminates_pid():
     emitted = []
-    with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[True, False]), patch(
+    with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=True), patch(
         "ael.adapters.flash_bmda_gdbmi.os.kill"
-    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
+    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None), patch(
+        "ael.adapters.flash_bmda_gdbmi._reset_stlink_usb_device", return_value=True
+    ):
         flash_bmda_gdbmi._cleanup_managed_local_stlink_server({"managed": True, "pid": 123}, emitted.append)
 
-    kill_mock.assert_called_once()
+    # Now uses SIGKILL directly (not SIGTERM), so exactly one kill call
+    kill_mock.assert_called_once_with(123, signal.SIGKILL)
     assert any("stopping managed local ST-Link GDB server pid 123" in line for line in emitted)
-
-
-def test_cleanup_managed_local_stlink_server_escalates_to_sigkill():
-    emitted = []
-    with patch("ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[True, True]), patch(
-        "ael.adapters.flash_bmda_gdbmi.os.kill"
-    ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None):
-        flash_bmda_gdbmi._cleanup_managed_local_stlink_server({"managed": True, "pid": 123}, emitted.append)
-
-    assert kill_mock.call_count == 2
-    assert any("ignored SIGTERM" in line for line in emitted)
 
 
 def test_local_stlink_server_available_uses_managed_flag():
@@ -234,28 +227,30 @@ def test_find_stale_stlink_pids_parses_ps_output():
 def test_terminate_stale_stlink_processes_emits_and_kills():
     emitted = []
     with patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[123, 456]), patch(
-        "ael.adapters.flash_bmda_gdbmi._pid_exists", side_effect=[False, False]
-    ), patch("ael.adapters.flash_bmda_gdbmi.os.kill") as kill_mock, patch(
+        "ael.adapters.flash_bmda_gdbmi.os.kill"
+    ) as kill_mock, patch(
         "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
-    ):
+    ), patch("ael.adapters.flash_bmda_gdbmi._reset_stlink_usb_device", return_value=True):
         flash_bmda_gdbmi._terminate_stale_stlink_processes(4242, emitted.append)
 
     assert any("found stale local ST-Link server process(es)" in line for line in emitted)
+    # Now uses SIGKILL directly for both pids
     assert kill_mock.call_count == 2
+    for call in kill_mock.call_args_list:
+        assert call.args[1] == signal.SIGKILL
 
 
-
-def test_terminate_stale_stlink_processes_escalates_to_sigkill():
+def test_terminate_stale_stlink_processes_sends_usb_reset():
+    """After killing stale processes, a USB reset must be sent to recover the ST-Link device."""
     emitted = []
     with patch("ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[123]), patch(
-        "ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=True
-    ), patch("ael.adapters.flash_bmda_gdbmi.os.kill") as kill_mock, patch(
+        "ael.adapters.flash_bmda_gdbmi.os.kill"
+    ), patch(
         "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
-    ):
+    ), patch("ael.adapters.flash_bmda_gdbmi._reset_stlink_usb_device", return_value=True) as usb_reset_mock:
         flash_bmda_gdbmi._terminate_stale_stlink_processes(4242, emitted.append)
 
-    assert any("ignored SIGTERM" in line for line in emitted)
-    assert kill_mock.call_count == 2
+    usb_reset_mock.assert_called_once()
 
 
 def test_run_writes_flash_log_when_path_configured(tmp_path):
@@ -571,11 +566,11 @@ def test_ensure_local_stlink_gdb_server_restarts_existing_listener_before_flash(
         "ael.adapters.flash_bmda_gdbmi.Path.exists", return_value=True
     ), patch("ael.adapters.flash_bmda_gdbmi._port_is_listening", side_effect=[True, False, False]), patch(
         "ael.adapters.flash_bmda_gdbmi._find_stale_stlink_pids", return_value=[340032]
-    ), patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_with_retries", return_value={"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}), patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=False), patch(
+    ), patch("ael.adapters.flash_bmda_gdbmi._probe_stlink_health", return_value={"ok": True, "code": "", "summary": "", "hint": "", "output": "", "command": ""}), patch("ael.adapters.flash_bmda_gdbmi._pid_exists", return_value=False), patch(
         "ael.adapters.flash_bmda_gdbmi.os.kill"
     ) as kill_mock, patch("ael.adapters.flash_bmda_gdbmi.subprocess.Popen", return_value=Proc()) as popen, patch(
         "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
-    ):
+    ), patch("ael.adapters.flash_bmda_gdbmi._reset_stlink_usb_device", return_value=True):
         result = flash_bmda_gdbmi._ensure_local_stlink_gdb_server(
             {"ip": "127.0.0.1", "gdb_port": 4242},
             emitted.append,
@@ -584,6 +579,82 @@ def test_ensure_local_stlink_gdb_server_restarts_existing_listener_before_flash(
 
     assert result["ok"] is True
     assert result["managed"] is True
-    kill_mock.assert_called_once_with(340032, flash_bmda_gdbmi.signal.SIGTERM)
+    # Now uses SIGKILL directly (not SIGTERM) to avoid libusb assertion crash on cleanup
+    kill_mock.assert_called_once_with(340032, signal.SIGKILL)
     popen.assert_called_once()
     assert any("restarting existing local ST-Link GDB server" in line for line in emitted)
+
+
+def test_classify_stlink_server_issue_usb_transport_hung():
+    # The real server log pattern: LIBUSB_ERROR_TIMEOUT on GET_CURRENT_MODE and ENTER_SWD
+    log = (
+        "ERROR usb.c: GET_VERSION send request failed: LIBUSB_ERROR_TIMEOUT\n"
+        "ERROR usb.c: GET_CURRENT_MODE send request failed: LIBUSB_ERROR_TIMEOUT\n"
+        "ERROR usb.c: ENTER_SWD send request failed: LIBUSB_ERROR_TIMEOUT\n"
+        "Failed to enter SWD mode\n"
+    )
+    diag = flash_bmda_gdbmi._classify_stlink_server_issue(log)
+    assert diag["code"] == "usb_transport_hung"
+    assert "frozen" in diag["summary"].lower() or "transport" in diag["summary"].lower()
+    assert "unplug" in diag["hint"].lower()
+    assert "replug" in diag["hint"].lower()
+    # Must NOT say power-cycle the DUT, since the issue is the probe
+    assert "do not power-cycle the dut" in diag["hint"].lower() or "not the target" in diag["hint"].lower()
+
+
+def test_classify_stlink_server_issue_timeout_single_occurrence_stays_usb_timeout():
+    # Single-occurrence GET_VERSION timeout (no ENTER_SWD / GET_CURRENT_MODE) stays usb_timeout
+    diag = flash_bmda_gdbmi._classify_stlink_server_issue(
+        "GET_VERSION read reply failed: LIBUSB_ERROR_TIMEOUT"
+    )
+    assert diag["code"] == "usb_timeout"
+
+
+def test_run_emits_usb_transport_hung_diagnostic_when_managed_server_fails(tmp_path):
+    """When a managed local GDB server starts but all GDB connections timeout,
+    and the server log contains LIBUSB_ERROR_TIMEOUT on SWD commands,
+    flash.run() must print the usb_transport_hung diagnostic."""
+    firmware = tmp_path / "fw.elf"
+    firmware.write_text("stub", encoding="utf-8")
+    server_log = tmp_path / "flash_stlink_server.log"
+    server_log.write_text(
+        "ERROR usb.c: GET_CURRENT_MODE send request failed: LIBUSB_ERROR_TIMEOUT\n"
+        "ERROR usb.c: ENTER_SWD send request failed: LIBUSB_ERROR_TIMEOUT\n"
+        "Failed to enter SWD mode\n",
+        encoding="utf-8",
+    )
+    flash_log = tmp_path / "flash.log"
+
+    class FailResult:
+        returncode = 1
+        stdout = "could not connect: Connection timed out.\n"
+        stderr = ""
+
+    with patch(
+        "ael.adapters.flash_bmda_gdbmi._ensure_local_stlink_gdb_server",
+        return_value={
+            "ok": True,
+            "managed": True,
+            "port_checked": True,
+            "server_log_path": str(server_log),
+            "error": "",
+            "diagnostic_code": "",
+            "skip_port_probe": True,
+            "pid": 9876,
+        },
+    ), patch("ael.adapters.flash_bmda_gdbmi._run_gdb", return_value=FailResult()), patch(
+        "ael.adapters.flash_bmda_gdbmi.time.sleep", return_value=None
+    ):
+        ok = flash_bmda_gdbmi.run(
+            {"ip": "127.0.0.1", "gdb_port": 4242, "gdb_cmd": "arm-none-eabi-gdb"},
+            str(firmware),
+            flash_cfg={"flash_log_path": str(flash_log)},
+        )
+
+    assert ok is False
+    log_text = flash_log.read_text(encoding="utf-8")
+    assert "Flash: FAIL" in log_text
+    assert "transport" in log_text.lower() or "frozen" in log_text.lower(), \
+        f"Expected USB transport hung message in flash log: {log_text!r}"
+    assert "unplug" in log_text.lower() and "replug" in log_text.lower(), \
+        f"Expected replug instruction in flash log: {log_text!r}"
