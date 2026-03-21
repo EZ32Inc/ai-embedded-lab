@@ -16,8 +16,8 @@ Status legend:
   - taxonomy-enforced health domains; health_domain keys align with `STATUS_HEALTH_DOMAIN_KEYS`
 - `doctor`: OK
   - taxonomy-enforced checks; check keys align with `DOCTOR_CHECK_KEYS`
-- `preflight_probe`: PARTIAL
-  - action is usable and routable, but response details remain backend-shaped
+- `preflight_probe`: OK
+  - wrapped through _preflight_probe() with wrap_legacy_action; emits model-v1 ok/outcome/result/error envelope
 - `program_firmware`: OK
   - unified envelope is live in interface layer and backed by controller facade
 - `capture_signature`: OK
@@ -37,12 +37,12 @@ Status legend:
   - taxonomy-enforced health domains; capture and logic_analyzer replace old subsystem names
 - `doctor`: OK
   - taxonomy-enforced checks; capture_control and logic_analyzer replace old subsystem names
-- `preflight_probe`: PARTIAL
-  - action is useful and provider-routed, but detailed payload shape remains legacy-heavy
+- `preflight_probe`: OK
+  - wrapped through _preflight_probe() with wrap_legacy_action; emits model-v1 envelope with targets/monitor_ok/logic_analyzer_ok
 - `program_firmware`: OK
   - unified envelope is live in interface layer and backed by controller facade
 - `capture_signature`: PARTIAL
-  - unified envelope is live, but compatibility aliases are still required by downstream consumers
+  - unified envelope is live; compat aliases (edges/high/low) retained; adapter_registry migrated to prefer new names
 - naming consistency: PARTIAL
   - public and runtime naming is clean; `jtag_native_api.py` remains a family backend detail
 - error consistency: PARTIAL
@@ -96,13 +96,18 @@ Status legend:
 
 - unified provider spine: OK
 - unified dispatch routing: OK
-- unified action envelope: PARTIAL
+- unified action envelope: OK
+  - all actions (including preflight_probe) go through wrap_legacy_action / model-v1 envelope
+  - InstrumentProvider.invoke_action emits a WARNING log if a handler returns non-model-v1 shape
 - stable capability taxonomy: OK
   - all four families pass `enforce_capability_taxonomy`
 - normalized doctor and status semantics: OK
   - all four families emit taxonomy-enforced health domains and check keys
   - `normalize_status_result` and `normalize_doctor_result` enforce this at the interface layer
 - reporting vocabulary: OK
-- fallback and degradation model: PARTIAL
+- fallback and degradation model: OK
+  - `bench_regression.py` provides FAILURE_BOUNDARY_POLICY action table and recurring run governance
 - public controller and instrument naming: OK
 - legacy backend isolation: PARTIAL
+  - `control_instrument_native_api.py` still imported by `controller_backend.py`
+  - compat field aliases (edges/high/low) still present in capture_signature result; active callers migrated to prefer new names
