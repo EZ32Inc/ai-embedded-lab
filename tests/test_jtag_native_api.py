@@ -49,8 +49,8 @@ def test_get_status_reports_endpoint_domains(monkeypatch):
     assert out["status"] == "ok"
     assert out["data"]["health_domains"]["debug_remote"]["ok"] is True
     assert out["data"]["health_domains"]["web_api"]["ok"] is True
-    assert out["data"]["health_domains"]["capture_subsystem"]["ok"] is True
-    assert out["data"]["health_domains"]["monitor_targets"]["ok"] is None
+    assert out["data"]["health_domains"]["capture"]["ok"] is True
+    assert out["data"]["health_domains"]["logic_analyzer"]["ok"] is None
 
 
 def test_doctor_wraps_preflight(monkeypatch):
@@ -65,8 +65,8 @@ def test_doctor_wraps_preflight(monkeypatch):
     out = jtag_native_api.doctor(_probe_cfg())
     assert out["status"] == "ok"
     assert out["data"]["checks"]["preflight"]["ok"] is True
-    assert out["data"]["checks"]["monitor_targets"]["targets"] == ["M4"]
-    assert out["data"]["checks"]["capture_subsystem"]["ok"] is True
+    assert out["data"]["checks"]["logic_analyzer"]["targets"] == ["M4"]
+    assert out["data"]["checks"]["capture_control"]["ok"] is True
 
 
 def test_preflight_probe_reports_native_success(monkeypatch):

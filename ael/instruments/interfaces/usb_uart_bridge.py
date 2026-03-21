@@ -205,9 +205,8 @@ def doctor(manifest: Dict[str, Any]) -> Dict[str, Any]:
         data = (payload.get("data") or {}) if isinstance(payload.get("data"), dict) else {}
         checks = {
             "tcp": {"ok": True},
-            "bridge_service": {"ok": True},
+            "bridge_service": {"ok": bool(data.get("ok", True)), "evidence": data},
             "uart_surface": {"ok": bool(data.get("ok", True))},
-            "doctor": data,
         }
         wrapped = _native_ok(
             normalize_doctor_result(

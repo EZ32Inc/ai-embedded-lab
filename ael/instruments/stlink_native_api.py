@@ -164,14 +164,9 @@ def get_status(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
             "reachable": reachable,
             "endpoints": {"gdb_remote": gdb_check},
             "health_domains": {
-                "gdb_remote": {
+                "debug_remote": {
                     "ok": reachable,
                     "summary": "ST-Link GDB remote endpoint is reachable" if reachable else "ST-Link GDB remote endpoint is not reachable",
-                },
-                "debug_attach": {
-                    "ok": None,
-                    "state": "unverified",
-                    "detail": "debug attach health is verified during preflight/programming",
                 },
             },
         }

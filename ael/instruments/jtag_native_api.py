@@ -183,11 +183,11 @@ def get_status(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
                 },
                 "debug_remote": {"ok": bool(debug_check.get("ok"))},
                 "web_api": {"ok": bool(control_check.get("ok"))},
-                "capture_subsystem": {
+                "capture": {
                     "ok": bool(control_check.get("ok")),
                     "dependency": "web_api",
                 },
-                "monitor_targets": {
+                "logic_analyzer": {
                     "ok": None,
                     "state": "unverified",
                     "detail": "monitor target enumeration runs during doctor/preflight",
@@ -215,11 +215,11 @@ def doctor(probe_cfg: Dict[str, Any]) -> Dict[str, Any]:
             "network": {"ok": bool((health_domains.get("network") or {}).get("ok"))},
             "gdb_remote": {"ok": bool((health_domains.get("debug_remote") or {}).get("ok"))},
             "web_api": {"ok": bool((health_domains.get("web_api") or {}).get("ok"))},
-            "capture_subsystem": {
+            "capture_control": {
                 "ok": la_ok,
                 "detail": "logic-analyzer self-test passed" if la_ok else "logic-analyzer self-test failed",
             },
-            "monitor_targets": {
+            "logic_analyzer": {
                 "ok": monitor_ok,
                 "targets": monitor_targets,
             },
