@@ -873,8 +873,7 @@ def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
         keys.append(f"probe_path:{probe_path}")
 
     board_dut = _resolve_board_cfg(repo_root, task.board)
-    board_legacy = board_dut.to_legacy_dict() if board_dut is not None else {}
-    flash_cfg = board_legacy.get("flash", {}) if isinstance(board_legacy.get("flash"), dict) else {}
+    flash_cfg = board_dut.flash if board_dut is not None else {}
     flash_port = str(flash_cfg.get("port") or "").strip()
     if flash_port:
         keys.append(f"serial:{flash_port}")
