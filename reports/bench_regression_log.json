@@ -283,5 +283,43 @@
     "status_health_schema_version_counts": {},
     "timestamp": "2026-03-21T23:04:47Z",
     "total_count": 8
+  },
+  {
+    "baseline_readiness_status": "needs_attention",
+    "capability_taxonomy_version_counts": {},
+    "doctor_check_schema_version_counts": {},
+    "fail_count": 1,
+    "failure_boundary_counts": {},
+    "failure_class_counts": {},
+    "health_status": "partial_pass",
+    "instrument_family_counts": {},
+    "instrument_health_counts": {},
+    "ok": false,
+    "pass_count": 5,
+    "recovery_hint_counts": {},
+    "run_id": "",
+    "schema_review_status": "partial_structured_coverage",
+    "status_health_schema_version_counts": {},
+    "timestamp": "2026-03-22T00:58:30Z",
+    "total_count": 8
+  },
+  {
+    "baseline_readiness_status": "needs_attention",
+    "capability_taxonomy_version_counts": {},
+    "doctor_check_schema_version_counts": {},
+    "fail_count": 0,
+    "failure_boundary_counts": {},
+    "failure_class_counts": {},
+    "health_status": "pass",
+    "instrument_family_counts": {},
+    "instrument_health_counts": {},
+    "ok": true,
+    "pass_count": 6,
+    "recovery_hint_counts": {},
+    "run_id": "",
+    "schema_review_status": "partial_structured_coverage",
+    "status_health_schema_version_counts": {},
+    "timestamp": "2026-03-22T01:04:54Z",
+    "total_count": 6
   }
 ]
