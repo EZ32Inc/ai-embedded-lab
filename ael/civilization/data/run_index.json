@@ -104,10 +104,10 @@
   },
   "stm32f103_stlink_local|stm32f103_stlink_local_smoke": {
     "exp_id": "88897255-e739-49b7-ab36-308556efd8b5",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 3,
-    "last_seen": 1774213478.6388817,
-    "confidence": 0.6,
+    "last_seen": 1774213574.7968702,
+    "confidence": 0.7,
     "known_failures": {
       "load": {
         "exp_id": "a6780db1-b2e0-4bf2-8f4d-e8ad858e019c",
