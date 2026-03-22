@@ -12,6 +12,8 @@ from typing import Any, Dict, List, Tuple
 from ael import paths as ael_paths
 from ael import inventory as inventory_view
 from ael import strategy_resolver
+from ael.dut.model import DUTConfig
+from ael.dut.registry import load_dut_from_file
 from ael.config_resolver import resolve_controller_config, resolve_controller_instance
 from ael.adapters import preflight
 from ael.instruments import provision as instrument_provision
@@ -512,8 +514,8 @@ def _validate_sequence_steps(repo_root: Path, setting: Dict[str, Any], *, label:
         if (board, test) not in valid_pairs:
             test_payload = _load_test_payload(test)
             test_board = str(test_payload.get("board") or "").strip() if isinstance(test_payload, dict) else ""
-            board_raw = _resolve_board_raw(repo_root, board)
-            if not (test_board == board and board_raw):
+            board_cfg_check = _resolve_board_cfg(repo_root, board)
+            if not (test_board == board and board_cfg_check is not None):
                 return False, f"{label} {idx} references non-DUT test board={board} test={test}"
         bad = [field for field in forbidden_fields if raw_step.get(field) not in (None, "")]
         if bad:
@@ -589,23 +591,22 @@ def _run_preflight_only(repo_root: Path, step: Dict[str, Any]) -> Tuple[int, Dic
     return (0 if ok else 2), {"ok": bool(ok), "result": info or {}}
 
 
-def _resolve_board_raw(repo_root: Path, board: str | None) -> Dict[str, Any]:
+def _resolve_board_cfg(repo_root: Path, board: str | None) -> DUTConfig | None:
     board_id = str(board or "").strip()
     if not board_id:
-        return {}
-    board_path = repo_root / "configs" / "boards" / f"{board_id}.yaml"
-    if not board_path.exists():
-        return {}
-    loaded = _simple_yaml_load(str(board_path))
-    return loaded if isinstance(loaded, dict) else {}
+        return None
+    try:
+        return load_dut_from_file(repo_root, board_id)
+    except (FileNotFoundError, Exception):
+        return None
 
 
 def _instrument_interface_family(repo_root: Path, board: str | None, test_path: str | None) -> str:
     board_id = str(board or "").strip()
     if not board_id:
         return ""
-    board_raw = _resolve_board_raw(repo_root, board_id)
-    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    board_dut = _resolve_board_cfg(repo_root, board_id)
+    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
     if test_path:
         test_raw = _load_text_payload(Path(test_path))
         if isinstance(test_raw, dict):
@@ -640,8 +641,8 @@ def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: 
     test_raw = _load_text_payload(Path(test_path))
     if not isinstance(test_raw, dict):
         return
-    board_raw = _resolve_board_raw(repo_root, board)
-    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    board_dut = _resolve_board_cfg(repo_root, board)
+    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
     if not strategy_resolver.is_meter_digital_verify_test(test_raw, board_cfg):
         return
     instrument_id, tcp_cfg, manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
@@ -873,8 +874,8 @@ def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
     elif probe_path:
         keys.append(f"probe_path:{probe_path}")
 
-    board_raw = _resolve_board_raw(repo_root, task.board)
-    board_cfg = board_raw.get("board", {}) if isinstance(board_raw.get("board"), dict) else {}
+    board_dut = _resolve_board_cfg(repo_root, task.board)
+    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg.get("flash"), dict) else {}
     flash_port = str(flash_cfg.get("port") or "").strip()
     if flash_port:
