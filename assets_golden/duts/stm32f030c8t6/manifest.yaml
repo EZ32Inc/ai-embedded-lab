@@ -1,0 +1,41 @@
+id: stm32f030c8t6
+name: STM32F030C8T6 GPIO Bench
+mcu: stm32f030c8t6
+family: stm32f0
+description: STM32F030C8T6 GPIO/signature bench DUT
+
+board:
+  vendor: Generic
+  form_factor: breakout
+
+mcus:
+  - id: main
+    mcu: stm32f030c8t6
+    family: stm32f0
+    role: dut
+    clock_hz: 8000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f030c8t6
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f030c8t6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: draft
+
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32f030c8t6
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32f0
+  - gpio_bench
+verified:
+  status: false

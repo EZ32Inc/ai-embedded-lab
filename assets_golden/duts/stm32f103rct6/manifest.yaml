@@ -1,0 +1,44 @@
+id: stm32f103rct6
+name: STM32F103RCT6 Mailbox Bench
+mcu: stm32f103rct6
+family: stm32f1
+description: STM32F103RCT6 mailbox-verify bench DUT
+
+board:
+  vendor: Generic
+  form_factor: breakout
+
+mcus:
+  - id: main
+    mcu: stm32f103rct6
+    family: stm32f1
+    role: dut
+    clock_hz: 8000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f103rct6_mailbox
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f103rct6.yaml
+    instrument_family: esp32jtag
+    primary: true
+  - id: stlink
+    path: configs/boards/stm32f103rct6_stlink.yaml
+    instrument_family: stlink
+
+lifecycle_stage: draft
+
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32f103rct6_mailbox
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32f1
+  - mailbox
+verified:
+  status: false

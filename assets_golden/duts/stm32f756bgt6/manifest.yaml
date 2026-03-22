@@ -1,0 +1,41 @@
+id: stm32f756bgt6
+name: STM32F756BGT6 GPIO Bench
+mcu: stm32f756bgt6
+family: stm32f7
+description: STM32F756BGT6 GPIO/signature bench DUT
+
+board:
+  vendor: Generic
+  form_factor: breakout
+
+mcus:
+  - id: main
+    mcu: stm32f756bgt6
+    family: stm32f7
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f756bgt6
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f756bgt6.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: draft
+
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32f756bgt6
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32f7
+  - gpio_bench
+verified:
+  status: false
