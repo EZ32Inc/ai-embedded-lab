@@ -28,64 +28,78 @@
   },
   "stm32f103_gpio_stlink|stm32f103_gpio_no_external_capture_stlink": {
     "exp_id": "58375963-b52f-4c9f-9229-27831aa4ea35",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774181736.3605769,
-    "confidence": 0.7,
+    "last_seen": 1774209625.2589035,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "rp2040_pico|rp2040_gpio_signature": {
     "exp_id": "380575b4-32d8-410e-8667-ef13c5a9d534",
-    "success_count": 103,
+    "success_count": 106,
     "failure_count": 0,
-    "last_seen": 1774182364.6304438,
+    "last_seen": 1774209627.5241325,
     "confidence": 1.0,
     "known_failures": {}
   },
   "stm32f411ceu6|stm32f411_gpio_signature": {
     "exp_id": "f088415d-c27b-4cd0-924d-c885fddbf63e",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774181741.5444393,
-    "confidence": 0.7,
+    "last_seen": 1774209631.661494,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "stm32h750vbt6|stm32h750_wiring_verify": {
     "exp_id": "2df9a795-2492-4333-a501-935e0c38d6d0",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774181750.3698828,
-    "confidence": 0.7,
+    "last_seen": 1774209643.2763782,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_gpio_signature": {
     "exp_id": "e034dc0b-e907-4151-9377-af71abde1598",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774181761.0591948,
-    "confidence": 0.7,
+    "last_seen": 1774209653.0466323,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "esp32c6_devkit|esp32c6_gpio_signature_with_meter": {
     "exp_id": "4fa3d6be-9218-4834-8625-1eb0b1105bb7",
-    "success_count": 3,
-    "failure_count": 1,
-    "last_seen": 1774181811.7969096,
-    "confidence": 0.7,
+    "success_count": 6,
+    "failure_count": 2,
+    "last_seen": 1774209650.097079,
+    "confidence": 1.0,
     "known_failures": {
       "check_signal": {
         "exp_id": "67627318-e611-4421-a06b-bbc26bf4cf98",
-        "count": 1,
+        "count": 2,
         "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed — stages: preflight, build, load, run — failure: check_signal — instrument digital verification failed"
       }
     }
   },
   "esp32c3_devkit|esp32c3_gpio_signature_with_meter": {
     "exp_id": "4f68a83c-25f3-456a-b06b-d92a06777dc8",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774181811.75239,
-    "confidence": 0.7,
+    "last_seen": 1774209475.7246883,
+    "confidence": 1.0,
     "known_failures": {}
+  },
+  "rp2040_pico|rp2040_uart_banner": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 2,
+    "last_seen": 1774197913.0005665,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "858acf42-51ac-404e-89c6-62c37094de0b",
+        "count": 2,
+        "last_raw": "[rp2040_pico] rp2040_uart_banner: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
   }
 }
