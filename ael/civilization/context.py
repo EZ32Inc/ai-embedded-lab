@@ -14,6 +14,13 @@ class CivilizationContext:
     - know what has worked before (prior_runs)
     - know what has failed before and should be avoided (avoid_paths)
     - surface aggregated run statistics (run_stats)
+    - surface known fix/decision skills (relevant_skills)
+
+    summary_lines() surfaces four sections:
+      ① run_stats        — how many times, what confidence
+      ② relevant_skills  — known fixes / decisions for this board/domain
+      ③ likely_pitfalls  — avoid_paths: paths marked dangerous
+      ④ observation_focus — derived: what to actively watch this run
     """
 
     board_id: str
@@ -28,6 +35,9 @@ class CivilizationContext:
     # Aggregated statistics from run_index (success_count, failure_count, confidence, last_seen)
     run_stats: dict = field(default_factory=dict)
 
+    # Known fix/decision skills relevant to this board/domain (from get_relevant_skills)
+    relevant_skills: List[dict] = field(default_factory=list)
+
     @property
     def has_prior_success(self) -> bool:
         return self.run_stats.get("success_count", 0) > 0 or any(
@@ -39,16 +49,25 @@ class CivilizationContext:
         return len(self.avoid_paths) > 0
 
     def summary_lines(self) -> List[str]:
-        """Human-readable lines for pipeline logging."""
+        """Human-readable lines for pipeline logging.
+
+        Sections (only printed if non-empty):
+          ① run_stats        — N runs, S success / F failed, confidence
+          ② relevant_skills  — known fix/decision skills
+          ③ likely_pitfalls  — avoid_paths
+          ④ observation_focus — derived watch points
+        """
         lines = []
         stats = self.run_stats
+        has_any = stats or self.prior_runs or self.avoid_paths or self.relevant_skills
 
-        if not stats and not self.prior_runs and not self.avoid_paths:
+        if not has_any:
             lines.append(
                 f"[civilization] no prior experience for {self.board_id}/{self.test_name}"
             )
             return lines
 
+        # ① run_stats
         if stats:
             s = stats.get("success_count", 0)
             f = stats.get("failure_count", 0)
@@ -66,14 +85,46 @@ class CivilizationContext:
                 f"{n}/{len(self.prior_runs)} prior runs succeeded (legacy)"
             )
 
+        # ② relevant_skills
+        if self.relevant_skills:
+            lines.append(
+                f"[civilization] known skills ({len(self.relevant_skills)}):"
+            )
+            for sk in self.relevant_skills[:3]:
+                raw = str(sk.get("raw", ""))[:120]
+                conf = sk.get("confidence", 0.5)
+                lines.append(f"  skill [{conf:.2f}]: {raw}")
+
+        # ③ likely_pitfalls (avoid_paths)
         if self.avoid_paths:
             lines.append(
-                f"[civilization] WARNING: {len(self.avoid_paths)} avoid path(s) known:"
+                f"[civilization] likely pitfalls ({len(self.avoid_paths)}):"
             )
             for ap in self.avoid_paths[:3]:
-                lines.append(f"  avoid: {str(ap.get('raw', ''))[:100]}")
+                lines.append(f"  pitfall: {str(ap.get('raw', ''))[:100]}")
+
+        # ④ observation_focus — derived from avoid_paths + failure history
+        focus: List[str] = []
+        for ap in self.avoid_paths[:2]:
+            raw = str(ap.get("raw", "")).strip()
+            if raw:
+                focus.append(raw[:80])
+        if stats.get("failure_count", 0) > 0:
+            focus.append(
+                f"{stats['failure_count']} prior failure(s) on record"
+                " — watch for early stage exits"
+            )
+        if focus:
+            lines.append("[civilization] observation focus:")
+            for item in focus:
+                lines.append(f"  watch: {item}")
 
         return lines
 
     def is_empty(self) -> bool:
-        return not self.run_stats and not self.prior_runs and not self.avoid_paths
+        return (
+            not self.run_stats
+            and not self.prior_runs
+            and not self.avoid_paths
+            and not self.relevant_skills
+        )

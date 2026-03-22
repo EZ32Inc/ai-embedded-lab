@@ -36,10 +36,10 @@
   },
   "rp2040_pico|rp2040_gpio_signature": {
     "exp_id": "380575b4-32d8-410e-8667-ef13c5a9d534",
-    "success_count": 3,
+    "success_count": 103,
     "failure_count": 0,
-    "last_seen": 1774181736.810672,
-    "confidence": 0.7,
+    "last_seen": 1774182364.6304438,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "stm32f411ceu6|stm32f411_gpio_signature": {

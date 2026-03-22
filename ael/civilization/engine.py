@@ -59,13 +59,14 @@ class CivilizationEngine:
     All methods degrade gracefully if the Experience Engine is unavailable.
 
     Public interface for AEL callers:
-      get_context(board_id, test_name)          → CivilizationContext
-      get_recommended_path(intent, context)     → List[dict]
-      get_avoid_paths(intent, context)          → List[dict]
-      get_relevant_skills(intent, context)      → List[dict]
-      record_run(board_id, test_name, ok, ...)  → Optional[str]
-      feedback(exp_id, correct, outcome)        → bool
-      is_available()                            → bool
+      get_context(board_id, test_name)                   → CivilizationContext
+      get_recommended_path(intent, context)              → List[dict]
+      get_avoid_paths(intent, context)                   → List[dict]
+      get_relevant_skills(intent, context)               → List[dict]
+      record_run(board_id, test_name, ok, ...)           → Optional[str]
+      record_skill(trigger, fix, lesson, scope, ...)     → Optional[str]
+      feedback(exp_id, correct, outcome)                 → bool
+      is_available()                                     → bool
     """
 
     # ------------------------------------------------------------------
@@ -89,6 +90,7 @@ class CivilizationEngine:
             return ctx
 
         keyword = build_run_keyword(board_id, test_name)
+        intent = build_run_intent(board_id, test_name)
         try:
             ctx.prior_runs = ExperienceAPI.query(
                 keyword=keyword, domain=_DOMAIN, avoid=False
@@ -96,6 +98,11 @@ class CivilizationEngine:
             ctx.avoid_paths = ExperienceAPI.query(
                 keyword=keyword, domain=_DOMAIN, avoid=True
             ) or []
+            # ② Populate relevant_skills: fix/decision tagged, outcome=success
+            ctx.relevant_skills = CivilizationEngine.get_relevant_skills(
+                intent=intent,
+                context={"board_id": board_id, "domain": _DOMAIN},
+            )
         except Exception:
             pass
         return ctx
@@ -299,6 +306,75 @@ class CivilizationEngine:
             )
         except Exception:
             return False
+
+    # ------------------------------------------------------------------
+    # Skill recording — callable at any point during or after a run
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def record_skill(
+        trigger: str,
+        fix: str,
+        lesson: str,
+        scope: str,
+        board_id: str = "",
+        source_ref: str = "",
+        source: str = "AEL",
+    ) -> Optional[str]:
+        """Record a reusable engineering skill into the Experience Engine.
+
+        A skill is a structured, reusable fix or decision extracted at the
+        moment of realization — during or after a run, with no dependency on
+        the run outcome sequence.
+
+        Fields:
+            trigger:    When this skill applies (symptom / trigger condition)
+                        e.g. "STM32F4 UART loopback fails silently on PA9/PA10"
+            fix:        Exact resolution (config, code, command)
+                        e.g. "Use USART2 on PD5/PD6; PA9/PA10 are not free"
+            lesson:     Reusable rule derived from this experience
+                        e.g. "On F4 Discovery, PA9/PA10 claimed by ST-Link bridge"
+            scope:      Applicability scope
+                        e.g. "stm32f4_discovery" / "all_stm32f4" / "stm32"
+            board_id:   Specific board if narrower than scope (optional)
+            source_ref: Origin reference, e.g. "docs/specs/stm32f401_bringup_report.md"
+            source:     Originating system: "AEL" or "human"
+
+        Returns:
+            EE experience ID, or None if EE unavailable.
+        """
+        if not _EE_AVAILABLE:
+            return None
+
+        # Prefix with [scope] so keyword search (substring on raw) finds this skill
+        # when queried by board_id or scope name.
+        tag_prefix = f"[{board_id}] " if board_id else f"[{scope}] "
+        raw = (
+            tag_prefix
+            + f"[skill] trigger: {trigger} | fix: {fix} | lesson: {lesson}"
+            + (f" | ref: {source_ref}" if source_ref else "")
+        )
+        intent = f"apply fix for {scope}" + (f" on {board_id}" if board_id else "")
+        actions = [
+            f"trigger:{trigger[:80]}",
+            f"fix:{fix[:80]}",
+            f"lesson:{lesson[:80]}",
+        ]
+
+        try:
+            with _write_lock:
+                exp = ExperienceAPI.add(
+                    raw=raw,
+                    domain=_DOMAIN,
+                    intent=intent,
+                    source=source,
+                    actions=actions,
+                    outcome="success",
+                    scope="task",
+                )
+                return exp.id
+        except Exception:
+            return None
 
     # ------------------------------------------------------------------
     # Status
