@@ -46,7 +46,7 @@ This shift is happening now, as AI systems become capable of:
 With AEL, AI can:
 
 - generate firmware from high-level goals
-- run tests on real hardware
+- run embedded programs on real hardware and observe their behavior
 - detect failures and fix them
 - iterate until a working result is achieved
 

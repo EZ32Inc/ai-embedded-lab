@@ -1621,7 +1621,7 @@ def run_pipeline(
     else:
         _write_json(run_paths.preflight, {"skipped": True})
         with _tee_output(run_paths.preflight_log, output_mode):
-            print("Preflight: SKIPPED (test config)")
+            print("Preflight: SKIPPED (program config)")
 
     instrument_selftest_step = strategy_resolver.build_instrument_selftest_step(
         test_raw=test_raw,

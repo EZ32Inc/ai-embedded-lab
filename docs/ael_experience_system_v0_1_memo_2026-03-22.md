@@ -104,3 +104,32 @@ These were previously only stored in AI memory files. They are now queryable via
 | `ael/civilization/engine.py` | `get_context()` populates `relevant_skills`; added `record_skill()` |
 | `ael/civilization_client.py` | Exposed `record_skill()`; updated module docstring with protocol |
 | `experience_engine/storage/memory.json` | 3 initial skills seeded |
+
+## Terminology Correction (2026-03-22)
+
+AEL has been using the word "test" for things like LED blinking, ADC sampling, UART
+communication, and DAC waveform generation. This is incorrect — these are not tests.
+
+**Correct model:**
+
+| Old | New |
+|-----|-----|
+| test | embedded program |
+| run test → pass/fail | run program → observe → adapt → evolve |
+| test system | embedded program execution and evolution system |
+
+**What changed (Phase 0 — output strings and docs):**
+- `civilization/context.py` output: "no prior experience" → "no prior runs for program …"
+- `civilization_client.py` output: "recorded run" → "program run recorded"
+- `pipeline.py` output: "SKIPPED (test config)" → "SKIPPED (program config)"
+- `inventory.py` display: "tests: none" → "programs: none"
+- `docs/ael_one_pager.md`: "run tests on real hardware" → "run embedded programs on real hardware"
+
+**Pack JSON (Phase 1 — backward-compatible):**
+- Pack files now accept `"programs": [...]` as the preferred key
+- Legacy `"tests": [...]` key still works (read as fallback)
+- New packs should use `"programs"`
+
+**Internal variables (Phase 2 — deferred):**
+- `test_name`, `test_path`, `test_raw`, `test_kind` remain unchanged in code
+- Will be migrated gradually without breaking callers

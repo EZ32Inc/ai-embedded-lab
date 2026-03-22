@@ -77,7 +77,7 @@ def record_run(
             description=description,
         )
         outcome_str = "success" if ok else (f"failed ({failure_kind})" if failure_kind else "failed")
-        print(f"[civilization] recorded run → {board_id}/{test_name}: {outcome_str} (id={exp_id})")
+        print(f"[civilization] program run recorded → {board_id}/{test_name}: {outcome_str} (id={exp_id})")
         return exp_id
     except Exception:
         return None

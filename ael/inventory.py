@@ -175,7 +175,8 @@ def _load_pack_index(repo_root: Path) -> List[Dict[str, Any]]:
                     "name": payload.get("name") or path.stem,
                     "path": rel,
                     "board": payload.get("board"),
-                    "tests": [str(t) for t in (payload.get("tests") or [])],
+                    # "programs" is the preferred key; "tests" is the legacy alias
+                    "tests": [str(t) for t in (payload.get("programs") or payload.get("tests") or [])],
                 }
             )
     return packs
@@ -869,7 +870,7 @@ def render_text(inventory: Dict[str, Any]) -> str:
     summary = inventory.get("summary") or {}
     lines.append("DUT inventory")
     lines.append(f"dut_count: {summary.get('dut_count', 0)}")
-    lines.append("mcus_with_tests: " + ", ".join(summary.get("mcus_with_tests") or []))
+    lines.append("mcus_with_programs: " + ", ".join(summary.get("mcus_with_tests") or []))
     lines.append("")
     for dut in inventory.get("duts") or []:
         source = dut.get("source") or "golden"
@@ -879,7 +880,7 @@ def render_text(inventory: Dict[str, Any]) -> str:
         lines.append(f"{dut['dut_id']} ({dut.get('mcu')}){source_tag}{lifecycle_tag}")
         tests = dut.get("tests") or []
         if not tests:
-            lines.append("  tests: none")
+            lines.append("  programs: none")
             continue
         for test in tests:
             extras = []

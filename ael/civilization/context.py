@@ -63,7 +63,7 @@ class CivilizationContext:
 
         if not has_any:
             lines.append(
-                f"[civilization] no prior experience for {self.board_id}/{self.test_name}"
+                f"[civilization] no prior runs for program {self.board_id}/{self.test_name}"
             )
             return lines
 
@@ -74,14 +74,14 @@ class CivilizationContext:
             conf = stats.get("confidence", 0.5)
             total = s + f
             lines.append(
-                f"[civilization] {self.board_id}/{self.test_name}: "
+                f"[civilization] program {self.board_id}/{self.test_name}: "
                 f"{total} runs — {s} success / {f} failed  (confidence={conf:.2f})"
             )
         elif self.prior_runs:
             # Fallback for old records not yet in run_index
             n = sum(1 for r in self.prior_runs if r.get("outcome") == "success")
             lines.append(
-                f"[civilization] {self.board_id}/{self.test_name}: "
+                f"[civilization] program {self.board_id}/{self.test_name}: "
                 f"{n}/{len(self.prior_runs)} prior runs succeeded (legacy)"
             )
 
