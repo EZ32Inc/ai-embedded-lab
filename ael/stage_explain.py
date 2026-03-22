@@ -4,7 +4,9 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from ael.compatibility.resolver import resolve_dut_test
 from ael.connection_model import build_connection_setup, render_connection_setup_text, _as_board_dict
+from ael.dut.registry import load_dut_from_file
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import (
     resolve_control_instrument_config,
@@ -287,6 +289,23 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
     }
 
 
+def _dut_applicability_check(board_id: str, test_raw: Dict[str, Any]) -> Dict[str, Any] | None:
+    """Return a DUT↔Test applicability result dict, or None if undetermined."""
+    try:
+        dut = load_dut_from_file(REPO_ROOT, board_id)
+        result = resolve_dut_test(dut, test_raw)
+        return {
+            "applicable": result.applicable,
+            "dut_kind": dut.kind,
+            "dut_features": sorted(dut.features),
+            "reasons": result.reasons,
+            "missing_features": result.missing_features,
+            "excluded_by": result.excluded_by,
+        }
+    except Exception:
+        return None
+
+
 def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
     board_cfg = _as_board_dict(resolved.board_cfg)
@@ -426,6 +445,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
                     }
                     if resolved.compatibility_result is not None else None
                 ),
+                "dut_applicability": _dut_applicability_check(board_id, test_raw),
             },
         },
         "includes": [

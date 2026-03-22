@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Tuple
 from ael import paths as ael_paths
 from ael import inventory as inventory_view
 from ael import strategy_resolver
+from ael.compatibility.resolver import resolve_dut_test
 from ael.dut.model import DUTConfig
 from ael.dut.registry import load_dut_from_file
 from ael.config_resolver import resolve_controller_config, resolve_controller_instance
@@ -319,6 +320,25 @@ def _schema_advisory_payload(repo_root: Path, board: str, test: str) -> Dict[str
     warnings: List[str] = []
     if status == "declared_unsupported":
         warnings.append(str(advisory.get("summary") or "selected instrument is not in declared support set"))
+
+    # DUT↔Test applicability check (Phase 2)
+    try:
+        test_raw = _load_text_payload(Path(test))
+        board_dut = _resolve_board_cfg(repo_root, board)
+        if board_dut is not None and isinstance(test_raw, dict):
+            dut_result = resolve_dut_test(board_dut, test_raw)
+            if not dut_result.applicable:
+                msg = f"DUT applicability: test may not apply to {board!r}"
+                if dut_result.missing_features:
+                    msg += f" (missing features: {', '.join(dut_result.missing_features)})"
+                elif dut_result.excluded_by:
+                    msg += f" (excluded by: {', '.join(dut_result.excluded_by)})"
+                elif dut_result.reasons:
+                    msg += f" — {dut_result.reasons[0]}"
+                warnings.append(msg)
+    except Exception:
+        pass
+
     payload = {
         "plan_schema_kind": "structured" if test_payload.get("schema_version") not in (None, "", "legacy") else "legacy",
         "schema_version": test_payload.get("schema_version"),
