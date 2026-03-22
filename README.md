@@ -113,6 +113,31 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### AEL Experience System v0.1 — Record, Reuse, and Grow from Engineering Experience (2026-03-22)
+
+AEL now records, reuses, and grows from engineering experience.
+
+Completed in this milestone:
+
+- **Experience Engine** — structured Experience Unit storage with confidence, tags, outcome, and feedback loop
+- **Civilization Engine** (`ael/civilization/`) — the only layer that talks to the Experience Engine; pipeline never imports it directly
+- **Closed Experience Loop** (`run → record → reuse`) — skills from past debugging sessions surface before the next run on the same board
+
+The before-run protocol now outputs four sections every time a run begins:
+
+1. Run statistics — N runs, S success / F failed, confidence
+2. Known skills — fix/decision experiences relevant to this board and domain
+3. Likely pitfalls — paths previously marked as dangerous
+4. Observation focus — derived watch points from past failures
+
+A new `record_skill()` entry point allows capturing reusable engineering fixes at the moment of realization — during or after a run, with no dependency on run-outcome sequence. Fields: `trigger`, `fix`, `lesson`, `scope`, `source_ref`.
+
+AEL has moved from pure automation toward an experience-driven engineering system.
+
+📄 [Full memo](docs/ael_experience_system_v0_1_memo_2026-03-22.md)
+
+---
+
 ### Schema Convergence Milestone — Default Verification Reached Parallel Stable Closure (2026-03-20)
 
 The post-refactor validation result now shows that AEL has moved past "functionally working" and into a stable converged phase.
