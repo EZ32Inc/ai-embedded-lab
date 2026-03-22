@@ -85,12 +85,15 @@ def list_duts(root_dir):
             continue
         manifest = _load_yaml(manifest_path)
         missing = _validate_manifest(manifest)
+        spec_errors = validate_dut_manifest(manifest)
         entry = {
             "id": manifest.get("id") if isinstance(manifest, dict) else None,
             "path": str(item),
             "manifest": manifest,
             "valid": not missing,
             "missing": missing,
+            "spec_errors": spec_errors,
+            "spec_valid": not spec_errors,
         }
         duts.append(entry)
     return duts
@@ -103,12 +106,15 @@ def load_dut(dut_id, roots=None):
         if path.exists():
             manifest = _load_yaml(path)
             missing = _validate_manifest(manifest)
+            spec_errors = validate_dut_manifest(manifest)
             return {
                 "id": manifest.get("id") if isinstance(manifest, dict) else dut_id,
                 "path": str(path.parent),
                 "manifest": manifest,
                 "valid": not missing,
                 "missing": missing,
+                "spec_errors": spec_errors,
+                "spec_valid": not spec_errors,
             }
     return None
 

@@ -294,3 +294,70 @@ class TestGoldenManifests:
         assert failures == {}, f"Golden manifests with validation errors:\n" + "\n".join(
             f"  {k}: {v}" for k, v in failures.items()
         )
+
+
+# ── Integration: list_duts and load_dut surface spec_errors ─────────────────
+
+class TestListDutsSpecErrors:
+    def test_list_duts_entry_has_spec_errors_field(self):
+        from ael.assets import list_duts
+        duts = list_duts("assets_golden/duts")
+        assert len(duts) > 0
+        for entry in duts:
+            assert "spec_errors" in entry, f"{entry.get('id')} missing spec_errors"
+            assert "spec_valid" in entry, f"{entry.get('id')} missing spec_valid"
+            assert isinstance(entry["spec_errors"], list)
+            assert isinstance(entry["spec_valid"], bool)
+
+    def test_list_duts_all_golden_are_spec_valid(self):
+        from ael.assets import list_duts
+        duts = list_duts("assets_golden/duts")
+        failures = {
+            e["id"]: e["spec_errors"]
+            for e in duts
+            if not e["spec_valid"]
+        }
+        assert failures == {}, f"Golden DUTs failing spec validation: {failures}"
+
+    def test_list_duts_spec_valid_independent_of_valid(self):
+        """spec_valid and valid are independent fields."""
+        from ael.assets import list_duts
+        duts = list_duts("assets_golden/duts")
+        for entry in duts:
+            # Both fields exist and are boolean
+            assert isinstance(entry["valid"], bool)
+            assert isinstance(entry["spec_valid"], bool)
+
+    def test_list_duts_nonexistent_dir_returns_empty(self):
+        from ael.assets import list_duts
+        result = list_duts("assets_golden/does_not_exist")
+        assert result == []
+
+
+class TestLoadDutSpecErrors:
+    def test_load_dut_entry_has_spec_errors_field(self):
+        from ael.assets import load_dut
+        entry = load_dut("stm32f411ceu6")
+        assert entry is not None
+        assert "spec_errors" in entry
+        assert "spec_valid" in entry
+        assert isinstance(entry["spec_errors"], list)
+        assert isinstance(entry["spec_valid"], bool)
+
+    def test_load_dut_golden_is_spec_valid(self):
+        from ael.assets import load_dut
+        for dut_id in ["stm32f411ceu6", "esp32c6_devkit", "stm32f407_discovery", "rp2040_pico"]:
+            entry = load_dut(dut_id)
+            assert entry is not None, f"{dut_id} not found"
+            assert entry["spec_valid"], f"{dut_id} spec_errors: {entry['spec_errors']}"
+
+    def test_load_dut_missing_returns_none(self):
+        from ael.assets import load_dut
+        assert load_dut("no_such_board") is None
+
+    def test_load_dut_prefer_user_has_spec_errors(self):
+        from ael.assets import load_dut_prefer_user
+        entry = load_dut_prefer_user("stm32f411ceu6")
+        assert entry is not None
+        assert "spec_errors" in entry
+        assert "spec_valid" in entry
