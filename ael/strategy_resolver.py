@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ael.adapters import build_artifacts
-from ael.connection_model import NormalizedConnectionContext, normalize_connection_context, resolve_bench_setup
+from ael.connection_model import NormalizedConnectionContext, normalize_connection_context, resolve_bench_setup, _as_board_dict
 
 
 @dataclass(frozen=True)
@@ -112,6 +112,7 @@ def resolve_control_instrument_override(repo_root: Path, test_raw: Dict[str, Any
 
 
 def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any):
+    board_cfg = _as_board_dict(board_cfg)
     explicit: Dict[str, Any] = {}
     if isinstance(test_raw, dict):
         explicit = test_raw.get("instrument", {}) if isinstance(test_raw.get("instrument"), dict) else {}
@@ -152,6 +153,7 @@ def resolve_instrument_context(test_raw: Dict[str, Any] | Any, board_cfg: Dict[s
     return instrument_id, tcp_cfg, manifest
 
 def instrument_selftest_requested(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any) -> bool:
+    board_cfg = _as_board_dict(board_cfg)
     if isinstance(test_raw, dict):
         if bool(test_raw.get("instrument_selftest")):
             return True
@@ -169,6 +171,7 @@ def instrument_selftest_requested(test_raw: Dict[str, Any] | Any, board_cfg: Dic
 
 
 def is_meter_digital_verify_test(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any) -> bool:
+    board_cfg = _as_board_dict(board_cfg)
     if not isinstance(test_raw, dict):
         return False
     inst = test_raw.get("instrument", {})
@@ -190,6 +193,7 @@ def is_meter_digital_verify_test(test_raw: Dict[str, Any] | Any, board_cfg: Dict
 
 
 def resolve_builder_kind(board_cfg: Dict[str, Any] | Any) -> str:
+    board_cfg = _as_board_dict(board_cfg)
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
     if isinstance(build_cfg, dict):
         kind = str(build_cfg.get("type", "")).strip().lower()
@@ -205,6 +209,7 @@ def resolve_builder_kind(board_cfg: Dict[str, Any] | Any) -> str:
 
 
 def default_firmware_path(repo_root: Path, board_cfg: Dict[str, Any] | Any) -> str:
+    board_cfg = _as_board_dict(board_cfg)
     return build_artifacts.default_firmware_path(repo_root, board_cfg, resolve_builder_kind(board_cfg))
 
 
@@ -285,6 +290,7 @@ def build_preflight_step(test_raw: Dict[str, Any] | Any, probe_cfg: Dict[str, An
 
 
 def build_instrument_selftest_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any, artifacts_dir: Path):
+    board_cfg = _as_board_dict(board_cfg)
     if not instrument_selftest_requested(test_raw, board_cfg):
         return None
     instrument_id, tcp_cfg, manifest = resolve_instrument_context(test_raw, board_cfg)
@@ -327,6 +333,7 @@ def resolve_build_stage(
     output_mode: str,
     build_log_path: str,
 ):
+    board_cfg = _as_board_dict(board_cfg)
     build_kind = resolve_builder_kind(board_cfg)
     known_firmware_path = None
     build_step = None
@@ -357,6 +364,7 @@ def resolve_load_stage(
     flash_json_path: str,
     flash_log_path: str,
 ):
+    board_cfg = _as_board_dict(board_cfg)
     flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg, dict) else {}
     reset_unwired = wiring_cfg.get("reset") in ("NC", "NONE", "NONE/NC", "N/C", "NA")
     if reset_unwired:
@@ -395,6 +403,7 @@ def resolve_load_stage(
 
 
 def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any, output_mode: str, observe_uart_log: str, uart_json: str, flash_json: str, observe_uart_step_log: str):
+    board_cfg = _as_board_dict(board_cfg)
     observe_uart_cfg = {}
     if isinstance(effective, dict):
         observe_uart_cfg = effective.get("observe_uart", {}) or {}
@@ -444,6 +453,7 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
 
 
 def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] | Any, probe_cfg: Dict[str, Any] | Any, wiring_cfg: Dict[str, Any] | Any, artifacts_dir: Path, observe_log: str, output_mode: str, measure_path: str):
+    board_cfg = _as_board_dict(board_cfg)
     if is_meter_digital_verify_test(test_raw, board_cfg):
         instrument_id, tcp_cfg, _manifest = resolve_instrument_context(test_raw, board_cfg)
         bench_setup = resolve_bench_setup(test_raw)

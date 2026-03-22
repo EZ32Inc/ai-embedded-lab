@@ -606,11 +606,10 @@ def _instrument_interface_family(repo_root: Path, board: str | None, test_path: 
     if not board_id:
         return ""
     board_dut = _resolve_board_cfg(repo_root, board_id)
-    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
     if test_path:
         test_raw = _load_text_payload(Path(test_path))
         if isinstance(test_raw, dict):
-            instrument_id, _tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+            instrument_id, _tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_dut)
             if str(instrument_id or "").strip() == "esp32s3_dev_c_meter":
                 return "esp32_meter"
     probe_raw, probe_path = _resolve_step_probe_binding(repo_root, {"board": board_id, "test": test_path})
@@ -642,10 +641,9 @@ def _ensure_step_meter_reachable(repo_root: Path, board: str | None, test_path: 
     if not isinstance(test_raw, dict):
         return
     board_dut = _resolve_board_cfg(repo_root, board)
-    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
-    if not strategy_resolver.is_meter_digital_verify_test(test_raw, board_cfg):
+    if not strategy_resolver.is_meter_digital_verify_test(test_raw, board_dut):
         return
-    instrument_id, tcp_cfg, manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+    instrument_id, tcp_cfg, manifest = strategy_resolver.resolve_instrument_context(test_raw, board_dut)
     if str(instrument_id or "").strip() != "esp32s3_dev_c_meter":
         return
     manifest_payload = dict(manifest) if isinstance(manifest, dict) else {}
@@ -875,8 +873,8 @@ def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
         keys.append(f"probe_path:{probe_path}")
 
     board_dut = _resolve_board_cfg(repo_root, task.board)
-    board_cfg = board_dut.to_legacy_dict() if board_dut is not None else {}
-    flash_cfg = board_cfg.get("flash", {}) if isinstance(board_cfg.get("flash"), dict) else {}
+    board_legacy = board_dut.to_legacy_dict() if board_dut is not None else {}
+    flash_cfg = board_legacy.get("flash", {}) if isinstance(board_legacy.get("flash"), dict) else {}
     flash_port = str(flash_cfg.get("port") or "").strip()
     if flash_port:
         keys.append(f"serial:{flash_port}")
@@ -885,7 +883,7 @@ def _task_resource_keys(repo_root: Path, task: VerificationTask) -> List[str]:
     if test_path:
         test_raw = _load_text_payload(Path(test_path))
         if isinstance(test_raw, dict):
-            instrument_id, tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_cfg)
+            instrument_id, tcp_cfg, _manifest = strategy_resolver.resolve_instrument_context(test_raw, board_dut)
             host = str((tcp_cfg or {}).get("host") or "").strip()
             port = (tcp_cfg or {}).get("port")
             if instrument_id and host and port is not None:
