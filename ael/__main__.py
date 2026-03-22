@@ -3933,7 +3933,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
 
     pack_name = pack.get("name", "pack")
     pack_board = board_override or pack.get("board")
-    tests = pack.get("tests", [])
+    tests = pack.get("programs") or pack.get("tests") or []
     if not pack_board or not tests:
         print("Pack: missing board or tests")
         return 2

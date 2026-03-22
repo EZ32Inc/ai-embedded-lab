@@ -1,0 +1,25 @@
+# Instrument Spec v1 — USB-UART Bridge (network_rpc backend)
+#
+# Describes the existing lab bench USB-UART bridge instrument
+# using the new action-based v1 spec format.
+#
+# Backend: network_rpc — routes to the existing dispatcher / action_model catalog.
+# The instrument must also be declared in configs/action_model/lab_bench.yaml.
+
+schema_version: 1
+
+instrument:
+  id: usb_uart_bridge_lab
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_read
+      backend: network_rpc
+      params: [baud, duration_s]
+
+    - name: uart_wait_for
+      backend: network_rpc
+      params: [pattern, baud, timeout_s]

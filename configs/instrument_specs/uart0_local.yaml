@@ -1,0 +1,25 @@
+# Instrument Spec v1 — Local UART (pyserial backend)
+#
+# Describes a locally-connected UART instrument accessed directly
+# via pyserial — no network wrapper required.
+#
+# Backend: pyserial — routes to UsbUartBridgeBackend in
+# ael/instruments/backends/usb_uart_bridge/backend.py
+
+schema_version: 1
+
+instrument:
+  id: uart0
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_read
+      backend: pyserial
+      params: [port, baudrate, timeout]
+
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]
