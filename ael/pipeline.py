@@ -22,6 +22,7 @@ from ael.config_resolver import resolve_control_instrument_instance
 from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines, _as_board_dict
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import summarize_resource_keys
+from ael import civilization_client
 
 _REPO_ROOT = ael_paths.repo_root()
 
@@ -1251,6 +1252,7 @@ def run_pipeline(
         print(f"I am guessing {', '.join(missing_wiring)} — please confirm.")
 
     print("AI: starting pipeline")
+    civilization_client.query_context(board_id or "unknown", test_name or "unknown")
     if instrument_id:
         banner_name = test_name or instrument_id
         banner_host = instrument_host or "unknown"
@@ -2008,6 +2010,16 @@ def run_pipeline(
             ),
         },
         run_root=run_paths.root,
+    )
+
+    civilization_client.record_run(
+        board_id=board_id or "unknown",
+        test_name=test_name or "unknown",
+        ok=bool(result.get("ok", False)),
+        stages=[s for s in ["preflight", "build", "load", "run", "check"]
+                if not failed_step or not failed_step.startswith(s)],
+        failure_kind=result.get("failure_kind", "") or failed_step or "",
+        description=result.get("error_summary", "") or "",
     )
 
     if result["ok"]:

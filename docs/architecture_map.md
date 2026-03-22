@@ -1,117 +1,192 @@
 # AEL Architecture Map
 
-**Date:** 2026-03-21
-**Based on:** actual repo inspection
+**Date:** 2026-03-22
+**Status:** Current (based on live codebase)
 
 ---
 
-## Entry Points
+## 1. Entry Points
 
-| Command | File | Purpose |
-|---|---|---|
-| `python -m ael run` | `ael/__main__.py` | Execute a single board/test combination |
-| `python -m ael pack` | `ael/__main__.py` | Execute a multi-test pack (JSON sequence) |
-| `python -m ael verify-default run` | `ael/__main__.py` | Run the full default regression suite |
-| `python -m ael doctor` | `ael/__main__.py` | Diagnose control instrument + board health |
-| `python -m ael instruments ...` | `ael/__main__.py` | Inventory, describe, and control instruments |
-| `python -m ael inventory ...` | `ael/__main__.py` | Audit test/board/connection metadata |
-| `python -m ael status` | `ael/__main__.py` | Unified system + project health overview |
+| Entry point | File | Key function/class | Purpose |
+|---|---|---|---|
+| CLI main | `ael/__main__.py` | `main()` | Argparse router for all subcommands |
+| Single test run | `ael/pipeline.py` | `run_pipeline()` | Full pipeline: config → build → flash → observe → report |
+| Verification suite | `ael/default_verification.py` | `run_default_setting()` | Parallel multi-board test suite with health governance |
+| Stage explain | `ael/stage_explain.py` | `explain_stage()` | Structured metadata/plan view for a given stage |
+| Doctor | `ael/instrument_doctor.py` | `run_doctor()` | Instrument + connection health diagnostics |
 
----
-
-## One Run Lifecycle
-
-For `python -m ael run --board B --test T`:
-
-1. **CLI dispatch** — `ael/__main__.py`: parse args, resolve probe path from controller ID
-2. **Config load** — `ael/config_resolver.py`: load board YAML, probe YAML, test JSON
-3. **Strategy resolution** — `ael/strategy_resolver.py::resolve_run_strategy()`: merge configs, select instrument, normalize wiring
-4. **Run directory created** — `ael/run_manager.py`: create `runs/YYYY-MM-DD_HH-MM-SS_BOARD_TEST/` with all artifact paths
-5. **Plan built** — `ael/pipeline.py`: assemble ordered list of steps (preflight → build → load → run → check)
-6. **Steps executed** — `ael/runner.py::run_plan()`: dispatch each step to its adapter via `AdapterRegistry`
-   - **preflight** → `ael/adapters/preflight.py`: TCP-ping endpoints, check bench setup readiness
-   - **build** → `ael/adapters/build_{cmake|idf|stm32}.py`: compile firmware, produce ELF
-   - **load** → `ael/adapters/flash_{bmda_gdbmi|idf}.py`: flash firmware to target via GDB/esptool
-   - **run** → `ael/adapters/observe_{uart_log|gpio_pin}.py`: capture UART or GPIO during execution
-   - **check** → `ael/adapters/check_mailbox_verify.py` or signal verification: validate against test expectations
-7. **Retry / recovery** — `ael/runner.py`: on failure, consult `recovery_policy.py`, execute recovery action, rewind and retry
-8. **Result written** — `runs/.../result.json`, `runs/.../evidence.json`, workflow event archived
+**CLI subcommands:** `run`, `doctor`, `pack`, `instruments`, `dut`, `verify-default`, `inventory`, `connection`, `explain-stage`, `workflow-archive`, `hw-check`, `la-check`, `status`, `board`, `project`
 
 ---
 
-## Main Components
+## 2. One Run Lifecycle
 
-| Component | File(s) | Role |
-|---|---|---|
-| CLI / command dispatch | `ael/__main__.py` | Arg parsing; routes to pipeline, instruments, inventory, verify-default |
-| Run orchestration | `ael/pipeline.py` | Loads configs, builds plan, calls runner, archives events |
-| Plan executor | `ael/runner.py` | Executes steps in order; retry budget; recovery dispatch |
-| Adapter registry | `ael/adapter_registry.py` | Maps `step.type` string → adapter instance |
-| Strategy resolver | `ael/strategy_resolver.py` | Selects instrument, resolves wiring, builds preflight/build/load/run/check steps |
-| Config loader | `ael/config_resolver.py` | Reads board YAML, probe YAML from `configs/` |
-| Run artifact manager | `ael/run_manager.py` | Creates timestamped `runs/` directory; provides all log/result paths |
-| Connection model | `ael/connection_model.py` | Normalizes bench wiring; computes `SetupReadinessSummary` |
-| Connection metadata | `ael/connection_metadata.py` | Schema validation for `bench_setup`, `power_and_boot`, wiring fields |
-| Instrument inventory | `ael/inventory.py` | Builds queryable map of boards, tests, connections |
-| Instrument health | `ael/instrument_doctor.py`, `ael/doctor_checks.py` | Diagnostic checks for probe + board readiness |
-| Default verification | `ael/default_verification.py` | Multi-board parallel suite runner; regression snapshots |
-| Failure recovery | `ael/failure_recovery.py`, `ael/recovery_policy.py` | Maps failure kinds → recovery actions |
-| Pack loader | `ael/pack_loader.py` | Loads multi-test JSON packs |
-| Verification logic | `ael/verification/` | Signal check evaluation, LA capture analysis |
-| Build adapters | `ael/adapters/build_*.py` | CMake (RP2040), IDF (ESP32), STM32 Make wrappers |
-| Flash adapters | `ael/adapters/flash_*.py` | GDB+BMDA (STM32/RP2040), esptool (ESP32) |
-| Observe adapters | `ael/adapters/observe_*.py` | UART log capture, GPIO pin observation |
-| Check adapters | `ael/adapters/check_*.py` | Mailbox verify, signal verify |
-| Preflight adapter | `ael/adapters/preflight.py` | TCP reachability, bench setup readiness |
-| Instrument backends | `instruments/` | ESP32JTAG, ESP32 meter, ST-Link, USB UART drivers |
+```
+CLI  →  pipeline.run_pipeline()
+          │
+          ├─ 1. Config merge      config_resolver, pipeline._merge_configs()
+          │                        board.yaml + probe.yaml + test.json → effective config
+          │
+          ├─ 2. Strategy resolve  strategy_resolver.resolve_run_strategy()
+          │                        selects build/flash/observe method; Phase 1 compatibility check
+          │
+          ├─ 3. Plan build        pipeline._build_plan()
+          │                        ordered list of Step objects (preflight, build, load, run, check)
+          │
+          ├─ 4. Preflight         adapters/preflight.py
+          │                        ping, TCP reachability, probe monitor, instrument health
+          │
+          ├─ 5. Build             adapters/build_cmake.py | build_idf.py | build_stm32.py
+          │                        firmware compiled for target board
+          │
+          ├─ 6. Flash             adapters/flash_bmda_gdbmi.py | flash_idf.py
+          │                        binary loaded to DUT via SWD/GDB-MI or IDF esptool
+          │
+          ├─ 7. Observe / Run     adapters/observe_gpio_pin.py | observe_uart_log.py | observe_log.py
+          │                        GPIO edge capture (via instrument), UART frame capture
+          │
+          ├─ 8. Verify            adapters/check_mailbox_verify.py | verification/la_verify.py
+          │                        mailbox result check, logic analyzer edge verification
+          │
+          └─ 9. Report            pipeline._build_validation_summary()
+                                   result JSON + console output; evidence.json artifact
+```
 
----
-
-## Communication and Call Relationships
-
-- **Python function calls**: primary path between all CORE modules (pipeline → runner → adapters)
-- **JSON files**: test plans in `tests/plans/`, packs in `packs/`, run results in `runs/`
-- **YAML files**: board configs in `configs/boards/`, probe configs in `configs/probes/`
-- **Subprocess**: build tools (make, cmake, idf.py), flash tools (esptool), GDB sessions (gdb+st-util or gdb+BMDA)
-- **HTTP**: instrument backends communicate with physical instruments over HTTP (ESP32 meter, ESP32JTAG REST API)
-- **TCP socket**: preflight TCP-pings instrument endpoints; GDB connects to st-util or BMDA GDB server
-- **Serial/SWD**: ST-Link and ESP32JTAG bit-bang SWD to flash and debug targets
-- **JSONL**: `workflow_archive/events.jsonl` records all run events for audit
+**Retry / recovery:** `runner.run_plan()` implements a per-step retry budget. On failure, `failure_recovery.py` normalises the failure kind and `recovery_policy.py` resolves recovery hints (e.g. replug, reset, reflash).
 
 ---
 
-## Core vs Adapter Split
+## 3. Main Components
 
-### Core orchestration (ael_guard protected)
+### Orchestration (Core)
 
-These files must not reference specific board types, MCUs, or external tools by name.
+| Module | Purpose |
+|---|---|
+| `pipeline.py` (~2100 lines) | Master orchestrator: config merge, plan building, stage loop, summary |
+| `runner.py` | Step execution engine: retry loop, timeout, failure classification |
+| `strategy_resolver.py` | Build/load/run strategy selection; Phase 1 instrument compatibility |
+| `adapter_registry.py` | String-keyed router: step type → adapter callable |
+| `config_resolver.py` | CLI default resolution, board/probe config discovery |
+| `run_manager.py` | Run directory lifecycle, `Tee` output buffering |
+| `default_verification.py` | Verification suite: parallel workers, health inference, regression snapshot |
+| `connection_model.py` | Wiring digest, connection setup validation, readiness checks |
 
-- `ael/__main__.py`
-- `ael/pipeline.py`
-- `ael/runner.py`
-- `ael/run_manager.py`
-- `ael/config_resolver.py`
-- `ael/doctor_checks.py`
-- `ael/strategy_resolver.py`
-- `ael/connection_model.py`
-- `ael/adapter_registry.py`
+### Compatibility Layer
 
-### Adapters and board-specific layers
+| Module | Purpose |
+|---|---|
+| `compatibility/resolver.py` | Phase 1–3 resolvers: test↔instrument, DUT↔test, DUT↔instrument |
+| `compatibility/registry.py` | Surface key → capability type mappings; DUT feature → required surfaces |
+| `compatibility/model.py` | Result dataclasses: `CompatibilityResult`, `ExecutionPlan`, `DUTSpec`, etc. |
+| `compatibility/rules.py` | Requirement matching logic |
+| `compatibility/explain.py` | Human-readable compatibility explanations |
 
-These may freely reference hardware, MCUs, tools, and vendors.
+### DUT Layer
 
-- `ael/adapters/` — all adapter modules
-- `instruments/` — ESP32JTAG, ESP32 meter, ST-Link, USB UART backends
-- `configs/boards/` — per-board YAML (target, flash method, wiring, power_and_boot)
-- `configs/probes/` — per-probe YAML (IP, port, gdb_cmd)
-- `firmware/targets/` — per-target firmware source
+| Module | Purpose |
+|---|---|
+| `dut/model.py` | `DUTConfig` dataclass: board identity, processor, kind, features |
+| `dut/loader.py` | YAML → `DUTConfig` deserialization |
+| `dut/registry.py` | DUT catalog lookup by board ID |
+
+### Instrument Layer
+
+| Module | Purpose |
+|---|---|
+| `instruments/registry.py` | Instrument catalog; `find_by_capability()` |
+| `instruments/dispatcher.py` | Action dispatcher: validates and routes to backend |
+| `instruments/action_registry.py` | `ACTION_REGISTRY`: known actions, schemas |
+| `instruments/manifest.py` | Manifest loading/parsing |
+| `instruments/native_api_dispatch.py` | Native API invocation bridge |
+| `instruments/backends/esp32_jtag/` | ESP32-JTAG driver (SWD bit-bang, GPIO, reset) |
+| `instruments/backends/esp32_meter/` | ESP32 meter driver (voltage, GPIO measurement) |
+| `instruments/backends/stlink/` | ST-Link driver (SWD flash, doctor) |
+| `instruments/backends/usb_uart_bridge/` | UART bridge daemon |
+
+### Adapters (Step Executors)
+
+| Adapter | Step type |
+|---|---|
+| `adapters/build_cmake.py` | `build.cmake` |
+| `adapters/build_idf.py` | `build.idf` |
+| `adapters/flash_bmda_gdbmi.py` | `load.swd` (SWD via BMDA/GDB-MI) |
+| `adapters/flash_idf.py` | `load.idf` (ESP32 esptool) |
+| `adapters/preflight.py` | `preflight` |
+| `adapters/observe_gpio_pin.py` | `run.gpio_signature` |
+| `adapters/observe_uart_log.py` | `run.uart_log` |
+| `adapters/check_mailbox_verify.py` | `check.mailbox` |
+| `adapters/control_reset_serial.py` | `control.reset` |
+
+### Supporting Modules
+
+| Module | Purpose |
+|---|---|
+| `inventory.py` | DUT/bench resource summaries, connection queries |
+| `evidence.py` | Structured observation records (JSON schema) |
+| `failure_recovery.py` | Failure kind normalisation |
+| `recovery_policy.py` | Recovery hint lookup table |
+| `connection_doctor.py` | Connection health checks |
+| `instrument_doctor.py` | Instrument diagnostics |
+| `verify_default_snapshot.py` | Regression snapshot comparison |
+| `workflow_archive.py` | Event logging (JSONL) |
+| `test_plan_schema.py` | Test metadata extraction helpers |
 
 ---
 
-## Immediate Pain Points Noticed
+## 4. Communication / Call Relationships
 
-- **`adapter_registry.py` is large**: nominally CORE but contains inline adapter class definitions that reference specific instrument types and step names. The registry is the right place for dispatch, but mixing registration with implementation makes it harder to extend.
-- **Strategy resolver doubles as step builder**: `strategy_resolver.py` resolves configs AND builds the preflight/build/load/run/check step dicts. These two concerns are currently intertwined.
-- **Retry and recovery are split**: retry budget lives in `runner.py`; recovery actions live in `failure_recovery.py` and `recovery_policy.py`. The rewind/retry interaction requires reading three files to understand.
-- **No unified instrument capability registry**: whether a given instrument can do voltage measurement, digital capture, or JTAG depends on runtime dispatch through several layers. There is no single declarative place to query instrument capabilities.
-- **Draft board configs contain placeholder values**: `configs/boards/*_draft.yaml` files have literal `PLACEHOLDER` strings that pass YAML load but would fail value-level schema validation.
+- **Direct Python calls** — primary pattern throughout: CLI → pipeline → runner → adapters
+- **Subprocess** — build (`cmake`, `make`, `idf.py`), flash (`gdb` + GDB-MI, `stm32cubeprogrammer`)
+- **JSON/YAML files** — board YAML, probe YAML, test JSON merged into effective config; result JSON per run; `evidence.json` artifact
+- **HTTP REST** — remote instrument APIs (esp32_meter meter API, LA web API)
+- **TCP** — probe GDB server (`host:4242`), ESP32-JTAG endpoint
+- **Serial (pyserial)** — UART capture, ESP32 download mode control
+- **SWD / JTAG** — via BMDA/GDB-MI over TCP to probe
+- **File-based state** — run directory (`runs/{id}/`) holds logs per stage, effective config, result JSON
+
+---
+
+## 5. Core vs Adapter Split
+
+**Core orchestration** — logic that is not specific to any board or tool:
+
+```
+pipeline.py          runner.py           strategy_resolver.py
+adapter_registry.py  config_resolver.py  run_manager.py
+default_verification.py                  compatibility/
+connection_model.py  failure_recovery.py recovery_policy.py
+dut/                 run_contract.py     gates.py
+```
+
+**Adapters / board-specific / tool-specific:**
+
+```
+adapters/build_*.py          adapters/flash_*.py
+adapters/observe_*.py        adapters/check_*.py
+adapters/preflight.py        adapters/control_*.py
+adapters/instrument_*.py
+instruments/backends/esp32_jtag/
+instruments/backends/esp32_meter/
+instruments/backends/stlink/
+instruments/backends/usb_uart_bridge/
+configs/boards/*.yaml        configs/*.yaml
+firmware/targets/*/          tests/plans/*.json
+```
+
+---
+
+## 6. Immediate Pain Points Noticed
+
+1. **`pipeline.py` is too large (~2100 lines)** — config merging, plan building, stage routing, summary formatting, and debug rendering all in one file. Candidates to split out: `config_merger`, `plan_builder`, `run_orchestrator`, `summary_formatter`.
+
+2. **`runner.run_plan()` is long (~400+ lines)** — retry loop, recovery dispatch, timeout handling, and failure classification all mixed together. Hard to trace control flow.
+
+3. **Config loading has no single entry point** — board from `configs/boards/{id}.yaml`, probe from `configs/{id}.yaml`, test from `tests/plans/{id}.json`, instrument instances from `configs/instrument_instances/{id}.yaml`. Merging is scattered across `pipeline.py` and `config_resolver.py`.
+
+4. **Connection model is split across four modules** — `connection_model.py`, `connection_metadata.py`, `connection_doctor.py`, `adapters/preflight.py`. No single source of truth for connection readiness.
+
+5. **Instrument layer has dual abstraction** — old manifest-based `registry.py` / `manifest.py` path alongside newer action dispatcher (`dispatcher.py`, `action_registry.py`). Both active; some backends reachable from both paths.
+
+6. **Step types are plain strings** — `adapter_registry.get("build.cmake")` style. No compile-time discovery or validation of which step types exist.
+
+7. **Evidence vs result are separate schemas** — `artifacts/evidence.json` and `runs/{id}/result.json` use different structures with no explicit link between them.
