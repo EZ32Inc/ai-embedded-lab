@@ -3,6 +3,7 @@
   "test_kind": "baremetal_mailbox",
   "name": "stm32f103_gpio_no_external_capture_stlink",
   "board": "stm32f103_gpio_stlink",
+  "required_capabilities": ["flash_program", "debug_attach", "reset_control"],
   "supported_instruments": ["stlink"],
   "requires": {
     "mailbox": true,

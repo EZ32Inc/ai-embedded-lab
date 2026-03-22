@@ -3,6 +3,7 @@
   "test_kind": "baremetal_mailbox",
   "name": "stm32h750_wiring_verify",
   "board": "stm32h750vbt6",
+  "required_capabilities": ["flash_program", "debug_attach", "reset_control"],
   "supported_instruments": ["esp32jtag"],
   "requires": {
     "mailbox": true,

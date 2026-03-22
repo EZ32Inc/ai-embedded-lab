@@ -1,6 +1,7 @@
 {
   "name": "stm32f411_gpio_signature",
   "board": "stm32f411ceu6",
+  "required_capabilities": ["flash_program", "logic_capture", "reset_control"],
   "build": {
     "project_dir": "firmware/targets/stm32f411ceu6",
     "artifact_stem": "stm32f411_app",

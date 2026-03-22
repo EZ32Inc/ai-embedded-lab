@@ -1,6 +1,7 @@
 {
   "name": "rp2040_gpio_signature",
   "board": "rp2040_pico",
+  "required_capabilities": ["flash_program", "logic_capture", "reset_control"],
   "pin": "sig",
   "min_freq_hz": 200.0,
   "max_freq_hz": 100000.0,

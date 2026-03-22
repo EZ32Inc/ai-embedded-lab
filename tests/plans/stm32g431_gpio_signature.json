@@ -1,6 +1,7 @@
 {
   "name": "stm32g431_gpio_signature",
   "board": "stm32g431cbu6",
+  "required_capabilities": ["flash_program", "logic_capture", "reset_control"],
   "build": {
     "project_dir": "firmware/targets/stm32g431cbu6",
     "artifact_stem": "stm32g431_app",

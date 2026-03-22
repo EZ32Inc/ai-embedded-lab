@@ -6,6 +6,8 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ael.adapters import build_artifacts
+from ael.compatibility.model import CompatibilityResult
+from ael.compatibility.resolver import resolve_test_instrument
 from ael.connection_model import NormalizedConnectionContext, normalize_connection_context, resolve_bench_setup, _as_board_dict
 
 
@@ -22,6 +24,7 @@ class ResolvedRunStrategy:
     instrument_port: Optional[int]
     instrument_communication: Dict[str, Any]
     instrument_capability_surfaces: Dict[str, str]
+    compatibility_result: Optional[CompatibilityResult] = None
 
 
 def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
@@ -257,6 +260,16 @@ def resolve_run_strategy(
     instrument_id, instrument_tcp_cfg, instrument_manifest = resolve_instrument_context(test_raw, board_cfg)
     instrument_host = instrument_tcp_cfg.get("host") if isinstance(instrument_tcp_cfg, dict) else None
     instrument_port = instrument_tcp_cfg.get("port") if isinstance(instrument_tcp_cfg, dict) else None
+
+    required_capabilities = (
+        list(test_raw.get("required_capabilities") or [])
+        if isinstance(test_raw, dict) else []
+    )
+    probe_surfaces = _normalize_capability_surfaces(probe_raw)
+    compatibility_result: Optional[CompatibilityResult] = None
+    if required_capabilities:
+        compatibility_result = resolve_test_instrument(required_capabilities, probe_surfaces)
+
     return ResolvedRunStrategy(
         probe_cfg=probe_cfg,
         board_cfg=board_cfg,
@@ -269,6 +282,7 @@ def resolve_run_strategy(
         instrument_port=instrument_port,
         instrument_communication=_normalize_communication_metadata(instrument_manifest),
         instrument_capability_surfaces=_normalize_capability_surfaces(instrument_manifest),
+        compatibility_result=compatibility_result,
     )
 
 

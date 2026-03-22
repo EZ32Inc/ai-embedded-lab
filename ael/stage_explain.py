@@ -416,6 +416,16 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
                 "probe_type": ctx.get("probe_type"),
                 "probe_communication": ctx.get("probe_communication"),
                 "probe_capability_surfaces": ctx.get("probe_capability_surfaces"),
+                "capability_check": (
+                    {
+                        "compatible": resolved.compatibility_result.compatible,
+                        "score": resolved.compatibility_result.score,
+                        "reasons": resolved.compatibility_result.reasons,
+                        "missing": resolved.compatibility_result.missing_capabilities,
+                        "warnings": resolved.compatibility_result.warnings,
+                    }
+                    if resolved.compatibility_result is not None else None
+                ),
             },
         },
         "includes": [
