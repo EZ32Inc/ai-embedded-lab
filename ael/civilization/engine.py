@@ -48,6 +48,7 @@ from ael.civilization.translator import (
     build_run_actions,
     ael_outcome_to_experience,
 )
+from ael.civilization import run_index
 
 _DOMAIN = "engineering"
 
@@ -80,6 +81,10 @@ class CivilizationEngine:
         unavailable (never raises).
         """
         ctx = CivilizationContext(board_id=board_id, test_name=test_name)
+
+        # Always attach aggregated stats from local index (no EE needed)
+        ctx.run_stats = run_index.get_run_stats(board_id, test_name)
+
         if not _EE_AVAILABLE:
             return ctx
 
@@ -209,17 +214,19 @@ class CivilizationEngine:
         description: str = "",
         source: str = "AEL",
     ) -> Optional[str]:
-        """Record an AEL run result as an experience in the Experience Engine.
+        """Record an AEL run result — aggregate if known, append if new.
 
-        Thread-safe: uses a module-level lock to prevent concurrent JSON
-        write corruption when called from parallel verify-default workers.
+        Logic:
+          success + known signature → EE.feedback("correct") + index count++
+          success + new signature   → EE.add() + index init
+          failure + known kind      → EE.feedback("wrong")  + index count++
+          failure + new kind        → EE.add() + index entry for this kind
+
+        Thread-safe: _write_lock covers both EE and index writes.
 
         Returns:
-            Experience ID string, or None if unavailable.
+            EE experience ID (canonical record for this outcome), or None.
         """
-        if not _EE_AVAILABLE:
-            return None
-
         outcome = ael_outcome_to_experience(ok, failure_kind)
         raw = build_run_raw(board_id, test_name, outcome, stages, failure_kind, description)
         intent = build_run_intent(board_id, test_name)
@@ -227,16 +234,42 @@ class CivilizationEngine:
 
         try:
             with _write_lock:
-                exp = ExperienceAPI.add(
-                    raw=raw,
-                    domain=_DOMAIN,
-                    intent=intent,
-                    source=source,
-                    actions=actions,
-                    outcome=outcome,
-                    scope="task",
-                )
-            return exp.id
+                if ok:
+                    existing_id = run_index.get_success_exp_id(board_id, test_name)
+                    if existing_id and _EE_AVAILABLE:
+                        # Aggregate: strengthen existing success record
+                        ExperienceAPI.feedback(exp_id=existing_id, feedback="correct")
+                        run_index.record_success(board_id, test_name, existing_id)
+                        return existing_id
+                    elif _EE_AVAILABLE:
+                        # First success: create EE record + index entry
+                        exp = ExperienceAPI.add(
+                            raw=raw, domain=_DOMAIN, intent=intent,
+                            source=source, actions=actions, outcome=outcome, scope="task",
+                        )
+                        run_index.record_success(board_id, test_name, exp.id)
+                        return exp.id
+                    else:
+                        run_index.record_success(board_id, test_name, "")
+                        return None
+                else:
+                    existing_id = run_index.get_failure_exp_id(board_id, test_name, failure_kind)
+                    if existing_id and _EE_AVAILABLE:
+                        # Aggregate: same failure kind seen before
+                        ExperienceAPI.feedback(exp_id=existing_id, feedback="wrong")
+                        run_index.record_failure(board_id, test_name, failure_kind, existing_id, raw)
+                        return existing_id
+                    elif _EE_AVAILABLE:
+                        # New failure kind: append to EE
+                        exp = ExperienceAPI.add(
+                            raw=raw, domain=_DOMAIN, intent=intent,
+                            source=source, actions=actions, outcome=outcome, scope="task",
+                        )
+                        run_index.record_failure(board_id, test_name, failure_kind, exp.id, raw)
+                        return exp.id
+                    else:
+                        run_index.record_failure(board_id, test_name, failure_kind, "", raw)
+                        return None
         except Exception:
             return None
 
