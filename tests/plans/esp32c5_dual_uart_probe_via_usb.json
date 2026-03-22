@@ -7,7 +7,7 @@
   "requires": {"mailbox": false, "datacapture": false},
   "labels": ["uart", "selftest_only"],
   "covers": ["uart"],
-  "notes": "Validates native USB Serial/JTAG path (Espressif CDC, /dev/ttyACM3). Both ports receive printf simultaneously via secondary console config.",
+  "notes": "Validates native USB Serial/JTAG path (Espressif CDC, /dev/ttyACM3). Expects AEL_USBJTAG pattern which appears ONLY on this port — not on UART0 bridge. Proves role, not just connectivity.",
   "build": {
     "project_dir": "firmware/targets/esp32c5_dual_uart_probe",
     "artifact_stem": "ael_esp32c5_dual_uart_probe",
@@ -24,7 +24,7 @@
     "profile": "espidf",
     "duration_s": 10,
     "expect_patterns": [
-      "AEL_READY ESP32C5 DUAL"
+      "AEL_USBJTAG ESP32C5"
     ]
   }
 }

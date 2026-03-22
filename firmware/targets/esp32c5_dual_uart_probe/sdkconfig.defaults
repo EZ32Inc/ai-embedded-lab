@@ -1,5 +1,4 @@
-# Console: primary = UART0 (GPIO11 TX, GPIO12 RX), secondary = USB Serial/JTAG
-# printf() goes to both ports simultaneously.
-CONFIG_ESP_CONSOLE_UART_DEFAULT=y
-CONFIG_ESP_CONSOLE_SECONDARY_USB_SERIAL_JTAG=y
+# Console: NONE — firmware drives UART0 and USB Serial/JTAG explicitly.
+# Each port sends role-specific messages; no cross-mirroring.
+CONFIG_ESP_CONSOLE_NONE=y
 CONFIG_ESP_DEFAULT_CPU_FREQ_MHZ_160=y

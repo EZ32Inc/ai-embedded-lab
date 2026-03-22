@@ -145,18 +145,24 @@
   },
   "esp32c5_devkit_dual_usb|esp32c5_dual_uart_probe_via_usb": {
     "exp_id": "91452970-1ace-4666-b35d-4b18cba4183e",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774219412.1957805,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 2,
+    "failure_count": 1,
+    "last_seen": 1774221338.5600326,
+    "confidence": 0.6,
+    "known_failures": {
+      "build": {
+        "exp_id": "ff14fba0-3d09-458d-8ed8-531decbfc36b",
+        "count": 1,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_dual_uart_probe_via_usb: failed — stages: preflight, load, run, check — failure: build — build failed"
+      }
+    }
   },
   "esp32c5_devkit_dual_usb|esp32c5_dual_uart_probe_via_bridge": {
     "exp_id": "5c2d8b40-1640-440d-b418-0e3e4757e50d",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774219459.3974516,
-    "confidence": 0.5,
+    "last_seen": 1774221379.3815012,
+    "confidence": 0.6,
     "known_failures": {}
   }
 }

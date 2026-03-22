@@ -7,7 +7,7 @@
   "requires": {"mailbox": false, "datacapture": false},
   "labels": ["uart", "selftest_only"],
   "covers": ["uart"],
-  "notes": "Validates UART0 via CH341 bridge path (/dev/ttyACM0, GPIO11 TX). Primary console output.",
+  "notes": "Validates UART0 via CH341 bridge path (/dev/ttyACM0, GPIO11 TX). Expects AEL_UART0 pattern which appears ONLY on this port — not on USB JTAG port. Proves role, not just connectivity.",
   "build": {
     "project_dir": "firmware/targets/esp32c5_dual_uart_probe",
     "artifact_stem": "ael_esp32c5_dual_uart_probe",
@@ -24,7 +24,7 @@
     "profile": "espidf",
     "duration_s": 10,
     "expect_patterns": [
-      "AEL_READY ESP32C5 DUAL"
+      "AEL_UART0 ESP32C5"
     ]
   }
 }
