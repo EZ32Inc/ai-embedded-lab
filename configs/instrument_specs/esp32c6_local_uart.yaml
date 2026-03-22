@@ -1,0 +1,20 @@
+# Instrument Spec v1 — ESP32C6 local UART (pyserial backend)
+#
+# Minimal spec describing only the actions that
+# esp32c6_gpio_signature_with_meter actually uses.
+#
+# First real validation case for the v1 instrument spec direction.
+
+schema_version: 1
+
+instrument:
+  id: esp32c6_local_uart
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]

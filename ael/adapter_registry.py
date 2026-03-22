@@ -329,6 +329,66 @@ class _LoadAdapter:
         return {"ok": True}
 
 
+def _run_uart_via_instrument_spec(spec_name: str, cfg: Dict[str, Any], raw_log_path: str) -> Dict[str, Any]:
+    """Route UART observe through a v1 instrument spec instead of opening serial directly.
+
+    Used when observe_uart_cfg contains an 'instrument_spec' key naming a spec in
+    configs/instrument_specs/.  Calls uart_wait_for via the spec executor and maps
+    the result back to the shape expected by _UartCheckAdapter.
+    """
+    from ael.instruments.spec_loader import load_specs_dir
+    from ael.instruments.spec_executor import execute_spec_action
+
+    _blank: Dict[str, Any] = {
+        "ok": False, "bytes": 0, "lines": 0, "port": "", "baud": 0,
+        "crash_detected": False, "reboot_loop_suspected": False,
+        "errors": [], "warnings": [], "matched": {}, "raw_log_path": raw_log_path,
+    }
+
+    specs_dir = Path(__file__).resolve().parent.parent / "configs" / "instrument_specs"
+    specs = load_specs_dir(specs_dir)
+    spec = specs.get(spec_name)
+    if spec is None:
+        return {**_blank, "error_summary": f"instrument spec '{spec_name}' not found in {specs_dir}"}
+
+    port = str(cfg.get("port") or "")
+    baud = int(cfg.get("baud") or 115200)
+    timeout_s = float(cfg.get("duration_s") or 8.0)
+    patterns = list(cfg.get("expect_patterns") or [])
+    pattern = patterns[0] if patterns else ""
+
+    result = execute_spec_action(
+        spec, "uart_wait_for",
+        {"port": port, "baudrate": baud, "pattern": pattern, "timeout": timeout_s},
+    )
+
+    ok = bool(result.get("ok", False))
+    data = result.get("data") or {}
+    capture = str(data.get("capture_excerpt") or "")
+    try:
+        Path(raw_log_path).write_text(capture, encoding="utf-8")
+    except Exception:
+        pass
+
+    return {
+        "ok": ok,
+        "bytes": len(capture.encode("utf-8", errors="replace")),
+        "lines": len(capture.splitlines()),
+        "port": port,
+        "baud": baud,
+        "crash_detected": False,
+        "reboot_loop_suspected": False,
+        "errors": [],
+        "warnings": [],
+        "matched": {"expect": {pattern: 1} if ok and pattern else {}},
+        "missing_expect": [] if ok else ([pattern] if pattern else []),
+        "forbid_matched": [],
+        "raw_log_path": raw_log_path,
+        "error_summary": "" if ok else (str(result.get("error") or "uart_wait_for failed")),
+        "instrument_spec": spec_name,
+    }
+
+
 class _UartCheckAdapter:
     def execute(self, step, plan, ctx):
         inputs = step.get("inputs", {}) if isinstance(step, dict) else {}
@@ -391,7 +451,10 @@ class _UartCheckAdapter:
                     cfg["port"] = flash_port
             except Exception:
                 pass
-        if log_path:
+        instrument_spec_name = str(cfg.get("instrument_spec") or "").strip()
+        if instrument_spec_name:
+            uart_result = _run_uart_via_instrument_spec(instrument_spec_name, cfg, raw_log_path)
+        elif log_path:
             with _tee_output(log_path, output_mode):
                 uart_result = observe_log.run_serial_log(cfg, raw_log_path=raw_log_path)
         else:

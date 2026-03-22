@@ -24,6 +24,7 @@
     "baud": 115200,
     "duration_s": 8,
     "profile": "espidf",
+    "instrument_spec": "esp32c6_local_uart",
     "expect_patterns": [
       "AEL_DUT_READY"
     ]
