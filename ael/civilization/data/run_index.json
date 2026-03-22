@@ -142,5 +142,21 @@
     "last_seen": 1774215947.5104995,
     "confidence": 0.5,
     "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_dual_uart_probe_via_usb": {
+    "exp_id": "91452970-1ace-4666-b35d-4b18cba4183e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774219412.1957805,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_dual_uart_probe_via_bridge": {
+    "exp_id": "5c2d8b40-1640-440d-b418-0e3e4757e50d",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774219459.3974516,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }

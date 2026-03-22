@@ -1,0 +1,56 @@
+# ESP32-C5 DevKit — Dual USB board
+#
+# Two USB connectors (identified via udevadm):
+#   /dev/ttyACM3 (Vendor=Espressif, MAC=3C:DC:75:84:A6:54) — Native USB Serial/JTAG
+#   /dev/ttyACM0 (Vendor=1a86 CH341, serial=5AAF278818)    — UART0 bridge (GPIO11 TX, GPIO12 RX)
+#
+# Flash uses native USB port (ACM3). Ports set explicitly to avoid
+# picking the wrong board when multiple Espressif devices are connected.
+
+board:
+  name: ESP32-C5 DevKit Dual USB
+  target: esp32c5
+  kind: board
+  features:
+    - programmable_via_jtag
+    - has_uart_console
+    - has_gpio
+    - has_dual_usb
+  processors:
+    - id: esp32c5
+      arch: riscv
+      role: primary
+      clock_hz: 160000000
+  probe_required: false
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32c5_dual_uart_probe
+  flash:
+    method: idf_esptool
+    target: esp32c5
+    port: /dev/ttyACM3        # native USB Serial/JTAG (Espressif, MAC 3C:DC:75:84:A6:54)
+    baud: 460800
+    serial: null
+  pins:
+    safe_output:
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+    strap_or_reserved:
+      - GPIO8
+      - GPIO9
+      - GPIO11   # UART0 TX
+      - GPIO12   # UART0 RX
+      - GPIO13   # USB D-
+      - GPIO14   # USB D+
+  default_wiring:
+    swd: "NC"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3

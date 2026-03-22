@@ -1,0 +1,19 @@
+# Instrument Spec v1 — ESP32-C5 UART0 via CH341 USB bridge
+#
+# CH341 USB-to-UART bridge connected to UART0 (GPIO11 TX, GPIO12 RX).
+# Appears as /dev/ttyACM* with Vendor=1a86, Model=USB_Single_Serial.
+# Receives primary UART0 console output.
+
+schema_version: 1
+
+instrument:
+  id: esp32c5_uart_bridge
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]
