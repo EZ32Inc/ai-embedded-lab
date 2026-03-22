@@ -69,22 +69,22 @@
   "esp32c6_devkit|esp32c6_gpio_signature_with_meter": {
     "exp_id": "4fa3d6be-9218-4834-8625-1eb0b1105bb7",
     "success_count": 6,
-    "failure_count": 2,
-    "last_seen": 1774209650.097079,
+    "failure_count": 5,
+    "last_seen": 1774213436.439976,
     "confidence": 1.0,
     "known_failures": {
       "check_signal": {
         "exp_id": "67627318-e611-4421-a06b-bbc26bf4cf98",
-        "count": 2,
+        "count": 5,
         "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed — stages: preflight, build, load, run — failure: check_signal — instrument digital verification failed"
       }
     }
   },
   "esp32c3_devkit|esp32c3_gpio_signature_with_meter": {
     "exp_id": "4f68a83c-25f3-456a-b06b-d92a06777dc8",
-    "success_count": 6,
+    "success_count": 15,
     "failure_count": 0,
-    "last_seen": 1774209475.7246883,
+    "last_seen": 1774213436.3926415,
     "confidence": 1.0,
     "known_failures": {}
   },
@@ -99,6 +99,25 @@
         "exp_id": "858acf42-51ac-404e-89c6-62c37094de0b",
         "count": 2,
         "last_raw": "[rp2040_pico] rp2040_uart_banner: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
+  },
+  "stm32f103_stlink_local|stm32f103_stlink_local_smoke": {
+    "exp_id": "88897255-e739-49b7-ab36-308556efd8b5",
+    "success_count": 2,
+    "failure_count": 3,
+    "last_seen": 1774213478.6388817,
+    "confidence": 0.6,
+    "known_failures": {
+      "load": {
+        "exp_id": "a6780db1-b2e0-4bf2-8f4d-e8ad858e019c",
+        "count": 2,
+        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed — stages: preflight, build, run, check — failure: load — name 'time' is not defined"
+      },
+      "check_mailbox": {
+        "exp_id": "a45a2f25-23ed-4926-ba95-3ab4cfce9c3b",
+        "count": 1,
+        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox read failed: parse_failed"
       }
     }
   }

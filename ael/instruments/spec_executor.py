@@ -34,6 +34,7 @@ from __future__ import annotations
 
 import os
 import subprocess
+import time
 from pathlib import Path
 from typing import Any
 
@@ -179,6 +180,12 @@ def _execute_pyserial(
 # backend: stlink_local
 # ---------------------------------------------------------------------------
 
+_STUTIL_BIN = (
+    Path(__file__).resolve().parents[2]
+    / "instruments" / "STLinkInstrument" / "install" / "bin" / "st-util"
+)
+
+
 def _stlink_env() -> dict[str, str]:
     """Build environment with LD_LIBRARY_PATH for local stlink install."""
     env = dict(os.environ)
@@ -186,6 +193,44 @@ def _stlink_env() -> dict[str, str]:
     current = str(env.get("LD_LIBRARY_PATH") or "")
     env["LD_LIBRARY_PATH"] = lib if not current else f"{lib}:{current}"
     return env
+
+
+def _kill_stutil(port: int = 4242) -> None:
+    """Kill any st-util process listening on the given port."""
+    try:
+        res = subprocess.run(["ps", "-ef"], capture_output=True, text=True, timeout=2)
+    except Exception:
+        return
+    token = f"--listen_port {port}"
+    for line in (res.stdout or "").splitlines():
+        if "st-util" not in line or token not in line:
+            continue
+        parts = line.split()
+        if len(parts) < 2:
+            continue
+        try:
+            os.kill(int(parts[1]), 9)
+        except Exception:
+            pass
+    time.sleep(0.5)
+
+
+def _start_stutil(port: int = 4242) -> subprocess.Popen | None:
+    """Start st-util in the background and wait briefly for it to be ready."""
+    if not _STUTIL_BIN.exists():
+        return None
+    env = _stlink_env()
+    try:
+        proc = subprocess.Popen(
+            [str(_STUTIL_BIN), "--listen_port", str(port), "--multi"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            env=env,
+        )
+        time.sleep(1.5)  # give st-util time to claim USB and start listening
+        return proc
+    except Exception:
+        return None
 
 
 def _execute_stlink_local(
@@ -228,6 +273,12 @@ def _execute_stlink_local(
                 "error": f"firmware file not found: {firmware}",
             }
         flash_addr = str(request.get("flash_addr") or "0x8000000")
+        gdb_port = int(request.get("gdb_port") or 4242)
+
+        # st-flash and st-util both need exclusive USB access.
+        # Kill any running st-util before flash, then restart it afterwards
+        # so the mailbox verify GDB step can connect.
+        _kill_stutil(gdb_port)
         cmd = [str(_STFLASH_BIN), "write", firmware, flash_addr]
 
     elif action_name == "reset":
@@ -269,6 +320,12 @@ def _execute_stlink_local(
 
     output = ((proc.stdout or "") + (proc.stderr or "")).strip()
     ok = proc.returncode == 0
+
+    # After a successful flash, restart st-util so subsequent steps
+    # (e.g. mailbox verify via GDB) can connect.
+    if ok and action_name == "flash":
+        _start_stutil(gdb_port)
+
     return {
         "ok": ok,
         "action": action_name,
