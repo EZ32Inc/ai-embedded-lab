@@ -1,0 +1,19 @@
+# Instrument Spec v1 — ESP32-C6 Native USB Serial/JTAG port
+#
+# Corresponds to the Espressif built-in USB Serial/JTAG peripheral.
+# Appears as /dev/ttyACM* with Vendor=Espressif, Model=USB_JTAG_serial_debug_unit.
+# Receives secondary console output (mirrors UART0) when both ports are connected.
+
+schema_version: 1
+
+instrument:
+  id: esp32c6_usb_jtag
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]

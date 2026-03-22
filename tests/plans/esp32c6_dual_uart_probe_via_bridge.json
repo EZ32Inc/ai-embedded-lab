@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_dual_uart_probe_via_bridge",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["uart", "selftest_only"],
+  "covers": ["uart"],
+  "notes": "Validates UART0 via CH341 USB bridge path (/dev/ttyACM1). Firmware outputs to this port as primary UART0 console. Both ports can be tested independently — this plan reads from the bridge side.",
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_dual_uart_probe",
+    "artifact_stem": "ael_esp32c6_dual_uart_probe",
+    "build_dir": "artifacts/build_esp32c6_dual_uart_probe"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c6_uart_bridge",
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "expect_patterns": [
+      "AEL_READY ESP32C6 DUAL"
+    ]
+  }
+}

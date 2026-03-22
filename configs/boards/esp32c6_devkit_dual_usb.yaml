@@ -1,0 +1,58 @@
+# ESP32-C6 DevKit — Dual USB board (CH341 bridge + native USB Serial/JTAG)
+#
+# Two USB connectors:
+#   /dev/ttyACM* (Vendor=1a86 CH341)     — UART0 primary console, flash via UART
+#   /dev/ttyACM* (Vendor=Espressif)      — USB Serial/JTAG secondary console, flash via USB CDC
+#
+# Flash uses the native USB port (Espressif CDC).
+# Serial port: set explicitly to avoid picking the wrong board when multiple
+# ESP32-C6 boards are connected simultaneously.
+#
+# To identify your board's port:
+#   udevadm info /dev/ttyACMx | grep ID_SERIAL
+#   Espressif MAC 40:4C:CA:55:5A:D4 → native USB (use for flash)
+#   Vendor 1a86 CH341                → UART0 bridge (use for uart_bridge observe)
+
+board:
+  name: ESP32-C6 DevKit Dual USB
+  target: esp32c6
+  kind: board
+  features:
+    - programmable_via_jtag
+    - has_uart_console
+    - has_gpio
+    - has_dual_usb
+  processors:
+    - id: esp32c6
+      arch: riscv
+      role: primary
+      clock_hz: 160000000
+  probe_required: false
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32c6_dual_uart_probe
+  flash:
+    method: idf_esptool
+    target: esp32c6
+    port: /dev/ttyACM2        # native USB Serial/JTAG (Espressif, MAC 40:4C:CA:55:5A:D4)
+    baud: 460800
+    serial: null
+  pins:
+    safe_output:
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+    strap_or_reserved:
+      - GPIO8
+      - GPIO9
+  default_wiring:
+    swd: "NC"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3

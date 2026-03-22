@@ -28,49 +28,49 @@
   },
   "stm32f103_gpio_stlink|stm32f103_gpio_no_external_capture_stlink": {
     "exp_id": "58375963-b52f-4c9f-9229-27831aa4ea35",
-    "success_count": 6,
+    "success_count": 7,
     "failure_count": 0,
-    "last_seen": 1774209625.2589035,
+    "last_seen": 1774213936.7716825,
     "confidence": 1.0,
     "known_failures": {}
   },
   "rp2040_pico|rp2040_gpio_signature": {
     "exp_id": "380575b4-32d8-410e-8667-ef13c5a9d534",
-    "success_count": 106,
+    "success_count": 107,
     "failure_count": 0,
-    "last_seen": 1774209627.5241325,
+    "last_seen": 1774213938.6399891,
     "confidence": 1.0,
     "known_failures": {}
   },
   "stm32f411ceu6|stm32f411_gpio_signature": {
     "exp_id": "f088415d-c27b-4cd0-924d-c885fddbf63e",
-    "success_count": 6,
+    "success_count": 7,
     "failure_count": 0,
-    "last_seen": 1774209631.661494,
+    "last_seen": 1774213943.1515956,
     "confidence": 1.0,
     "known_failures": {}
   },
   "stm32h750vbt6|stm32h750_wiring_verify": {
     "exp_id": "2df9a795-2492-4333-a501-935e0c38d6d0",
-    "success_count": 6,
+    "success_count": 7,
     "failure_count": 0,
-    "last_seen": 1774209643.2763782,
+    "last_seen": 1774213954.6270783,
     "confidence": 1.0,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_gpio_signature": {
     "exp_id": "e034dc0b-e907-4151-9377-af71abde1598",
-    "success_count": 6,
+    "success_count": 7,
     "failure_count": 0,
-    "last_seen": 1774209653.0466323,
+    "last_seen": 1774213971.9098887,
     "confidence": 1.0,
     "known_failures": {}
   },
   "esp32c6_devkit|esp32c6_gpio_signature_with_meter": {
     "exp_id": "4fa3d6be-9218-4834-8625-1eb0b1105bb7",
-    "success_count": 6,
+    "success_count": 7,
     "failure_count": 5,
-    "last_seen": 1774213436.439976,
+    "last_seen": 1774213961.0791273,
     "confidence": 1.0,
     "known_failures": {
       "check_signal": {
@@ -104,10 +104,10 @@
   },
   "stm32f103_stlink_local|stm32f103_stlink_local_smoke": {
     "exp_id": "88897255-e739-49b7-ab36-308556efd8b5",
-    "success_count": 3,
+    "success_count": 6,
     "failure_count": 3,
-    "last_seen": 1774213574.7968702,
-    "confidence": 0.7,
+    "last_seen": 1774214056.0222802,
+    "confidence": 1.0,
     "known_failures": {
       "load": {
         "exp_id": "a6780db1-b2e0-4bf2-8f4d-e8ad858e019c",
@@ -120,5 +120,21 @@
         "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox read failed: parse_failed"
       }
     }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_dual_uart_probe_via_usb": {
+    "exp_id": "be44082e-9371-4e3e-a925-51935ccdbf73",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774215905.1148767,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_dual_uart_probe_via_bridge": {
+    "exp_id": "66d15b4f-272d-4fd9-bd1e-7c164a4d3112",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774215947.5104995,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }
