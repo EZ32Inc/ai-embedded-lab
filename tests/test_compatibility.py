@@ -449,3 +449,96 @@ class TestResolveDUTTest:
             test_raw = json.load(f)
         result = resolve_dut_test(dut, test_raw)
         assert result.applicable is True
+
+
+# ---------------------------------------------------------------------------
+# Phase 3: DUT ↔ Instrument physical/protocol compatibility
+# ---------------------------------------------------------------------------
+
+from ael.compatibility.model import DUTInstrumentCompatibilityResult
+from ael.compatibility.resolver import resolve_dut_instrument
+
+
+class TestResolveDUTInstrument:
+    def _swd_dut(self, extra_features=None):
+        features = ["programmable_via_swd", "has_gpio", "has_reset_pin"]
+        return DUTSpec(kind="board", features=frozenset(features + (extra_features or [])), board_id="test_board")
+
+    def _esp32_dut(self):
+        return DUTSpec(kind="board", features=frozenset(["programmable_via_jtag", "has_uart_console", "has_gpio", "has_adc"]), board_id="esp32c6")
+
+    def _esp32jtag_surfaces(self):
+        return {"swd": "gdb_remote", "gpio_in": "web_api", "gpio_out": "web_api", "adc_in": "web_api", "reset_out": "web_api"}
+
+    def _stlink_surfaces(self):
+        return {"swd": "gdb_remote"}
+
+    def _meter_surfaces(self):
+        return {"gpio_in": "meter_tcp", "adc_in": "meter_tcp", "gpio_out": "meter_tcp"}
+
+    def test_esp32jtag_compatible_with_swd_dut(self):
+        result = resolve_dut_instrument(self._swd_dut(), self._esp32jtag_surfaces())
+        assert result.compatible is True
+        assert not result.missing_surfaces
+
+    def test_stlink_compatible_with_swd_dut(self):
+        # ST-Link has swd surface — sufficient for SWD-programmable DUT
+        result = resolve_dut_instrument(self._swd_dut(), self._stlink_surfaces())
+        assert result.compatible is True
+        assert not result.missing_surfaces
+
+    def test_stlink_generates_warnings_for_missing_optionals(self):
+        # ST-Link has no gpio_in/reset_out — optional surfaces → warnings, not failure
+        dut = DUTSpec(kind="board", features=frozenset(["programmable_via_swd", "has_gpio", "has_reset_pin"]), board_id="test")
+        result = resolve_dut_instrument(dut, self._stlink_surfaces())
+        assert result.compatible is True
+        assert result.warnings  # missing gpio_in and/or reset_out generate warnings
+
+    def test_meter_incompatible_with_swd_dut(self):
+        # ESP32 meter has no swd — cannot program SWD-programmable DUT
+        result = resolve_dut_instrument(self._swd_dut(), self._meter_surfaces())
+        assert result.compatible is False
+        assert "swd" in result.missing_surfaces
+
+    def test_esp32_dut_no_required_surfaces(self):
+        # programmable_via_jtag uses esptool (no instrument surface required)
+        # So meter is compatible at the DUT↔Instrument level
+        result = resolve_dut_instrument(self._esp32_dut(), self._meter_surfaces())
+        assert result.compatible is True
+
+    def test_empty_surfaces_fails_swd_dut(self):
+        result = resolve_dut_instrument(self._swd_dut(), {})
+        assert result.compatible is False
+        assert "swd" in result.missing_surfaces
+
+    def test_dut_no_features_always_compatible(self):
+        # A DUT with no known features has no required surfaces
+        dut = DUTSpec(kind="board", features=frozenset())
+        result = resolve_dut_instrument(dut, {})
+        assert result.compatible is True
+
+    def test_accepts_dutconfig_object(self):
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "stm32f411ceu6")
+        surfaces = {"swd": "gdb_remote", "gpio_in": "web_api", "reset_out": "web_api"}
+        result = resolve_dut_instrument(dut, surfaces)
+        assert result.compatible is True
+
+    def test_stm32f103_stlink_compatible(self):
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "stm32f103_gpio_stlink")
+        result = resolve_dut_instrument(dut, {"swd": "gdb_remote"})
+        assert result.compatible is True
+
+    def test_esp32c6_meter_compatible_no_swd_needed(self):
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "esp32c6_devkit")
+        # meter provides gpio_in, adc_in, gpio_out — no swd needed for esp32
+        result = resolve_dut_instrument(dut, {"gpio_in": "meter_tcp", "adc_in": "meter_tcp"})
+        assert result.compatible is True

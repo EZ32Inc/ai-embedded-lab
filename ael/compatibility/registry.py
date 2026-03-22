@@ -91,6 +91,36 @@ def _build_reverse() -> Dict[str, FrozenSet[str]]:
 CAPABILITY_TO_SURFACE_KEYS: Dict[str, FrozenSet[str]] = _build_reverse()
 
 
+# ---------------------------------------------------------------------------
+# DUT feature → required instrument surface keys (Phase 3: DUT↔Instrument)
+#
+# Maps DUT features (from board YAML) to the instrument surface key(s) that
+# must be present for the instrument to interface with the DUT.
+# "required" means the instrument MUST have this surface to be usable.
+# "optional" means missing it generates a warning, not a failure.
+# ---------------------------------------------------------------------------
+
+#: DUT features that require a specific instrument surface key.
+DUT_FEATURE_TO_REQUIRED_SURFACES: Dict[str, FrozenSet[str]] = {
+    "programmable_via_swd":  frozenset({"swd"}),
+    # programmable_via_jtag uses esptool/IDF directly — no instrument surface needed
+    "programmable_via_jtag": frozenset(),
+}
+
+#: DUT features where a missing instrument surface generates a warning (not failure).
+DUT_FEATURE_TO_OPTIONAL_SURFACES: Dict[str, FrozenSet[str]] = {
+    "has_reset_pin": frozenset({"reset_out"}),
+    "has_gpio":      frozenset({"gpio_in", "gpio_out"}),
+    "has_adc":       frozenset({"adc_in"}),
+    "has_uart_console": frozenset({"uart"}),
+}
+
+#: All known valid DUT kind values.
+VALID_DUT_KINDS: FrozenSet[str] = frozenset({
+    "bare_mcu", "soc", "board", "module", "fpga_target", "mixed_system",
+})
+
+
 def capabilities_from_surface_key(surface_key: str) -> FrozenSet[str]:
     """Return canonical capability types provided by a given surface key."""
     return SURFACE_KEY_TO_CAPABILITIES.get(surface_key, frozenset())

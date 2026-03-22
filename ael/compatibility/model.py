@@ -110,6 +110,19 @@ class CompatibilityResult:
 
 
 @dataclass
+class DUTInstrumentCompatibilityResult:
+    """Result of checking whether an instrument can interface with a DUT (Phase 3)."""
+
+    compatible: bool
+    reasons: List[str] = field(default_factory=list)
+    missing_surfaces: List[str] = field(default_factory=list)  # required surface keys absent
+    warnings: List[str] = field(default_factory=list)          # optional surfaces absent
+
+    def __bool__(self) -> bool:
+        return self.compatible
+
+
+@dataclass
 class ExecutionPlan:
     """Result of resolving which instruments to use for a given test."""
 

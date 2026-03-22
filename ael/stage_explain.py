@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from ael.compatibility.resolver import resolve_dut_test
+from ael.compatibility.resolver import resolve_dut_instrument, resolve_dut_test
 from ael.connection_model import build_connection_setup, render_connection_setup_text, _as_board_dict
 from ael.dut.registry import load_dut_from_file
 from ael.pipeline import _simple_yaml_load
@@ -306,6 +306,21 @@ def _dut_applicability_check(board_id: str, test_raw: Dict[str, Any]) -> Dict[st
         return None
 
 
+def _dut_instrument_check(board_id: str, probe_surfaces: Dict[str, str]) -> Dict[str, Any] | None:
+    """Return a DUT↔Instrument compatibility result dict, or None if undetermined."""
+    try:
+        dut = load_dut_from_file(REPO_ROOT, board_id)
+        result = resolve_dut_instrument(dut, probe_surfaces)
+        return {
+            "compatible": result.compatible,
+            "reasons": result.reasons,
+            "missing_surfaces": result.missing_surfaces,
+            "warnings": result.warnings,
+        }
+    except Exception:
+        return None
+
+
 def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
     board_cfg = _as_board_dict(resolved.board_cfg)
@@ -446,6 +461,7 @@ def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
                     if resolved.compatibility_result is not None else None
                 ),
                 "dut_applicability": _dut_applicability_check(board_id, test_raw),
+                "dut_instrument_check": _dut_instrument_check(board_id, ctx.get("probe_capability_surfaces") or {}),
             },
         },
         "includes": [

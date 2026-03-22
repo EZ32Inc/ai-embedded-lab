@@ -8,6 +8,7 @@ Phase 3: DUT ↔ Instrument (planned).
 from ael.compatibility.model import (
     Capability,
     CompatibilityResult,
+    DUTInstrumentCompatibilityResult,
     DUTSpec,
     DUTTestCompatibilityResult,
     ExecutionPlan,
@@ -15,6 +16,7 @@ from ael.compatibility.model import (
     TestApplicabilitySpec,
 )
 from ael.compatibility.resolver import (
+    resolve_dut_instrument,
     resolve_dut_test,
     resolve_execution_plan,
     resolve_test_instrument,
@@ -23,11 +25,13 @@ from ael.compatibility.resolver import (
 __all__ = [
     "Capability",
     "CompatibilityResult",
+    "DUTInstrumentCompatibilityResult",
     "DUTSpec",
     "DUTTestCompatibilityResult",
     "ExecutionPlan",
     "Requirement",
     "TestApplicabilitySpec",
+    "resolve_dut_instrument",
     "resolve_dut_test",
     "resolve_execution_plan",
     "resolve_test_instrument",

@@ -9,6 +9,10 @@ Phase 1: Test ↔ Instrument capability matching.
 Phase 2: DUT ↔ Test applicability.
     resolve_dut_test(dut_spec_or_cfg, test_raw)
         → DUTTestCompatibilityResult
+
+Phase 3: DUT ↔ Instrument physical/protocol compatibility.
+    resolve_dut_instrument(dut_spec_or_cfg, instrument_surfaces)
+        → DUTInstrumentCompatibilityResult
 """
 
 from __future__ import annotations
@@ -17,13 +21,18 @@ from typing import Any, Dict, List
 
 from ael.compatibility.model import (
     CompatibilityResult,
+    DUTInstrumentCompatibilityResult,
     DUTSpec,
     DUTTestCompatibilityResult,
     ExecutionPlan,
     Requirement,
     TestApplicabilitySpec,
 )
-from ael.compatibility.registry import provided_capabilities_from_surfaces
+from ael.compatibility.registry import (
+    DUT_FEATURE_TO_OPTIONAL_SURFACES,
+    DUT_FEATURE_TO_REQUIRED_SURFACES,
+    provided_capabilities_from_surfaces,
+)
 from ael.compatibility.rules import check_required_set
 
 
@@ -233,3 +242,74 @@ def resolve_dut_test(
            if test_spec.requires_dut_features else "")
     )
     return DUTTestCompatibilityResult(applicable=True, reasons=reasons)
+
+
+def resolve_dut_instrument(
+    dut: Any,
+    instrument_surfaces: Dict[str, str],
+) -> DUTInstrumentCompatibilityResult:
+    """Check whether an instrument can physically/protocol interface with a DUT (Phase 3).
+
+    Examines the DUT's features to determine which instrument surface keys are
+    required (hard requirement) or optional (generates a warning if absent).
+
+    Args:
+        dut: A DUTConfig, DUTSpec, or dict describing the DUT.
+        instrument_surfaces: The instrument's capability_surfaces dict
+            (surface_key → surface_name) from its manifest.
+
+    Returns:
+        DUTInstrumentCompatibilityResult.
+    """
+    dut_spec = dut if isinstance(dut, DUTSpec) else DUTSpec.from_dut_config(dut)
+    surfaces = instrument_surfaces if isinstance(instrument_surfaces, dict) else {}
+
+    # Surfaces that are actually populated (have a non-empty surface name)
+    active_surfaces = frozenset(
+        sk for sk, sname in surfaces.items()
+        if str(sname or "").strip()
+    )
+
+    missing_surfaces: List[str] = []
+    warnings: List[str] = []
+    reasons: List[str] = []
+
+    # Required surfaces — derived from DUT features
+    required: set = set()
+    for feature in dut_spec.features:
+        req = DUT_FEATURE_TO_REQUIRED_SURFACES.get(feature, frozenset())
+        required |= req
+
+    for surface in sorted(required):
+        if surface not in active_surfaces:
+            missing_surfaces.append(surface)
+
+    # Optional surfaces — generates warnings if absent
+    for feature in dut_spec.features:
+        opt = DUT_FEATURE_TO_OPTIONAL_SURFACES.get(feature, frozenset())
+        for surface in sorted(opt):
+            if surface not in active_surfaces and surface not in required:
+                warnings.append(
+                    f"DUT feature '{feature}' benefits from '{surface}' surface "
+                    f"but instrument does not provide it"
+                )
+
+    compatible = len(missing_surfaces) == 0
+
+    if compatible:
+        reasons.append(
+            f"instrument satisfies all required surfaces for DUT '{dut_spec.board_id or dut_spec.kind}'"
+            + (f" ({len(warnings)} optional surface(s) absent)" if warnings else "")
+        )
+    else:
+        reasons.append(
+            f"instrument missing required surface(s) for DUT "
+            f"'{dut_spec.board_id or dut_spec.kind}': {', '.join(missing_surfaces)}"
+        )
+
+    return DUTInstrumentCompatibilityResult(
+        compatible=compatible,
+        reasons=reasons,
+        missing_surfaces=missing_surfaces,
+        warnings=warnings,
+    )
