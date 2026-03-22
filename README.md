@@ -135,6 +135,8 @@ A new `record_skill()` entry point allows capturing reusable engineering fixes a
 AEL has moved from pure automation toward an experience-driven engineering system.
 
 📄 [Full memo](docs/ael_experience_system_v0_1_memo_2026-03-22.md)
+📄 [Civilization Engine v0.1 Spec](docs/AEL_Civilization_Engine_V0_1_Spec.md)
+📄 [Civilization Engine essentials](docs/memo_AEL_Civilization_essentials.md)
 
 ---
 
