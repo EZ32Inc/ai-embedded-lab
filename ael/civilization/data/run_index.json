@@ -123,11 +123,17 @@
   },
   "esp32c6_devkit_dual_usb|esp32c6_dual_uart_probe_via_usb": {
     "exp_id": "be44082e-9371-4e3e-a925-51935ccdbf73",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774215905.1148767,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 2,
+    "failure_count": 1,
+    "last_seen": 1774218237.6297264,
+    "confidence": 0.6,
+    "known_failures": {
+      "build": {
+        "exp_id": "4bb233ee-3e5f-4c6b-9fe9-ab7e169f2b51",
+        "count": 1,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_dual_uart_probe_via_usb: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+      }
+    }
   },
   "esp32c6_devkit_dual_usb|esp32c6_dual_uart_probe_via_bridge": {
     "exp_id": "66d15b4f-272d-4fd9-bd1e-7c164a4d3112",

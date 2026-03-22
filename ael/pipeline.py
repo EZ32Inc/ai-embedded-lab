@@ -1252,7 +1252,9 @@ def run_pipeline(
         print(f"I am guessing {', '.join(missing_wiring)} — please confirm.")
 
     print("AI: starting pipeline")
-    civilization_client.query_context(board_id or "unknown", test_name or "unknown")
+    civilization_client.print_rules()
+    _civ_ctx = civilization_client.query_context(board_id or "unknown", test_name or "unknown")
+    _was_first_success = _civ_ctx is None or _civ_ctx.run_stats.get("success_count", 0) == 0
     if instrument_id:
         banner_name = test_name or instrument_id
         banner_host = instrument_host or "unknown"
@@ -2021,6 +2023,17 @@ def run_pipeline(
         failure_kind=result.get("failure_kind", "") or failed_step or "",
         description=result.get("error_summary", "") or "",
     )
+
+    if result.get("ok"):
+        _flash_spec = str(flash_cfg.get("instrument_spec") or "") if isinstance(flash_cfg, dict) else ""
+        _uart_spec = str((test_raw or {}).get("observe_uart", {}).get("instrument_spec") or "")
+        civilization_client.reflect_on_run(
+            board_id=board_id or "unknown",
+            test_name=test_name or "unknown",
+            was_first_success=_was_first_success,
+            flash_instrument_spec=_flash_spec,
+            uart_instrument_spec=_uart_spec,
+        )
 
     if result["ok"]:
         print("PASS: Run verified")

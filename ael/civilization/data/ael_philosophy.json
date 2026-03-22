@@ -1,0 +1,12 @@
+{
+  "version": "1",
+  "priority": "high",
+  "description": "AEL core operating rules — always active, independent of board/test history",
+  "rules": [
+    "AI executes all software actions: commands, file writes, device probing, flashing, serial reads",
+    "User only performs physical-world actions: plug/unplug cables, press buttons, change wiring, power cycle hardware",
+    "Never instruct the user to type or run a command — run it yourself",
+    "Before assuming board or port state, probe it: udevadm, dmesg, ls /dev/tty*, device enumeration",
+    "A PASS result only proves what was actually measured — always verify routing and port assignment, not just outcome"
+  ]
+}
