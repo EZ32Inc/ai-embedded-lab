@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
-from ael.connection_model import build_connection_setup, render_connection_setup_text
+from ael.connection_model import build_connection_setup, render_connection_setup_text, _as_board_dict
 from ael.pipeline import _simple_yaml_load
 from ael.config_resolver import (
     resolve_control_instrument_config,
@@ -124,24 +124,24 @@ def _control_instrument_selection(ctx: Dict[str, Any]) -> Dict[str, Any] | None:
 
 def _selected_dut_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx.get("resolved")
-    board_cfg = resolved.board_cfg if resolved is not None else {}
+    board_cfg = _as_board_dict(resolved.board_cfg if resolved is not None else {})
     ownership_kind = str(ctx.get("ownership_kind") or "board_owned").strip() or "board_owned"
     return {
         "id": board_id,
-        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
-        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "name": board_cfg.get("name"),
+        "target": board_cfg.get("target"),
         "runtime_binding": "board_profile_driven" if ownership_kind == "board_owned" else "instrument_owned_plan",
     }
 
 
 def _selected_board_profile_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx.get("resolved")
-    board_cfg = resolved.board_cfg if resolved is not None else {}
+    board_cfg = _as_board_dict(resolved.board_cfg if resolved is not None else {})
     ownership_kind = str(ctx.get("ownership_kind") or "board_owned").strip() or "board_owned"
     return {
         "id": board_id,
-        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
-        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "name": board_cfg.get("name"),
+        "target": board_cfg.get("target"),
         "config": ctx.get("board_path"),
         "role": "runtime_policy" if ownership_kind == "board_owned" else "instrument_plan_context",
     }
@@ -289,7 +289,7 @@ def _load_context(board_id: str, test_path: str, repo_root: Path) -> Dict[str, A
 
 def _plan_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
     resolved = ctx["resolved"]
-    board_cfg = resolved.board_cfg
+    board_cfg = _as_board_dict(resolved.board_cfg)
     test_raw = ctx["test_raw"]
     metadata = extract_plan_metadata(test_raw)
     explanation = _metadata_explanation(metadata)
@@ -480,7 +480,7 @@ def _preflight_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _run_payload(board_id: str, ctx: Dict[str, Any]) -> Dict[str, Any]:
-    board_cfg = ctx["resolved"].board_cfg
+    board_cfg = _as_board_dict(ctx["resolved"].board_cfg)
     build_kind, _, _ = resolve_build_stage(board_cfg=board_cfg, verify_only=False, no_build=False, repo_root=REPO_ROOT, output_mode="quiet", build_log_path="<build_log>")
     flash_cfg = (board_cfg.get("flash") or {}) if isinstance(board_cfg.get("flash"), dict) else {}
     return {

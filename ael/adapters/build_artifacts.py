@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Any
 
+from ael.connection_model import _as_board_dict
+
 
 def default_firmware_path(repo_root: Path, board_cfg: Dict[str, Any], build_kind: str) -> str:
+    board_cfg = _as_board_dict(board_cfg)
     # Adapter-layer artifact naming hints used by no-build fallback mode.
     if build_kind == "arm_debug":
         build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}

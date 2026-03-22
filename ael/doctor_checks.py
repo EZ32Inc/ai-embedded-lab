@@ -109,7 +109,13 @@ def validate_config(probe_raw, board_raw, test_raw):
     if not (probe.get("gdb_port") or conn.get("gdb_port")):
         issues.append("probe gdb_port missing")
 
-    board = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
+    if hasattr(board_raw, "to_legacy_dict"):
+        board = board_raw.to_legacy_dict()
+    elif isinstance(board_raw, dict):
+        raw_board = board_raw.get("board", {})
+        board = raw_board if isinstance(raw_board, dict) else {}
+    else:
+        board = {}
     if not board.get("name"):
         issues.append("board.name missing")
     if not board.get("target"):

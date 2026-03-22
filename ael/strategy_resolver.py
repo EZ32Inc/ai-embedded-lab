@@ -222,11 +222,13 @@ def resolve_run_strategy(
     repo_root: Path,
 ) -> ResolvedRunStrategy:
     probe_cfg = normalize_probe_cfg(probe_raw)
-    board_cfg = board_raw.get("board", {}) if isinstance(board_raw, dict) else {}
-    if not isinstance(board_cfg, dict):
-        board_cfg = {}
+    if hasattr(board_raw, "to_legacy_dict"):
+        board_cfg = board_raw.to_legacy_dict()
+    elif isinstance(board_raw, dict):
+        raw_board = board_raw.get("board", {})
+        board_cfg = dict(raw_board) if isinstance(raw_board, dict) else {}
     else:
-        board_cfg = dict(board_cfg)
+        board_cfg = {}
 
     test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
     firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None

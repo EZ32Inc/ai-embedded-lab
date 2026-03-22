@@ -3,12 +3,15 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from ael.connection_model import _as_board_dict
+
 
 def _toolchain_ok():
     return shutil.which("arm-none-eabi-gcc") is not None
 
 
 def run(board_cfg):
+    board_cfg = _as_board_dict(board_cfg)
     name = board_cfg.get("name", "unknown")
     print(f"Build: target {name}")
 

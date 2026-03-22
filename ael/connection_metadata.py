@@ -200,7 +200,12 @@ def validate_connection_metadata(
     board_cfg: Dict[str, Any] | Any,
     test_raw: Dict[str, Any] | Any,
 ) -> List[str]:
-    board = board_cfg if isinstance(board_cfg, dict) else {}
+    if hasattr(board_cfg, "to_legacy_dict"):
+        board = board_cfg.to_legacy_dict()
+    elif isinstance(board_cfg, dict):
+        board = board_cfg
+    else:
+        board = {}
     test = test_raw if isinstance(test_raw, dict) else {}
     errors: List[str] = []
     errors.extend(validate_default_wiring(board.get("default_wiring")))

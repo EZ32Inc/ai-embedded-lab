@@ -2,12 +2,15 @@ import os
 import shutil
 import subprocess
 
+from ael.connection_model import _as_board_dict
+
 
 def _idf_ok():
     return shutil.which("idf.py") is not None
 
 
 def run(board_cfg):
+    board_cfg = _as_board_dict(board_cfg)
     name = board_cfg.get("name", "unknown")
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
     project_dir = build_cfg.get("project_dir")

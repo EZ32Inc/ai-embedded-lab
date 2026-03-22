@@ -2,6 +2,8 @@ import os
 import shutil
 import subprocess
 
+from ael.connection_model import _as_board_dict
+
 
 def _resolve_project_dir(root, board_cfg):
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg.get("build"), dict) else {}
@@ -56,6 +58,7 @@ def _toolchain_ok():
 
 
 def run(board_cfg):
+    board_cfg = _as_board_dict(board_cfg)
     name = board_cfg.get("name", "unknown")
     print(f"Build: target {name}")
 

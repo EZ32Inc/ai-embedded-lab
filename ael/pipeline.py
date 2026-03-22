@@ -19,7 +19,7 @@ from ael.runner import run_plan
 from ael.run_contract import RunRequest, RunTermination
 from ael import strategy_resolver
 from ael.config_resolver import resolve_control_instrument_instance
-from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines
+from ael.connection_model import build_connection_digest, build_connection_setup, wiring_assumption_lines, _as_board_dict
 from ael.probe_binding import empty_probe_binding, load_probe_binding
 from ael.verification_model import summarize_resource_keys
 
@@ -375,23 +375,25 @@ def _control_instrument_payload(
 
 
 def _selected_dut_payload(*, board_id, board_cfg):
-    if not board_id and not isinstance(board_cfg, dict):
+    board_cfg = _as_board_dict(board_cfg)
+    if not board_id and not board_cfg:
         return None
     return {
         "id": board_id or None,
-        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
-        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "name": board_cfg.get("name"),
+        "target": board_cfg.get("target"),
         "runtime_binding": "board_profile_driven",
     }
 
 
 def _selected_board_profile_payload(*, board_id, board_cfg):
-    if not board_id and not isinstance(board_cfg, dict):
+    board_cfg = _as_board_dict(board_cfg)
+    if not board_id and not board_cfg:
         return None
     return {
         "id": board_id or None,
-        "name": board_cfg.get("name") if isinstance(board_cfg, dict) else None,
-        "target": board_cfg.get("target") if isinstance(board_cfg, dict) else None,
+        "name": board_cfg.get("name"),
+        "target": board_cfg.get("target"),
         "config": (f"configs/boards/{board_id}.yaml" if board_id else None),
         "role": "runtime_policy",
     }
