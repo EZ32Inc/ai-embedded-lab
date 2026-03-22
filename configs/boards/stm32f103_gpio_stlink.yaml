@@ -3,6 +3,10 @@ board:
   target: stm32f103c8t6
   instrument_instance: stlink_stm32f103_gpio
   clock_hz: 8000000
+  kind: bare_mcu
+  features:
+    - programmable_via_swd
+    - has_gpio
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f103_gpio_no_external_capture

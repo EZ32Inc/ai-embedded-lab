@@ -1,6 +1,12 @@
 board:
   name: ESP32-C6 DevKit
   target: esp32c6
+  kind: board
+  features:
+    - programmable_via_jtag
+    - has_uart_console
+    - has_gpio
+    - has_adc
   processors:
     - id: esp32c6
       arch: riscv

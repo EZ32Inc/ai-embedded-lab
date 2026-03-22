@@ -4,6 +4,8 @@
   "name": "stm32f103_gpio_no_external_capture_stlink",
   "board": "stm32f103_gpio_stlink",
   "required_capabilities": ["flash_program", "debug_attach", "reset_control"],
+  "applies_to": ["board", "bare_mcu"],
+  "requires_dut_features": ["programmable_via_swd", "has_gpio"],
   "supported_instruments": ["stlink"],
   "requires": {
     "mailbox": true,

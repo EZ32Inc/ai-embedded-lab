@@ -300,3 +300,152 @@ class TestExplain:
         text = explain_plan(plan)
         assert "NOT EXECUTABLE" in text
         assert "logic_capture" in text
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: DUT ↔ Test applicability
+# ---------------------------------------------------------------------------
+
+from ael.compatibility.model import DUTSpec, DUTTestCompatibilityResult, TestApplicabilitySpec
+from ael.compatibility.resolver import resolve_dut_test
+
+
+class TestDUTSpec:
+    def test_from_dut_config_object(self):
+        class FakeDUT:
+            kind = "board"
+            features = ["programmable_via_swd", "has_gpio"]
+            board_id = "test_board"
+
+        spec = DUTSpec.from_dut_config(FakeDUT())
+        assert spec.kind == "board"
+        assert "programmable_via_swd" in spec.features
+        assert spec.board_id == "test_board"
+
+    def test_from_dict(self):
+        spec = DUTSpec.from_dut_config({"kind": "bare_mcu", "features": ["has_gpio"]})
+        assert spec.kind == "bare_mcu"
+        assert "has_gpio" in spec.features
+
+    def test_from_empty(self):
+        spec = DUTSpec.from_dut_config({})
+        assert spec.kind == "board"
+        assert spec.features == frozenset()
+
+    def test_from_none(self):
+        spec = DUTSpec.from_dut_config(None)
+        assert spec.kind == "board"
+
+
+class TestTestApplicabilitySpec:
+    def test_from_test_raw(self):
+        raw = {
+            "applies_to": ["board", "bare_mcu"],
+            "requires_dut_features": ["programmable_via_swd", "has_gpio"],
+            "excludes_tags": ["not_programmable"],
+        }
+        spec = TestApplicabilitySpec.from_test_raw(raw)
+        assert "board" in spec.applies_to
+        assert "bare_mcu" in spec.applies_to
+        assert "programmable_via_swd" in spec.requires_dut_features
+        assert "not_programmable" in spec.excludes_tags
+
+    def test_empty_applies_to_means_all(self):
+        spec = TestApplicabilitySpec.from_test_raw({})
+        assert spec.applies_to == frozenset()
+
+
+class TestResolveDUTTest:
+    def _board_dut(self, features=None):
+        return DUTSpec(kind="board", features=frozenset(features or ["programmable_via_swd", "has_gpio"]))
+
+    def _gpio_sig_test(self):
+        return {
+            "applies_to": ["board", "bare_mcu"],
+            "requires_dut_features": ["programmable_via_swd", "has_gpio"],
+        }
+
+    def test_applicable_board_with_all_features(self):
+        result = resolve_dut_test(self._board_dut(), self._gpio_sig_test())
+        assert result.applicable is True
+        assert not result.missing_features
+
+    def test_wrong_dut_kind(self):
+        dut = DUTSpec(kind="fpga_target", features=frozenset(["programmable_via_swd", "has_gpio"]))
+        result = resolve_dut_test(dut, self._gpio_sig_test())
+        assert result.applicable is False
+        assert "fpga_target" in result.reasons[0]
+
+    def test_missing_required_feature(self):
+        dut = DUTSpec(kind="board", features=frozenset(["has_gpio"]))  # no programmable_via_swd
+        result = resolve_dut_test(dut, self._gpio_sig_test())
+        assert result.applicable is False
+        assert "programmable_via_swd" in result.missing_features
+
+    def test_excluded_by_tag(self):
+        dut = DUTSpec(kind="board", features=frozenset(["programmable_via_swd", "has_gpio", "not_programmable"]))
+        test = {
+            "applies_to": ["board"],
+            "requires_dut_features": ["has_gpio"],
+            "excludes_tags": ["not_programmable"],
+        }
+        result = resolve_dut_test(dut, test)
+        assert result.applicable is False
+        assert "not_programmable" in result.excluded_by
+
+    def test_no_applies_to_matches_all_kinds(self):
+        # If applies_to is absent, test applies to all DUT kinds
+        dut = DUTSpec(kind="fpga_target", features=frozenset())
+        result = resolve_dut_test(dut, {})  # no applies_to
+        assert result.applicable is True
+
+    def test_accepts_dutconfig_object(self):
+        class FakeDUT:
+            kind = "board"
+            features = ["programmable_via_swd", "has_gpio"]
+            board_id = "test"
+        result = resolve_dut_test(FakeDUT(), self._gpio_sig_test())
+        assert result.applicable is True
+
+    def test_bare_mcu_kind_applicable(self):
+        dut = DUTSpec(kind="bare_mcu", features=frozenset(["programmable_via_swd", "has_gpio"]))
+        result = resolve_dut_test(dut, self._gpio_sig_test())
+        assert result.applicable is True
+
+    def test_esp32c6_meter_test(self):
+        dut = DUTSpec(kind="board", features=frozenset(["programmable_via_jtag", "has_uart_console", "has_gpio", "has_adc"]))
+        test = {
+            "applies_to": ["board", "soc"],
+            "requires_dut_features": ["has_gpio", "has_adc"],
+        }
+        result = resolve_dut_test(dut, test)
+        assert result.applicable is True
+
+    def test_dut_loader_integration(self):
+        """DUTConfig loaded from board YAML has kind and features parsed."""
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "stm32f411ceu6")
+        assert dut.kind == "board"
+        assert "programmable_via_swd" in dut.features
+        assert "has_gpio" in dut.features
+
+    def test_dut_loader_stm32f103_stlink(self):
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "stm32f103_gpio_stlink")
+        assert dut.kind == "bare_mcu"
+        assert "programmable_via_swd" in dut.features
+
+    def test_end_to_end_stm32f411_applicable(self):
+        from pathlib import Path
+        from ael.dut.registry import load_dut_from_file
+        import json
+        repo_root = Path(__file__).resolve().parents[1]
+        dut = load_dut_from_file(repo_root, "stm32f411ceu6")
+        with open(repo_root / "tests/plans/stm32f411_gpio_signature.json") as f:
+            test_raw = json.load(f)
+        result = resolve_dut_test(dut, test_raw)
+        assert result.applicable is True

@@ -12,6 +12,8 @@
   "labels": ["meter", "instrument_path"],
   "covers": ["gpio", "voltage"],
   "required_capabilities": ["flash_program", "logic_capture", "voltage_measure", "serial_console"],
+  "applies_to": ["board", "soc"],
+  "requires_dut_features": ["has_gpio", "has_adc"],
   "firmware": "assets_golden/duts/esp32c6_devkit/gpio_signature/firmware",
   "preflight": {
     "enabled": false

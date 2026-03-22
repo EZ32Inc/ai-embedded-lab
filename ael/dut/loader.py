@@ -93,9 +93,13 @@ def load_dut(board_id: str, raw: Dict[str, Any]) -> DUTConfig:
     known_keys = {
         "name", "target", "processors", "build", "flash",
         "observe_map", "observe", "pins", "capabilities",
-        "instrument", "clock_hz",
+        "instrument", "clock_hz", "kind", "features",
     }
     extra = {k: v for k, v in raw.items() if k not in known_keys}
+
+    kind = str(raw.get("kind") or "board").strip() or "board"
+    raw_features = raw.get("features")
+    features = [str(f).strip() for f in raw_features if str(f).strip()] if isinstance(raw_features, list) else []
 
     return DUTConfig(
         board_id=board_id,
@@ -109,4 +113,6 @@ def load_dut(board_id: str, raw: Dict[str, Any]) -> DUTConfig:
         capabilities=dict(raw.get("capabilities") or {}),
         instrument=dict(raw.get("instrument") or {}),
         extra=extra,
+        kind=kind,
+        features=features,
     )

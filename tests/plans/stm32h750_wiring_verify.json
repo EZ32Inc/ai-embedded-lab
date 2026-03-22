@@ -4,6 +4,8 @@
   "name": "stm32h750_wiring_verify",
   "board": "stm32h750vbt6",
   "required_capabilities": ["flash_program", "debug_attach", "reset_control"],
+  "applies_to": ["board", "bare_mcu"],
+  "requires_dut_features": ["programmable_via_swd", "has_gpio"],
   "supported_instruments": ["esp32jtag"],
   "requires": {
     "mailbox": true,

@@ -1,21 +1,27 @@
-"""Compatibility resolver — Phase 1: Test ↔ Instrument.
+"""Compatibility resolver.
 
-Public API:
+Phase 1: Test ↔ Instrument capability matching.
     resolve_test_instrument(required_capabilities, instrument_surfaces)
         → CompatibilityResult
-
     resolve_execution_plan(required_capabilities, instruments)
         → ExecutionPlan
+
+Phase 2: DUT ↔ Test applicability.
+    resolve_dut_test(dut_spec_or_cfg, test_raw)
+        → DUTTestCompatibilityResult
 """
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from ael.compatibility.model import (
     CompatibilityResult,
+    DUTSpec,
+    DUTTestCompatibilityResult,
     ExecutionPlan,
     Requirement,
+    TestApplicabilitySpec,
 )
 from ael.compatibility.registry import provided_capabilities_from_surfaces
 from ael.compatibility.rules import check_required_set
@@ -164,3 +170,66 @@ def resolve_execution_plan(
             f"add an instrument that provides: {', '.join(partial.missing_capabilities)}"
         ],
     )
+
+
+def resolve_dut_test(
+    dut: Any,
+    test_raw: Any,
+) -> DUTTestCompatibilityResult:
+    """Check whether a test plan applies to a given DUT (Phase 2).
+
+    Args:
+        dut: A DUTConfig, DUTSpec, or dict describing the DUT.
+        test_raw: Test plan dict (may declare applies_to, requires_dut_features,
+            excludes_tags).
+
+    Returns:
+        DUTTestCompatibilityResult indicating whether the test applies.
+    """
+    dut_spec = dut if isinstance(dut, DUTSpec) else DUTSpec.from_dut_config(dut)
+    test_spec = TestApplicabilitySpec.from_test_raw(test_raw)
+
+    reasons: List[str] = []
+    missing_features: List[str] = []
+    excluded_by: List[str] = []
+
+    # Check kind applicability (skip if applies_to is empty → test applies to all)
+    if test_spec.applies_to and dut_spec.kind not in test_spec.applies_to:
+        return DUTTestCompatibilityResult(
+            applicable=False,
+            reasons=[
+                f"DUT kind '{dut_spec.kind}' not in test's applies_to "
+                f"{sorted(test_spec.applies_to)}"
+            ],
+        )
+
+    # Check required DUT features
+    for feature in test_spec.requires_dut_features:
+        if feature not in dut_spec.features:
+            missing_features.append(feature)
+
+    # Check excludes
+    for tag in test_spec.excludes_tags:
+        if tag in dut_spec.features:
+            excluded_by.append(tag)
+
+    if excluded_by:
+        return DUTTestCompatibilityResult(
+            applicable=False,
+            reasons=[f"DUT has excluded tag(s): {', '.join(excluded_by)}"],
+            excluded_by=excluded_by,
+        )
+
+    if missing_features:
+        return DUTTestCompatibilityResult(
+            applicable=False,
+            reasons=[f"DUT missing required feature(s): {', '.join(missing_features)}"],
+            missing_features=missing_features,
+        )
+
+    reasons.append(
+        f"DUT kind '{dut_spec.kind}' is applicable"
+        + (f"; all {len(test_spec.requires_dut_features)} required features present"
+           if test_spec.requires_dut_features else "")
+    )
+    return DUTTestCompatibilityResult(applicable=True, reasons=reasons)

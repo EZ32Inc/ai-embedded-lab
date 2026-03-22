@@ -48,6 +48,9 @@ class DUTConfig:
     capabilities: Dict[str, Any] = field(default_factory=dict)
     instrument: Dict[str, Any] = field(default_factory=dict)
     extra: Dict[str, Any] = field(default_factory=dict)
+    # Phase 2: DUT↔Test applicability
+    kind: str = "board"                    # bare_mcu | soc | board | module | fpga_target | mixed_system
+    features: List[str] = field(default_factory=list)  # e.g. ["programmable_via_swd", "has_gpio"]
 
     # ── Backward-compat accessors ──────────────────────────────────────────
 

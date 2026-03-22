@@ -3,6 +3,11 @@ board:
   target: stm32f411ceu6
   instrument_instance: esp32jtag_stm32f411
   clock_hz: 16000000
+  kind: board
+  features:
+    - programmable_via_swd
+    - has_reset_pin
+    - has_gpio
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f411ceu6
