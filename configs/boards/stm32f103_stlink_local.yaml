@@ -1,0 +1,47 @@
+# STM32F103 board — local STLink (st-flash direct, no GDB server)
+#
+# Same target as stm32f103_gpio_stlink but flash goes through
+# the v1 instrument spec (stlink_local backend) instead of
+# the existing GDB/st-util pipeline.
+#
+# Proves that the stlink instrument family supports both:
+#   - network_rpc / GDB path (existing)
+#   - stlink_local / st-flash direct path (new)
+
+board:
+  name: STM32F103 Bluepill — local STLink (st-flash)
+  target: stm32f103c8t6
+  instrument_instance: stlink_stm32f103_gpio
+  clock_hz: 8000000
+  kind: bare_mcu
+  features:
+    - programmable_via_swd
+    - has_gpio
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f103_gpio_no_external_capture
+    artifact_stem: stm32f103_gpio_no_external_capture_app
+  flash:
+    instrument_spec: stlink_f103_local   # route flash through spec executor -> st-flash
+    flash_addr: "0x8000000"
+    speed_khz: 1000
+    reset_strategy: none
+    post_load_settle_s: 2.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "load"
+      - "monitor reset run"
+      - "disconnect"
+  mailbox_verify_defaults:
+    skip_attach: true
+  default_wiring:
+    swd: "external"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VDD
+        nominal_v: 3.3

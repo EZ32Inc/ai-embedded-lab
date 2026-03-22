@@ -277,10 +277,16 @@ class _LoadAdapter:
             firmware_path = state.get("firmware_path")
         if not firmware_path:
             return {"ok": False, "error_summary": "missing firmware path"}
+        instrument_spec_name = str(flash_cfg.get("instrument_spec") or "").strip() if isinstance(flash_cfg, dict) else ""
         if log_path and self.method == "idf_esptool":
             with _tee_output(log_path, output_mode):
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
             payload = {"ok": bool(ok), "method": "idf_esptool"}
+        elif instrument_spec_name:
+            result = _run_flash_via_instrument_spec(instrument_spec_name, firmware_path, flash_cfg)
+            ok = bool(result.get("ok", False))
+            payload = {"ok": ok, "status": "ok" if ok else "error", "method": f"spec:{instrument_spec_name}",
+                       "error": {"message": result.get("error", "flash failed")} if not ok else {}}
         else:
             if self.method == "idf_esptool":
                 ok = flash_idf.run(probe_cfg, firmware_path, flash_cfg=flash_cfg, flash_json_path=flash_json_path)
@@ -327,6 +333,29 @@ class _LoadAdapter:
                 }
                 _save_runtime_state(ctx, state)
         return {"ok": True}
+
+
+def _run_flash_via_instrument_spec(
+    spec_name: str,
+    firmware_path: str,
+    flash_cfg: Dict[str, Any],
+) -> Dict[str, Any]:
+    """Route flash through a v1 instrument spec.
+
+    Used when flash_cfg contains an 'instrument_spec' key naming a spec in
+    configs/instrument_specs/.  Calls the spec's 'flash' action via spec_executor.
+    """
+    from ael.instruments.spec_loader import load_specs_dir
+    from ael.instruments.spec_executor import execute_spec_action
+
+    specs_dir = Path(__file__).resolve().parent.parent / "configs" / "instrument_specs"
+    specs = load_specs_dir(specs_dir)
+    spec = specs.get(spec_name)
+    if spec is None:
+        return {"ok": False, "error": f"instrument spec '{spec_name}' not found in {specs_dir}"}
+
+    flash_addr = str(flash_cfg.get("flash_addr") or "0x8000000")
+    return execute_spec_action(spec, "flash", {"firmware": firmware_path, "flash_addr": flash_addr})
 
 
 def _run_uart_via_instrument_spec(spec_name: str, cfg: Dict[str, Any], raw_log_path: str) -> Dict[str, Any]:

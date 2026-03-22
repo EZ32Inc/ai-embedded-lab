@@ -1,0 +1,28 @@
+# Instrument Spec v1 — Local STLink (stlink_local backend)
+#
+# Describes a locally-connected ST-Link programmer using st-flash directly.
+# No network wrapper. No GDB server (st-util) required.
+# st-flash binary: instruments/STLinkInstrument/install/bin/st-flash
+#
+# Proves the same instrument family (stlink) supports both:
+#   - network_rpc (existing: GDB -> TCP -> remote st-util)
+#   - stlink_local (new: st-flash via USB, no network layer)
+
+schema_version: 1
+
+instrument:
+  id: stlink_f103_local
+  kind: stlink
+
+  capabilities:
+    - flash
+    - reset
+
+  actions:
+    - name: flash
+      backend: stlink_local
+      params: [firmware, flash_addr]
+
+    - name: reset
+      backend: stlink_local
+      params: []

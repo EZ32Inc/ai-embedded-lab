@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f103_stlink_local_smoke",
+  "board": "stm32f103_stlink_local",
+  "required_capabilities": ["flash_program", "debug_attach", "reset_control"],
+  "applies_to": ["board", "bare_mcu"],
+  "requires_dut_features": ["programmable_via_swd", "has_gpio"],
+  "supported_instruments": ["stlink"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "selftest_only"],
+  "covers": ["gpio"],
+  "notes": "Validation program for local STLink instrument spec v1. Flash goes through stlink_local backend (st-flash direct) instead of GDB/st-util. Verify via mailbox confirms the flashed firmware ran correctly.",
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103_gpio_no_external_capture",
+    "artifact_stem": "stm32f103_gpio_no_external_capture_app",
+    "build_dir": "artifacts/build_stm32f103_stlink_local_smoke"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "addr": "0x20004C00",
+    "settle_s": 1.0
+  },
+  "bench_setup": {
+    "notes": "ST-Link connected via USB. No external GPIO capture required. Flash uses st-flash directly (stlink_local spec path). Firmware performs GPIO self-check on PA4-PA7 and PC13, reports result via AEL mailbox.",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_SELFTEST_BUS",
+        "dut_signal": "PA4..PA7",
+        "direction": "output"
+      },
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "PC13",
+        "direction": "output"
+      }
+    ]
+  }
+}

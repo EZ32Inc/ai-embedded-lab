@@ -412,6 +412,30 @@
           "reason": "Broadens family coverage, but M0 support is a sharper change than STM32G431."
         }
       }
+    },
+    {
+      "board_id": "stm32f103_stlink_local",
+      "target_id": "stm32f103c8t6",
+      "display_name": "STM32F103 Bluepill \u2014 local STLink (st-flash)",
+      "family": "stm32f1",
+      "generation_class": "verified_local_baseline",
+      "validation_status": "plan_verified_only",
+      "baseline_recommendation": "candidate",
+      "notes": [
+        "Variant of stm32f103_gpio_stlink using st-flash direct (no GDB/st-util).",
+        "First validation case for stlink_local instrument spec v1 backend.",
+        "Flash path goes through spec_executor -> st-flash binary."
+      ],
+      "pilot_assessment": {
+        "process_hardening": {
+          "recommendation": "not_selected",
+          "reason": "Instrument spec validation board; not a general hardening candidate."
+        },
+        "cross_family_proof": {
+          "recommendation": "not_selected",
+          "reason": "Same F1 family as existing baseline; not broadening family coverage."
+        }
+      }
     }
   ],
   "second_pilot_recommendation": {
