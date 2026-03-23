@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_temperature",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["temperature", "selftest_only"],
+  "covers": ["temperature_sensor"],
+  "notes": "Reads internal temperature sensor 5 times via temperature_sensor_get_celsius(). No wires required.",
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_temperature",
+    "artifact_stem": "ael_esp32c5_temperature",
+    "build_dir": "artifacts/build_esp32c5_temperature"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 15,
+    "expect_patterns": [
+      "AEL_TEMP",
+      "AEL_TEMP DONE"
+    ]
+  }
+}

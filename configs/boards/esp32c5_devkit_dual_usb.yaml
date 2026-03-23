@@ -28,7 +28,7 @@ board:
   flash:
     method: idf_esptool
     target: esp32c5
-    port: /dev/ttyACM3        # native USB Serial/JTAG (Espressif, MAC 3C:DC:75:84:A6:54)
+    port: /dev/ttyACM0        # UART bridge CH341 (GPIO11/12)
     baud: 460800
     serial: null
   pins:

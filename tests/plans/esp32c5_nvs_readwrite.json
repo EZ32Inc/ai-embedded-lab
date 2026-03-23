@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_nvs_readwrite",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["nvs", "flash", "selftest_only"],
+  "covers": ["nvs"],
+  "notes": "Writes 0xDEADBEEF to NVS, reads it back, compares. Proves flash write/read path. No wires required.",
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_nvs_readwrite",
+    "artifact_stem": "ael_esp32c5_nvs_readwrite",
+    "build_dir": "artifacts/build_esp32c5_nvs_readwrite"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 10,
+    "expect_patterns": [
+      "AEL_NVS PASS"
+    ]
+  }
+}

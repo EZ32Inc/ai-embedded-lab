@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_uart0_loopback",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["uart", "loopback"],
+  "covers": ["uart"],
+  "notes": "Wire A: GPIO18 (UART1 TX) → GPIO19 (UART1 RX). UART0 (GPIO11/12) is the CH341 bridge and cannot be used for loopback. UART1 on free GPIO18/19 proves the UART peripheral and pin-mux path. Console on UART0 → observed on ACM0.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO18", "to": "GPIO19", "label": "Wire A — UART1 TX→RX loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_uart0_loopback",
+    "artifact_stem": "ael_esp32c5_uart0_loopback",
+    "build_dir": "artifacts/build_esp32c5_uart0_loopback"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 40,
+    "expect_patterns": [
+      "AEL_UART1_LOOP PASS"
+    ]
+  }
+}

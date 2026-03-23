@@ -1,0 +1,32 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_wifi_dual_band",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["wifi", "selftest_only"],
+  "covers": ["wifi_2g", "wifi_5g"],
+  "notes": "Scans 2.4 GHz and 5 GHz separately using esp_wifi_set_band_mode(). ESP32-C5 is the only ESP32 with native 5 GHz support. No wires required.",
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_wifi_dual_band",
+    "artifact_stem": "ael_esp32c5_wifi_dual_band",
+    "build_dir": "artifacts/build_esp32c5_wifi_dual_band"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 30,
+    "expect_patterns": [
+      "AEL_WIFI2G FOUND:",
+      "AEL_WIFI5G FOUND:",
+      "AEL_WIFI DONE"
+    ]
+  }
+}

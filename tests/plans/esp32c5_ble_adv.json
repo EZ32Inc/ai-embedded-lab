@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_ble_adv",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["ble", "selftest_only"],
+  "covers": ["ble"],
+  "notes": "Starts NimBLE non-connectable advertising and confirms the stack syncs. No wires required.",
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_ble_adv",
+    "artifact_stem": "ael_esp32c5_ble_adv",
+    "build_dir": "artifacts/build_esp32c5_ble_adv"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 15,
+    "expect_patterns": [
+      "AEL_BLE PASS"
+    ]
+  }
+}

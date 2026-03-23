@@ -1,0 +1,17 @@
+{
+  "name": "esp32c5_minimal_wiring",
+  "board": "esp32c5_devkit_dual_usb",
+  "preflight": {
+    "enabled": false
+  },
+  "notes": "ESP32-C5 minimal wiring validation pack — 7 experiments covering all major peripherals with only 3 short jumper wires. Run zero-wire group first, then add wires one at a time. Wire A: GPIO11→GPIO12 (UART0 loopback). Wire B: GPIO0→GPIO1 (GPIO/ADC). Wire C: GPIO7→GPIO2 (SPI MOSI→MISO).",
+  "tests": [
+    "tests/plans/esp32c5_wifi_dual_band.json",
+    "tests/plans/esp32c5_temperature.json",
+    "tests/plans/esp32c5_nvs_readwrite.json",
+    "tests/plans/esp32c5_ble_adv.json",
+    "tests/plans/esp32c5_uart0_loopback.json",
+    "tests/plans/esp32c5_gpio_adc_loopback.json",
+    "tests/plans/esp32c5_spi_loopback.json"
+  ]
+}

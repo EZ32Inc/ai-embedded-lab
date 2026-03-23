@@ -1,0 +1,35 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c5_spi_loopback",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["spi", "loopback"],
+  "covers": ["spi"],
+  "notes": "Wire C: GPIO7 (SPI2 MOSI) → GPIO2 (SPI2 MISO). Transmits 8-byte pattern and verifies echo. CLK=GPIO6, CS=GPIO10. Proves SPI2 peripheral and bus path.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO7", "to": "GPIO2", "label": "Wire C — SPI2 MOSI → MISO loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_spi_loopback",
+    "artifact_stem": "ael_esp32c5_spi_loopback",
+    "build_dir": "artifacts/build_esp32c5_spi_loopback"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 10,
+    "expect_patterns": [
+      "AEL_SPI PASS"
+    ]
+  }
+}
