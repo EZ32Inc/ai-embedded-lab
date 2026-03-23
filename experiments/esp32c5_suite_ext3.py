@@ -14,8 +14,8 @@ All wiring (6 jumpers):
   GPIO4  ↔ GPIO5    UART1 TX ↔ RX
   GPIO6  →  GPIO1   ADC loopback
   GPIO7  ↔ GPIO9    SPI MOSI ↔ MISO
-  GPIO8  ↔ GPIO16   I2C SDA master ↔ slave
-  GPIO13 ↔ GPIO17   I2C SCL master ↔ slave
+  GPIO8  ↔ GPIO14   I2C SDA master ↔ slave
+  GPIO13 ↔ GPIO23   I2C SCL master ↔ slave
 
 Ports:
   Flash   — Native USB Serial/JTAG  3C:DC:75:84:A6:54

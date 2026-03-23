@@ -11,8 +11,8 @@
  *   GPIO4  ↔  GPIO5    UART1 TX ↔ RX
  *   GPIO6  →  GPIO1    ADC loopback
  *   GPIO7  ↔  GPIO9    SPI MOSI ↔ MISO
- *   GPIO8  ↔  GPIO16   I2C SDA master ↔ slave   ← NEW
- *   GPIO13 ↔  GPIO17   I2C SCL master ↔ slave   ← NEW
+ *   GPIO8  ↔  GPIO14   I2C SDA master ↔ slave   ← NEW
+ *   GPIO13 ↔  GPIO23   I2C SCL master ↔ slave   ← NEW
  *   GPIO0  = SPI CLK   (output only)
  *   GPIO10 = SPI CS    (output only)
  *
@@ -88,8 +88,8 @@
 #define I2C_MASTER_SDA    GPIO_NUM_8
 #define I2C_MASTER_SCL    GPIO_NUM_13
 #define I2C_SLAVE_PORT    ((i2c_port_num_t)1)   /* ESP32-C5 has 2 I2C controllers */
-#define I2C_SLAVE_SDA     GPIO_NUM_16
-#define I2C_SLAVE_SCL     GPIO_NUM_17
+#define I2C_SLAVE_SDA     GPIO_NUM_14
+#define I2C_SLAVE_SCL     GPIO_NUM_23
 #define I2C_SLAVE_ADDR    0x5A
 #define I2C_SPEED_HZ      100000
 #define I2C_BUF_LEN       8
@@ -434,8 +434,8 @@ static void test_spi(void)
 /* ── 12. I2C master/slave loopback ──────────────
  *
  * I2C0 (master) GPIO8=SDA  GPIO13=SCL
- * I2C1 (slave)  GPIO16=SDA GPIO17=SCL
- * Jumper:  GPIO8 ↔ GPIO16,  GPIO13 ↔ GPIO17
+ * I2C1 (slave)  GPIO14=SDA GPIO23=SCL
+ * Jumper:  GPIO8 ↔ GPIO14,  GPIO13 ↔ GPIO23
  *
  * v5.5.x new slave API:
  *   i2c_slave_receive()  — non-blocking, arms a DMA buffer
