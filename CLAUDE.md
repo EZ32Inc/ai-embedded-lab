@@ -100,6 +100,15 @@ run_index.record_success(board_id, test_name, exp_id)
 | 资产 | EE ID | 适用范围 | confidence |
 |------|-------|---------|-----------|
 | Minimal-Instrument Board Bring-up Pattern | `933fc74a` | ESP32 / RISC-V 双USB开发板 | 0.5→提升中 |
+| **[HIGH_PRIORITY] IRAM_ATTR variable + PMP_IDRAM_SPLIT = Store fault** | `d26958c3` | ESP32-C5 / PMP IDRAM split 目标 | 0.5 |
+
+## ESP32-C5 board_family 已知陷阱
+
+| 问题 | EE ID | 修法 |
+|------|-------|------|
+| gpio_install_isr_service 须在 WiFi/BLE 之前调用 | `dbdf36fb` | app_main 最前面先调用 |
+| app_main 默认栈 3584 不够用（11 drivers） | `73f41c63` | sdkconfig: ESP_MAIN_TASK_STACK_SIZE=8192 |
+| GPIO interrupt 测试须在 PCNT 之前跑 | `92297155` | 共享 pin 时 PCNT 必须最后占用 |
 
 ---
 
