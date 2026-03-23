@@ -17,12 +17,12 @@
       "preflight_failed": {
         "exp_id": "28ff0f1f-62b2-4184-b772-ce29169c49f2",
         "count": 3,
-        "last_raw": "[test_board2] test_uart: partial — stages: preflight, build, load — failure: preflight_failed"
+        "last_raw": "[test_board2] test_uart: partial \u2014 stages: preflight, build, load \u2014 failure: preflight_failed"
       },
       "firmware_programming_failed": {
         "exp_id": "8d38432f-2c15-420a-9b5d-6ff73439067c",
         "count": 1,
-        "last_raw": "[test_board2] test_uart: failed — stages: preflight, build, load, run — failure: firmware_programming_failed"
+        "last_raw": "[test_board2] test_uart: failed \u2014 stages: preflight, build, load, run \u2014 failure: firmware_programming_failed"
       }
     }
   },
@@ -76,7 +76,7 @@
       "check_signal": {
         "exp_id": "67627318-e611-4421-a06b-bbc26bf4cf98",
         "count": 5,
-        "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed — stages: preflight, build, load, run — failure: check_signal — instrument digital verification failed"
+        "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_signal \u2014 instrument digital verification failed"
       }
     }
   },
@@ -98,7 +98,7 @@
       "check_uart": {
         "exp_id": "858acf42-51ac-404e-89c6-62c37094de0b",
         "count": 2,
-        "last_raw": "[rp2040_pico] rp2040_uart_banner: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[rp2040_pico] rp2040_uart_banner: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -112,12 +112,12 @@
       "load": {
         "exp_id": "a6780db1-b2e0-4bf2-8f4d-e8ad858e019c",
         "count": 2,
-        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed — stages: preflight, build, run, check — failure: load — name 'time' is not defined"
+        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 name 'time' is not defined"
       },
       "check_mailbox": {
         "exp_id": "a45a2f25-23ed-4926-ba95-3ab4cfce9c3b",
         "count": 1,
-        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox read failed: parse_failed"
+        "last_raw": "[stm32f103_stlink_local] stm32f103_stlink_local_smoke: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_mailbox \u2014 mailbox read failed: parse_failed"
       }
     }
   },
@@ -131,7 +131,7 @@
       "build": {
         "exp_id": "4bb233ee-3e5f-4c6b-9fe9-ab7e169f2b51",
         "count": 1,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_dual_uart_probe_via_usb: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_dual_uart_probe_via_usb: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 adapter execute failed: [Errno 32] Broken pipe"
       }
     }
   },
@@ -153,7 +153,7 @@
       "build": {
         "exp_id": "ff14fba0-3d09-458d-8ed8-531decbfc36b",
         "count": 1,
-        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_dual_uart_probe_via_usb: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_dual_uart_probe_via_usb: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       }
     }
   },
@@ -163,6 +163,106 @@
     "failure_count": 0,
     "last_seen": 1774221379.3815012,
     "confidence": 0.6,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_wifi_dual_band": {
+    "exp_id": "f57954cc-47b9-4ebd-9108-f7887eb2e2db",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774224121.0160909,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_temperature": {
+    "exp_id": "4f176b8c-13dc-4921-a798-feee7a9e57ff",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774224240.8475213,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_nvs_readwrite": {
+    "exp_id": "a1740903-11c1-458b-a86c-df12179f4b48",
+    "success_count": 1,
+    "failure_count": 4,
+    "last_seen": 1774225401.785708,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "c45b3838-11aa-43fd-a04a-4fc4892bae32",
+        "count": 4,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_nvs_readwrite: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
+      }
+    }
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_ble_adv": {
+    "exp_id": "e16a1fb0-6e6e-4351-abf6-5cff810d1ef5",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774225450.222819,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_uart0_loopback": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 15,
+    "last_seen": 1774231811.889857,
+    "confidence": 0.5,
+    "known_failures": {
+      "load": {
+        "exp_id": "98d87d32-2009-4ece-b777-3483811e490e",
+        "count": 7,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_uart0_loopback: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
+      },
+      "check_uart": {
+        "exp_id": "099430cb-4d3d-49aa-87bb-3a7b031de0bf",
+        "count": 6,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_uart0_loopback: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
+      },
+      "build": {
+        "exp_id": "329155bf-4eeb-4835-8364-a8a1f5ea8bd4",
+        "count": 2,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_uart0_loopback: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
+      }
+    }
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_gpio_adc_loopback": {
+    "exp_id": "688e641d-9072-4056-92da-db9d727ca32f",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774232746.4743686,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "unknown|unknown": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "last_seen": 1774235590.045541,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "2ba68fa0-f8f4-48b7-b562-1aefc2fb7546",
+        "count": 1,
+        "last_raw": "[unknown] unknown: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
+      }
+    }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_suite_ext": {
+    "exp_id": "39b99875-b6fc-49bd-96e0-c29dc5ca3980",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774270942.5465949,
+    "confidence": 0.8,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|esp32c5_suite_ext": {
+    "exp_id": "2ee2d4f1-5bd7-491c-9fda-91d6bcdddb55",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774270942.5465949,
+    "confidence": 0.9,
     "known_failures": {}
   }
 }
