@@ -1,0 +1,11 @@
+# Enable Bluetooth (NimBLE stack)
+CONFIG_BT_ENABLED=y
+CONFIG_BT_NIMBLE_ENABLED=y
+
+# Wi-Fi (explicit; enabled by default on ESP32-C6)
+CONFIG_ESP_WIFI_ENABLED=y
+
+# Custom partition table — larger app partition for BLE+WiFi binary
+CONFIG_PARTITION_TABLE_CUSTOM=y
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_OFFSET=0x8000
