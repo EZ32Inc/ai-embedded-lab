@@ -121,6 +121,42 @@ exp_id = ExperienceAPI.add(
 )
 ```
 
+### Debug 教训记录规则（必须遵守）
+
+任务中发生过 debug（crash / build fail / test fail 后修复）时，**每一个独立的 bug 必须单独一条 EE entry**。禁止将多个 bug 合并进一段描述。
+
+**强制检查清单：**
+
+1. **逐条记录**：N 个不同根因 → N 条独立 `ExperienceAPI.add()` 调用
+2. **intent 可搜索**：intent 字段必须描述"如何避免"，不是"发生了什么"
+   - ✗ 差：`intent='debug esp32c5 gpio crash'`
+   - ✓ 好：`intent='avoid Store access fault from IRAM_ATTR variable with PMP_IDRAM_SPLIT'`
+3. **raw 包含技术关键词**：症状、触发条件、具体 fix 要写进 raw，便于关键词查询
+4. **scope 按可迁移性判断**：
+   - 可迁移到同芯片族 → `board_family`
+   - 可迁移到跨芯片平台 → `pattern`，raw 加 `[HIGH_PRIORITY]`
+5. **不得用 `record_run()` 代替教训记录**：`record_run()` 只记录 pass/fail 结果，不承载 debug 知识
+
+**Debug 教训模板：**
+
+```python
+# 每个 bug 单独一条，禁止合并
+exp_id = ExperienceAPI.add(
+    raw=(
+        '[{board_id}] [avoid] '
+        'trigger: <触发条件，精确到 API/配置> | '
+        'symptom: <现象，包括 MCAUSE/地址等关键信息> | '
+        'root_cause: <根因> | '
+        'fix: <具体修法> | '
+        'confirmed: <芯片型号 + IDF版本>'
+    ),
+    domain='engineering',
+    intent='avoid <问题类型> on <芯片> when <场景>',
+    outcome='success',     # 表示问题已修复
+    scope='board_family',  # 或 'pattern' + [HIGH_PRIORITY]
+)
+```
+
 ---
 
 ## 规则 4 — 高优先级资产提升条件
@@ -174,14 +210,24 @@ ExperienceAPI.feedback(exp_id, 'correct', 'success')
 |-------|-------|---------|---------|
 | Minimal-Instrument Board Bring-up Pattern | `933fc74a` | ESP32 / RISC-V 双USB开发板 | C6(1次) + C5(1次) |
 
+### scope='pattern' — 跨板高优先级
+
+| 资产名 | EE ID | 适用范围 |
+|-------|-------|---------|
+| Minimal-Instrument Board Bring-up Pattern | `933fc74a` | ESP32 / RISC-V 双USB开发板 |
+| **IRAM_ATTR variable + PMP_IDRAM_SPLIT = Store fault** | `d26958c3` | ESP32-C5 及所有 PMP IDRAM split 目标 |
+
 ### scope='board_family' — 单芯片族可复用
 
-| 资产 | EE ID | board_id |
-|------|-------|---------|
+| 资产 | EE ID | board_id / 说明 |
+|------|-------|----------------|
 | esp32c6_suite_ext success | `39b99875` | esp32c6_devkit_dual_usb |
 | esp32c5_suite_ext success | `2ee2d4f1` | esp32c5_devkit_dual_usb |
 | LEDC 10-bit freq/2 on C6 (avoid) | `06fca084` | esp32c6_devkit_dual_usb |
 | sdkconfig.defaults override (avoid) | `af1b33a5` | esp32_dual_usb |
+| gpio_install_isr_service 须在 WiFi/BLE 之前 | `dbdf36fb` | esp32c5_devkit_dual_usb |
+| ESP_MAIN_TASK_STACK_SIZE=8192（11驱动套件）| `73f41c63` | esp32c5_devkit_dual_usb |
+| GPIO interrupt 测试须在 PCNT 之前（共享 pin）| `92297155` | esp32c5_devkit_dual_usb |
 
 ---
 
