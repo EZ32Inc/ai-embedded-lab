@@ -1,0 +1,30 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32jtag_port_d_loopback",
+  "test_kind": "instrument_self_test",
+  "board": "esp32jtag_instrument_s3",
+
+  "notes": "Port D (P3) → Port A (P0) loopback self-test. Drives static GPIO patterns and 132 MHz counter on Port D; captures on Port A channels 0-3 via Logic Analyzer. WIRING: 4 jumper wires P3pin0→P0pin0, P3pin1→P0pin1, P3pin2→P0pin2, P3pin3→P0pin3. Port D and Port A must be in Logic Analyzer mode (default).",
+
+  "preflight": {
+    "enabled": false,
+    "note": "No preflight — instrument is self-tested via its own web API."
+  },
+
+  "run_script": {
+    "type": "python",
+    "path": "experiments/esp32jtag/port_d_loopback.py",
+    "args": ["--config", "configs/esp32jtag.yaml"],
+    "expected_exit_code": 0,
+    "timeout_s": 120
+  },
+
+  "success_criteria": {
+    "all_cases_pass": true,
+    "phases": ["gpio", "counter"],
+    "gpio_patterns": ["0000", "1111", "0101", "1010", "0001", "1000"],
+    "counter_modes": ["counter_lo", "counter_hi"],
+    "min_match_pct": 95.0,
+    "duty_range": [0.35, 0.65]
+  }
+}

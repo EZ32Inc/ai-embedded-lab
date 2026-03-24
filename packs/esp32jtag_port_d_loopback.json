@@ -1,0 +1,14 @@
+{
+  "name": "esp32jtag_port_d_loopback",
+  "board": "esp32jtag_instrument_s3",
+  "description": "Port D (P3) → Port A (P0) loopback self-test: GPIO static patterns + counter toggle verification",
+  "wiring": [
+    "P3 pin0 ── P0 pin0",
+    "P3 pin1 ── P0 pin1",
+    "P3 pin2 ── P0 pin2",
+    "P3 pin3 ── P0 pin3"
+  ],
+  "tests": [
+    "tests/plans/esp32jtag_port_d_loopback.json"
+  ]
+}
