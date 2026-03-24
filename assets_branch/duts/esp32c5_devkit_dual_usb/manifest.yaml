@@ -1,0 +1,49 @@
+board:
+  form_factor: devkit
+  vendor: Espressif
+board_configs:
+- id: default
+  instrument_family: esp32_meter
+  path: configs/boards/esp32c5_devkit_dual_usb.yaml
+  primary: true
+build:
+  project_dir: firmware/targets/esp32c5_suite_ext3
+  type: idf
+compile_validation: passed
+compile_validation_note: idf.py build esp32c5_suite_ext3 — 12/12 PASS verified 2026-03-23
+default_packs:
+- packs/esp32c5_full_suite.json
+description: ESP32-C5 dual-USB devkit — full 12-test hardware suite (TEMP/NVS/WiFi/BLE/Sleep/PWM/INTR/PCNT/UART/ADC/SPI/I2C).
+  I2C uses V2 slave driver + bit-bang master to work around SOC_HP_I2C_NUM=1.
+build_type: idf
+family: esp32
+flash:
+  method: idf_esptool
+flash_method: idf_esptool
+id: esp32c5_devkit_dual_usb
+lifecycle_stage: merge_candidate
+mcu: esp32c5
+mcus:
+- build:
+    project_dir: firmware/targets/esp32c5_suite_ext3
+    type: idf
+  clock_hz: 160000000
+  family: esp32
+  flash:
+    method: idf_esptool
+  id: main
+  mcu: esp32c5
+  role: dut
+name: ESP32-C5 DevKit Dual USB
+tags:
+- esp32
+- esp32c5
+- devkit
+- dual_usb
+verified:
+  date: 2026-03-23
+  note: '12/12 PASS on suite_ext3 (two consecutive runs). I2C fixed via HW slave V2
+    + bit-bang master (CE: 87240d79).'
+  status: true
+  verified_on:
+    bench_id: default

@@ -1,0 +1,11 @@
+{
+  "name": "esp32c5_full_suite",
+  "board": "esp32c5_devkit_dual_usb",
+  "notes": "ESP32-C5 full 12-test hardware suite (suite_ext3). Requires 6 jumpers — see tests/plans/esp32c5_suite_ext3.json for wiring. Covers: TEMP, NVS, WiFi, BLE, Sleep, PWM, INTR, PCNT, UART, ADC, SPI, I2C.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c5_suite_ext3.json"
+  ]
+}
