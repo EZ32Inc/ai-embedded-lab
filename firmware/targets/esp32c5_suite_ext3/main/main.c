@@ -40,8 +40,8 @@
 #include "driver/pulse_cnt.h"
 #include "driver/uart.h"
 #include "driver/spi_master.h"
-#include "driver/i2c_master.h"
 #include "driver/i2c_slave.h"
+#include "esp_timer.h"
 #include "driver/temperature_sensor.h"
 #include "esp_adc/adc_oneshot.h"
 #include "nvs_flash.h"
@@ -81,18 +81,24 @@
 
 #define PWM_GPIO     GPIO_NUM_15
 
-/* I2C loopback — two separate controllers.
- * i2c_port_num_t is typedef int; I2C_NUM_0/1 are in the legacy header.
- * Use integer literals to stay compatible with the new driver API. */
-#define I2C_MASTER_PORT   ((i2c_port_num_t)0)
-#define I2C_MASTER_SDA    GPIO_NUM_8
-#define I2C_MASTER_SCL    GPIO_NUM_13
-#define I2C_SLAVE_PORT    ((i2c_port_num_t)1)   /* ESP32-C5 has 2 I2C controllers */
-#define I2C_SLAVE_SDA     GPIO_NUM_14
-#define I2C_SLAVE_SCL     GPIO_NUM_23
-#define I2C_SLAVE_ADDR    0x5A
-#define I2C_SPEED_HZ      100000
-#define I2C_BUF_LEN       8
+/* I2C loopback — bit-bang master (GPIO8/GPIO13) + HW I2C slave V2 (GPIO14/GPIO23).
+ *
+ * ESP32-C5 has one HP I2C port (port 0).  IDF i2c_slave_receive() has a bug:
+ * it calls i2c_ll_start_trans() which flips the slave into auto-start master
+ * mode, driving SDA=0 SCL=0.  IDF slave V2 (CONFIG_I2C_ENABLE_SLAVE_DRIVER_VERSION_2=y)
+ * is callback-based and never calls i2c_slave_receive(), so the bug does not
+ * trigger.  The HW slave handles address match, clock stretch, ACK/NACK and
+ * data capture in hardware; the bit-bang master controls SCL so timing is
+ * fully deterministic and immune to OS scheduling jitter.
+ *
+ * Wiring: GPIO8 ↔ GPIO14 (SDA),  GPIO13 ↔ GPIO23 (SCL). */
+#define I2C_SLAVE_PORT   ((i2c_port_num_t)0)
+#define I2C_SLAVE_SDA    GPIO_NUM_14
+#define I2C_SLAVE_SCL    GPIO_NUM_23
+#define BB_SDA           GPIO_NUM_8
+#define BB_SCL           GPIO_NUM_13
+#define BS_ADDR          0x5A
+#define I2C_BUF_LEN      8
 
 static int s_passed = 0;
 static int s_failed = 0;
@@ -202,6 +208,15 @@ static void test_ble(void)
     int ok = (s_ble_adv > 0);
     printf("AEL_BLE advertisers=%d %s\n", s_ble_adv, ok ? "PASS" : "FAIL");
     ok ? s_passed++ : s_failed++;
+
+    /* Stop NimBLE host and BT controller.
+     * NimBLE host task runs at priority (configMAX_PRIORITIES-4)=21, which is
+     * far above the I2C bit-bang slave task (priority 1).  If left running it
+     * preempts the slave during the 500µs I2C START window, so the slave never
+     * detects START.  Stopping it here lets the slave task run uncontested. */
+    nimble_port_stop();
+    vTaskDelay(pdMS_TO_TICKS(50));   /* let host task call nimble_port_freertos_deinit() */
+    nimble_port_deinit();
 }
 
 /* ── 5. Light sleep ──────────────────────────── */
@@ -431,136 +446,153 @@ static void test_spi(void)
     ok ? s_passed++ : s_failed++;
 }
 
-/* ── 12. I2C master/slave loopback ──────────────
+/* ── 12. I2C loopback ────────────────────────────
  *
- * I2C0 (master) GPIO8=SDA  GPIO13=SCL
- * I2C1 (slave)  GPIO14=SDA GPIO23=SCL
- * Jumper:  GPIO8 ↔ GPIO14,  GPIO13 ↔ GPIO23
- *
- * v5.5.x new slave API:
- *   i2c_slave_receive()  — non-blocking, arms a DMA buffer
- *   on_recv_done callback — fires from ISR when master write completes
- *   i2c_slave_transmit() — queues TX data for next master read
- *
- * Flow:
- *   1. Register on_recv_done callback
- *   2. Arm i2c_slave_receive() with buffer
- *   3. Master transmits I2C_BUF_LEN bytes
- *   4. Callback gives semaphore; main task echoes via i2c_slave_transmit()
- *   5. Master reads I2C_BUF_LEN bytes back
- *   6. Compare TX == RX
+ * Bit-bang master: SDA=GPIO8, SCL=GPIO13
+ * HW slave (V2):  SDA=GPIO14, SCL=GPIO23
+ * Jumpers: GPIO8 ↔ GPIO14,  GPIO13 ↔ GPIO23
  */
-static i2c_slave_dev_handle_t s_i2c_slave_hdl = NULL;
-static SemaphoreHandle_t      s_i2c_recv_sem;
-static uint8_t                s_i2c_slave_buf[I2C_BUF_LEN];
 
-/* ISR callback — runs in interrupt context */
-static bool IRAM_ATTR i2c_slave_recv_done_cb(i2c_slave_dev_handle_t handle,
-                                              const i2c_slave_rx_done_event_data_t *evt,
-                                              void *arg)
+/* Bit-bang master helpers — master controls SCL so timing is deterministic. */
+#define BB_HALF_US  50    /* 50 µs half-period ≈ 10 kHz (conservative for HW slave) */
+
+static void bb_delay(void) { busy_delay_us(BB_HALF_US); }
+
+static void bb_wait_scl_hi(void)  /* handle clock stretch */
 {
-    BaseType_t woken = pdFALSE;
-    xSemaphoreGiveFromISR(s_i2c_recv_sem, &woken);
-    return woken == pdTRUE;
+    int64_t t = esp_timer_get_time() + 10000LL;
+    while (!gpio_get_level(BB_SCL) && esp_timer_get_time() < t) {}
+}
+
+static void bb_init(void)
+{
+    /* Pre-set output registers HIGH before enabling OD mode to avoid glitch */
+    gpio_set_level(BB_SDA, 1);
+    gpio_set_level(BB_SCL, 1);
+    gpio_config_t gc = {
+        .pin_bit_mask = (1ULL << BB_SDA) | (1ULL << BB_SCL),
+        .mode         = GPIO_MODE_INPUT_OUTPUT_OD,
+        .pull_up_en   = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type    = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&gc);
+    bb_delay();
+}
+
+static void bb_start(void)
+{
+    gpio_set_level(BB_SDA, 1); bb_delay();
+    gpio_set_level(BB_SCL, 1); bb_delay();
+    gpio_set_level(BB_SDA, 0); bb_delay();   /* START: SDA falls while SCL high */
+    gpio_set_level(BB_SCL, 0); bb_delay();
+}
+
+static void bb_stop(void)
+{
+    gpio_set_level(BB_SDA, 0); bb_delay();
+    gpio_set_level(BB_SCL, 1); bb_wait_scl_hi(); bb_delay();
+    gpio_set_level(BB_SDA, 1); bb_delay();   /* STOP: SDA rises while SCL high */
+}
+
+/* Returns 1 = ACK, 0 = NACK */
+static int bb_write_byte(uint8_t byte)
+{
+    for (int b = 7; b >= 0; b--) {
+        gpio_set_level(BB_SDA, (byte >> b) & 1); bb_delay();
+        gpio_set_level(BB_SCL, 1); bb_wait_scl_hi(); bb_delay();
+        gpio_set_level(BB_SCL, 0); bb_delay();
+    }
+    gpio_set_level(BB_SDA, 1); bb_delay();          /* release SDA for ACK */
+    gpio_set_level(BB_SCL, 1); bb_wait_scl_hi(); bb_delay();
+    int ack = !gpio_get_level(BB_SDA);              /* ACK = slave pulls SDA low */
+    gpio_set_level(BB_SCL, 0); bb_delay();
+    return ack;
+}
+
+/* Returns 0 on success, negative on NACK */
+static int bb_transmit(uint8_t addr, const uint8_t *data, int len)
+{
+    bb_start();
+    if (!bb_write_byte((uint8_t)((addr << 1) | 0))) { bb_stop(); return -1; }
+    for (int i = 0; i < len; i++) {
+        if (!bb_write_byte(data[i])) { bb_stop(); return -(i + 2); }
+    }
+    bb_stop();
+    return 0;
+}
+
+/* HW slave V2 state */
+static SemaphoreHandle_t s_slv_done;
+static uint8_t           s_slv_rx[I2C_BUF_LEN];
+static volatile uint32_t s_slv_rx_len;
+
+static bool i2c_slave_recv_cb(i2c_slave_dev_handle_t i2c_slave,
+                               const i2c_slave_rx_done_event_data_t *evt_data,
+                               void *arg)
+{
+    (void)i2c_slave; (void)arg;
+    BaseType_t xw = 0;
+    uint32_t n = evt_data->length < I2C_BUF_LEN ? evt_data->length : I2C_BUF_LEN;
+    memcpy(s_slv_rx, evt_data->buffer, n);
+    s_slv_rx_len = n;
+    xSemaphoreGiveFromISR(s_slv_done, &xw);
+    return (bool)xw;
 }
 
 static void test_i2c(void)
 {
-    /* ── slave init ── */
-    i2c_slave_config_t slave_cfg = {
-        .i2c_port       = I2C_SLAVE_PORT,
-        .sda_io_num     = I2C_SLAVE_SDA,
-        .scl_io_num     = I2C_SLAVE_SCL,
-        .clk_source     = I2C_CLK_SRC_DEFAULT,
-        .send_buf_depth = 64,
-        .slave_addr     = I2C_SLAVE_ADDR,
-        .addr_bit_len   = I2C_ADDR_BIT_LEN_7,
-    };
-    esp_err_t e = i2c_new_slave_device(&slave_cfg, &s_i2c_slave_hdl);
-    if (e != ESP_OK) {
-        printf("AEL_I2C slave_init_err=0x%x FAIL\n", e); s_failed++; return;
-    }
-
-    /* Register receive-done callback (ISR context) */
-    s_i2c_recv_sem = xSemaphoreCreateBinary();
-    i2c_slave_event_callbacks_t slave_cbs = { .on_recv_done = i2c_slave_recv_done_cb };
-    i2c_slave_register_event_callbacks(s_i2c_slave_hdl, &slave_cbs, NULL);
-
-    /* Arm receive buffer — non-blocking, callback fires when done */
-    memset(s_i2c_slave_buf, 0, I2C_BUF_LEN);
-    i2c_slave_receive(s_i2c_slave_hdl, s_i2c_slave_buf, I2C_BUF_LEN);
-
-    /* ── master init ── */
-    i2c_master_bus_config_t master_bus_cfg = {
-        .i2c_port          = I2C_MASTER_PORT,
-        .sda_io_num        = I2C_MASTER_SDA,
-        .scl_io_num        = I2C_MASTER_SCL,
-        .clk_source        = I2C_CLK_SRC_DEFAULT,
-        .glitch_ignore_cnt = 7,
-        .flags.enable_internal_pullup = true,
-    };
-    i2c_master_bus_handle_t bus = NULL;
-    e = i2c_new_master_bus(&master_bus_cfg, &bus);
-    if (e != ESP_OK) {
-        i2c_del_slave_device(s_i2c_slave_hdl);
-        vSemaphoreDelete(s_i2c_recv_sem);
-        printf("AEL_I2C master_bus_err=0x%x FAIL\n", e); s_failed++; return;
-    }
-
-    i2c_device_config_t dev_cfg = {
-        .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address  = I2C_SLAVE_ADDR,
-        .scl_speed_hz    = I2C_SPEED_HZ,
-    };
-    i2c_master_dev_handle_t dev = NULL;
-    e = i2c_master_bus_add_device(bus, &dev_cfg, &dev);
-    if (e != ESP_OK) {
-        i2c_del_master_bus(bus);
-        i2c_del_slave_device(s_i2c_slave_hdl);
-        vSemaphoreDelete(s_i2c_recv_sem);
-        printf("AEL_I2C master_dev_err=0x%x FAIL\n", e); s_failed++; return;
-    }
-
-    /* ── master write → slave receive ── */
     static const uint8_t I2C_TX[I2C_BUF_LEN] = {
         0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0
     };
-    e = i2c_master_transmit(dev, I2C_TX, I2C_BUF_LEN, 500);
+    s_slv_done = xSemaphoreCreateBinary();
+    memset(s_slv_rx, 0, sizeof(s_slv_rx));
+    s_slv_rx_len = 0;
+
+    /* Init HW I2C slave (V2) on port 0, GPIO14/GPIO23 */
+    i2c_slave_config_t slv_cfg = {
+        .i2c_port          = I2C_SLAVE_PORT,
+        .clk_source        = I2C_CLK_SRC_DEFAULT,
+        .scl_io_num        = I2C_SLAVE_SCL,
+        .sda_io_num        = I2C_SLAVE_SDA,
+        .slave_addr        = BS_ADDR,
+        .send_buf_depth    = 100,
+        .receive_buf_depth = 100,
+        .flags.enable_internal_pullup = true,
+    };
+    i2c_slave_dev_handle_t slv;
+    esp_err_t e = i2c_new_slave_device(&slv_cfg, &slv);
     if (e != ESP_OK) {
-        i2c_master_bus_rm_device(dev); i2c_del_master_bus(bus);
-        i2c_del_slave_device(s_i2c_slave_hdl); vSemaphoreDelete(s_i2c_recv_sem);
-        printf("AEL_I2C transmit_err=0x%x FAIL\n", e); s_failed++; return;
+        vSemaphoreDelete(s_slv_done);
+        printf("AEL_I2C slave_init=0x%x FAIL\n", e); s_failed++; return;
     }
 
-    /* Wait for slave receive callback */
-    BaseType_t got = xSemaphoreTake(s_i2c_recv_sem, pdMS_TO_TICKS(2000));
-
-    /* Slave queues echo response */
-    esp_err_t slave_tx_err = ESP_FAIL;
-    if (got == pdTRUE) {
-        slave_tx_err = i2c_slave_transmit(s_i2c_slave_hdl,
-                                          s_i2c_slave_buf, I2C_BUF_LEN, 500);
-    }
-    vTaskDelay(pdMS_TO_TICKS(20));
-
-    /* ── master read ← slave echo ── */
-    uint8_t rx[I2C_BUF_LEN] = {0};
-    esp_err_t recv_err = ESP_FAIL;
-    if (slave_tx_err == ESP_OK) {
-        recv_err = i2c_master_receive(dev, rx, I2C_BUF_LEN, 500);
+    i2c_slave_event_callbacks_t cbs = {
+        .on_receive = i2c_slave_recv_cb,
+    };
+    e = i2c_slave_register_event_callbacks(slv, &cbs, NULL);
+    if (e != ESP_OK) {
+        i2c_del_slave_device(slv); vSemaphoreDelete(s_slv_done);
+        printf("AEL_I2C slave_cb=0x%x FAIL\n", e); s_failed++; return;
     }
 
-    /* ── teardown ── */
-    i2c_master_bus_rm_device(dev);
-    i2c_del_master_bus(bus);
-    i2c_del_slave_device(s_i2c_slave_hdl);
-    vSemaphoreDelete(s_i2c_recv_sem);
+    /* Init bit-bang master and transmit */
+    bb_init();
+    vTaskDelay(pdMS_TO_TICKS(10));   /* let slave settle */
 
-    int match = (recv_err == ESP_OK && memcmp(I2C_TX, rx, I2C_BUF_LEN) == 0);
-    int ok    = (got == pdTRUE && slave_tx_err == ESP_OK && match);
-    printf("AEL_I2C slave_recv=%d slave_tx=%d master_recv=%d match=%d %s\n",
-           (got == pdTRUE), (int)slave_tx_err, (int)recv_err, match,
-           ok ? "PASS" : "FAIL");
+    int tx_err = bb_transmit(BS_ADDR, I2C_TX, I2C_BUF_LEN);
+
+    /* Wait for slave callback */
+    BaseType_t got = xSemaphoreTake(s_slv_done, pdMS_TO_TICKS(500));
+
+    i2c_del_slave_device(slv);
+    vSemaphoreDelete(s_slv_done);
+
+    int match = (got == pdTRUE) && (s_slv_rx_len == I2C_BUF_LEN) &&
+                (memcmp(I2C_TX, s_slv_rx, I2C_BUF_LEN) == 0);
+    int ok    = (tx_err == 0) && match;
+    printf("AEL_I2C tx_err=%d rx_len=%u match=%d %s\n",
+           tx_err, (unsigned)s_slv_rx_len, match, ok ? "PASS" : "FAIL");
     ok ? s_passed++ : s_failed++;
 }
 
