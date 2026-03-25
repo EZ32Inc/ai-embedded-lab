@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32_wroom32d_test_spi",
+  "test_kind": "instrument_specific",
+  "board": "esp32_wroom32d_cp210x",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2", "selftest"],
+  "covers": ["spi"],
+  "notes": "Stage 2: SPI2 MOSI↔MISO loopback. GPIO23↔GPIO19 jumper required. CLK=GPIO18 and CS=GPIO27 need no external connection.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO23", "to": "GPIO19", "label": "SPI2 MOSI ↔ MISO loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32_wroom32d/test_spi",
+    "artifact_stem": "ael_esp32_wroom32d_test_spi",
+    "build_dir": "artifacts/build_esp32_wroom32d_test_spi"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 6,
+    "reset_strategy": "rts",
+    "expect_patterns": ["AEL_SPI.*PASS"]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "esp32_wroom32d_stage2",
+  "board": "esp32_wroom32d_cp210x",
+  "notes": "Stage 2: wiring/integration tests. 6 jumpers required — see individual test plan wiring sections. Covers: GPIO interrupt, PCNT, UART, ADC, SPI, I2C.",
+  "preflight": {"enabled": false},
+  "tests": [
+    "tests/plans/esp32_wroom32d/test_gpio_intr.json",
+    "tests/plans/esp32_wroom32d/test_pcnt.json",
+    "tests/plans/esp32_wroom32d/test_uart.json",
+    "tests/plans/esp32_wroom32d/test_adc.json",
+    "tests/plans/esp32_wroom32d/test_spi.json",
+    "tests/plans/esp32_wroom32d/test_i2c.json"
+  ]
+}

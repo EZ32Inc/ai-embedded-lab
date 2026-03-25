@@ -1,0 +1,9 @@
+{
+  "name": "esp32_wroom32d_stage0",
+  "board": "esp32_wroom32d_cp210x",
+  "notes": "Stage 0 gate: bare-board console validation. No jumpers. Must PASS before advancing to Stage 1 or Stage 2.",
+  "preflight": {"enabled": false},
+  "tests": [
+    "tests/plans/esp32_wroom32d/hello.json"
+  ]
+}

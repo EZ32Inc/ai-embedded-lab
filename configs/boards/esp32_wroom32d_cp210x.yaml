@@ -23,7 +23,7 @@ board:
   probe_required: false
   build:
     type: idf
-    project_dir: firmware/targets/esp32_wroom32d_suite
+    project_dir: firmware/targets/esp32_wroom32d/hello
   flash:
     method: idf_esptool
     target: esp32

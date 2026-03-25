@@ -1,0 +1,20 @@
+{
+  "name": "esp32_wroom32d_full",
+  "board": "esp32_wroom32d_cp210x",
+  "notes": "Full 12-test suite for ESP32-WROOM-32D CP210X. Stage 0 (no wires) → Stage 1 (no wires) → Stage 2 (6 jumpers). Covers: console, NVS, WiFi, BLE, sleep, PWM, GPIO interrupt, PCNT, UART, ADC, SPI, I2C.",
+  "preflight": {"enabled": false},
+  "tests": [
+    "tests/plans/esp32_wroom32d/hello.json",
+    "tests/plans/esp32_wroom32d/test_nvs.json",
+    "tests/plans/esp32_wroom32d/test_wifi.json",
+    "tests/plans/esp32_wroom32d/test_ble.json",
+    "tests/plans/esp32_wroom32d/test_sleep.json",
+    "tests/plans/esp32_wroom32d/test_pwm.json",
+    "tests/plans/esp32_wroom32d/test_gpio_intr.json",
+    "tests/plans/esp32_wroom32d/test_pcnt.json",
+    "tests/plans/esp32_wroom32d/test_uart.json",
+    "tests/plans/esp32_wroom32d/test_adc.json",
+    "tests/plans/esp32_wroom32d/test_spi.json",
+    "tests/plans/esp32_wroom32d/test_i2c.json"
+  ]
+}

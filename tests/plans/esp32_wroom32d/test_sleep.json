@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32_wroom32d_test_sleep",
+  "test_kind": "instrument_specific",
+  "board": "esp32_wroom32d_cp210x",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage1", "selftest"],
+  "covers": ["sleep"],
+  "notes": "Stage 1: light sleep with 1-second timer wakeup. No jumpers required.",
+  "wiring": {"required": []},
+  "build": {
+    "project_dir": "firmware/targets/esp32_wroom32d/test_sleep",
+    "artifact_stem": "ael_esp32_wroom32d_test_sleep",
+    "build_dir": "artifacts/build_esp32_wroom32d_test_sleep"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": ["AEL_SLEEP.*PASS"]
+  }
+}

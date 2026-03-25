@@ -1,0 +1,14 @@
+{
+  "name": "esp32_wroom32d_stage1",
+  "board": "esp32_wroom32d_cp210x",
+  "notes": "Stage 0+1: bare-board + no-wire functional tests. No jumpers required. Covers: console, NVS, WiFi, BLE, sleep, PWM.",
+  "preflight": {"enabled": false},
+  "tests": [
+    "tests/plans/esp32_wroom32d/hello.json",
+    "tests/plans/esp32_wroom32d/test_nvs.json",
+    "tests/plans/esp32_wroom32d/test_wifi.json",
+    "tests/plans/esp32_wroom32d/test_ble.json",
+    "tests/plans/esp32_wroom32d/test_sleep.json",
+    "tests/plans/esp32_wroom32d/test_pwm.json"
+  ]
+}

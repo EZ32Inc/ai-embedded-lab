@@ -1,10 +1,10 @@
 /*
- * esp32_wroom32d_hello — minimal UART console health check
+ * hello — Stage 0 bare-board console validation for ESP32-WROOM-32D (CP210X)
  *
- * Prints a counter line every second to UART0 (GPIO1 TX → CP210X → /dev/ttyUSB0).
- * No jumpers required. No peripherals touched.
- * Stops after 15 lines, prints AEL_HELLO_DONE, then idles.
+ * No jumpers. No peripherals. Only power + CP210X USB.
+ * Prints 15 tick lines then AEL_HELLO_DONE.
  *
+ * Must PASS before any wired test is attempted.
  * Flash: idf.py -p /dev/ttyUSB0 build flash monitor
  */
 

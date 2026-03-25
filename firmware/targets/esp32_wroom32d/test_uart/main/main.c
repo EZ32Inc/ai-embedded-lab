@@ -1,0 +1,45 @@
+/*
+ * test_uart — Stage 2: UART1 TX→RX loopback
+ *
+ * Wiring required: GPIO17 (TX) ↔ GPIO16 (RX)
+ *
+ * Sends "AEL_UART_PING" on UART1 and reads it back via the loopback wire.
+ * Output: AEL_UART sent=N recv=N PASS|FAIL
+ */
+
+#include <stdio.h>
+#include <string.h>
+#include "ael_board_init.h"
+#include "driver/uart.h"
+#include "driver/gpio.h"
+
+#define UART1_TX GPIO_NUM_17
+#define UART1_RX GPIO_NUM_16
+
+void app_main(void)
+{
+    ael_common_init();
+
+    uart_config_t cfg = {
+        .baud_rate  = 115200,
+        .data_bits  = UART_DATA_8_BITS,
+        .parity     = UART_PARITY_DISABLE,
+        .stop_bits  = UART_STOP_BITS_1,
+        .flow_ctrl  = UART_HW_FLOWCTRL_DISABLE,
+    };
+    uart_driver_install(UART_NUM_1, 256, 256, 0, NULL, 0);
+    uart_param_config(UART_NUM_1, &cfg);
+    uart_set_pin(UART_NUM_1, UART1_TX, UART1_RX, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+    const char *MSG = "AEL_UART_PING";
+    const int   LEN = (int)strlen(MSG);
+    uint8_t rx[32]  = {0};
+
+    uart_flush(UART_NUM_1);
+    uart_write_bytes(UART_NUM_1, MSG, LEN);
+    int rxlen = uart_read_bytes(UART_NUM_1, rx, LEN, pdMS_TO_TICKS(500));
+    uart_driver_delete(UART_NUM_1);
+
+    int ok = (rxlen == LEN && memcmp(rx, MSG, LEN) == 0);
+    printf("AEL_UART sent=%d recv=%d %s\n", LEN, rxlen, ok ? "PASS" : "FAIL");
+}

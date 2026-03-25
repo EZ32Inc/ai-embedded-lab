@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32_wroom32d_test_adc",
+  "test_kind": "instrument_specific",
+  "board": "esp32_wroom32d_cp210x",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2", "selftest"],
+  "covers": ["adc"],
+  "notes": "Stage 2: ADC1 loopback. GPIO33→GPIO34 jumper required. GPIO34 is input-only (ADC1_CH6). ADC2 unavailable during WiFi — test uses ADC1 only.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO33", "to": "GPIO34", "label": "ADC drive → ADC1_CH6 input (GPIO34 input-only)"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32_wroom32d/test_adc",
+    "artifact_stem": "ael_esp32_wroom32d_test_adc",
+    "build_dir": "artifacts/build_esp32_wroom32d_test_adc"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": ["AEL_ADC.*PASS"]
+  }
+}

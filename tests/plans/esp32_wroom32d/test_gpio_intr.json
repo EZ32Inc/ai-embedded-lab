@@ -1,0 +1,31 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32_wroom32d_test_gpio_intr",
+  "test_kind": "instrument_specific",
+  "board": "esp32_wroom32d_cp210x",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2", "selftest"],
+  "covers": ["gpio"],
+  "notes": "Stage 2: GPIO interrupt loopback. GPIO25→GPIO26 jumper required. Run BEFORE test_pcnt — both share this wire and PCNT occupies the pin after init.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO25", "to": "GPIO26", "label": "GPIO interrupt drive + input"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32_wroom32d/test_gpio_intr",
+    "artifact_stem": "ael_esp32_wroom32d_test_gpio_intr",
+    "build_dir": "artifacts/build_esp32_wroom32d_test_gpio_intr"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": ["AEL_INTR.*PASS"]
+  }
+}
