@@ -1,0 +1,7 @@
+{
+  "name": "esp32jtag_firmware_smoke",
+  "board": "esp32jtag_instrument_s3",
+  "tests": [
+    "tests/plans/esp32jtag_firmware_smoke.json"
+  ]
+}

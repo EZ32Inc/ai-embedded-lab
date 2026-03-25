@@ -447,8 +447,22 @@ def build_uart_step(effective: Dict[str, Any] | Any, board_cfg: Dict[str, Any] |
             if instrument_id:
                 observe_uart_cfg.setdefault("bridge_instrument_id", instrument_id)
             break
-    observe_uart_cfg.setdefault("auto_reset_on_download", True)
-    observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
+    # Detect native-USB-only boards (no USB-UART bridge chip).
+    # On these boards RTS/DTR lines do NOT control reset or boot mode.
+    # Indicators: console.type==usb_serial_jtag OR console.rts_dtr_reset==False.
+    # Force reset_strategy=none to prevent AEL from attempting RTS/DTR resets.
+    board_console = board_cfg.get("console", {}) or {}
+    _native_usb = (
+        str(board_console.get("type") or "").lower() == "usb_serial_jtag"
+        or not bool(board_console.get("rts_dtr_reset", True))
+        or str(board_cfg.get("usb_interface_type") or "").lower() == "native_only"
+    )
+    if _native_usb:
+        observe_uart_cfg["reset_strategy"] = "none"
+        observe_uart_cfg["auto_reset_on_download"] = False
+    else:
+        observe_uart_cfg.setdefault("auto_reset_on_download", True)
+        observe_uart_cfg.setdefault("reset_strategy", board_cfg.get("uart_reset_strategy", "none"))
     step = {
         "name": "check_uart",
         "type": "check.uart_log",

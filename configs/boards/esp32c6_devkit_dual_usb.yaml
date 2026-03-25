@@ -17,6 +17,7 @@ board:
   name: ESP32-C6 DevKit Dual USB
   target: esp32c6
   kind: board
+  usb_interface_type: dual   # CH341 bridge (RTS/DTR OK) + native USB Serial/JTAG
   features:
     - programmable_via_jtag
     - has_uart_console

@@ -332,7 +332,7 @@ def run(cfg, raw_log_path: str):
             "error_summary": "UART port not set",
         }
 
-    baud = int(cfg.get("baud", 115200))
+    baud = int(cfg.get("baud") or 115200)
     duration_s = float(cfg.get("duration_s", 6))
     profile = str(cfg.get("profile", "auto")).lower()
     expect_patterns = cfg.get("expect_patterns") or []

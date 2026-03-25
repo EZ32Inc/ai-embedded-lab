@@ -1,0 +1,77 @@
+{
+  "_template": "instrument_firmware_smoke v1.0",
+  "_instructions": [
+    "Replace ALL <PLACEHOLDERS> with real values",
+    "Remove all keys starting with underscore before using",
+    "expect_patterns: extract from real boot log — see observe_uart_boot_pattern_guide.md",
+    "duration_s: set to (boot_time_seconds + 5) minimum; 15 is safe for WiFi-enabled firmware",
+    "validate_network: delete section if firmware has no network interface"
+  ],
+
+  "schema_version": "1.0",
+  "name": "<BOARD_ID>_smoke",
+  "test_kind": "instrument_firmware_smoke",
+  "board": "<BOARD_ID>",
+
+  "preflight": {
+    "enabled": false
+  },
+
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "_port_note": "verify with: udevadm info /dev/ttyACM0 | grep ID_SERIAL_SHORT",
+    "usb_vid": "303a",
+    "usb_pid": "1001",
+    "usb_serial": "<USB_SERIAL>",
+    "_usb_serial_note": "MAC form, e.g. '3C:DC:75:5A:9A:FC' — from udevadm ID_SERIAL_SHORT",
+    "baud": null,
+    "_baud_note": "null for USB CDC (native USB); set 115200 for UART bridge",
+    "profile": "espidf",
+    "duration_s": 15,
+    "_duration_note": "must exceed firmware boot time; increase if patterns are missed",
+    "expect_patterns": [
+      "<SUBSYSTEM_INIT_PATTERN>",
+      "_example: FPGA configured OK - status = 0",
+      "<SERVICE_READY_PATTERN>",
+      "_example: Listening on TCP port: 4242",
+      "<BOOT_COMPLETE_PATTERN>",
+      "_example: \\[APP\\] Free memory:"
+    ],
+    "_expect_patterns_note": [
+      "Minimum 3 patterns covering different boot phases",
+      "Escape regex special chars: ( -> \\(   ) -> \\)   [ -> \\[   ] -> \\]",
+      "Do NOT include: timestamps, memory addresses, IP addresses, version strings",
+      "See observe_uart_boot_pattern_guide.md for full rules"
+    ],
+    "rts_dtr_reset": false,
+    "_rts_dtr_note": "false for native-USB-only (Class B); true for bridge port (Class A)",
+    "on_port_missing": "request_manual_recovery"
+  },
+
+  "validate_network": {
+    "_section_note": "Delete this entire section if firmware has no network interface",
+    "enabled": true,
+    "source": "serial_log",
+    "ip_pattern": "IP\\s+:\\s+(\\d+\\.\\d+\\.\\d+\\.\\d+)",
+    "_ip_pattern_note": [
+      "Regex with one capture group — AEL substitutes into {{observed_ip}}",
+      "Adjust to match your firmware's IP log format:",
+      "  ESP-IDF WiFi:  'IP\\\\s+:\\\\s+(\\\\d+\\\\.\\\\d+\\\\.\\\\d+\\\\.\\\\d+)'",
+      "  lwIP event:    'got ip:\\\\s*(\\\\d+\\\\.\\\\d+\\\\.\\\\d+\\\\.\\\\d+)'",
+      "  Custom:        'assigned\\\\s+(\\\\d+\\\\.\\\\d+\\\\.\\\\d+\\\\.\\\\d+)'"
+    ],
+    "checks": [
+      {
+        "kind": "ping",
+        "target": "{{observed_ip}}",
+        "_note": "basic reachability"
+      },
+      {
+        "kind": "tcp",
+        "target": "{{observed_ip}}:4242",
+        "_note": "GDB server port — change or remove if not applicable"
+      }
+    ]
+  }
+}

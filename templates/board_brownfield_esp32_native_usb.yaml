@@ -1,0 +1,83 @@
+# Template: ESP32 Brownfield Project — Native-USB-Only Board (Class B)
+#
+# Use this template for boards with a SINGLE USB port wired directly to the
+# ESP32 native USB peripheral (GPIO19/20 on S3, GPIO18/19 on C3, etc.).
+# There is NO separate USB-to-UART bridge chip.
+#
+# Examples: ESP32JTAG Instrument S3, bare ESP32-S3 modules, custom minimal boards
+#
+# Instructions:
+#   1. Replace ALL <PLACEHOLDERS> with real values
+#   2. Delete comment lines you don't need
+#   3. Save to configs/boards/<BOARD_ID>.yaml
+#
+# To find USB serial:
+#   udevadm info /dev/ttyACM0 | grep -E 'ID_SERIAL_SHORT|ID_VENDOR_ID|ID_MODEL_ID'
+# To find /dev/tty* device:
+#   ls /dev/ttyACM* /dev/ttyUSB* (before and after plugging in)
+
+board:
+  name: <BOARD_NAME>           # e.g. "ESP32JTAG Instrument (ESP32-S3)"
+  kind: instrument_firmware    # instrument_firmware | board | dut
+  target: <TARGET>             # esp32s3 | esp32c3 | esp32c6 | esp32s2 | ...
+  usb_interface_type: native_only  # single native USB, NO bridge chip, NO RTS/DTR
+
+  processors:
+    - id: <TARGET>
+      arch: xtensa              # xtensa (S3, S2) | riscv (C3, C6, C5, H2)
+      role: primary
+      clock_hz: 240000000       # 240MHz for S3; 160MHz for C3/C6
+
+  build:
+    type: idf
+    project_dir: <PROJECT_DIR>  # absolute path to IDF project root
+                                # e.g. /nvme1t/work/my_firmware
+    build_dir: <PROJECT_DIR>/build  # keep artifacts in project dir (brownfield)
+    artifact_stem: <FIRMWARE_NAME>  # stem of .elf/.bin (e.g. my_firmware)
+    idf_target: <TARGET>
+    idf_path: <IDF_PATH>        # e.g. /home/user/esp/esp-idf
+                                # delete this line if idf.py is already in PATH
+    skip_set_target: true       # REQUIRED for brownfield: protects tuned sdkconfig
+                                # set false only if project has no committed sdkconfig
+    use_flash_args: true        # multi-binary flash via build/flash_args
+                                # set false if project uses single-binary flash
+
+  flash:
+    method: idf_esptool
+    target: <TARGET>
+    port: null                  # probed at flash time using usb_serial
+    usb_vid: "303a"             # Espressif native USB VID (fixed for all ESP32)
+    usb_pid: "1001"             # Espressif USB Serial/JTAG PID
+    usb_serial: "<USB_SERIAL>"  # MAC address form, e.g. "3C:DC:75:5A:9A:FC"
+                                # from: udevadm info /dev/ttyACM0 | grep ID_SERIAL_SHORT
+    baud: 460800
+    auto_reset: false           # NO RTS/DTR — native USB, no bridge chip
+    requires_running_firmware: true  # normal flash assumes firmware is up and USB healthy
+    recovery:
+      method: manual_boot_button
+      instruction: >
+        Hold BOOT (GPIO0), press+release RESET, then release BOOT.
+        ESP32 enters USB download mode. Then re-run flash command.
+      trigger_conditions:
+        - firmware_crash
+        - usb_stack_failure
+        - brick_recovery
+
+  console:
+    type: usb_serial_jtag       # CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+    port: /dev/ttyACM0          # same USB port as flash
+                                # verify: udevadm info /dev/ttyACM0 | grep ID_SERIAL_SHORT
+    baud: null                  # USB CDC — baud setting irrelevant
+                                # AEL uses 115200 internally as placeholder
+    profile: espidf
+    rts_dtr_reset: false        # HARD CONSTRAINT: no bridge chip, no RTS/DTR
+    loss_on_crash: true         # USB console disappears if firmware crashes
+
+  network:                      # delete section if no network interface
+    mode: sta                   # sta | ap
+    gdb_port: 4242              # delete if no GDB server
+    web_port: 443               # delete if no web interface
+
+  # No observe_map / LA wiring for instrument firmware.
+  # Primary observation is via serial log.
+  # Add observe_map only if this board is also used as a DUT with LA.

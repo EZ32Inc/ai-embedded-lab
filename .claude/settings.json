@@ -9,7 +9,11 @@
       "Bash(grep*)",
       "Bash(find*)",
       "Bash(ls*)",
-      "Bash(cat*)"
+      "Bash(cat*)",
+      "Bash(sed*)",
+      "Bash(head*)",
+      "Bash(curl*)",
+      "Bash(tail*)"
     ]
   }
 }

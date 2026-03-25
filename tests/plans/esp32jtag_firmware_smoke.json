@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32jtag_firmware_smoke",
+  "test_kind": "instrument_firmware_smoke",
+  "board": "esp32jtag_instrument_s3",
+
+  "notes": "Smoke test for ESP32JTAG instrument firmware. Primary observation is USB serial log (USB Serial/JTAG, /dev/ttyACM0). Secondary: network health checks after boot. No LA wiring required — this is the instrument itself, not a DUT. HARDWARE CONSTRAINT: single native USB port, no bridge chip. RTS/DTR cannot trigger reset. If USB path is lost (crash), manual recovery required: hold BOOT + press RESET.",
+
+  "build": {
+    "project_dir": "/nvme1t/work/esp32jtag_firmware",
+    "artifact_stem": "esp32jtag_firmware",
+    "use_flash_args": true
+  },
+
+  "preflight": {
+    "enabled": false,
+    "note": "Preflight skipped — instrument is self-hosted. Serial port probed at run time."
+  },
+
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "usb_vid": "303a",
+    "usb_pid": "1001",
+    "usb_serial": "3C:DC:75:5A:9A:FC",
+    "baud": null,
+    "profile": "espidf",
+    "duration_s": 15,
+    "expect_patterns": [
+      "FPGA configured OK - status = 0",
+      "spi_master_init\\(\\) done, gbl_spi_h1 is Not NULL",
+      "Listening on TCP port: 4242",
+      "\\[APP\\] Free memory:"
+    ],
+    "heartbeat_pattern": "Free internal and DMA memory:",
+    "rts_dtr_reset": false,
+    "note": "Native USB Serial/JTAG — no bridge chip. baud=null (USB CDC). RTS/DTR MUST NOT be used for reset. If port absent at test start: firmware may have crashed; manual recovery required (BOOT+RESET).",
+    "on_port_missing": "request_manual_recovery"
+  },
+
+  "validate_network": {
+    "enabled": true,
+    "source": "serial_log",
+    "ip_pattern": "IP          : (\\d+\\.\\d+\\.\\d+\\.\\d+)",
+    "checks": [
+      {"kind": "ping",  "target": "{{observed_ip}}"},
+      {"kind": "tcp",   "target": "{{observed_ip}}:4242"}
+    ],
+    "note": "IP is DHCP-assigned. Extract from serial log pattern 'IP          :'. Then ping + TCP :4242."
+  }
+}

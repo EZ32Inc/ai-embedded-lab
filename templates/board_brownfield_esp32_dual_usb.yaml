@@ -1,0 +1,84 @@
+# Template: ESP32 Brownfield Project — Dual-USB Board (Class A)
+#
+# Use this template for boards with BOTH:
+#   - A USB-to-UART bridge chip (CH341, CP210x, FT232, etc.) → UART0 console
+#   - The ESP32 native USB port → secondary console / flash
+#
+# RTS/DTR reset IS available on the bridge port.
+# Console survives firmware crash (bridge is independent hardware).
+#
+# Examples: ESP32-C5 DevKit, ESP32-C6 DevKit, most official Espressif DevKitC boards
+#
+# Instructions:
+#   1. Replace ALL <PLACEHOLDERS> with real values
+#   2. Identify which /dev/tty* is bridge vs native (see below)
+#   3. Save to configs/boards/<BOARD_ID>.yaml
+#
+# To distinguish bridge port from native port:
+#   udevadm info /dev/ttyACM0 | grep ID_VENDOR_ID
+#   → 1a86 = CH341 (bridge)
+#   → 303a = Espressif (native USB)
+#   → 10c4 = CP210x (bridge)
+#   → 0403 = FT232 (bridge)
+
+board:
+  name: <BOARD_NAME>           # e.g. "ESP32-C6 DevKit Dual USB"
+  kind: board                  # board | dut | instrument_firmware
+  target: <TARGET>             # esp32c5 | esp32c6 | esp32s3 | ...
+  usb_interface_type: dual     # bridge (RTS/DTR OK) + native USB Serial/JTAG
+
+  processors:
+    - id: <TARGET>
+      arch: riscv               # riscv (C5, C6, H2) | xtensa (S3, S2)
+      role: primary
+      clock_hz: 160000000       # 160MHz for C5/C6; 240MHz for S3
+
+  build:
+    type: idf
+    project_dir: <PROJECT_DIR>
+    build_dir: <PROJECT_DIR>/build
+    artifact_stem: <FIRMWARE_NAME>
+    idf_target: <TARGET>
+    idf_path: <IDF_PATH>        # delete if idf.py in PATH
+    skip_set_target: true       # set false if no committed sdkconfig
+
+  flash:
+    method: idf_esptool
+    target: <TARGET>
+    port: null                  # probed at flash time
+    usb_vid: "303a"             # Espressif native USB (used for flash)
+    usb_pid: "1001"
+    usb_serial: "<NATIVE_USB_SERIAL>"  # MAC of native USB port
+    baud: 460800
+    auto_reset: false           # native USB port: no RTS/DTR
+                                # (bridge port supports RTS/DTR, but flash uses native)
+
+  console:
+    type: uart                  # UART0 via bridge chip
+    port: /dev/ttyACM0          # bridge port (CH341/CP210x)
+                                # verify VID: udevadm info /dev/ttyACM0 | grep ID_VENDOR_ID
+    baud: 115200                # UART0 baud — check sdkconfig CONFIG_ESP_CONSOLE_UART_BAUDRATE
+    profile: espidf
+    rts_dtr_reset: true         # bridge chip: RTS/DTR AVAILABLE for reset
+    loss_on_crash: false        # bridge is independent — console survives firmware crash
+    # Bridge chip info (for reference):
+    # bridge_chip: CH341         # CH341 | CP210x | FT232 | other
+    # bridge_vid: "1a86"
+    # bridge_serial: "<BRIDGE_SERIAL>"
+
+  # Optional: secondary console via native USB (if firmware also enables USB CDC)
+  # console_secondary:
+  #   type: usb_serial_jtag
+  #   port: /dev/ttyACM2        # native USB port
+  #   baud: null
+  #   rts_dtr_reset: false
+
+  # LA / observe wiring (fill in if used as DUT with logic analyzer)
+  # observe_map:
+  #   gpio4: P0.0
+  #   gpio5: P0.1
+
+  pins:
+    safe_output: []             # GPIOs safe to drive as output in tests
+    strap_or_reserved:
+      - GPIO0                   # BOOT strap pin — do not use in tests

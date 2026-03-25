@@ -1,0 +1,91 @@
+# ESP32JTAG Instrument Firmware — Board/Device Config
+#
+# Role: instrument firmware (NOT a DUT).
+# This config describes an ESP32-S3 running esp32jtag_firmware.
+# Used for build, flash, and smoke validation of the instrument itself.
+#
+# ── CRITICAL HARDWARE CONSTRAINT ──────────────────────────────────────────────
+# Single USB port, wired directly to ESP32-S3 native USB.
+# There is NO separate USB-to-UART bridge chip.
+#
+# Consequences:
+#   1. Console is native USB Serial/JTAG (CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y),
+#      NOT a traditional UART console.
+#   2. RTS/DTR lines cannot be used to trigger reset or enter download mode.
+#      Do NOT attempt auto-reset via serial control lines.
+#   3. USB console is the primary runtime log path (always-on during normal op).
+#   4. On firmware crash / USB stack failure, this path may be lost.
+#      AEL cannot auto-recover. Manual recovery is required (see below).
+#
+# ── FLASH / RECOVERY MODEL ────────────────────────────────────────────────────
+# Normal flash (firmware is running and USB is healthy):
+#   idf.py -p /dev/ttyACM0 flash          ← device must be in normal run mode
+#   OR: esptool.py --chip esp32s3 -p /dev/ttyACM0 write_flash @build/flash_args
+#
+# Manual recovery (firmware crashed / USB path lost / brick recovery):
+#   AEL must request user intervention:
+#     1. Hold BOOT button (GPIO0)
+#     2. Press and release RESET button while holding BOOT
+#     3. Release BOOT → ESP32-S3 enters download mode
+#     4. Re-flash via esptool.py
+# ──────────────────────────────────────────────────────────────────────────────
+#
+# Observed: /dev/ttyACM0, VID=303a:1001, serial=3C:DC:75:5A:9A:FC
+# Boot-time DHCP IP: 192.168.2.62 (STA mode, BELL567)
+
+board:
+  name: ESP32JTAG Instrument (ESP32-S3)
+  kind: instrument_firmware
+  target: esp32s3
+  usb_interface_type: native_only   # single native USB, NO bridge chip, NO RTS/DTR reset
+  processors:
+    - id: esp32s3
+      arch: xtensa
+      role: primary
+      clock_hz: 240000000
+
+  build:
+    type: idf
+    project_dir: /nvme1t/work/esp32jtag_firmware   # external absolute path
+    build_dir: /nvme1t/work/esp32jtag_firmware/build  # keep artifacts in project dir
+    artifact_stem: esp32jtag_firmware
+    idf_target: esp32s3
+    idf_path: /home/aes/esp/esp-idf                # IDF install; sourced if idf.py not in PATH
+    skip_set_target: true    # brownfield: project has tuned sdkconfig; set-target would destroy it
+    use_flash_args: true     # multi-binary flash via build/flash_args
+
+  flash:
+    method: idf_esptool
+    target: esp32s3
+    port: null               # probe at flash time: VID=303a PID=1001
+    usb_vid: "303a"
+    usb_pid: "1001"
+    usb_serial: "3C:DC:75:5A:9A:FC"
+    baud: 460800
+    auto_reset: false        # NO RTS/DTR — native USB, no bridge chip
+    requires_running_firmware: true   # normal flash assumes firmware is up
+    recovery:
+      method: manual_boot_button
+      instruction: >
+        Hold BOOT (GPIO0), press+release RESET, then release BOOT.
+        ESP32-S3 enters download mode. Then re-run flash command.
+      trigger_conditions:
+        - firmware_crash
+        - usb_stack_failure
+        - brick_recovery
+
+  console:
+    type: usb_serial_jtag    # CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+    port: /dev/ttyACM0       # same USB port as flash — no separate bridge
+    baud: null               # USB CDC — baud setting irrelevant
+    profile: espidf
+    rts_dtr_reset: false     # NO hardware reset via serial control lines
+    loss_on_crash: true      # console path may disappear on firmware crash
+
+  network:
+    mode: sta
+    gdb_port: 4242
+    web_port: 443
+
+  # No observe_map / LA wiring — this is an instrument, not a DUT.
+  # Observation is via serial log (primary) and network health checks (secondary).

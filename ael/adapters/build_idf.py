@@ -9,18 +9,46 @@ def _idf_ok():
     return shutil.which("idf.py") is not None
 
 
+def _inject_idf_path(idf_path: str) -> bool:
+    """Add IDF tools to PATH by sourcing export.sh (or using idf_path/tools directly)."""
+    export_sh = os.path.join(idf_path, "export.sh")
+    if not os.path.exists(export_sh):
+        return False
+    # Extract PATH additions by sourcing export.sh in a subprocess
+    result = subprocess.run(
+        f'source "{export_sh}" 2>/dev/null && echo "IDF_PATH=$IDF_PATH" && echo "PATH=$PATH"',
+        shell=True, executable="/bin/bash",
+        capture_output=True, text=True
+    )
+    for line in result.stdout.splitlines():
+        if line.startswith("PATH="):
+            os.environ["PATH"] = line[len("PATH="):]
+        elif line.startswith("IDF_PATH="):
+            os.environ["IDF_PATH"] = line[len("IDF_PATH="):]
+    return _idf_ok()
+
+
 def run(board_cfg):
     board_cfg = _as_board_dict(board_cfg)
     name = board_cfg.get("name", "unknown")
     build_cfg = board_cfg.get("build", {}) if isinstance(board_cfg, dict) else {}
     project_dir = build_cfg.get("project_dir")
-    target = build_cfg.get("target") or board_cfg.get("target")
+    target = build_cfg.get("target") or build_cfg.get("idf_target") or board_cfg.get("target")
     build_dir_override = str(build_cfg.get("build_dir") or "").strip()
     print(f"Build: target {name}")
 
     if not _idf_ok():
-        print("Build: idf.py not found in PATH")
-        return None
+        # Try idf_path from build config, then from environment
+        idf_path = (
+            build_cfg.get("idf_path")
+            or board_cfg.get("idf_path")
+            or os.environ.get("IDF_PATH")
+        )
+        if idf_path and _inject_idf_path(idf_path):
+            print(f"Build: IDF sourced from {idf_path}")
+        else:
+            print("Build: idf.py not found in PATH")
+            return None
 
     if not project_dir:
         print("Build: project_dir not set")
@@ -43,10 +71,16 @@ def run(board_cfg):
         shutil.rmtree(build_dir)
     os.makedirs(build_dir, exist_ok=True)
 
+    # skip_set_target: set true for brownfield projects that already have a
+    # tuned sdkconfig. Running set-target triggers fullclean + sdkconfig
+    # regeneration which destroys project-specific settings.
+    skip_set_target = bool(build_cfg.get("skip_set_target", False))
+
     try:
         env = os.environ.copy()
         if target:
             env["IDF_TARGET"] = str(target)
+        if target and not skip_set_target:
             res = subprocess.run(
                 ["idf.py", "-C", proj, "-B", build_dir, "set-target", str(target)],
                 check=True,
@@ -58,6 +92,8 @@ def run(board_cfg):
                 print(res.stdout.strip())
             if res.stderr:
                 print(res.stderr.strip())
+        elif skip_set_target:
+            print(f"Build: skip_set_target=true — using existing sdkconfig")
         res = subprocess.run(
             ["idf.py", "-C", proj, "-B", build_dir, "build"],
             check=True,

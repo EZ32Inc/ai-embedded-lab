@@ -1,0 +1,118 @@
+project_id: esp32jtag_firmware_onboarding
+project_name: ESP32JTAG Firmware — AEL Brownfield Onboarding
+project_type: instrument_firmware_onboarding
+project_user: local_user
+domain: instrument_firmware
+
+status: onboarding_complete
+
+description: >
+  Brownfield onboarding of the ESP32JTAG instrument firmware (ESP32-S3).
+  This is the firmware that runs on AEL's own debug probe hardware —
+  not a DUT. The USB serial port is permanently available as the
+  primary runtime observation channel.
+
+  First real case of AEL Brownfield Firmware Onboarding workflow.
+  Used to derive a repeatable onboarding pattern and a grounded spec.
+
+source:
+  project_dir: /nvme1t/work/esp32jtag_firmware
+  build_system: esp-idf-cmake
+  idf_version: ">=5.0"
+  idf_target: esp32s3
+
+hardware:
+  mcu: ESP32-S3
+  flash_size: 8MB
+  psram: 8MB
+  usb_vid: "303a"
+  usb_pid: "1001"
+  usb_serial: "3C:DC:75:5A:9A:FC"
+  console_type: usb_serial_jtag        # CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y
+  usb_port: /dev/ttyACM0              # observed at onboarding time
+
+network:
+  mode: sta                            # STA mode, connects to BELL567
+  dhcp_ip_observed: 192.168.2.62      # DHCP-assigned at onboarding
+  gdb_port: 4242
+  web_port: 443
+
+confirmed_facts:
+  - key: console_port
+    value: /dev/ttyACM0
+    source: observed
+    note: Espressif USB JTAG/serial, VID=303a PID=1001 serial=3C:DC:75:5A:9A:FC
+
+  - key: console_type
+    value: usb_serial_jtag
+    source: sdkconfig
+    note: CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y — NOT UART, NOT CDC OTG
+
+  - key: usb_architecture
+    value: single_native_usb_no_bridge
+    source: user_confirmed
+    note: >
+      Single USB port wired directly to ESP32-S3 native USB (GPIO19/20).
+      NO USB-to-UART bridge chip. This is NOT a traditional UART console.
+
+  - key: rts_dtr_reset
+    value: false
+    source: user_confirmed
+    note: >
+      RTS/DTR CANNOT trigger reset or download mode. Native USB only.
+      MUST NOT attempt auto-reset via serial control lines.
+
+  - key: flash_and_console_same_port
+    value: true
+    source: hardware_design
+    note: USB port is permanently available — flash and runtime log on same connector
+
+  - key: recovery_model
+    value: manual_boot_button
+    source: user_confirmed
+    note: >
+      If firmware crashes or USB path is lost, AEL cannot auto-recover.
+      Manual recovery: hold BOOT (GPIO0) + press RESET → ESP32-S3 download mode.
+      AEL must request user intervention in this case.
+
+  - key: console_loss_on_crash
+    value: true
+    source: hardware_architecture
+    note: >
+      USB Serial/JTAG console is implemented in firmware. If the firmware
+      crashes or the USB stack fails, the console path disappears.
+      AEL must treat a missing /dev/ttyACM0 as a crash indicator.
+
+  - key: boot_ready_signal
+    value: "[APP] Free memory:"
+    source: observed_boot_log
+    note: Appears at line 1063 of main.c after all init complete
+
+  - key: gdb_ready_signal
+    value: "Listening on TCP port: 4242"
+    source: observed_boot_log
+
+  - key: network_ready_signal
+    value: "GOT ip event!!!"
+    source: observed_boot_log
+
+  - key: fpga_ready_signal
+    value: "FPGA configured OK - status = 0"
+    source: observed_boot_log
+
+  - key: heartbeat_signal
+    value: "Free internal and DMA memory:"
+    source: observed_boot_log
+    note: Printed every 3 seconds in while(true) loop
+
+artifacts:
+  elf:  build/esp32jtag_firmware.elf
+  bin:  build/esp32jtag_firmware.bin
+  map:  build/esp32jtag_firmware.map
+  flash_args: build/flash_args
+  flash_args_content: |
+    --flash_mode dio --flash_freq 80m --flash_size 16MB
+    0x0     bootloader/bootloader.bin
+    0x20000 esp32jtag_firmware.bin
+    0x8000  partition_table/partition-table.bin
+    0xf000  ota_data_initial.bin

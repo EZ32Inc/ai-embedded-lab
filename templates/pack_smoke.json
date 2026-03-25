@@ -1,0 +1,17 @@
+{
+  "_template": "pack_smoke v1.0",
+  "_instructions": [
+    "Replace ALL <PLACEHOLDERS> with real values",
+    "Remove all keys starting with underscore before using",
+    "Save to packs/<BOARD_ID>_smoke.json",
+    "Run with: python3 -m ael pack --pack packs/<BOARD_ID>_smoke.json"
+  ],
+
+  "name": "<BOARD_ID>_smoke",
+  "board": "<BOARD_ID>",
+  "_board_note": "must match the stem of configs/boards/<BOARD_ID>.yaml",
+  "tests": [
+    "tests/plans/<BOARD_ID>_smoke.json"
+  ],
+  "_tests_note": "list of test plan paths relative to repo root"
+}
