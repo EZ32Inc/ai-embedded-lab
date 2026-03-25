@@ -7,16 +7,16 @@ board_configs:
   path: configs/boards/esp32_wroom32d_cp210x.yaml
   primary: true
 build:
-  project_dir: firmware/targets/esp32_wroom32d_suite
+  project_dir: firmware/targets/esp32_wroom32d/test_full_suite
   type: idf
 build_type: idf
 compile_validation: passed
-compile_validation_note: idf.py build esp32_wroom32d_suite — esp32 target
+compile_validation_note: idf.py build test_full_suite — 12/12 PASS verified 2026-03-25
 default_packs:
-- packs/esp32_wroom32d_full_suite.json
-description: ESP32-WROOM-32D devkit with CP210x USB-UART bridge. 11-test suite covering
-  NVS/WiFi/BLE/Sleep/PWM/I2C/INTR/PCNT/UART/ADC/SPI. Single USB port, reset_strategy=rts
-  required.
+- packs/esp32_wroom32d_full.json
+description: ESP32-WROOM-32D devkit with CP210x USB-UART bridge. 12 isolated test
+  programs (truth layer) + test_full_suite convenience binary. Covers Hello/NVS/WiFi/BLE/Sleep/PWM/INTR/PCNT/UART/ADC/SPI/I2C.
+  Single USB port, reset_strategy=rts required.
 family: esp32
 flash:
   method: idf_esptool
@@ -26,7 +26,7 @@ lifecycle_stage: merged_to_main
 mcu: esp32
 mcus:
 - build:
-    project_dir: firmware/targets/esp32_wroom32d_suite
+    project_dir: firmware/targets/esp32_wroom32d/test_full_suite
     type: idf
   clock_hz: 240000000
   family: esp32
@@ -43,6 +43,8 @@ tags:
 - cp210x
 verified:
   date: 2026-03-25
-  status: false
+  note: '12/12 PASS on test_full_suite (AEL_SUITE_FULL DONE passed=12 failed=0). 12
+    isolated truth-layer programs all previously PASS. Rule D convenience binary verified.'
+  status: true
   verified_on:
     bench_id: default

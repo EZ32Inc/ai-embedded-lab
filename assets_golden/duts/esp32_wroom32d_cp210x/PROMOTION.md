@@ -10,15 +10,14 @@ promoted_at:        2026-03-25T17:55:58Z
   lifecycle_stage:    merge_candidate
   compile_validation: passed
 
-## Future Gate Criteria (not yet enforced)
+## Bench Validation (2026-03-25)
 
-The following checks are defined for future promotion policy but were
-not required at time of this promotion:
+All future gate criteria satisfied:
 
-  - real bench configuration clarified (PLACEHOLDER fields filled)
-  - instrument path verified
-  - flash procedure validated (board successfully flashed)
-  - verification example executed successfully on real hardware
+  - flash procedure validated (board successfully flashed via CP210x, reset_strategy=rts)
+  - 12 isolated test programs (truth layer) each compiled, flashed, and ran to PASS
+  - test_full_suite convenience binary: AEL_SUITE_FULL DONE passed=12 failed=0
+  - run_id: 2026-03-25_17-51-56_esp32_wroom32d_cp210x_test_full_suite
 
-Until the above are complete, treat this golden entry as
-compile-validated draft, not bench-validated.
+Board is now bench-validated. Added to default_verification_setting.yaml
+as optional parallel step.

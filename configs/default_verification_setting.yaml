@@ -32,6 +32,11 @@
         {
           "board": "stm32f103_gpio_stlink",
           "test": "tests/plans/stm32f103_gpio_no_external_capture_stlink.json"
+        },
+        {
+          "board": "esp32_wroom32d_cp210x",
+          "test": "tests/plans/esp32_wroom32d/test_full_suite.json",
+          "optional": true
         }
       ]
     }

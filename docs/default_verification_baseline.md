@@ -13,7 +13,7 @@ for:
 
 ## Current configured steps
 
-The current baseline is one eight-worker parallel batch defined in
+The current baseline is one nine-worker parallel batch defined in
 [configs/default_verification_setting.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/default_verification_setting.yaml).
 
 ### Required (6)
@@ -42,7 +42,7 @@ The current baseline is one eight-worker parallel batch defined in
 - DUT test: `stm32f103_gpio_no_external_capture_stlink`
 - Plan: `tests/plans/stm32f103_gpio_no_external_capture_stlink.json`
 
-### Optional candidates (2)
+### Optional candidates (3)
 
 These run in parallel with the required batch but do not affect the PASS/FAIL
 result. They skip gracefully when hardware is not on bench.
@@ -54,6 +54,11 @@ result. They skip gracefully when hardware is not on bench.
 - DUT: `stm32f401rct6` *(optional — ESP32JTAG, hardware-gated)*
 - DUT test: `stm32f401_gpio_signature`
 - Plan: `tests/plans/stm32f401_gpio_signature.json`
+
+- DUT: `esp32_wroom32d_cp210x` *(optional — CP210x, hardware-gated; 6 jumpers required)*
+- DUT test: `esp32_wroom32d_test_full_suite`
+- Plan: `tests/plans/esp32_wroom32d/test_full_suite.json`
+- Note: bench-validated 2026-03-25; 12/12 PASS (`AEL_SUITE_FULL DONE passed=12 failed=0`)
 
 ## Current validated result
 
@@ -67,6 +72,7 @@ Representative evidence:
 - ST-Link USB freeze fixed (SIGKILL + USBDEVFS_RESET ioctl); 3/3 consecutive passes confirmed `2026-03-21`
 - ST-Link promoted from optional to required; suite confirmed `6/6 PASS` on `2026-03-21`
 - Optional candidates (F407 Discovery, F401RCT6) added; suite confirmed `PASS (6/8)` on `2026-03-21`
+- ESP32-WROOM-32D bench-validated (12/12 PASS); added as optional candidate `2026-03-25`
 
 A regression on `2026-03-20` temporarily broke all four `ESP32JTAG`-backed runs
 at preflight (lost provider-resolution metadata after interface standardization);
@@ -77,7 +83,7 @@ repaired and baseline returned to `6/6 PASS` in run `2026-03-20_13-10-38`.
 At the current project stage, this baseline should be treated as:
 
 - the default regression health line for schema and execution-model changes
-- the main repeated live-bench stability line for the current eight-board setup (6 required + 2 optional)
+- the main repeated live-bench stability line for the current nine-board setup (6 required + 3 optional)
 - the primary readiness signal before expanding to broader mixed-instrument
   coverage
 
