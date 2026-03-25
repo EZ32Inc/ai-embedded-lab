@@ -108,7 +108,7 @@ run_index.record_success(board_id, test_name, exp_id)
 | **[HIGH_PRIORITY] observe_uart baud=null → int(None) TypeError (USB CDC)** | `da6927bd` | 所有 USB CDC 设备（ESP32-S3 native USB 等） | 0.9 |
 | **[HIGH_PRIORITY] ESP32JTAG Firmware Brownfield Onboarding Pattern** | `92fd939d` | ESP32-S3 native USB instrument firmware | 0.8 |
 | **[HIGH_PRIORITY] ESP32 USB Interface Classification: native-only vs dual** | `7daa8c80` | 所有 ESP32 板（Class A dual / Class B native-only） | 0.9 |
-| **[HIGH_PRIORITY] Playwright Browser Automation for Embedded Web UI Testing** | `4952a7d2` | 任何带 Web UI 的嵌入式设备（HTTPS + Basic Auth + WebSocket） | 0.9 |
+| **[HIGH_PRIORITY] Playwright Browser Automation for Embedded Web UI Testing** | `747fdb40` | 任何带 Web UI 的嵌入式设备（HTTPS + Basic Auth + WebSocket） | 0.9 |
 
 ## ESP32-C5 board_family 已知陷阱
 
