@@ -4,17 +4,30 @@
   "test_kind": "instrument_specific",
   "board": "esp32_wroom32d_cp210x",
   "supported_instruments": [],
-  "requires": {"mailbox": false, "datacapture": false},
-  "labels": ["stage1", "selftest"],
-  "covers": ["ble"],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage1",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "ble"
+  ],
   "notes": "Stage 1: BLE passive scan via NimBLE. No jumpers required. 3-second scan; passes if any advertiser is seen.",
-  "wiring": {"required": []},
+  "wiring": {
+    "required": []
+  },
   "build": {
     "project_dir": "firmware/targets/esp32_wroom32d/test_ble",
     "artifact_stem": "ael_esp32_wroom32d_test_ble",
     "build_dir": "artifacts/build_esp32_wroom32d_test_ble"
   },
-  "preflight": {"enabled": false},
+  "preflight": {
+    "enabled": false
+  },
   "observe_uart": {
     "enabled": true,
     "port": "/dev/ttyUSB0",
@@ -22,6 +35,8 @@
     "profile": "espidf",
     "duration_s": 12,
     "reset_strategy": "rts",
-    "expect_patterns": ["AEL_BLE.*PASS"]
+    "expect_patterns": [
+      "AEL_BLE.*PASS"
+    ]
   }
 }

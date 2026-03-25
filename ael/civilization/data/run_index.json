@@ -241,5 +241,107 @@
         "last_raw": "[esp32_wroom32d_cp210x] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
       }
     }
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_hello": {
+    "exp_id": "d2a64da7-b959-43c6-a091-f3e4f05df318",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774472509.8776085,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_nvs": {
+    "exp_id": "85203595-df52-487f-aa8e-663e139adce1",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774472573.7302742,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_wifi": {
+    "exp_id": "a401bc34-cdcd-49d8-b911-6335a0471189",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774473057.6115413,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_ble": {
+    "exp_id": "519d81db-b92d-4037-9086-374079a9ece4",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774473116.3019836,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_pwm": {
+    "exp_id": "ffb28901-ac4f-4263-a16a-573468c35a76",
+    "success_count": 1,
+    "failure_count": 1,
+    "last_seen": 1774473724.1445568,
+    "confidence": 0.5,
+    "known_failures": {
+      "load": {
+        "exp_id": "8866b55f-9a41-4568-bce3-f653321d559f",
+        "count": 1,
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_pwm: failed — stages: preflight, build, run, check — failure: load — load failed"
+      }
+    }
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_sleep": {
+    "exp_id": "22ab70db-8e07-445e-bf38-0c1d5d0743dd",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473664.1366282,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_gpio_intr": {
+    "exp_id": "fd85aa52-14df-4bf8-9600-76530061c35a",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473778.3947022,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_pcnt": {
+    "exp_id": "7cec8dc1-e6cf-481a-b4fd-1089ba1dfb91",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473833.0244365,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_uart": {
+    "exp_id": "7ff95723-a25b-4f75-9dd5-4acf0b1483fc",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473888.496915,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_adc": {
+    "exp_id": "0d9a4e31-2455-41eb-842e-dbde70ad5507",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473942.4899356,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_spi": {
+    "exp_id": "a0fff844-f0b9-40d8-8056-15690864804b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774473994.5096886,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_i2c": {
+    "exp_id": "9ea5706b-163a-44a4-8936-2ad2f4476511",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774474049.7338755,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }

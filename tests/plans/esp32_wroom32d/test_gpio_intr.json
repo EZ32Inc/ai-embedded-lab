@@ -4,13 +4,26 @@
   "test_kind": "instrument_specific",
   "board": "esp32_wroom32d_cp210x",
   "supported_instruments": [],
-  "requires": {"mailbox": false, "datacapture": false},
-  "labels": ["stage2", "selftest"],
-  "covers": ["gpio"],
-  "notes": "Stage 2: GPIO interrupt loopback. GPIO25→GPIO26 jumper required. Run BEFORE test_pcnt — both share this wire and PCNT occupies the pin after init.",
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "gpio"
+  ],
+  "notes": "Stage 2: GPIO interrupt loopback. GPIO25\u2192GPIO26 jumper required. Run BEFORE test_pcnt \u2014 both share this wire and PCNT occupies the pin after init.",
   "wiring": {
     "required": [
-      {"from": "GPIO25", "to": "GPIO26", "label": "GPIO interrupt drive + input"}
+      {
+        "from": "GPIO25",
+        "to": "GPIO26",
+        "label": "GPIO interrupt drive + input"
+      }
     ]
   },
   "build": {
@@ -18,7 +31,9 @@
     "artifact_stem": "ael_esp32_wroom32d_test_gpio_intr",
     "build_dir": "artifacts/build_esp32_wroom32d_test_gpio_intr"
   },
-  "preflight": {"enabled": false},
+  "preflight": {
+    "enabled": false
+  },
   "observe_uart": {
     "enabled": true,
     "port": "/dev/ttyUSB0",
@@ -26,6 +41,8 @@
     "profile": "espidf",
     "duration_s": 8,
     "reset_strategy": "rts",
-    "expect_patterns": ["AEL_INTR.*PASS"]
+    "expect_patterns": [
+      "AEL_INTR.*PASS"
+    ]
   }
 }

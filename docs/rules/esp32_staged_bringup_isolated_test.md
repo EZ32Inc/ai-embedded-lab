@@ -1,5 +1,5 @@
-# ESP32 Bring-Up & Test Architecture Rule
-## (No-Wire Console-First + One Test, One Program)
+# ESP32 Bring-Up & Test Architecture Rule (Unified)
+## No-Wire Console-First + One Test Per Program + Staged Suites + Optional Full Suite
 
 ---
 
@@ -8,36 +8,25 @@
 This document defines the mandatory bring-up methodology and test architecture for all
 ESP32-family boards (ESP32, S2, S3, C3, C5, C6, P4, etc.).
 
-It combines two critical engineering rules:
+It unifies four core rules:
 
 1. **No-Wire Console-First Validation**
 2. **One Test, One Program**
+3. **Stage by Dependency**
+4. **Optional Full Board Suite (Built on Verified Tests Only)**
 
 These rules are REQUIRED for all board validation, Golden Test Packs, and AEL execution
 pipelines.
 
 ---
 
-## 2. Core Principles
+## 2. Core Philosophy
 
-### Principle 1 — Reduce Variables First
+> Embedded systems must prioritize **controllability, observability, and debuggability**
+> over convenience.
 
-> Always validate the system in the simplest possible configuration before introducing
-> additional complexity.
-
----
-
-### Principle 2 — Isolate Failures
-
-> Each test must be independently executable and must not depend on side effects from
-> other tests.
-
----
-
-### Principle 3 — Stage by Dependency
-
-> Tests must be ordered from lowest dependency (no wiring) to highest dependency
-> (external integration).
+Unlike general software systems, embedded bring-up interacts with physical hardware and
+must strictly control variables.
 
 ---
 
@@ -45,7 +34,7 @@ pipelines.
 
 ### Requirement
 
-Before running any test, the board MUST pass a minimal console output program under
+Before any functional testing, the board MUST pass a minimal console output program under
 **no external wiring condition**.
 
 ---
@@ -59,7 +48,7 @@ Before running any test, the board MUST pass a minimal console output program un
 
 **Program Requirement:**
 
-A minimal program that prints a deterministic string.
+A minimal program that prints a deterministic string to the console interface.
 
 **Example:**
 ```
@@ -69,10 +58,10 @@ HELLO_AES channel=USB_SERIAL_JTAG
 ```
 
 **Must PASS:**
-- Flash success
-- Reliable boot
-- Correct console output
-- Repeatable across resets
+- Flash succeeds
+- Board boots reliably
+- Console output is visible
+- Output is repeatable across resets
 
 ---
 
@@ -95,16 +84,16 @@ Examples:
 External connections allowed.
 
 Examples:
-- UART to DUT
+- UART link
 - SPI / I2C
 - JTAG routing
-- External GPIO interaction
+- External GPIO
 
 ---
 
 ### Invariant
 
-> No board bring-up is valid unless Stage 0 (no-wire console) passes first.
+> No board bring-up is valid unless Stage 0 passes first.
 
 ---
 
@@ -112,7 +101,7 @@ Examples:
 
 ### Requirement
 
-> Each test MUST be implemented as an independent program or independently runnable unit.
+> Each test MUST be independently executable.
 
 ---
 
@@ -129,8 +118,6 @@ main() {
 }
 ```
 
-This is NOT allowed.
-
 ---
 
 ### Required Pattern ✅
@@ -138,18 +125,17 @@ This is NOT allowed.
 Each test is independent:
 
 - `hello_uart0`
-- `hello_usb`
 - `test_nvs`
 - `test_temp`
 - `test_wifi`
 - `test_ble`
 - `test_sleep`
-- `test_uart_link`
-- `test_spi_fpga`
-- `test_i2c_device`
+- `test_uart`
+- `test_spi`
+- `test_i2c`
 
 Each must:
-- Compile independently
+- Build independently
 - Flash independently
 - Run independently
 - Produce its own PASS/FAIL result
@@ -158,114 +144,178 @@ Each must:
 
 ### Rationale
 
-Monolithic test programs cause:
+Monolithic tests cause:
 - State contamination between tests
 - Hidden dependencies
 - Hard-to-debug failures
 - Non-reproducible issues
-- Longer debug cycles
 
 ---
 
-## 5. Combined Execution Model
+## 5. Rule C — Stage by Dependency
 
-Correct workflow:
+Tests must follow this order:
 
-1. **Stage 0**
-   - Run minimal hello program
-   - Verify console output
+1. Minimal console (no wire)
+2. No-wire functional tests
+3. Wiring / integration tests
 
-2. **Stage 1**
-   - Run each no-wire test independently
-
-3. **Stage 2**
-   - Add wiring
-   - Run each integration test independently
+This ordering ensures that when a test fails, the problem space is already bounded by what
+passed before it.
 
 ---
 
-## 6. AEL / Automation Enforcement
+## 6. Rule D — Optional Full Board Suite (ALLOWED WITH CONSTRAINTS)
 
-This rule must be enforced as a **hard gate**:
+A full board test suite is **allowed and recommended**, but ONLY under strict conditions.
 
-### Preflight Gate:
+---
+
+### Purpose
+
+- Fast board health check
+- Regression testing
+- Manufacturing / field validation
+- Golden Test execution shortcut
+
+---
+
+### Critical Requirement
+
+> The full suite MUST be built on already validated independent tests.
+
+Independent tests are validated first. The full suite is added afterward — never before.
+
+---
+
+### Allowed Structure
+
+The full suite acts as an **orchestration layer**, not a reimplementation.
+
+---
+
+### Strongly Recommended Model — External Runner Orchestration (Best)
+
+```
+flash hello_uart0  → verify PASS
+flash test_nvs     → verify PASS
+flash test_wifi    → verify PASS
+flash test_spi     → verify PASS
+...
+```
+
+This is the AEL pack model. Each test remains a separate program. The runner flashes and
+verifies each in sequence. Truth layer and convenience layer are identical.
+
+---
+
+### Acceptable Model — Combined Firmware (With Care)
+
+A single combined firmware MAY exist, but it MUST:
+
+- Clearly separate each sub-test as an independent function
+- Print PASS/FAIL per sub-test
+- Avoid shared hidden state between sub-tests
+- Reinitialize hardware within each sub-test function
+- NOT depend on execution-order side effects
+
+---
+
+### Forbidden ❌
+
+Rewriting all tests into a single large `main()` with shared logic, shared state, and
+hidden coupling between test steps.
+
+---
+
+## 7. Truth Layer vs Convenience Layer
+
+> Independent tests are the **truth layer**.
+> Full suites are the **convenience layer**.
+
+The system MUST always preserve:
+- Ability to run each test individually
+- Ability to debug at single-test granularity
+
+The full suite is a time-saving shortcut. It does NOT replace individual tests.
+
+---
+
+## 8. AEL / Automation Enforcement
+
+### Preflight Gate
+
+Before any test pack execution:
 
 - Minimal flash → PASS
 - Minimal boot → PASS
 - Console output → PASS
 
-Otherwise:
-→ STOP execution
+Otherwise: → STOP
 
 ---
 
-### Execution Model:
+### Execution Model
 
-- Run tests one by one
-- No shared `main()`
-- No chained execution
-
----
-
-## 7. Anti-Pattern Warning
-
-> Do NOT apply "convenience-driven software patterns" to embedded bring-up.
-
-In software:
-- Combining tests may reduce code duplication
-
-In embedded systems:
-- Combining tests **increases failure coupling**
-- Makes hardware debugging significantly harder
+- Tests run independently (or as cleanly separated functions in the combined firmware)
+- No chained hidden execution
+- Failures must be localizable to a single test
 
 ---
 
-## 8. Refactoring Requirement (MANDATORY)
+## 9. Mandatory Refactoring Rule
 
 If an existing implementation:
-- Combines multiple tests into a single program
-- Runs all tests inside one `main()`
+- Combines multiple tests in one program with a single `main()`
+- Has shared state or hidden dependencies between test steps
 
 Then it MUST be refactored.
 
 ---
 
-### Required Refactor Actions:
+### Required Refactor Actions
 
-1. Extract each test into its own program:
-   - One test = one entry point
-
-2. Remove all cross-test dependencies
-
-3. Ensure each test:
-   - Initializes hardware independently
-   - Cleans up its own state
-   - Does not rely on previous tests
-
-4. Reorganize into staged structure:
-   - hello
-   - no-wire tests
-   - wiring tests
+1. Split into independent test programs (one per test)
+2. Ensure no cross-test dependency
+3. Reorganize into staged structure:
+   - hello (Stage 0)
+   - no-wire tests (Stage 1)
+   - wiring tests (Stage 2)
+4. Optionally add full board suite AFTER all individual tests are validated
 
 ---
 
-## 9. Summary
+## 10. Key Engineering Insight
 
-> Embedded bring-up is not about "doing everything at once".
-> It is about **controlling variables and isolating failures**.
+> Embedded debugging is about **reducing variables and isolating failures**.
 
-Correct approach:
-- No-wire first
-- Console first
-- One test at a time
-- Stage by dependency
+NOT about:
+- Minimizing code duplication
+- Maximizing convenience
+
+In software: combining tests may reduce code.
+In embedded: combining tests **increases failure coupling** and makes hardware debugging
+significantly harder.
 
 ---
 
-## 10. Short Name
+## 11. Correct Workflow
 
-**ESP32 Staged Bring-Up + Isolated Test Rule**
+```
+1. No wiring
+2. Flash + run minimal hello → PASS
+3. Flash + run each no-wire test independently → PASS each
+4. Add wiring
+5. Flash + run each integration test independently → PASS each
+6. (Optional) Run full board suite as convenience shortcut
+```
+
+---
+
+## 12. Short Name
+
+**ESP32 Staged Bring-Up + Isolated Test + Full Suite Rule**
 
 or
 
-**No-Wire First + One-Test-Per-Program Rule**
+**No-Wire First + One-Test-Per-Program + Verified Full Suite**

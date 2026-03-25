@@ -1,0 +1,50 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32_wroom32d_test_full_suite",
+  "test_kind": "instrument_specific",
+  "board": "esp32_wroom32d_cp210x",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["full_suite", "convenience_layer"],
+  "covers": ["console", "nvs", "wifi", "ble", "sleep", "pwm", "gpio", "pcnt", "uart", "adc", "spi", "i2c"],
+  "notes": "Rule D 'Acceptable Model': single firmware running all 12 sub-tests. Each sub-test is a self-contained function with independent init/deinit. CONVENIENCE LAYER — truth layer is the 12 individual test_* programs. 6 jumpers required: GPIO25↔26 (INTR/PCNT), GPIO17↔16 (UART), GPIO33→34 (ADC), GPIO23↔19 (SPI), GPIO21↔13 (I2C SDA), GPIO22↔14 (I2C SCL).",
+  "wiring": {
+    "required": [
+      {"from": "GPIO25", "to": "GPIO26", "label": "Wire 1 — GPIO interrupt drive + PCNT input"},
+      {"from": "GPIO17", "to": "GPIO16", "label": "Wire 2 — UART1 TX → RX loopback"},
+      {"from": "GPIO33", "to": "GPIO34", "label": "Wire 3 — ADC drive → ADC1_CH6 input"},
+      {"from": "GPIO23", "to": "GPIO19", "label": "Wire 4 — SPI2 MOSI ↔ MISO loopback"},
+      {"from": "GPIO21", "to": "GPIO13", "label": "Wire 5 — I2C SDA: master (I2C0) ↔ slave (I2C1)"},
+      {"from": "GPIO22", "to": "GPIO14", "label": "Wire 6 — I2C SCL: master (I2C0) ↔ slave (I2C1)"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32_wroom32d/test_full_suite",
+    "artifact_stem": "ael_esp32_wroom32d_test_full_suite",
+    "build_dir": "artifacts/build_esp32_wroom32d_test_full_suite"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyUSB0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 75,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_HELLO.*PASS",
+      "AEL_NVS.*PASS",
+      "AEL_WIFI.*PASS",
+      "AEL_BLE.*PASS",
+      "AEL_SLEEP.*PASS",
+      "AEL_PWM.*PASS",
+      "AEL_INTR.*PASS",
+      "AEL_PCNT.*PASS",
+      "AEL_UART.*PASS",
+      "AEL_ADC.*PASS",
+      "AEL_SPI.*PASS",
+      "AEL_I2C.*PASS",
+      "AEL_SUITE_FULL DONE passed=12 failed=0"
+    ]
+  }
+}

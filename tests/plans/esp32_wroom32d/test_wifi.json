@@ -4,17 +4,30 @@
   "test_kind": "instrument_specific",
   "board": "esp32_wroom32d_cp210x",
   "supported_instruments": [],
-  "requires": {"mailbox": false, "datacapture": false},
-  "labels": ["stage1", "selftest"],
-  "covers": ["wifi"],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage1",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "wifi"
+  ],
   "notes": "Stage 1: 2.4 GHz passive WiFi scan. No jumpers required. ESP32 classic is 2.4 GHz only. Passes if at least one AP is found.",
-  "wiring": {"required": []},
+  "wiring": {
+    "required": []
+  },
   "build": {
     "project_dir": "firmware/targets/esp32_wroom32d/test_wifi",
     "artifact_stem": "ael_esp32_wroom32d_test_wifi",
     "build_dir": "artifacts/build_esp32_wroom32d_test_wifi"
   },
-  "preflight": {"enabled": false},
+  "preflight": {
+    "enabled": false
+  },
   "observe_uart": {
     "enabled": true,
     "port": "/dev/ttyUSB0",
@@ -22,6 +35,8 @@
     "profile": "espidf",
     "duration_s": 20,
     "reset_strategy": "rts",
-    "expect_patterns": ["AEL_WIFI.*PASS"]
+    "expect_patterns": [
+      "AEL_WIFI.*PASS"
+    ]
   }
 }

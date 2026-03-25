@@ -4,13 +4,26 @@
   "test_kind": "instrument_specific",
   "board": "esp32_wroom32d_cp210x",
   "supported_instruments": [],
-  "requires": {"mailbox": false, "datacapture": false},
-  "labels": ["stage2", "selftest"],
-  "covers": ["pcnt"],
-  "notes": "Stage 2: PCNT pulse counter loopback. GPIO25→GPIO26 jumper required. Run AFTER test_gpio_intr.",
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "pcnt"
+  ],
+  "notes": "Stage 2: PCNT pulse counter loopback. GPIO25\u2192GPIO26 jumper required. Run AFTER test_gpio_intr.",
   "wiring": {
     "required": [
-      {"from": "GPIO25", "to": "GPIO26", "label": "PCNT drive + input"}
+      {
+        "from": "GPIO25",
+        "to": "GPIO26",
+        "label": "PCNT drive + input"
+      }
     ]
   },
   "build": {
@@ -18,7 +31,9 @@
     "artifact_stem": "ael_esp32_wroom32d_test_pcnt",
     "build_dir": "artifacts/build_esp32_wroom32d_test_pcnt"
   },
-  "preflight": {"enabled": false},
+  "preflight": {
+    "enabled": false
+  },
   "observe_uart": {
     "enabled": true,
     "port": "/dev/ttyUSB0",
@@ -26,6 +41,8 @@
     "profile": "espidf",
     "duration_s": 8,
     "reset_strategy": "rts",
-    "expect_patterns": ["AEL_PCNT.*PASS"]
+    "expect_patterns": [
+      "AEL_PCNT.*PASS"
+    ]
   }
 }

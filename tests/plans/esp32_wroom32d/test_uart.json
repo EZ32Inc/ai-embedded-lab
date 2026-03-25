@@ -4,13 +4,26 @@
   "test_kind": "instrument_specific",
   "board": "esp32_wroom32d_cp210x",
   "supported_instruments": [],
-  "requires": {"mailbox": false, "datacapture": false},
-  "labels": ["stage2", "selftest"],
-  "covers": ["uart"],
-  "notes": "Stage 2: UART1 TX→RX loopback. GPIO17↔GPIO16 jumper required. Console is UART0 (GPIO1/3 via CP210X); UART1 is the test port — no conflict.",
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "uart"
+  ],
+  "notes": "Stage 2: UART1 TX\u2192RX loopback. GPIO17\u2194GPIO16 jumper required. Console is UART0 (GPIO1/3 via CP210X); UART1 is the test port \u2014 no conflict.",
   "wiring": {
     "required": [
-      {"from": "GPIO17", "to": "GPIO16", "label": "UART1 TX → RX loopback"}
+      {
+        "from": "GPIO17",
+        "to": "GPIO16",
+        "label": "UART1 TX \u2192 RX loopback"
+      }
     ]
   },
   "build": {
@@ -18,7 +31,9 @@
     "artifact_stem": "ael_esp32_wroom32d_test_uart",
     "build_dir": "artifacts/build_esp32_wroom32d_test_uart"
   },
-  "preflight": {"enabled": false},
+  "preflight": {
+    "enabled": false
+  },
   "observe_uart": {
     "enabled": true,
     "port": "/dev/ttyUSB0",
@@ -26,6 +41,8 @@
     "profile": "espidf",
     "duration_s": 8,
     "reset_strategy": "rts",
-    "expect_patterns": ["AEL_UART.*PASS"]
+    "expect_patterns": [
+      "AEL_UART.*PASS"
+    ]
   }
 }
