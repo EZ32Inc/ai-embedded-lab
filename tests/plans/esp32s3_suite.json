@@ -33,6 +33,7 @@
     "baud": 115200,
     "profile": "espidf",
     "duration_s": 60,
+    "reset_strategy": "rts",
     "expect_patterns": [
       "AEL_TEMP.*PASS",
       "AEL_NVS.*PASS",

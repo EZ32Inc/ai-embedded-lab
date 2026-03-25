@@ -1,0 +1,51 @@
+id: esp32s3_devkit_dual_usb
+name: ESP32-S3 DevKit Dual USB
+description: >
+  ESP32-S3 dual-USB devkit — full 12-test hardware suite
+  (TEMP/NVS/WiFi/BLE/Sleep/PWM/INTR/PCNT/UART/ADC/SPI/I2C).
+  WiFi 2.4GHz only. I2C uses HW I2C0 master + HW I2C1 slave (V2 API);
+  no bit-bang needed since S3 has two I2C controllers.
+lifecycle_stage: merged_to_main
+family: esp32
+mcu: esp32s3
+board:
+  vendor: Espressif
+  form_factor: devkit
+tags:
+  - esp32
+  - esp32s3
+  - devkit
+  - dual_usb
+board_configs:
+  - id: default
+    path: configs/boards/esp32s3_devkit_dual_usb.yaml
+    primary: true
+    instrument_family: none
+build_type: idf
+build:
+  type: idf
+  project_dir: firmware/targets/esp32s3_suite
+flash_method: idf_esptool
+flash:
+  method: idf_esptool
+mcus:
+  - id: main
+    mcu: esp32s3
+    role: dut
+    family: esp32
+    clock_hz: 240000000
+    build:
+      type: idf
+      project_dir: firmware/targets/esp32s3_suite
+    flash:
+      method: idf_esptool
+default_packs:
+  - packs/esp32s3_full_suite.json
+compile_validation: passed
+compile_validation_note: "idf.py build esp32s3_suite — 12/12 PASS verified 2026-03-25"
+verified:
+  status: true
+  date: 2026-03-25
+  note: "12/12 PASS on first run. I2C via HW I2C0 master + HW I2C1 slave V2 (CE: 0ee28e73)."
+  verified_on:
+    bench_id: default

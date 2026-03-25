@@ -160,10 +160,21 @@
   },
   "esp32s3_devkit_dual_usb|esp32s3_suite": {
     "exp_id": "first_run",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774451576.2662446,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 2,
+    "failure_count": 5,
+    "last_seen": 1774452778.7551827,
+    "confidence": 0.6,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "9e7bd106-7dd2-40a2-9f57-e658303d32ab",
+        "count": 4,
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed — stages: preflight, build, load, run — failure: check_uart — instrument spec 'esp32s3_uart_bridge' not found in /nvme1t/work/codex/ai-embedded-lab/configs/instrument_specs"
+      },
+      "load": {
+        "exp_id": "b407af7f-8899-411e-9ee8-555c29decdf9",
+        "count": 1,
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed — stages: preflight, build, run, check — failure: load — adapter execute failed: [Errno 2] No such file or directory: 'idf.py'"
+      }
+    }
   }
 }

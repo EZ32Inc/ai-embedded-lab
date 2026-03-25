@@ -1,0 +1,19 @@
+# Instrument Spec v1 — ESP32-S3 UART0 via CH341 USB bridge
+#
+# CH341 USB-to-UART bridge connected to UART0 (GPIO43 TX, GPIO44 RX).
+# Appears as /dev/ttyACM0 with Vendor=1a86, PID=0x55d3.
+# Receives primary UART0 console output at 115200 baud.
+
+schema_version: 1
+
+instrument:
+  id: esp32s3_uart_bridge
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]
