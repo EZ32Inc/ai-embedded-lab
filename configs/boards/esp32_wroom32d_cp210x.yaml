@@ -1,0 +1,73 @@
+# ESP32-WROOM-32D — CP210X USB-UART bridge board
+#
+# Single USB connector (CP210X, /dev/ttyUSB0):
+#   CP210X bridge — UART0 console (GPIO1 TX, GPIO3 RX), RTS/DTR auto-reset
+#
+# Flash via CP210X UART bridge — RTS/DTR auto-reset works.
+# Console appears on /dev/ttyUSB0 (UART0 @ 115200 baud).
+
+board:
+  name: ESP32-WROOM-32D CP210X
+  target: esp32
+  kind: board
+  usb_interface_type: bridge_only  # CP210X bridge only (no native USB)
+  features:
+    - programmable_via_uart
+    - has_uart_console
+    - has_gpio
+  processors:
+    - id: esp32
+      arch: xtensa
+      role: primary
+      clock_hz: 240000000
+  probe_required: false
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32_wroom32d_suite
+  flash:
+    method: idf_esptool
+    target: esp32
+    port: /dev/ttyUSB0
+    baud: 460800
+    serial: null
+  pins:
+    safe_output:
+      - GPIO4
+      - GPIO13
+      - GPIO14
+      - GPIO16
+      - GPIO17
+      - GPIO18
+      - GPIO19
+      - GPIO21
+      - GPIO22
+      - GPIO23
+      - GPIO25
+      - GPIO26
+      - GPIO27
+      - GPIO32
+      - GPIO33
+    strap_or_reserved:
+      - GPIO0    # BOOT strapping
+      - GPIO1    # UART0 TX (console)
+      - GPIO2    # strapping
+      - GPIO3    # UART0 RX (console)
+      - GPIO5    # strapping
+      - GPIO6    # SPI flash
+      - GPIO7    # SPI flash
+      - GPIO8    # SPI flash
+      - GPIO9    # SPI flash
+      - GPIO10   # SPI flash
+      - GPIO11   # SPI flash
+      - GPIO12   # strapping (flash voltage)
+      - GPIO15   # strapping (UART0 boot log)
+  default_wiring:
+    swd: "NC"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3

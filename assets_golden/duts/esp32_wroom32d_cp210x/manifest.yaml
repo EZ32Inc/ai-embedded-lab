@@ -1,0 +1,48 @@
+board:
+  form_factor: devkit
+  vendor: Espressif
+board_configs:
+- id: default
+  instrument_family: none
+  path: configs/boards/esp32_wroom32d_cp210x.yaml
+  primary: true
+build:
+  project_dir: firmware/targets/esp32_wroom32d_suite
+  type: idf
+build_type: idf
+compile_validation: passed
+compile_validation_note: idf.py build esp32_wroom32d_suite — esp32 target
+default_packs:
+- packs/esp32_wroom32d_full_suite.json
+description: ESP32-WROOM-32D devkit with CP210x USB-UART bridge. 11-test suite covering
+  NVS/WiFi/BLE/Sleep/PWM/I2C/INTR/PCNT/UART/ADC/SPI. Single USB port, reset_strategy=rts
+  required.
+family: esp32
+flash:
+  method: idf_esptool
+flash_method: idf_esptool
+id: esp32_wroom32d_cp210x
+lifecycle_stage: merged_to_main
+mcu: esp32
+mcus:
+- build:
+    project_dir: firmware/targets/esp32_wroom32d_suite
+    type: idf
+  clock_hz: 240000000
+  family: esp32
+  flash:
+    method: idf_esptool
+  id: main
+  mcu: esp32
+  role: dut
+name: ESP32-WROOM-32D DevKit (CP210x)
+tags:
+- esp32
+- esp32_wroom32d
+- devkit
+- cp210x
+verified:
+  date: 2026-03-25
+  status: false
+  verified_on:
+    bench_id: default

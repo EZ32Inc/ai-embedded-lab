@@ -2035,6 +2035,19 @@ def run_pipeline(
             uart_instrument_spec=_uart_spec,
         )
 
+    # Mandatory CE recording checklist — fires unconditionally (pass AND fail).
+    # Independent of CLAUDE.md; visible to any AI tool or human reading stdout.
+    _uart_obs = result.get("uart_observe") or {}
+    civilization_client.ce_recording_checklist(
+        board_id=board_id or "unknown",
+        test_name=test_name or "unknown",
+        ok=bool(result.get("ok", False)),
+        failed_step=failed_step or "",
+        error_summary=result.get("error_summary", "") or "",
+        warnings=_uart_obs.get("warnings", []),
+        uart_errors=_uart_obs.get("errors", []),
+    )
+
     if result["ok"]:
         print("PASS: Run verified")
         _print_success_summary(

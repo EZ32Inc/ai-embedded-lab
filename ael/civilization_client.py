@@ -159,6 +159,94 @@ def record_skill(
 
 
 # ---------------------------------------------------------------------------
+# Post-run: mandatory CE recording checklist (fires unconditionally)
+# ---------------------------------------------------------------------------
+
+def ce_recording_checklist(
+    board_id: str,
+    test_name: str,
+    ok: bool,
+    failed_step: str = "",
+    error_summary: str = "",
+    warnings: list = None,
+    uart_errors: list = None,
+) -> None:
+    """Print and auto-record a structured CE audit block after every run.
+
+    Fires unconditionally — pass OR fail.  Does NOT depend on CLAUDE.md or any
+    AI instruction file.  Any AI tool (Claude, Codex, etc.) or human reading
+    the run output will see the CE block and know exactly what to record.
+
+    Auto-records:
+      • run outcome (always)
+      • failure pattern  (if failed_step is set)
+      • warnings seen    (if any)
+
+    The printed block also lists open questions that require human/AI insight
+    to fill in (e.g. root cause, fix applied).  These cannot be auto-recorded
+    because the pipeline has no semantic knowledge of WHY things failed.
+    """
+    warnings = warnings or []
+    uart_errors = uart_errors or []
+    outcome = "PASS" if ok else f"FAIL (stage={failed_step})"
+
+    print()
+    print("=" * 60)
+    print("[CE] POST-RUN RECORDING BLOCK — action required")
+    print("=" * 60)
+    print(f"  board     : {board_id}")
+    print(f"  test      : {test_name}")
+    print(f"  outcome   : {outcome}")
+    if error_summary:
+        print(f"  error     : {error_summary}")
+    if warnings:
+        print(f"  warnings  : {len(warnings)} (see run log)")
+        for w in warnings[:3]:
+            print(f"              {str(w)[:100]}")
+    if uart_errors:
+        print(f"  uart_errs : {len(uart_errors)}")
+        for e in uart_errors[:3]:
+            print(f"              {str(e)[:100]}")
+    print()
+
+    # Auto-record the outcome fact (always — no AI judgment needed)
+    if _CE_AVAILABLE:
+        try:
+            from ael.civilization import CivilizationEngine
+            raw = (
+                f"[AUTO] ael run {board_id}/{test_name}: {outcome}."
+                + (f" stage={failed_step}." if failed_step else "")
+                + (f" error={error_summary[:120]}." if error_summary else "")
+            )
+            CivilizationEngine._ee.add(raw=raw, domain="engineering", scope="task",
+                                       outcome="success" if ok else "failure")
+        except Exception:
+            pass
+
+    # Print the structured template that AI/human MUST fill in before closing the task.
+    # Filling this template IS the CE recording — copy each populated line to
+    # ExperienceAPI.add() or record_skill().  An unfilled template means knowledge loss.
+    print("  REQUIRED: fill in the template below and record each non-empty line to CE.")
+    print("  If nothing new: write 'CE: nothing new to record' explicitly.")
+    print()
+    print("  ## CE RECORDING TEMPLATE")
+    print("  board_family : <e.g. esp32_classic / esp32c5 / stm32f4 / all>")
+    print("  scope        : <task | board_family | pattern>")
+    if not ok:
+        print("  symptom      : <what was observed — error message, test output>")
+        print("  root_cause   : <why it happened — driver bug, HW limitation, timing>")
+        print("  fix          : <exact change made — file, config key, code snippet>")
+    print("  constraint   : <wiring, GPIO, driver, SDK version restriction — or 'none'>")
+    print("  lesson       : <reusable rule for next time>")
+    print("  cross_board  : <yes/no — if yes, add [HIGH_PRIORITY] and scope=pattern>")
+    print()
+    print("  Paste populated template to: ExperienceAPI.add(raw=<lesson>, scope=<scope>)")
+    print("  Cross-board patterns:        ExperienceAPI.add(raw='[HIGH_PRIORITY] ...', scope='pattern')")
+    print("=" * 60)
+    print()
+
+
+# ---------------------------------------------------------------------------
 # Post-run: minimal reflection hook
 # ---------------------------------------------------------------------------
 

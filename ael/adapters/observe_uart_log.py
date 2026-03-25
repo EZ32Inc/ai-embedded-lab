@@ -46,7 +46,7 @@ def _default_patterns(profile: str):
     error_patterns = [
         r"\bE\s*\(",
         r"\bERROR\b",
-        r"failed",
+        r"failed(?!\s*=\s*0\b)",   # match "failed" but not "failed=0" (suite summary)
         r"failure",
         r"exception",
         r"corrupt",
@@ -115,6 +115,13 @@ def _capture_bytes(serial_mod, port, baud, duration_s, startup_wait_s, start_del
     if ser is None:
         return None, last_exc
 
+    # Explicitly de-assert DTR so CP210x / CH341 bridges don't hold GPIO0 low
+    # (which would trap the board in download mode after flash).
+    try:
+        ser.dtr = False
+    except Exception:
+        pass
+
     data = bytearray()
     if start_delay_s > 0:
         time.sleep(start_delay_s)
@@ -146,6 +153,61 @@ def _try_esp32_rts_reset(serial_mod, port):
         serial_mod=serial_mod,
     )
     return bool(out.get("ok", False)), str(out.get("message") or "")
+
+
+def _capture_bytes_with_rts_reset(serial_mod, port, baud, duration_s, startup_wait_s, start_delay_s):
+    """Open port once, de-assert DTR, pulse RTS to reset, then capture.
+
+    Avoids the open→close→reopen race where the second open briefly asserts DTR
+    and catches the ESP32 ROM bootloader GPIO0 strapping check, forcing it into
+    download mode.
+    """
+    open_deadline = time.time() + max(0.0, startup_wait_s)
+    ser = None
+    last_exc = None
+    while time.time() <= open_deadline:
+        try:
+            ser = _open_capture_serial(serial_mod, port, baud)
+            break
+        except Exception as exc:
+            last_exc = exc
+            time.sleep(0.2)
+    if ser is None:
+        return None, last_exc
+
+    data = bytearray()
+    try:
+        # De-assert DTR first so GPIO0 stays high (normal boot mode).
+        try:
+            ser.dtr = False
+        except Exception:
+            pass
+        time.sleep(0.05)
+
+        # RTS pulse: pull EN low (reset), then release.
+        try:
+            ser.rts = True
+            time.sleep(0.12)
+            ser.rts = False
+        except Exception:
+            pass
+
+        # Brief settle so the bootloader ROM can latch GPIO0 before we read.
+        time.sleep(max(0.3, start_delay_s))
+
+        start = time.time()
+        while time.time() - start < duration_s:
+            chunk = ser.read(4096)
+            if chunk:
+                data.extend(chunk)
+            else:
+                time.sleep(0.01)
+    finally:
+        try:
+            ser.close()
+        except Exception:
+            pass
+    return data, None
 
 
 def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patterns, forbid_patterns, boot_signatures):
@@ -200,9 +262,9 @@ def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patt
             if pat.search(line):
                 boot_count += 1
 
-    if boot_count >= 2:
-        reboot_loop_suspected = True
     if boot_count >= 3:
+        reboot_loop_suspected = True
+    if boot_count >= 4:
         crash_detected = True
 
     missing_expect = [p for p in expect_patterns if p not in matched_expect]
@@ -415,7 +477,18 @@ def run(cfg, raw_log_path: str):
 
     startup_wait_s = float(cfg.get("startup_wait_s", 6.0))
     start_delay_s = float(cfg.get("start_delay_s", 0.4))
-    data, last_exc = _capture_bytes(serial, port, baud, duration_s, startup_wait_s, start_delay_s)
+
+    # If reset_strategy=rts, open the port once, de-assert DTR, pulse RTS to
+    # reset, then read — all on the same open file descriptor.  The old
+    # open→reset→close→reopen sequence briefly re-asserted DTR on the second
+    # open, catching the ESP32 ROM bootloader strapping-pin window and forcing
+    # the chip into download mode.
+    if reset_strategy == "rts":
+        data, last_exc = _capture_bytes_with_rts_reset(
+            serial, port, baud, duration_s, startup_wait_s, start_delay_s
+        )
+    else:
+        data, last_exc = _capture_bytes(serial, port, baud, duration_s, startup_wait_s, start_delay_s)
     if data is None:
         return {
             "ok": False,

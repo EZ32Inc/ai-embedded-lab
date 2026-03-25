@@ -2,14 +2,19 @@
   "esp32c5_devkit_dual_usb|esp32c5_suite_ext3": {
     "exp_id": null,
     "success_count": 0,
-    "failure_count": 3,
-    "last_seen": 1774341705.5345309,
+    "failure_count": 6,
+    "last_seen": 1774459750.5010967,
     "confidence": 0.5,
     "known_failures": {
       "check_uart": {
         "exp_id": "9080020e-01c4-4579-82c4-f651ad085ad4",
         "count": 3,
         "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed — stages: preflight, build, load, run — failure: check_uart — uart transport unavailable"
+      },
+      "load": {
+        "exp_id": "fd1f2710-5c8c-4cca-b54d-e4563fe7c8f6",
+        "count": 3,
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed — stages: preflight, build, run, check — failure: load — load failed"
       }
     }
   },
@@ -198,5 +203,43 @@
     "last_seen": 1774455084.437126,
     "confidence": 0.7,
     "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_suite": {
+    "exp_id": "538cf39c-0c22-4fef-8d9b-cf9aa9750307",
+    "success_count": 4,
+    "failure_count": 11,
+    "last_seen": 1774470828.3686266,
+    "confidence": 0.8,
+    "known_failures": {
+      "build": {
+        "exp_id": "3c4c9b90-5ad1-4580-a427-17e92be7b096",
+        "count": 2,
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, load, run, check — failure: build — build failed"
+      },
+      "load": {
+        "exp_id": "7c871986-db15-4028-9eb5-265d834d77cc",
+        "count": 2,
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, build, run, check — failure: load — load failed"
+      },
+      "check_uart": {
+        "exp_id": "48832acc-b3c8-460a-a8a2-f04d7009dfe1",
+        "count": 7,
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, build, load, run — failure: check_uart — uart indicates unstable DUT runtime"
+      }
+    }
+  },
+  "esp32_wroom32d_cp210x|unknown": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "last_seen": 1774465962.123592,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "160eb8ed-9b89-458f-bf4b-0b763b6005b8",
+        "count": 1,
+        "last_raw": "[esp32_wroom32d_cp210x] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      }
+    }
   }
 }
