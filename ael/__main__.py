@@ -332,6 +332,12 @@ def main():
     project_intake_p.add_argument("--boards-root", default="configs/boards")
     project_intake_p.add_argument("--non-interactive", action="store_true", help="print gaps only, do not prompt (for scripting)")
 
+    invoke_p = sub.add_parser("invoke", help="invoke a named board capability by natural name or alias")
+    invoke_p.add_argument("--board", required=False, default="esp32jtag_instrument_s3", help="Board id (default: esp32jtag_instrument_s3)")
+    invoke_p.add_argument("--list", dest="invoke_list", action="store_true", help="List all capabilities for the board")
+    invoke_p.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
+    invoke_p.add_argument("capability", nargs="?", default=None, help="Capability name or alias, e.g. \"port d loopback self-test\"")
+
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
     if args.cmd == "run":
@@ -792,6 +798,20 @@ def main():
                 print(json.dumps(state, indent=2, sort_keys=True))
             health = state["health_status"]
             sys.exit(0 if health in ("pass", "partial_pass") else 1)
+    if args.cmd == "invoke":
+        from ael.board.capability_registry import load_registry
+        try:
+            reg = load_registry(args.board, repo_root=Path(repo_root))
+        except FileNotFoundError as exc:
+            print(f"[invoke] {exc}")
+            sys.exit(1)
+        if args.invoke_list:
+            print(reg.list_capabilities(verbose=args.verbose))
+            sys.exit(0)
+        if not args.capability:
+            print("[invoke] Provide a capability name/alias, or use --list to see all capabilities.")
+            sys.exit(1)
+        sys.exit(reg.invoke(args.capability, verbose=args.verbose))
     if args.cmd == "project":
         sys.exit(_project_cmd(args))
     if args.cmd == "verify-default":

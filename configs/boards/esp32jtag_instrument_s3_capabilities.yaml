@@ -1,0 +1,155 @@
+# ESP32JTAG Board Capability Registry
+# Maps named board capabilities to invocable targets (packs, tests, scripts, or API info).
+# Loaded by ael/board/capability_registry.py and used by `ael invoke`.
+#
+# Schema: see docs/specs/ael_artifact_classification_rules_v1.md
+# Board layer — specific to esp32jtag_instrument_s3.
+
+board: esp32jtag_instrument_s3
+version: v1
+
+# Default probe config used when capability does not specify one.
+default_probe_config: configs/esp32jtag.yaml
+
+capabilities:
+
+  # ── Runnable tests / packs ────────────────────────────────────────────────
+
+  port_d_loopback_self_test:
+    description: >
+      Drive Port D (P3) with static GPIO patterns and 132 MHz counter,
+      capture on Port A (P0) via on-board Logic Analyzer, verify all
+      8 cases automatically. No external instruments needed.
+    kind: script
+    target: experiments/esp32jtag/port_d_loopback.py
+    probe_config: configs/esp32jtag.yaml
+    aliases:
+      - port d loopback
+      - port d loopback self test
+      - loopback self test
+      - p3 p0 loopback
+      - port d self test
+      - run port d loopback
+      - loopback test
+      - loopback
+    requires:
+      wiring: "4 jumper wires: P3 pin0→P0 pin0, P3 pin1→P0 pin1, P3 pin2→P0 pin2, P3 pin3→P0 pin3"
+      port_mode: "Port D and Port A must be in Logic Analyzer mode (default — not XVC)"
+    success_criteria: "8/8 cases pass: 6 GPIO static patterns (≥95% match) + 2 counter modes (duty 35–65%, all channels toggle)"
+
+  firmware_smoke_test:
+    description: >
+      Verify ESP32JTAG instrument firmware: boots cleanly, FPGA configures,
+      WiFi connects and gets DHCP IP, GDB service listens on :4242.
+      Observes USB serial log; no external wiring needed.
+    kind: pack
+    target: packs/esp32jtag_firmware_smoke.json
+    probe_config: null
+    aliases:
+      - firmware smoke
+      - smoke test
+      - firmware check
+      - boot test
+      - firmware smoke test
+      - smoke
+    requires: {}
+    success_criteria: "FPGA configured OK + Listening on TCP port 4242 + [APP] Free memory"
+
+  # ── API-surface capabilities (not directly runnable as a test) ────────────
+
+  logic_analyzer_capture:
+    description: >
+      Perform one instant Logic Analyzer capture via the firmware REST API.
+      Returns 16-channel, 264 MHz max sample data as a binary buffer.
+    kind: api
+    api_endpoint: "https://<board-ip>/instant_capture"
+    api_method: GET
+    aliases:
+      - la capture
+      - logic analyzer capture
+      - capture
+      - instant capture
+      - logic analyzer
+    implemented_in: experiments/esp32jtag/port_d_loopback.py::ESP32JTAGClient.instant_capture
+    probe_config: configs/esp32jtag.yaml
+
+  port_d_gpio_output:
+    description: >
+      Drive Port D (P3) pins 0–3 with a static 4-bit value via the FPGA GPIO Direct mode.
+      Requires Port D to be in Logic Analyzer mode (cfgpd=0, default).
+    kind: api
+    api_endpoint: "https://<board-ip>/api/portd_output"
+    api_method: POST
+    api_body: '{"mode": 3, "value": <0-15>}'
+    aliases:
+      - port d gpio
+      - port d gpio output
+      - gpio output
+      - drive port d
+      - portd output
+    implemented_in: firmware::web_server.c::portd_output_handler
+    probe_config: configs/esp32jtag.yaml
+
+  port_d_counter_lo:
+    description: >
+      Drive Port D (P3) pins 0–3 with the internal 132 MHz free-counter low nibble (bits [3:0]).
+      Bit 0 toggles fastest (~66 MHz). Used to verify LA and clock integrity.
+    kind: api
+    api_endpoint: "https://<board-ip>/api/portd_output"
+    api_method: POST
+    api_body: '{"mode": 1}'
+    aliases:
+      - counter lo
+      - counter low
+      - port d counter lo
+      - port d counter low
+    implemented_in: firmware::web_server.c::portd_output_handler
+    probe_config: configs/esp32jtag.yaml
+
+  port_d_counter_hi:
+    description: >
+      Drive Port D (P3) pins 0–3 with the internal 132 MHz free-counter high nibble (bits [7:4]).
+      Higher bits toggle at lower rates → more balanced duty cycle.
+    kind: api
+    api_endpoint: "https://<board-ip>/api/portd_output"
+    api_method: POST
+    api_body: '{"mode": 2}'
+    aliases:
+      - counter hi
+      - counter high
+      - port d counter hi
+      - port d counter high
+    implemented_in: firmware::web_server.c::portd_output_handler
+    probe_config: configs/esp32jtag.yaml
+
+  port_d_tristate:
+    description: >
+      Restore Port D (P3) to tristate (Logic Analyzer input mode, default).
+      Always call this after a GPIO output or counter drive sequence.
+    kind: api
+    api_endpoint: "https://<board-ip>/api/portd_output"
+    api_method: POST
+    api_body: '{"mode": 0}'
+    aliases:
+      - tristate
+      - port d tristate
+      - restore tristate
+      - port d restore
+    implemented_in: firmware::web_server.c::portd_output_handler
+    probe_config: configs/esp32jtag.yaml
+
+  reset_target:
+    description: >
+      Assert FPGA SRESET for 100 ms to reset the connected target MCU.
+      Requires Port B to be in UART+SRESET mode (cfgpb=1).
+    kind: api
+    api_endpoint: "https://<board-ip>/api/reset_target"
+    api_method: POST
+    api_body: '{}'
+    aliases:
+      - reset target
+      - target reset
+      - sreset
+      - reset dut
+    implemented_in: firmware::web_server.c::reset_target_handler
+    probe_config: configs/esp32jtag.yaml
