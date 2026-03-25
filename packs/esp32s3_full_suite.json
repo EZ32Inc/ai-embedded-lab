@@ -1,0 +1,11 @@
+{
+  "name": "esp32s3_full_suite",
+  "board": "esp32s3_devkit_dual_usb",
+  "notes": "ESP32-S3 full 12-test hardware suite. Requires 6 jumpers — see tests/plans/esp32s3_suite.json for wiring. Covers: TEMP, NVS, WiFi, BLE, Sleep, PWM, INTR, PCNT, UART, ADC, SPI, I2C. No external instrument required.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32s3_suite.json"
+  ]
+}

@@ -1,0 +1,70 @@
+# ESP32-S3 DevKit — Dual USB board
+#
+# Two USB connectors (identified via udevadm):
+#   /dev/ttyACM0 (Vendor=1a86 CH341) — UART0 bridge (GPIO43 TX, GPIO44 RX)
+#   /dev/ttyACM1 (Vendor=Espressif, PID=0x1001) — Native USB Serial/JTAG
+#
+# Flash uses CH341 UART bridge (ACM0) — RTS/DTR auto-reset supported.
+# Console (printf/IDF logs) appears on ACM0 (UART0 at 115200 baud).
+
+board:
+  name: ESP32-S3 DevKit Dual USB
+  target: esp32s3
+  kind: board
+  usb_interface_type: dual   # CH341 bridge (RTS/DTR OK) + native USB Serial/JTAG
+  features:
+    - programmable_via_uart
+    - has_uart_console
+    - has_gpio
+    - has_dual_usb
+  processors:
+    - id: esp32s3
+      arch: xtensa
+      role: primary
+      clock_hz: 240000000
+  probe_required: false
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32s3_suite
+  flash:
+    method: idf_esptool
+    target: esp32s3
+    port: /dev/ttyACM0        # UART bridge CH341 (GPIO43/44)
+    baud: 460800
+    serial: null
+  pins:
+    safe_output:
+      - GPIO1
+      - GPIO2
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+      - GPIO8
+      - GPIO9
+      - GPIO10
+      - GPIO11
+      - GPIO12
+      - GPIO13
+      - GPIO15
+      - GPIO16
+      - GPIO48
+    strap_or_reserved:
+      - GPIO0    # BOOT
+      - GPIO3    # strapping
+      - GPIO19   # USB D-
+      - GPIO20   # USB D+
+      - GPIO43   # UART0 TX (console)
+      - GPIO44   # UART0 RX (console)
+      - GPIO45   # strapping
+      - GPIO46   # strapping
+  default_wiring:
+    swd: "NC"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3

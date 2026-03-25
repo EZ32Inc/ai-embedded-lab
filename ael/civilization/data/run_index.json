@@ -61,74 +61,74 @@
   },
   "stm32g431cbu6|stm32g431_gpio_signature": {
     "exp_id": "6fe08b25-1434-4bb9-8bcc-eae87b6a87dc",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774366095.6680589,
-    "confidence": 0.6,
+    "last_seen": 1774448258.02728,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_minimal_runtime_mailbox": {
     "exp_id": "064784c3-edfd-4a28-a218-19a78a346deb",
-    "success_count": 1,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774366062.8783538,
-    "confidence": 0.5,
+    "last_seen": 1774448228.354429,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_uart_loopback": {
     "exp_id": "5c439eeb-9478-4f1e-bae2-80fb2940f1ae",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366128.9285355,
-    "confidence": 0.5,
+    "last_seen": 1774448288.7926412,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_spi": {
     "exp_id": "a320aed7-edc6-420f-916e-f39106aa9e8a",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366165.5378413,
-    "confidence": 0.5,
+    "last_seen": 1774448318.5370224,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_adc": {
     "exp_id": "0d43837c-297a-4cca-9f0e-78d2ba4c8bc7",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366198.2931757,
-    "confidence": 0.5,
+    "last_seen": 1774448349.231288,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_capture": {
     "exp_id": "d4ebf87d-467f-4d14-b9c2-fe0bbe31b99a",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366231.789124,
-    "confidence": 0.5,
+    "last_seen": 1774448378.963369,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_exti": {
     "exp_id": "cdbbc84a-eb33-46f4-93a6-fbdfe98fc504",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366264.984417,
-    "confidence": 0.5,
+    "last_seen": 1774448409.7635117,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_gpio_loopback": {
     "exp_id": "758c8c0f-1dc2-4678-a7f8-691d5e2c05c2",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366299.1978507,
-    "confidence": 0.5,
+    "last_seen": 1774448439.5658727,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "stm32g431cbu6|stm32g431_pwm": {
     "exp_id": "b671b90a-0bfe-4d40-b22e-8ad0fbd2200d",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774366332.4671361,
-    "confidence": 0.5,
+    "last_seen": 1774448470.2927978,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "esp32jtag_instrument_s3|esp32jtag_firmware_smoke": {
@@ -149,5 +149,21 @@
         "last_raw": "[esp32jtag_instrument_s3] esp32jtag_firmware_smoke: failed — stages: preflight, build, load, run — failure: check_uart — adapter execute failed: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
       }
     }
+  },
+  "stm32g431cbu6|unknown": {
+    "exp_id": "03317b16-d881-4d18-82df-d1b1f8ff58f2",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774448157.5062878,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_suite": {
+    "exp_id": "first_run",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774451576.2662446,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }

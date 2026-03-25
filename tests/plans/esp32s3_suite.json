@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32s3_suite",
+  "test_kind": "instrument_specific",
+  "board": "esp32s3_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["selftest"],
+  "covers": ["gpio", "adc", "spi", "uart", "i2c", "pwm", "loopback"],
+  "notes": "Full 12-test hardware suite for ESP32-S3 dual-USB devkit. Self-contained loopback, no external instrument. Requires 6 jumpers: GPIO4↔GPIO5 (PCNT+INTR), GPIO6↔GPIO7 (UART1), GPIO2→GPIO1 (ADC), GPIO11↔GPIO13 (SPI MOSI↔MISO), GPIO8↔GPIO15 (I2C SDA), GPIO9↔GPIO16 (I2C SCL). Flash+console: CH341 bridge /dev/ttyACM0. Native USB JTAG: /dev/ttyACM1 (unused during test). I2C uses HW I2C0 master + HW I2C1 slave (V2 callback API) — no bit-bang needed since S3 has two I2C controllers.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO4",  "to": "GPIO5",  "label": "Wire 1 — PCNT pulse out + GPIO interrupt in"},
+      {"from": "GPIO6",  "to": "GPIO7",  "label": "Wire 2 — UART1 TX → UART1 RX loopback"},
+      {"from": "GPIO2",  "to": "GPIO1",  "label": "Wire 3 — GPIO output → ADC1_CH0 input"},
+      {"from": "GPIO11", "to": "GPIO13", "label": "Wire 4 — SPI2 MOSI ↔ MISO loopback"},
+      {"from": "GPIO8",  "to": "GPIO15", "label": "Wire 5 — I2C0 SDA master ↔ I2C1 SDA slave"},
+      {"from": "GPIO9",  "to": "GPIO16", "label": "Wire 6 — I2C0 SCL master ↔ I2C1 SCL slave"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32s3_suite",
+    "artifact_stem": "ael_esp32s3_suite",
+    "build_dir": "artifacts/build_esp32s3_suite"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32s3_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 60,
+    "expect_patterns": [
+      "AEL_TEMP.*PASS",
+      "AEL_NVS.*PASS",
+      "AEL_WIFI.*PASS",
+      "AEL_BLE.*PASS",
+      "AEL_SLEEP.*PASS",
+      "AEL_PWM.*PASS",
+      "AEL_INTR.*PASS",
+      "AEL_PCNT.*PASS",
+      "AEL_UART.*PASS",
+      "AEL_ADC.*PASS",
+      "AEL_SPI.*PASS",
+      "AEL_I2C.*PASS",
+      "AEL_SUITE_S3 DONE passed=12 failed=0"
+    ]
+  }
+}
