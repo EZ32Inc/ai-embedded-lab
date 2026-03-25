@@ -38,6 +38,9 @@ avoid = ExperienceAPI.query(keyword=board_id, domain='engineering', avoid=True)
 | BLE 测试 | `ble` | `nimble`, `board_id` |
 | 分区表 / sdkconfig | `sdkconfig` | `partition`, `board_id` |
 | STM32 GPIO / UART | `board_id` | `stm32`, `loopback` |
+| 外部 IDF 项目 brownfield onboarding | `brownfield` | `skip_set_target`, `instrument_firmware` |
+| USB CDC observe_uart 问题 | `baud` | `usb_cdc`, `native_usb`, `observe_uart` |
+| 嵌入式 Web UI 按钮/WebSocket 验证 | `playwright` | `browser`, `webui`, `websocket`, `https` |
 
 ---
 
@@ -101,6 +104,11 @@ run_index.record_success(board_id, test_name, exp_id)
 |------|-------|---------|-----------|
 | Minimal-Instrument Board Bring-up Pattern | `933fc74a` | ESP32 / RISC-V 双USB开发板 | 0.5→提升中 |
 | **[HIGH_PRIORITY] IRAM_ATTR variable + PMP_IDRAM_SPLIT = Store fault** | `d26958c3` | ESP32-C5 / PMP IDRAM split 目标 | 0.5 |
+| **[HIGH_PRIORITY] ESP32-C5 i2c_slave_receive() bug + V2 workaround** | `87240d79` | ESP32-C5 I2C slave loopback | 0.5 |
+| **[HIGH_PRIORITY] observe_uart baud=null → int(None) TypeError (USB CDC)** | `da6927bd` | 所有 USB CDC 设备（ESP32-S3 native USB 等） | 0.9 |
+| **[HIGH_PRIORITY] ESP32JTAG Firmware Brownfield Onboarding Pattern** | `92fd939d` | ESP32-S3 native USB instrument firmware | 0.8 |
+| **[HIGH_PRIORITY] ESP32 USB Interface Classification: native-only vs dual** | `7daa8c80` | 所有 ESP32 板（Class A dual / Class B native-only） | 0.9 |
+| **[HIGH_PRIORITY] Playwright Browser Automation for Embedded Web UI Testing** | `4952a7d2` | 任何带 Web UI 的嵌入式设备（HTTPS + Basic Auth + WebSocket） | 0.9 |
 
 ## ESP32-C5 board_family 已知陷阱
 
@@ -109,6 +117,9 @@ run_index.record_success(board_id, test_name, exp_id)
 | gpio_install_isr_service 须在 WiFi/BLE 之前调用 | `dbdf36fb` | app_main 最前面先调用 |
 | app_main 默认栈 3584 不够用（11 drivers） | `73f41c63` | sdkconfig: ESP_MAIN_TASK_STACK_SIZE=8192 |
 | GPIO interrupt 测试须在 PCNT 之前跑 | `92297155` | 共享 pin 时 PCNT 必须最后占用 |
+| i2c_slave_receive() → auto-start master bug | `87240d79` | 用 V2 driver + bit-bang master 替代 |
+| I2C slave V2 receive_buf_depth=32 不够用 | `975b66b9` | 用 ≥100；RINGBUF overhead 约20字节 |
+| I2C slave V2 ADDRESS_MATCH stretch at >10kHz | `958116e1` | BB_HALF_US=50 (10kHz)；保证 ACK 检测 |
 
 ---
 
