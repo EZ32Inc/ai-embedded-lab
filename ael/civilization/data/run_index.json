@@ -193,10 +193,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_suite": {
     "exp_id": "3c799d50-93da-4429-8d7b-4d4fc42bc098",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774455042.605478,
-    "confidence": 0.6,
+    "last_seen": 1774455084.437126,
+    "confidence": 0.7,
     "known_failures": {}
   }
 }
