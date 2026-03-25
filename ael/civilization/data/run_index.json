@@ -176,5 +176,27 @@
         "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed — stages: preflight, build, run, check — failure: load — adapter execute failed: [Errno 2] No such file or directory: 'idf.py'"
       }
     }
+  },
+  "unknown|unknown": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "last_seen": 1774454495.658978,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "0a76dab0-ae5c-4300-8235-b53dd426ba65",
+        "count": 1,
+        "last_raw": "[unknown] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      }
+    }
+  },
+  "esp32c3_devkit_native_usb|esp32c3_suite": {
+    "exp_id": "3c799d50-93da-4429-8d7b-4d4fc42bc098",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774455042.605478,
+    "confidence": 0.6,
+    "known_failures": {}
   }
 }

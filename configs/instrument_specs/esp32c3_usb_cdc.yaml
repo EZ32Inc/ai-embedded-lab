@@ -1,0 +1,20 @@
+# Instrument Spec v1 — ESP32-C3 Native USB Serial/JTAG CDC
+#
+# Native USB Serial/JTAG peripheral on ESP32-C3.
+# VID=0x303a, PID=0x1001. Appears as /dev/ttyACM0.
+# Console output via USB CDC (CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y).
+# No RTS/DTR auto-reset — opening port does NOT trigger download mode.
+
+schema_version: 1
+
+instrument:
+  id: esp32c3_usb_cdc
+  kind: uart_bridge
+
+  capabilities:
+    - uart_txrx
+
+  actions:
+    - name: uart_wait_for
+      backend: pyserial
+      params: [port, baudrate, pattern, timeout]

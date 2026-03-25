@@ -1,0 +1,11 @@
+{
+  "name": "esp32c3_full_suite",
+  "board": "esp32c3_devkit_native_usb",
+  "notes": "ESP32-C3 10-test hardware suite. 4 jumpers — see tests/plans/esp32c3_suite.json. Covers: TEMP, NVS, WiFi, BLE, Sleep, PWM, INTR, UART, ADC, SPI. No PCNT (C3 lacks PCNT peripheral). No external instrument required.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c3_suite.json"
+  ]
+}

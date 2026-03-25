@@ -1,0 +1,21 @@
+schema_version: 1
+board_id: esp32c3_devkit_native_usb
+board_name: ESP32-C3 DevKit Native USB
+lifecycle_stage: merged_to_main
+
+verified:
+  status: true
+  date: 2026-03-25
+  run_id: 2026-03-25_12-05-37_esp32c3_devkit_native_usb_esp32c3_suite
+  tests_passed: 10
+  tests_failed: 0
+
+default_packs:
+  - packs/esp32c3_full_suite.json
+
+notes: >
+  ESP32-C3 single-USB native devkit (USB Serial/JTAG CDC).
+  10-test self-contained suite. No external instrument required.
+  No PCNT (ESP32-C3 lacks PCNT peripheral).
+  No I2C (single I2C controller insufficient for master+slave loopback).
+  Console via USB CDC /dev/ttyACM0. No reset_strategy needed (no CH341).

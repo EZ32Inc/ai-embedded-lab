@@ -1,0 +1,48 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c3_suite",
+  "test_kind": "instrument_specific",
+  "board": "esp32c3_devkit_native_usb",
+  "supported_instruments": [],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["selftest"],
+  "covers": ["gpio", "adc", "spi", "uart", "pwm", "loopback"],
+  "notes": "10-test hardware suite for ESP32-C3 single native-USB devkit. No external instrument. No PCNT — ESP32-C3 has no PCNT peripheral. 4 jumpers: GPIO4↔GPIO5 (INTR), GPIO6↔GPIO7 (UART1), GPIO2→GPIO1 (ADC1_CH1), GPIO10↔GPIO3 (SPI MOSI↔MISO, CLK=GPIO21, CS=GPIO20). No I2C — C3 has one I2C controller, insufficient free GPIO for loopback. Console via USB Serial/JTAG CDC (/dev/ttyACM0). No reset_strategy needed — native USB does not trigger download mode on port open (no CH341 auto-reset circuit).",
+  "wiring": {
+    "required": [
+      {"from": "GPIO4",  "to": "GPIO5",  "label": "Wire 1 — PCNT pulse out + GPIO interrupt in"},
+      {"from": "GPIO6",  "to": "GPIO7",  "label": "Wire 2 — UART1 TX → UART1 RX loopback"},
+      {"from": "GPIO2",  "to": "GPIO1",  "label": "Wire 3 — GPIO output → ADC1_CH1 input"},
+      {"from": "GPIO10", "to": "GPIO3",  "label": "Wire 4 — SPI2 MOSI ↔ MISO loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c3_suite",
+    "artifact_stem": "ael_esp32c3_suite",
+    "build_dir": "artifacts/build_esp32c3_suite"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c3_usb_cdc",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 60,
+    "expect_patterns": [
+      "AEL_TEMP.*PASS",
+      "AEL_NVS.*PASS",
+      "AEL_WIFI.*PASS",
+      "AEL_BLE.*PASS",
+      "AEL_SLEEP.*PASS",
+      "AEL_PWM.*PASS",
+      "AEL_INTR.*PASS",
+      "AEL_UART.*PASS",
+      "AEL_ADC.*PASS",
+      "AEL_SPI.*PASS",
+      "AEL_SUITE_C3 DONE passed=10 failed=0"
+    ]
+  }
+}

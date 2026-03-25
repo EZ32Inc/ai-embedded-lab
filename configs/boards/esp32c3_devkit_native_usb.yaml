@@ -1,0 +1,68 @@
+# ESP32-C3 DevKit — Native USB only (Class B)
+#
+# Single USB connector:
+#   /dev/ttyACM0 (Vendor=Espressif, VID=0x303a, PID=0x1001) — Native USB Serial/JTAG
+#
+# No CH341 bridge. Flash and console both use native USB port.
+# Console via USB Serial/JTAG CDC (CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG=y).
+# No RTS/DTR auto-reset circuit — no download-mode trigger when opening port.
+
+board:
+  name: ESP32-C3 DevKit Native USB
+  target: esp32c3
+  kind: board
+  usb_interface_type: native   # Class B — native USB only, no bridge chip
+  features:
+    - programmable_via_usb
+    - has_usb_cdc_console
+    - has_gpio
+    - single_usb
+  processors:
+    - id: esp32c3
+      arch: riscv
+      role: primary
+      clock_hz: 160000000
+  probe_required: false
+  build:
+    type: idf
+    project_dir: firmware/targets/esp32c3_suite
+  flash:
+    method: idf_esptool
+    target: esp32c3
+    port: /dev/ttyACM0        # Native USB Serial/JTAG
+    baud: 460800
+    serial: null
+  pins:
+    safe_output:
+      - GPIO1
+      - GPIO2
+      - GPIO3
+      - GPIO4
+      - GPIO5
+      - GPIO6
+      - GPIO7
+      - GPIO8
+      - GPIO10
+      - GPIO20
+      - GPIO21
+    strap_or_reserved:
+      - GPIO9    # BOOT strapping
+      - GPIO18   # USB D-
+      - GPIO19   # USB D+
+      - GPIO11   # SPI flash
+      - GPIO12   # SPI flash
+      - GPIO13   # SPI flash
+      - GPIO14   # SPI flash
+      - GPIO15   # SPI flash
+      - GPIO16   # SPI flash
+      - GPIO17   # SPI flash
+  default_wiring:
+    swd: "NC"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: VCC
+        nominal_v: 3.3
