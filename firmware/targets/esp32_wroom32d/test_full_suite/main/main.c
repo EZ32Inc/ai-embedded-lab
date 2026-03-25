@@ -1,21 +1,21 @@
 /*
- * test_full_suite — Full board suite for ESP32-WROOM-32D (CP210X)
+ * test_full_suite - Full board suite for ESP32-WROOM-32D (CP210X)
  *
  * Rule D "Acceptable Model": a single firmware that runs all 12 sub-tests.
  * Each sub-test is a self-contained function: independent init, independent
  * cleanup, no shared state, returns 1=PASS 0=FAIL.
  *
  * This is the CONVENIENCE LAYER.  The TRUTH LAYER is the 12 individual
- * programs in firmware/targets/esp32_wroom32d/test_*/  Those must be
- * validated first; this suite is added afterward.
+ * programs in firmware/targets/esp32_wroom32d/test_XX (individual targets).
+ * Those must be validated first; this suite is added afterward.
  *
- * Wiring (6 jumpers required — same as Stage 2 individual tests):
- *   GPIO25 ↔ GPIO26   GPIO interrupt drive / PCNT input
- *   GPIO17 ↔ GPIO16   UART1 TX → RX loopback
- *   GPIO33 →  GPIO34   ADC drive → ADC1_CH6 (input-only)
- *   GPIO23 ↔ GPIO19   SPI2 MOSI ↔ MISO
- *   GPIO21 ↔ GPIO13   I2C SDA: master (I2C0) ↔ slave (I2C1)
- *   GPIO22 ↔ GPIO14   I2C SCL: master (I2C0) ↔ slave (I2C1)
+ * Wiring (6 jumpers required - same as Stage 2 individual tests):
+ *   GPIO25 -- GPIO26   GPIO interrupt drive / PCNT input
+ *   GPIO17 -- GPIO16   UART1 TX -> RX loopback
+ *   GPIO33 -> GPIO34   ADC drive -> ADC1_CH6 (input-only)
+ *   GPIO23 -- GPIO19   SPI2 MOSI -- MISO
+ *   GPIO21 -- GPIO13   I2C SDA: master (I2C0) -- slave (I2C1)
+ *   GPIO22 -- GPIO14   I2C SCL: master (I2C0) -- slave (I2C1)
  *
  * Output tags: AEL_HELLO, AEL_NVS, AEL_WIFI, AEL_BLE, AEL_SLEEP, AEL_PWM,
  *              AEL_INTR, AEL_PCNT, AEL_UART, AEL_ADC, AEL_SPI, AEL_I2C
@@ -47,7 +47,7 @@
 #include "host/ble_hs.h"
 #include "host/ble_gap.h"
 
-/* ── pin assignments ──────────────────────────── */
+/* -- pin assignments ---------------------------- */
 #define INTR_DRIVE   GPIO_NUM_25
 #define INTR_INPUT   GPIO_NUM_26
 #define PCNT_DRIVE   GPIO_NUM_25
@@ -77,7 +77,7 @@
 #define I2C_BUF_LEN      8
 
 
-/* ── 1. hello ─────────────────────────────────── */
+/* -- 1. hello ----------------------------------- */
 /* Implicit: if this line prints, flash+boot+console all work. */
 static int sub_hello(void)
 {
@@ -86,7 +86,7 @@ static int sub_hello(void)
 }
 
 
-/* ── 2. NVS ───────────────────────────────────── */
+/* -- 2. NVS ------------------------------------- */
 static int sub_nvs(void)
 {
     const uint32_t WVAL = 0xAE320001U;
@@ -108,7 +108,7 @@ static int sub_nvs(void)
 }
 
 
-/* ── 3. WiFi ──────────────────────────────────── */
+/* -- 3. WiFi ------------------------------------ */
 static int sub_wifi(void)
 {
     esp_netif_create_default_wifi_sta();
@@ -132,7 +132,7 @@ static int sub_wifi(void)
 }
 
 
-/* ── 4. BLE ───────────────────────────────────── */
+/* -- 4. BLE ------------------------------------- */
 static SemaphoreHandle_t s_ble_sem;
 static volatile int      s_ble_adv;
 
@@ -171,7 +171,7 @@ static int sub_ble(void)
 }
 
 
-/* ── 5. Sleep ─────────────────────────────────── */
+/* -- 5. Sleep ----------------------------------- */
 static int sub_sleep(void)
 {
     printf("AEL_SLEEP entering\n"); fflush(stdout);
@@ -184,7 +184,7 @@ static int sub_sleep(void)
 }
 
 
-/* ── 6. PWM ───────────────────────────────────── */
+/* -- 6. PWM ------------------------------------- */
 static int sub_pwm(void)
 {
     ledc_timer_config_t tcfg = {
@@ -205,7 +205,7 @@ static int sub_pwm(void)
 }
 
 
-/* ── 7. GPIO interrupt ────────────────────────── */
+/* -- 7. GPIO interrupt -------------------------- */
 static volatile int s_intr_count;
 
 static void IRAM_ATTR _gpio_isr(void *arg) { (void)arg; s_intr_count++; }
@@ -253,7 +253,7 @@ static int sub_gpio_intr(void)
 }
 
 
-/* ── 8. PCNT ──────────────────────────────────── */
+/* -- 8. PCNT ------------------------------------ */
 static int sub_pcnt(void)
 {
     gpio_config_t gc = {
@@ -299,7 +299,7 @@ static int sub_pcnt(void)
 }
 
 
-/* ── 9. UART ──────────────────────────────────── */
+/* -- 9. UART ------------------------------------ */
 static int sub_uart(void)
 {
     uart_config_t cfg = {
@@ -325,7 +325,7 @@ static int sub_uart(void)
 }
 
 
-/* ── 10. ADC ──────────────────────────────────── */
+/* -- 10. ADC ------------------------------------ */
 static int sub_adc(void)
 {
     gpio_config_t gc = {
@@ -353,7 +353,7 @@ static int sub_adc(void)
 }
 
 
-/* ── 11. SPI ──────────────────────────────────── */
+/* -- 11. SPI ------------------------------------ */
 static const uint8_t SPI_TX[] = { 0xA5, 0x5A, 0xDE, 0xAD, 0xBE, 0xEF, 0x12, 0x34 };
 #define SPI_LEN ((int)sizeof(SPI_TX))
 
@@ -384,7 +384,7 @@ static int sub_spi(void)
 }
 
 
-/* ── 12. I2C ──────────────────────────────────── */
+/* -- 12. I2C ------------------------------------ */
 static SemaphoreHandle_t s_slv_done;
 static uint8_t           s_slv_rx[I2C_BUF_LEN];
 static volatile uint32_t s_slv_rx_len;
@@ -473,10 +473,10 @@ static int sub_i2c(void)
 }
 
 
-/* ── app_main ─────────────────────────────────── */
+/* -- app_main ----------------------------------- */
 void app_main(void)
 {
-    /* Shared init — order matters:
+    /* Shared init - order matters:
      *   1. ael_common_init   : NVS flash + log suppression
      *   2. ael_gpio_isr_init : must be before WiFi/BLE (known ESP32 pitfall)
      *   3. ael_netif_init    : TCP/IP stack + event loop for WiFi sub-test  */
@@ -490,18 +490,18 @@ void app_main(void)
     int passed = 0;
     const int TOTAL = 12;
 
-    passed += sub_hello();         /*  1 — console    (Stage 0) */
-    passed += sub_nvs();           /*  2 — NVS        (Stage 1) */
-    passed += sub_wifi();          /*  3 — WiFi       (Stage 1) */
-    passed += sub_ble();           /*  4 — BLE        (Stage 1) */
-    passed += sub_sleep();         /*  5 — sleep      (Stage 1) */
-    passed += sub_pwm();           /*  6 — PWM        (Stage 1) */
-    passed += sub_gpio_intr();     /*  7 — GPIO intr  (Stage 2) — before PCNT */
-    passed += sub_pcnt();          /*  8 — PCNT       (Stage 2) */
-    passed += sub_uart();          /*  9 — UART1      (Stage 2) */
-    passed += sub_adc();           /* 10 — ADC        (Stage 2) */
-    passed += sub_spi();           /* 11 — SPI        (Stage 2) */
-    passed += sub_i2c();           /* 12 — I2C        (Stage 2) */
+    passed += sub_hello();         /*  1 - console    (Stage 0) */
+    passed += sub_nvs();           /*  2 - NVS        (Stage 1) */
+    passed += sub_wifi();          /*  3 - WiFi       (Stage 1) */
+    passed += sub_ble();           /*  4 - BLE        (Stage 1) */
+    passed += sub_sleep();         /*  5 - sleep      (Stage 1) */
+    passed += sub_pwm();           /*  6 - PWM        (Stage 1) */
+    passed += sub_gpio_intr();     /*  7 - GPIO intr  (Stage 2) - before PCNT */
+    passed += sub_pcnt();          /*  8 - PCNT       (Stage 2) */
+    passed += sub_uart();          /*  9 - UART1      (Stage 2) */
+    passed += sub_adc();           /* 10 - ADC        (Stage 2) */
+    passed += sub_spi();           /* 11 - SPI        (Stage 2) */
+    passed += sub_i2c();           /* 12 - I2C        (Stage 2) */
 
     printf("AEL_SUITE_FULL DONE passed=%d failed=%d\n", passed, TOTAL - passed);
     fflush(stdout);

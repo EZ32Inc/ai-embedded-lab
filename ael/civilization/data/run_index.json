@@ -343,5 +343,19 @@
     "last_seen": 1774474049.7338755,
     "confidence": 0.5,
     "known_failures": {}
+  },
+  "esp32_wroom32d_cp210x|esp32_wroom32d_test_full_suite": {
+    "exp_id": "e47bc5cd-9a75-45ba-aa84-c86582d45d5c",
+    "success_count": 1,
+    "failure_count": 3,
+    "last_seen": 1774475647.9697936,
+    "confidence": 0.5,
+    "known_failures": {
+      "build": {
+        "exp_id": "556085e7-06d0-4d81-920b-6dff58c8d9fe",
+        "count": 3,
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_full_suite: failed — stages: preflight, load, run, check — failure: build — build failed"
+      }
+    }
   }
 }
