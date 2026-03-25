@@ -108,10 +108,11 @@ Ask: **what are the dependencies?**
 
 ```
 la_loopback_validation.py:
-  - Depends on: binary format (ESP32JTAG /instant_capture protocol)
-  - But: callable interface (output_fn, capture_fn) is generic
-  → Classify as: conditionally reusable (Layer 2/3 boundary)
-  → Action: keep in ael/patterns/, document the binary format dependency explicitly
+  - Depends on: ESP32JTAG /instant_capture binary protocol (board-specific firmware API)
+  - Validates against FPGA counter modes and GPIO Direct mode (board-specific features)
+  - No other board uses this firmware or produces this binary format
+  → Classify as: Board-specific (Layer 1)
+  → Location: experiments/esp32jtag/la_loopback_validation.py
 
 pcnt_loopback.py:
   - Depends on: firmware can measure pulses (any MCU with PCNT or equivalent)

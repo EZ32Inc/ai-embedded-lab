@@ -204,12 +204,11 @@ Capabilities now available on this board after migration:
 | Skills/checklists | `docs/skills/esp32jtag_*.md`, `docs/checklists/esp32jtag_*.md` | Board-specific operational knowledge |
 | Design memos (2026-03-19) | `docs/` dated memos | Session artifacts — see "Not Persisted" |
 
-**Note on `la_loopback_validation.py`:**
-Currently in `ael/patterns/loopback/` (suggesting AEL-core), but:
-- The binary format it decodes (`byte[0] skip + 16-bit big-endian words`) is the ESP32JTAG firmware's `/instant_capture` format
-- The callables (`output_fn`, `capture_fn`) make the code generic
-- In practice, no other board produces this exact binary format
-**Classification:** Conditionally reusable — keep in `ael/patterns/loopback/` but document the format dependency. If a future board uses the same firmware, it works immediately. If not, the pattern serves as a template.
+**`la_loopback_validation.py` — classification: Board-specific (Layer 1)**
+- Decodes the ESP32JTAG firmware's `/instant_capture` binary protocol
+- Validates against FPGA counter modes and GPIO Direct mode — both ESP32JTAG-specific features
+- No other board in this lab uses this firmware or produces this binary format
+- **Moved to:** `experiments/esp32jtag/la_loopback_validation.py`
 
 ---
 
@@ -232,7 +231,7 @@ Currently in `ael/patterns/loopback/` (suggesting AEL-core), but:
 |----------|------|-----------|
 | Universal bring-up spec | `docs/specs/ael_universal_bringup_spec_v1.md` | Board-agnostic method |
 | PCNT loopback pattern | `ael/patterns/loopback/pcnt_loopback.py` | Firmware-only, no special hardware |
-| LA loopback validation | `ael/patterns/loopback/la_loopback_validation.py` | Callable-based, format-documented |
+| PCNT loopback pattern | `ael/patterns/loopback/pcnt_loopback.py` | Firmware-only, no special hardware |
 | AEL adapters | `ael/adapters/build_idf.py`, `observe_uart_log.py` | Reusable across all ESP32/IDF boards |
 
 ---
@@ -307,7 +306,6 @@ projects/
 ael/
   patterns/
     loopback/
-      la_loopback_validation.py                        [CONDITIONALLY REUSABLE]
       pcnt_loopback.py                                 [AEL-CORE]
   instruments/
     interfaces/
@@ -327,5 +325,5 @@ ael/
 | MOVE to `docs/specs/archive/` | `onboarding_notes.md` | Facts already in project.yaml |
 | CREATE | `docs/specs/archive/` directory | Holds superseded session memos |
 | UPDATE | `brownfield_firmware_onboarding_spec_v0_1.md` | Extract the few ESP32JTAG-specific examples into notes; section 6 should reference this board but not mix in |
-| CLARIFY | `la_loopback_validation.py` docstring | Add "Binary format: ESP32JTAG /instant_capture protocol" so users know the format dependency |
+| MOVED | `la_loopback_validation.py` | `ael/patterns/loopback/` → `experiments/esp32jtag/` (Board-specific, not AEL-core) |
 | KEEP as-is | Everything else listed in Layer 1 / Layer 2 | Already in correct location |

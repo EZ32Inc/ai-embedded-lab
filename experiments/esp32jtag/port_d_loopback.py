@@ -46,13 +46,12 @@ from typing import Optional
 import requests
 from requests.auth import HTTPBasicAuth
 
-# Locate repo root for AEL imports
+# Add this script's directory to path for board-specific imports
 _HERE = Path(__file__).resolve().parent
-_REPO = _HERE.parent.parent
-if str(_REPO) not in sys.path:
-    sys.path.insert(0, str(_REPO))
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
 
-from ael.patterns.loopback.la_loopback_validation import (
+from la_loopback_validation import (
     LALoopbackValidator,
     LoopbackResult,
 )
