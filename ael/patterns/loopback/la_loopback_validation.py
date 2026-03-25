@@ -21,14 +21,22 @@ Callers supply two thin callables:
       Perform an instant LA capture and return the raw binary buffer
       exactly as the firmware sends it.
 
-The binary buffer format expected by this module:
+Binary format dependency
+-----------------------
+This module decodes the ESP32JTAG firmware's /instant_capture binary protocol:
   byte[0]     skipped (firmware status byte)
   bytes[1,2]  sample 0  (big-endian 16-bit, bit-i = LA channel i)
   bytes[3,4]  sample 1
   ...
 
-This matches the ESP32JTAG firmware's /instant_capture response and the
-logic_analyzer.html processCapturedData() decoder.
+This format is specific to the ESP32JTAG instrument firmware's
+/instant_capture HTTP endpoint and logic_analyzer.html processCapturedData().
+
+If you have a different board whose capture_fn() returns the same format,
+this module works unchanged. If not, subclass or copy _parse_samples().
+
+Classification: conditionally reusable (AEL patterns layer).
+Board-specific wiring and test cases live in experiments/esp32jtag/.
 
 Usage example
 -------------
