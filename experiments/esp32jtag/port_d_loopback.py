@@ -54,6 +54,8 @@ if str(_HERE) not in sys.path:
 from la_loopback_validation import (
     LALoopbackValidator,
     LoopbackResult,
+    CaseResult,
+    _parse_samples,
 )
 
 
@@ -110,6 +112,15 @@ TEST_CASES = [
     },
 ]
 
+#  Phase 3: esp_timer-based frequency output via /api/portd_freq
+#  All 4 channels toggle together (0x0F ↔ 0x00) at ~50% duty.
+FREQ_CASES = [
+    {"freq_hz": 125,  "description": "GPIO Direct  125 Hz — all channels ~50% duty"},
+    {"freq_hz": 250,  "description": "GPIO Direct  250 Hz — all channels ~50% duty"},
+    {"freq_hz": 500,  "description": "GPIO Direct  500 Hz — all channels ~50% duty"},
+    {"freq_hz": 1000, "description": "GPIO Direct 1000 Hz — all channels ~50% duty"},
+]
+
 
 # ── ESP32JTAG HTTP helpers ────────────────────────────────────────────────────
 
@@ -157,10 +168,30 @@ class ESP32JTAGClient:
         r.raise_for_status()
         return r.content
 
+    def set_portd_freq(self, freq_hz: int) -> dict:
+        r = self._sess.post(
+            f"{self.base}/api/portd_freq",
+            json={"freq_hz": freq_hz},
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+        j = r.json()
+        if j.get("status") != "ok":
+            raise RuntimeError(f"portd_freq error: {j.get('message')}")
+        return j
+
+    def set_la_sample_rate(self, sample_rate: int) -> None:
+        r = self._sess.post(
+            f"{self.base}/la_configure",
+            json={"sampleRate": sample_rate},
+            timeout=self.timeout,
+        )
+        r.raise_for_status()
+
     def restore_tristate(self) -> None:
         """Best-effort: restore Port D to tristate (LA input) after test."""
         try:
-            self.set_portd_output(MODE_TRISTATE, 0)
+            self.set_portd_freq(0)   # stop timer + tristate
         except Exception:
             pass
 
@@ -228,8 +259,53 @@ def run_test(
         verbose    = verbose,
     )
 
-    print(f"[run]   Running {len(TEST_CASES)} test cases …\n")
+    print(f"[run]   Running {len(TEST_CASES)} static/counter test cases …\n")
     result = validator.run_suite(TEST_CASES)
+
+    # ── Phase 3: esp_timer freq output tests ──────────────────────────────────
+    # The LA default sample rate is ~132 MHz (496 µs capture window).
+    # 125–1000 Hz half-period (0.5–4 ms) >> window → signal appears frozen.
+    # Fix: switch LA to 260 kHz (reg=254) → 65533 samples ≈ 252 ms window
+    # → 31–252 full cycles visible per capture, edges clearly detectable.
+    print(f"[run]   Running {len(FREQ_CASES)} freq test cases (low sample rate) …\n")
+    FREQ_SAMPLE_RATE = 260_000   # Hz — lowest FPGA LA rate (reg=254)
+    DEFAULT_SAMPLE_RATE = 264_000_000
+
+    client.set_la_sample_rate(FREQ_SAMPLE_RATE)
+    if verbose:
+        print(f"  [setup] LA sample rate → {FREQ_SAMPLE_RATE} Hz")
+
+    for fc in FREQ_CASES:
+        freq_hz = fc["freq_hz"]
+        desc    = fc["description"]
+
+        client.set_portd_freq(freq_hz)
+        time.sleep(0.05)   # let timer start (≥6 cycles at 125 Hz)
+
+        def _freq_driver(mode: int, value: int = 0) -> None:
+            pass   # already set above; output_fn is a no-op for run_suite
+
+        freq_validator = LALoopbackValidator(
+            output_fn  = _freq_driver,
+            capture_fn = _make_capture(client),
+            channels   = CHANNELS,
+            test_name  = f"freq_{freq_hz}",
+            settle_ms  = 0,     # signal already running; no extra wait
+            verbose    = verbose,
+        )
+        sub = freq_validator.run_suite([{
+            "type":             "counter",
+            "mode":             0,
+            "description":      desc,
+            "duty_range":       [0.35, 0.65],
+            "check_freq_order": False,   # all 4 channels toggle at same freq
+        }])
+        result.cases.extend(sub.cases)
+
+    # Restore default sample rate
+    client.set_la_sample_rate(DEFAULT_SAMPLE_RATE)
+    if verbose:
+        print(f"  [setup] LA sample rate → {DEFAULT_SAMPLE_RATE} Hz (restored)")
 
     # ── Cleanup ───────────────────────────────────────────────────────────────
     client.restore_tristate()
