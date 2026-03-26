@@ -27,9 +27,9 @@
   ],
   "notes": "S3JTAG-specific RP2040 signature path. Programs the RP2040 over SWD and validates a single target GPIO routed into S3JTAG Target In (GPIO15). Reset control is intentionally not required on this path.",
   "build": {
-    "project_dir": "firmware/targets/rp2040_pico",
-    "artifact_stem": "pico_blink",
-    "build_dir": "artifacts/build_rp2040_pico_s3jtag"
+    "project_dir": "assets_golden/duts/rp2040_pico/gpio_signature_s3jtag/firmware",
+    "artifact_stem": "pico_gpio_signature_s3jtag",
+    "build_dir": "artifacts/build_rp2040_gpio_signature_s3jtag"
   },
   "pin": "sig",
   "min_freq_hz": 200.0,

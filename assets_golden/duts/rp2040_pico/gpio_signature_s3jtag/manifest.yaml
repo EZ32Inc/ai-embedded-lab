@@ -1,0 +1,14 @@
+id: rp2040_pico_gpio_signature_s3jtag
+kind: dut_test_asset
+parent_dut: rp2040_pico
+description: RP2040 Pico GPIO signature DUT firmware for S3JTAG SWD + Target In verification
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/gpio_signature_s3jtag/firmware
+flash:
+  method: gdb_swd
+pins:
+  signal_out: 16
+instrument:
+  id: s3jtag_rp2040_lab
+  observe_pin: 15

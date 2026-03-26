@@ -6,3 +6,9 @@ Wiring expectations:
 
 Notes:
 - Uses firmware in `firmware/` (symlink to repo root firmware).
+
+S3JTAG variant:
+- Dedicated golden asset: `assets_golden/duts/rp2040_pico/gpio_signature_s3jtag/`
+- SWD via S3JTAG P3
+- Verify pin uses `TARGETIN` on S3JTAG GPIO15
+- Golden firmware drives RP2040 GPIO16 at 1 kHz
