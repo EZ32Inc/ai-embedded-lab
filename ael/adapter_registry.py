@@ -1115,7 +1115,7 @@ class _SignalVerifyAdapter:
                 "facts": signal_facts,
             }
 
-        if not capture.get("blob"):
+        if not capture.get("blob") and not isinstance(capture.get("targetin_result"), dict):
             measure = {"ok": False, "metrics": {}, "reasons": ["no_capture"]}
             if measure_path:
                 _write_json(measure_path, measure)
@@ -1130,7 +1130,45 @@ class _SignalVerifyAdapter:
             }
 
         if not led_observe_cfg.get("enabled"):
-            if signal_checks:
+            if isinstance(capture.get("targetin_result"), dict):
+                targetin = dict(capture.get("targetin_result") or {})
+                samples = int(targetin.get("samples") or 0)
+                high = int(targetin.get("high") or 0)
+                low = int(targetin.get("low") or 0)
+                transitions = int(targetin.get("transitions") or 0)
+                est_hz = float(targetin.get("estimated_hz") or 0.0)
+                total = high + low
+                duty = (float(high) / float(total)) if total > 0 else 0.0
+                ok = str(targetin.get("result") or "").strip().lower() == "pass" and str(targetin.get("state") or "").strip().lower() == "toggle"
+                if transitions < int(min_edges):
+                    ok = False
+                metrics = {
+                    "freq_hz": est_hz,
+                    "duty": duty,
+                    "samples": samples,
+                    "high": high,
+                    "low": low,
+                    "edges": transitions,
+                }
+                reasons = []
+                min_f = test_limits.get("min_freq_hz")
+                max_f = test_limits.get("max_freq_hz")
+                duty_min = test_limits.get("duty_min")
+                duty_max = test_limits.get("duty_max")
+                if min_f is not None and est_hz < float(min_f):
+                    reasons.append("freq_below_min")
+                    ok = False
+                if max_f is not None and est_hz > float(max_f):
+                    reasons.append("freq_above_max")
+                    ok = False
+                if duty_min is not None and duty < float(duty_min):
+                    reasons.append("duty_below_min")
+                    ok = False
+                if duty_max is not None and duty > float(duty_max):
+                    reasons.append("duty_above_max")
+                    ok = False
+                measure = {"ok": bool(ok), "metrics": metrics, "reasons": reasons, "source": "targetin_detect"}
+            elif signal_checks:
                 check_measures = [_analyze_signal_measure(capture, item) for item in signal_checks]
                 relations_ok, relation_results = _evaluate_signal_relations(check_measures)
                 ok = all(bool(item.get("ok")) for item in check_measures) and relations_ok

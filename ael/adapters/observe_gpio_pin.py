@@ -126,6 +126,56 @@ def _triggered_capture(base_url, auth, verify_ssl, timeout_s=5.0) -> bytes:
     return r.content
 
 
+def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None) -> bool:
+    start = requests.post(
+        f"{base_url}/test/start",
+        json={"test_type": "test_targetin_detect"},
+        headers={"Content-Type": "application/json"},
+        auth=auth,
+        timeout=10,
+        verify=verify_ssl,
+    )
+    start.raise_for_status()
+
+    deadline = time.time() + 10.0
+    while time.time() < deadline:
+        status_resp = requests.get(f"{base_url}/test/status", auth=auth, timeout=10, verify=verify_ssl)
+        status_resp.raise_for_status()
+        status_payload = status_resp.json() if status_resp.content else {}
+        if str(status_payload.get("state") or "").lower() in {"completed", "done", "idle"}:
+            break
+        time.sleep(0.2)
+
+    result_resp = requests.get(f"{base_url}/test/result", auth=auth, timeout=10, verify=verify_ssl)
+    result_resp.raise_for_status()
+    result = result_resp.json() if result_resp.content else {}
+
+    if capture_out is not None:
+        capture_out["targetin_result"] = dict(result)
+        capture_out["pin"] = pin_name
+        capture_out["pins"] = [pin_name]
+        capture_out["pin_bits"] = {pin_name: 0}
+        capture_out["bit"] = 0
+        capture_out["sample_rate_hz"] = int(result.get("estimated_hz") or 0) * 2 or 2000
+        capture_out["window_s"] = float(result.get("samples") or 0) / 40000.0 if result.get("samples") else 0.25
+        capture_out["edges"] = int(result.get("transitions") or 0)
+        capture_out["high"] = int(result.get("high") or 0)
+        capture_out["low"] = int(result.get("low") or 0)
+        capture_out["blob"] = b"TARGETIN"
+
+    state = str(result.get("state") or "").strip().lower()
+    ok = str(result.get("result") or "").strip().lower() == "pass" and state == "toggle" and int(result.get("transitions") or 0) > 0
+    if ok:
+        print(
+            "Verify: TARGETIN detect OK "
+            f"samples={int(result.get('samples') or 0)} transitions={int(result.get('transitions') or 0)} "
+            f"estimated_hz={int(result.get('estimated_hz') or 0)}"
+        )
+    else:
+        print(f"Verify: TARGETIN detect failed ({result})")
+    return ok
+
+
 def _bit_from_pin(pin: str) -> int:
     if not pin:
         return -1
@@ -170,16 +220,20 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
         return False
 
     bit_map = {name: _bit_from_pin(name) for name in normalized_pins}
+    base_url = f"{scheme}://{ip}:{port}"
+    auth = HTTPBasicAuth(user, password)
+
+    _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
+
+    if all(str(name).strip().upper() == "TARGETIN" for name in normalized_pins):
+        print(f"Verify: TARGETIN host={base_url} duration~{duration_s:.2f}s")
+        return _run_targetin_detect(base_url, auth, verify_ssl, normalized_pins[0], capture_out=capture_out)
+
     invalid = [name for name, bit in bit_map.items() if bit < 0 or bit > 15]
     if invalid:
         print(f"Verify: invalid LA bit from pin '{invalid[0]}'. Use P0.x or 0..15.")
         return False
     bit = bit_map[normalized_pins[0]]
-
-    base_url = f"{scheme}://{ip}:{port}"
-    auth = HTTPBasicAuth(user, password)
-
-    _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
     print(
         "Verify: LA host="
