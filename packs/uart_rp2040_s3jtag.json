@@ -1,0 +1,8 @@
+{
+  "name": "uart_rp2040_s3jtag",
+  "description": "UART banner validation for RP2040 flashed by S3JTAG and observed through a separate USB-UART bridge.",
+  "board": "rp2040_pico_s3jtag_uart",
+  "tests": [
+    "tests/plans/rp2040_uart_banner_with_s3jtag.json"
+  ]
+}

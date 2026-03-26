@@ -1,0 +1,83 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_uart_banner_with_s3jtag",
+  "board": "rp2040_pico_s3jtag_uart",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_uart_console"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path"
+  ],
+  "covers": [
+    "uart"
+  ],
+  "notes": "Programs RP2040 over S3JTAG SWD and validates the UART banner through a separate USB-UART bridge instrument.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/uart_banner_s3jtag/firmware",
+    "artifact_stem": "pico_uart_banner_s3jtag",
+    "build_dir": "artifacts/build_rp2040_uart_banner_s3jtag"
+  },
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "usb_uart_bridge_net",
+    "baud": 115200,
+    "profile": "rp2040",
+    "duration_s": 6,
+    "expect_patterns": [
+      "AEL_READY RP2040 UART"
+    ]
+  },
+  "bench_setup": {
+    "instrument_roles": [
+      {
+        "role": "control_instrument",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "192.168.4.1:4242",
+        "required": true,
+        "notes": "Used for RP2040 SWD flash/load via S3JTAG."
+      },
+      {
+        "role": "uart_instrument",
+        "instrument_id": "usb_uart_bridge_daemon",
+        "endpoint": "127.0.0.1:8767",
+        "required": true,
+        "notes": "Existing USB-UART bridge daemon. Must be bound to the RP2040 UART bridge before live validation."
+      }
+    ],
+    "serial_console": {
+      "port": "selected_by_usb_uart_bridge_daemon",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "uart_tx",
+        "dut_signal": "GPIO0/UART0_TX",
+        "direction": "output",
+        "notes": "Connect RP2040 UART0 TX to the USB-UART RX input used by the daemon."
+      },
+      {
+        "role": "uart_rx",
+        "dut_signal": "GPIO1/UART0_RX",
+        "direction": "input",
+        "notes": "Optional for banner-only validation; connect only if later bidirectional UART tests are needed."
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}

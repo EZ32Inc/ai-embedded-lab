@@ -1,0 +1,41 @@
+board:
+  name: RP2040 Pico via S3JTAG + UART Bridge
+  target: rp2040
+  kind: board
+  features:
+    - programmable_via_swd
+    - has_gpio
+    - has_uart_console
+  processors:
+    - id: rp2040
+      arch: arm
+      role: primary
+      clock_hz: 125000000
+  instrument_instance: s3jtag_rp2040_lab
+  build:
+    project_dir: assets_golden/duts/rp2040_pico/uart_banner_s3jtag/firmware
+    artifact_stem: pico_uart_banner_s3jtag
+    build_dir: artifacts/build_rp2040_uart_banner_s3jtag
+  firmware:
+    description: RP2040 UART banner target exercised through S3JTAG SWD plus a separate UART bridge instrument
+  default_wiring:
+    swd: P3
+    reset: NC
+    verify: "NC"
+  bench_connections:
+    - from: RP2040 SWDIO
+      to: S3JTAG P3.SWDIO
+    - from: RP2040 SWCLK
+      to: S3JTAG P3.SWCLK
+    - from: RP2040 UART0 TX
+      to: USB-UART RX
+    - from: GND
+      to: S3JTAG GND
+    - from: GND
+      to: USB-UART GND
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: 3V3
+        nominal_v: 3.3

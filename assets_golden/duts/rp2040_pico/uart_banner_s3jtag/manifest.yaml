@@ -1,0 +1,10 @@
+id: uart_banner_s3jtag
+name: RP2040 Pico uart_banner_s3jtag
+board: rp2040_pico_s3jtag_uart
+purpose: S3JTAG-controlled RP2040 UART banner asset using a separate UART observe instrument
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/uart_banner_s3jtag/firmware
+  artifact_stem: pico_uart_banner_s3jtag
+flash:
+  method: gdb_swd

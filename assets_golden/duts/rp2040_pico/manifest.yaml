@@ -29,6 +29,10 @@ board_configs:
     path: configs/boards/rp2040_pico_s3jtag.yaml
     instrument_family: esp32jtag
     primary: false
+  - id: s3jtag_uart
+    path: configs/boards/rp2040_pico_s3jtag_uart.yaml
+    instrument_family: esp32jtag
+    primary: false
 
 lifecycle_stage: golden
 
