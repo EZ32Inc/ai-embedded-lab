@@ -24,12 +24,18 @@ communication:
         type: basic
       options:
         tls_verify: false
+    - name: uart_websocket
+      transport: wifi
+      endpoint: wss://192.168.4.1/ws
+      protocol: websocket
+      invocation_style: bidirectional_stream
 
 capability_surfaces:
   swd: gdb_remote
   gpio_in: web_api
   gpio_out: web_api
   reset_out: web_api
+  uart: uart_websocket
 
 preflight:
   capture_check: targetin

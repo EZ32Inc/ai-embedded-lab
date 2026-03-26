@@ -25,7 +25,7 @@
   "covers": [
     "uart"
   ],
-  "notes": "Programs RP2040 over S3JTAG SWD and validates the UART banner through a separate USB-UART bridge instrument.",
+  "notes": "Programs RP2040 over S3JTAG SWD and validates the UART banner through the ESP32-S3 devkit internal Web UART bridge.",
   "build": {
     "project_dir": "assets_golden/duts/rp2040_pico/uart_banner_s3jtag/firmware",
     "artifact_stem": "pico_uart_banner_s3jtag",
@@ -33,7 +33,7 @@
   },
   "observe_uart": {
     "enabled": true,
-    "instrument_spec": "usb_uart_bridge_net",
+    "backend": "esp32jtag_web_uart",
     "baud": 115200,
     "profile": "rp2040",
     "duration_s": 6,
@@ -52,14 +52,14 @@
       },
       {
         "role": "uart_instrument",
-        "instrument_id": "usb_uart_bridge_daemon",
-        "endpoint": "127.0.0.1:8767",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "https://192.168.4.1:443",
         "required": true,
-        "notes": "Existing USB-UART bridge daemon. Must be bound to the RP2040 UART bridge before live validation."
+        "notes": "Uses the ESP32-S3 devkit internal Web UART bridge exposed by the same S3JTAG instrument."
       }
     ],
     "serial_console": {
-      "port": "selected_by_usb_uart_bridge_daemon",
+      "port": "s3jtag_internal_web_uart",
       "baud": 115200,
       "required": true
     },
@@ -68,13 +68,13 @@
         "role": "uart_tx",
         "dut_signal": "GPIO0/UART0_TX",
         "direction": "output",
-        "notes": "Connect RP2040 UART0 TX to the USB-UART RX input used by the daemon."
+        "notes": "Connect RP2040 UART0 TX to the S3JTAG internal UART RX on GPIO7."
       },
       {
         "role": "uart_rx",
         "dut_signal": "GPIO1/UART0_RX",
         "direction": "input",
-        "notes": "Optional for banner-only validation; connect only if later bidirectional UART tests are needed."
+        "notes": "Connect RP2040 UART0 RX to the S3JTAG internal UART TX on GPIO6. Recommended even for banner-only validation so the UART path is fully wired."
       }
     ],
     "ground_required": true,

@@ -13,4 +13,4 @@ S3JTAG variant:
 - Verify pin uses `TARGETIN` on S3JTAG GPIO15
 - Golden firmware drives RP2040 GPIO16 at 1 kHz
 - Dedicated minimal-runtime mailbox asset: `assets_golden/duts/rp2040_pico/minimal_runtime_mailbox_s3jtag/`
-- Dedicated UART banner asset: `assets_golden/duts/rp2040_pico/uart_banner_s3jtag/`
+- Dedicated UART banner asset: `assets_golden/duts/rp2040_pico/uart_banner_s3jtag/` using the S3JTAG internal ESP32-S3 Web UART bridge.

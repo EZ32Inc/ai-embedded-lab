@@ -2,6 +2,7 @@ import base64
 import json
 import os
 import re
+import ssl
 import time
 from urllib import error as urllib_error
 from urllib import request as urllib_request
@@ -355,12 +356,82 @@ def _capture_via_bridge(endpoint, duration_s, start_delay_s):
     return bytes(data), None
 
 
-def run(cfg, raw_log_path: str):
-    try:
-        import serial  # type: ignore
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError("pyserial is required. Install with: pip install pyserial") from exc
+def _normalize_esp32jtag_ws_url(endpoint):
+    raw = str(endpoint or "").strip()
+    if not raw:
+        return ""
+    if raw.startswith(("ws://", "wss://")):
+        if raw.endswith("/ws"):
+            return raw
+        if "/" not in raw.split("://", 1)[1]:
+            return raw.rstrip("/") + "/ws"
+        return raw
+    scheme = "wss://"
+    if raw.startswith("https://"):
+        raw = raw[len("https://"):]
+    elif raw.startswith("http://"):
+        raw = raw[len("http://"):]
+        scheme = "ws://"
+    elif raw.endswith(":443") or ":443/" in raw:
+        scheme = "wss://"
+    else:
+        scheme = "ws://"
+    if "/" in raw:
+        hostport, path = raw.split("/", 1)
+        path = "/" + path.lstrip("/")
+        if path == "/":
+            path = "/ws"
+    else:
+        hostport = raw
+        path = "/ws"
+    return f"{scheme}{hostport}{path}"
 
+
+def _capture_via_esp32jtag_web_uart(endpoint, duration_s, start_delay_s):
+    try:
+        import websocket  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        return None, f"websocket-client unavailable: {exc}"
+
+    ws_url = _normalize_esp32jtag_ws_url(endpoint)
+    if not ws_url:
+        return None, "missing ESP32JTAG Web UART endpoint"
+
+    data = bytearray()
+    ws = None
+    try:
+        ws = websocket.create_connection(
+            ws_url,
+            timeout=0.5,
+            sslopt={"cert_reqs": ssl.CERT_NONE},
+        )
+        ws.settimeout(0.2)
+        if start_delay_s > 0:
+            time.sleep(start_delay_s)
+        deadline = time.time() + max(0.0, duration_s)
+        while time.time() < deadline:
+            try:
+                chunk = ws.recv()
+            except websocket.WebSocketTimeoutException:
+                continue
+            if chunk is None:
+                continue
+            if isinstance(chunk, str):
+                data.extend(chunk.encode("utf-8", errors="replace"))
+            else:
+                data.extend(chunk)
+    except Exception as exc:
+        return None, str(exc)
+    finally:
+        try:
+            if ws is not None:
+                ws.close()
+        except Exception:
+            pass
+    return bytes(data), None
+
+
+def run(cfg, raw_log_path: str):
     enabled = bool(cfg.get("enabled", False))
     if not enabled:
         return {
@@ -378,22 +449,6 @@ def run(cfg, raw_log_path: str):
         }
 
     port = cfg.get("port")
-    if not port:
-        return {
-            "ok": False,
-            "bytes": 0,
-            "lines": 0,
-            "port": "",
-            "baud": int(cfg.get("baud", 115200)),
-            "crash_detected": False,
-            "reboot_loop_suspected": False,
-            "errors": [],
-            "warnings": [],
-            "matched": {},
-            "raw_log_path": raw_log_path,
-            "error_summary": "UART port not set",
-        }
-
     baud = int(cfg.get("baud") or 115200)
     duration_s = float(cfg.get("duration_s", 6))
     profile = str(cfg.get("profile", "auto")).lower()
@@ -401,6 +456,44 @@ def run(cfg, raw_log_path: str):
     forbid_patterns = cfg.get("forbid_patterns") or []
     boot_signatures = cfg.get("boot_signatures") or []
     bridge_endpoint = str(cfg.get("bridge_endpoint") or "").strip()
+    backend = str(cfg.get("backend") or "").strip().lower()
+
+    if backend == "esp32jtag_web_uart":
+        start_delay_s = float(cfg.get("start_delay_s", 0.2))
+        data, last_exc = _capture_via_esp32jtag_web_uart(bridge_endpoint, duration_s, start_delay_s)
+        if data is None:
+            return {
+                "ok": False,
+                "bytes": 0,
+                "lines": 0,
+                "port": str(port or "esp32jtag_web_uart"),
+                "baud": baud,
+                "crash_detected": False,
+                "reboot_loop_suspected": False,
+                "errors": [],
+                "warnings": [],
+                "matched": {},
+                "raw_log_path": raw_log_path,
+                "error_summary": f"failed to read UART via ESP32JTAG Web UART: {last_exc}",
+                "bridge_endpoint": bridge_endpoint,
+            }
+        with open(raw_log_path, "wb") as f:
+            f.write(data)
+        text = data.decode("utf-8", errors="replace")
+        result = _evaluate_capture(
+            text=text,
+            data=data,
+            port=str(port or "esp32jtag_web_uart"),
+            baud=baud,
+            raw_log_path=raw_log_path,
+            profile=profile,
+            expect_patterns=expect_patterns,
+            forbid_patterns=forbid_patterns,
+            boot_signatures=boot_signatures,
+        )
+        result["bridge_endpoint"] = bridge_endpoint
+        result["backend"] = backend
+        return result
 
     if bridge_endpoint:
         start_delay_s = float(cfg.get("start_delay_s", 0.4))
@@ -437,6 +530,27 @@ def run(cfg, raw_log_path: str):
         )
         result["bridge_endpoint"] = bridge_endpoint
         return result
+
+    if not port:
+        return {
+            "ok": False,
+            "bytes": 0,
+            "lines": 0,
+            "port": "",
+            "baud": baud,
+            "crash_detected": False,
+            "reboot_loop_suspected": False,
+            "errors": [],
+            "warnings": [],
+            "matched": {},
+            "raw_log_path": raw_log_path,
+            "error_summary": "UART port not set",
+        }
+
+    try:
+        import serial  # type: ignore
+    except Exception as exc:  # pragma: no cover
+        raise RuntimeError("pyserial is required. Install with: pip install pyserial") from exc
 
     if not os.path.exists(port):
         return {

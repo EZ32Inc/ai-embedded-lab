@@ -1,5 +1,5 @@
 board:
-  name: RP2040 Pico via S3JTAG + UART Bridge
+  name: RP2040 Pico via S3JTAG SWD + Internal UART
   target: rp2040
   kind: board
   features:
@@ -17,7 +17,7 @@ board:
     artifact_stem: pico_uart_banner_s3jtag
     build_dir: artifacts/build_rp2040_uart_banner_s3jtag
   firmware:
-    description: RP2040 UART banner target exercised through S3JTAG SWD plus a separate UART bridge instrument
+    description: RP2040 UART banner target exercised through S3JTAG SWD plus the ESP32-S3 devkit internal Web UART bridge
   default_wiring:
     swd: P3
     reset: NC
@@ -28,11 +28,11 @@ board:
     - from: RP2040 SWCLK
       to: S3JTAG P3.SWCLK
     - from: RP2040 UART0 TX
-      to: USB-UART RX
+      to: S3JTAG UART1 RX (GPIO7)
+    - from: RP2040 UART0 RX
+      to: S3JTAG UART1 TX (GPIO6)
     - from: GND
       to: S3JTAG GND
-    - from: GND
-      to: USB-UART GND
   power_and_boot:
     reset_strategy: none
     boot_mode_default: normal
