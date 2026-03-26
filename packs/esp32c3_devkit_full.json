@@ -1,0 +1,22 @@
+{
+  "name": "esp32c3_devkit_full",
+  "board": "esp32c3_devkit_native_usb",
+  "notes": "Full 10-test suite for ESP32-C3 DevKit (Rule B, truth layer). Stage 0 -> Stage 1 -> Stage 2. 4 jumpers required: GPIO4-5, GPIO6-7, GPIO8-1, GPIO10-3. GPIO8 used for ADC drive (GPIO2/LP-IO cannot output HIGH with ADC1 active on ESP32-C3).",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c3_devkit/hello.json",
+    "tests/plans/esp32c3_devkit/test_nvs.json",
+    "tests/plans/esp32c3_devkit/test_temp.json",
+    "tests/plans/esp32c3_devkit/test_wifi.json",
+    "tests/plans/esp32c3_devkit/test_ble.json",
+    "tests/plans/esp32c3_devkit/test_sleep.json",
+    "tests/plans/esp32c3_devkit/test_pwm.json",
+    "tests/plans/esp32c3_devkit/test_gpio_intr.json",
+    "tests/plans/esp32c3_devkit/test_uart.json",
+    "tests/plans/esp32c3_devkit/test_adc.json",
+    "tests/plans/esp32c3_devkit/test_spi.json",
+    "tests/plans/esp32c3_devkit/test_full_suite.json"
+  ]
+}

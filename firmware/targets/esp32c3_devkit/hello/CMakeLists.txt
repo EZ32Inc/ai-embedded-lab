@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(IDF_TARGET "esp32c3")
+set(SDKCONFIG_DEFAULTS "${CMAKE_CURRENT_SOURCE_DIR}/sdkconfig.defaults")
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(ael_esp32c3_devkit_hello)

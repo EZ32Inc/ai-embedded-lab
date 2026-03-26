@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c3_devkit_test_uart",
+  "test_kind": "instrument_specific",
+  "board": "esp32c3_devkit_native_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "uart"
+  ],
+  "notes": "Stage 2: UART1 TX->RX loopback. Jumper GPIO6 <-> GPIO7.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO6",
+        "to": "GPIO7",
+        "label": "UART1 TX -> RX loopback"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c3_devkit/test_uart",
+    "artifact_stem": "ael_esp32c3_devkit_test_uart",
+    "build_dir": "artifacts/build_esp32c3_devkit_test_uart"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "none",
+    "boot_signatures": [
+      "rst:0x"
+    ],
+    "expect_patterns": [
+      "AEL_UART.*PASS"
+    ]
+  }
+}

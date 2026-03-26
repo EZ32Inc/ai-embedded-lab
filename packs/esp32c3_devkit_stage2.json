@@ -1,0 +1,14 @@
+{
+  "name": "esp32c3_devkit_stage2",
+  "board": "esp32c3_devkit_native_usb",
+  "notes": "Stage 2: wiring-required tests. 4 jumpers: GPIO4-5, GPIO6-7, GPIO2-1, GPIO10-3.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c3_devkit/test_gpio_intr.json",
+    "tests/plans/esp32c3_devkit/test_uart.json",
+    "tests/plans/esp32c3_devkit/test_adc.json",
+    "tests/plans/esp32c3_devkit/test_spi.json"
+  ]
+}

@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c3_devkit_test_spi",
+  "test_kind": "instrument_specific",
+  "board": "esp32c3_devkit_native_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "spi"
+  ],
+  "notes": "Stage 2: SPI2 MOSI<->MISO loopback. Jumper GPIO10 <-> GPIO3. CLK=GPIO21, CS=GPIO20 (no jumpers needed).",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO10",
+        "to": "GPIO3",
+        "label": "SPI2 MOSI <-> MISO loopback"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c3_devkit/test_spi",
+    "artifact_stem": "ael_esp32c3_devkit_test_spi",
+    "build_dir": "artifacts/build_esp32c3_devkit_test_spi"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "none",
+    "boot_signatures": [
+      "rst:0x"
+    ],
+    "expect_patterns": [
+      "AEL_SPI.*PASS"
+    ]
+  }
+}

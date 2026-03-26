@@ -29,7 +29,7 @@ board:
   flash:
     method: idf_esptool
     target: esp32c3
-    port: /dev/ttyACM0        # Native USB Serial/JTAG
+    port: /dev/ttyACM1        # Native USB Serial/JTAG (serial B0:81:84:BF:F6:D0)
     baud: 460800
     serial: null
   pins:

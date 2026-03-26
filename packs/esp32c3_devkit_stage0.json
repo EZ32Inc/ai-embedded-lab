@@ -1,0 +1,11 @@
+{
+  "name": "esp32c3_devkit_stage0",
+  "board": "esp32c3_devkit_native_usb",
+  "notes": "Stage 0: bare-board smoke test. No wiring required.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c3_devkit/hello.json"
+  ]
+}

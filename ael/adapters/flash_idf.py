@@ -113,12 +113,31 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
             print(res.stderr.strip())
         ok = True
     except subprocess.CalledProcessError as exc:
-        print("Flash: FAIL")
-        if exc.stdout:
-            print(exc.stdout.strip())
-        if exc.stderr:
-            print(exc.stderr.strip())
-        ok = False
+        combined = (exc.stdout or "") + (exc.stderr or "")
+        # Native USB (e.g. ESP32-C3) hard_reset causes the USB-Serial/JTAG port
+        # to disconnect mid-cleanup.  esptool calls _setRTS(False) on the gone
+        # port → OSError [Errno 71] Protocol error.  The flash DATA was already
+        # written and verified ("Hash of data verified" / "Leaving...").
+        # Treat this as success — the chip is already running the new firmware.
+        if "Leaving..." in combined and (
+            "[Errno 71]" in combined or "Protocol error" in combined
+        ):
+            print(
+                "Flash: native USB cleanup RTS error (Errno 71) — "
+                "data verified, treating as success"
+            )
+            if exc.stdout:
+                print(exc.stdout.strip())
+            if exc.stderr:
+                print(exc.stderr.strip())
+            ok = True
+        else:
+            print("Flash: FAIL")
+            if exc.stdout:
+                print(exc.stdout.strip())
+            if exc.stderr:
+                print(exc.stderr.strip())
+            ok = False
 
     if ok and post_flash_run:
         # On some ESP32-S3 native USB setups, flash hard-reset leaves ROM downloader active.

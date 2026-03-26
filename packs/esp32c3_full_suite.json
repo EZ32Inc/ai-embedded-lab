@@ -1,11 +1,22 @@
 {
   "name": "esp32c3_full_suite",
   "board": "esp32c3_devkit_native_usb",
-  "notes": "ESP32-C3 10-test hardware suite. 4 jumpers — see tests/plans/esp32c3_suite.json. Covers: TEMP, NVS, WiFi, BLE, Sleep, PWM, INTR, UART, ADC, SPI. No PCNT (C3 lacks PCNT peripheral). No external instrument required.",
+  "notes": "ESP32-C3 DevKit Rule-B suite (12 plans: Stage 0 hello + Stage 1 x6 + Stage 2 x4 + full_suite). Replaces old monolithic esp32c3_suite. 4 jumpers: GPIO4-5, GPIO6-7, GPIO8-1, GPIO10-3. GPIO8 for ADC drive (LP-IO limitation). No external instrument required.",
   "preflight": {
     "enabled": false
   },
   "tests": [
-    "tests/plans/esp32c3_suite.json"
+    "tests/plans/esp32c3_devkit/hello.json",
+    "tests/plans/esp32c3_devkit/test_nvs.json",
+    "tests/plans/esp32c3_devkit/test_temp.json",
+    "tests/plans/esp32c3_devkit/test_wifi.json",
+    "tests/plans/esp32c3_devkit/test_ble.json",
+    "tests/plans/esp32c3_devkit/test_sleep.json",
+    "tests/plans/esp32c3_devkit/test_pwm.json",
+    "tests/plans/esp32c3_devkit/test_gpio_intr.json",
+    "tests/plans/esp32c3_devkit/test_uart.json",
+    "tests/plans/esp32c3_devkit/test_adc.json",
+    "tests/plans/esp32c3_devkit/test_spi.json",
+    "tests/plans/esp32c3_devkit/test_full_suite.json"
   ]
 }
