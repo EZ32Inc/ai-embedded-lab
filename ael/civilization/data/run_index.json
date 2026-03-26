@@ -842,5 +842,128 @@
     "last_seen": 1774534470.0926619,
     "confidence": 0.5,
     "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|hello": {
+    "exp_id": "3f48cdd4-e5a4-456a-aa34-6796a16f5c4c",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536096.5684316,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_nvs": {
+    "exp_id": "d64b1ce9-51de-4d85-ba4b-be78fc9593b7",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536262.5964277,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_temp": {
+    "exp_id": "da065a0c-bec7-4f48-a64e-0a3ce280b342",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536306.169436,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_wifi": {
+    "exp_id": "ad1e3352-391f-4965-8487-5f8a44f60828",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536386.0849767,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_ble": {
+    "exp_id": "e4fffd73-84e8-43d3-b546-f336e0516269",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536454.4943738,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_sleep": {
+    "exp_id": "b0fc2b64-674b-4be0-8e2d-19ba09baf8e9",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536498.8383973,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_pwm": {
+    "exp_id": "8c0fec29-4312-40d5-8857-60b3171f1b76",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536544.5592194,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_gpio_intr": {
+    "exp_id": "a17f0755-3567-4e65-a047-acfcd276c6cc",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536869.5853262,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_pcnt": {
+    "exp_id": "7fd7ccdc-5442-4f6e-af89-4f566be05b8b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536917.3268876,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_uart": {
+    "exp_id": "3f6e78a9-b49a-40de-a748-04321ea6cec8",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774536963.3477168,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_adc": {
+    "exp_id": "7f5c14db-80a6-41e6-8b6d-940faa490cc1",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774537010.905675,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_spi": {
+    "exp_id": "69e6bb0d-9755-4209-8dc4-9a635597d660",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774537056.6371555,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c5_devkit_dual_usb|test_i2c": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 23,
+    "last_seen": 1774554899.9114456,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "65721617-360d-40cc-a93f-08a4654e6784",
+        "count": 21,
+        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      },
+      "load": {
+        "exp_id": "e571de24-64da-4494-9280-8b7e7466d599",
+        "count": 2,
+        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed — stages: preflight, build, run, check — failure: load — load failed"
+      }
+    }
+  },
+  "esp32c5_devkit_dual_usb|test_full_suite": {
+    "exp_id": "e81d4a36-173b-4029-a6e0-20e031831557",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774555751.37558,
+    "confidence": 0.6,
+    "known_failures": {}
   }
 }

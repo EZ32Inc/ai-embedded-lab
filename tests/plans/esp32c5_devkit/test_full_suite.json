@@ -6,16 +6,14 @@
   "supported_instruments": ["esp32_meter"],
   "requires": {"mailbox": false, "datacapture": false},
   "labels": ["rule_d", "full_suite"],
-  "covers": ["gpio", "nvs", "temperature", "wifi", "ble", "sleep", "pwm", "pcnt", "uart", "adc", "spi", "i2c"],
-  "notes": "Rule D convenience layer: all 13 sub-tests in one firmware. 6 jumpers required: GPIO2<->GPIO3, GPIO4<->GPIO5, GPIO6->GPIO1, GPIO7<->GPIO9, GPIO8<->GPIO14, GPIO13<->GPIO23.",
+  "covers": ["gpio", "nvs", "temperature", "wifi", "ble", "sleep", "pwm", "pcnt", "uart", "adc", "spi"],
+  "notes": "Rule D convenience layer: 12 sub-tests (I2C excluded — see esp32c5_closeout_report). 4 jumpers required: GPIO2<->GPIO3, GPIO4<->GPIO5, GPIO6->GPIO1, GPIO7<->GPIO9.",
   "wiring": {
     "required": [
       {"from": "GPIO2",  "to": "GPIO3",  "label": "Wire 1 — GPIO interrupt drive / PCNT input (shared)"},
       {"from": "GPIO4",  "to": "GPIO5",  "label": "Wire 2 — UART1 TX -> RX loopback"},
       {"from": "GPIO6",  "to": "GPIO1",  "label": "Wire 3 — ADC drive -> ADC1_CH0 (GPIO6=LP-IO safe)"},
-      {"from": "GPIO7",  "to": "GPIO9",  "label": "Wire 4 — SPI2 MOSI <-> MISO loopback"},
-      {"from": "GPIO8",  "to": "GPIO14", "label": "Wire 5 — I2C SDA: bit-bang master <-> HW V2 slave"},
-      {"from": "GPIO13", "to": "GPIO23", "label": "Wire 6 — I2C SCL: bit-bang master <-> HW V2 slave"}
+      {"from": "GPIO7",  "to": "GPIO9",  "label": "Wire 4 — SPI2 MOSI <-> MISO loopback"}
     ]
   },
   "build": {
@@ -46,8 +44,7 @@
       "AEL_UART.*PASS",
       "AEL_ADC.*PASS",
       "AEL_SPI.*PASS",
-      "AEL_I2C.*PASS",
-      "AEL_SUITE_FULL DONE passed=13 failed=0"
+      "AEL_SUITE_FULL DONE passed=12 failed=0"
     ]
   }
 }

@@ -22,12 +22,12 @@
   "preflight": {"enabled": false},
   "observe_uart": {
     "enabled": true,
-    "instrument_spec": "esp32c5_uart_bridge",
     "port": "/dev/ttyACM0",
     "baud": 115200,
     "profile": "espidf",
     "boot_signatures": ["rst:0x"],
     "reset_strategy": "rts",
+    "start_delay_s": 1.0,
     "duration_s": 20,
     "expect_patterns": ["AEL_I2C.*PASS"]
   }

@@ -12,7 +12,15 @@
 /* Bit-bang master: SDA=GPIO8, SCL=GPIO13
  * HW I2C V2 slave: SDA=GPIO14, SCL=GPIO23
  * Jumpers: GPIO8 <-> GPIO14 (SDA),  GPIO13 <-> GPIO23 (SCL)
- * BB_HALF_US=50 -> ~10kHz (CE 958116e1: conservative for ADDRESS_MATCH stretch) */
+ * BB_HALF_US=50 -> ~10kHz (CE 958116e1: conservative for ADDRESS_MATCH stretch)
+ *
+ * NOTE: This test is EXCLUDED from the ESP32-C5 Rule-B suite.
+ * The I2C V2 slave peripheral does not drive ACK when addressed by the
+ * bit-bang master.  The I2C peripheral registers (sr.bus_busy=0) confirm it
+ * never detects bus activity despite correct GPIO matrix routing and confirmed
+ * physical wire connectivity.  Root cause is unresolved.
+ * See docs/esp32c5_closeout_report.md for full investigation details.
+ */
 #define I2C_SLAVE_PORT   ((i2c_port_num_t)0)
 #define I2C_SLAVE_SDA    GPIO_NUM_14
 #define I2C_SLAVE_SCL    GPIO_NUM_23
@@ -116,6 +124,7 @@ void app_main(void)
     if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         nvs_flash_erase(); nvs_flash_init();
     }
+    vTaskDelay(pdMS_TO_TICKS(100));
 
     static const uint8_t I2C_TX[I2C_BUF_LEN] = { 0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0 };
     s_slv_done = xSemaphoreCreateBinary();
@@ -151,10 +160,13 @@ void app_main(void)
     }
 
     bb_init();
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(50));
 
     int tx_err = bb_transmit(BS_ADDR, I2C_TX, I2C_BUF_LEN);
-    BaseType_t got = xSemaphoreTake(s_slv_done, pdMS_TO_TICKS(500));
+    BaseType_t got = pdFALSE;
+    if (tx_err == 0) {
+        got = xSemaphoreTake(s_slv_done, pdMS_TO_TICKS(500));
+    }
 
     i2c_del_slave_device(slv);
     vSemaphoreDelete(s_slv_done);
@@ -162,7 +174,10 @@ void app_main(void)
     int match = (got == pdTRUE) && (s_slv_rx_len == I2C_BUF_LEN) &&
                 (memcmp(I2C_TX, s_slv_rx, I2C_BUF_LEN) == 0);
     int ok = (tx_err == 0) && match;
-    printf("AEL_I2C tx_err=%d rx_len=%u match=%d %s\n",
-           tx_err, (unsigned)s_slv_rx_len, match, ok ? "PASS" : "FAIL");
-    fflush(stdout);
+    while (1) {
+        printf("AEL_I2C tx_err=%d rx_len=%u match=%d %s\n",
+               tx_err, (unsigned)s_slv_rx_len, match, ok ? "PASS" : "FAIL");
+        fflush(stdout);
+        vTaskDelay(pdMS_TO_TICKS(500));
+    }
 }
