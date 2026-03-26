@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "name": "test_pwm",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage1"],
+  "covers": ["pwm", "ledc"],
+  "notes": "Stage 1: LEDC 1kHz 50% on GPIO15. No jumpers.",
+  "wiring": {"required": []},
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_pwm",
+    "artifact_stem": "test_pwm",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_pwm"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_PWM.*PASS"]
+  }
+}

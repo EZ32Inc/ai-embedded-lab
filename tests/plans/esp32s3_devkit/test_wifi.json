@@ -30,7 +30,7 @@
   },
   "observe_uart": {
     "enabled": true,
-    "port": "/dev/ttyACM0",
+    "port": "/dev/ttyACM2",
     "baud": 115200,
     "profile": "espidf",
     "duration_s": 12,

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "name": "test_i2c",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2"],
+  "covers": ["i2c", "loopback"],
+  "notes": "Stage 2: I2C loopback. ESP32-C5 has one HP I2C port; bit-bang master (GPIO8/13) + HW V2 slave (GPIO14/23). BB_HALF_US=50 (~10kHz). Jumpers: GPIO8 <-> GPIO14 (SDA), GPIO13 <-> GPIO23 (SCL).",
+  "wiring": {
+    "required": [
+      {"from": "GPIO8",  "to": "GPIO14", "label": "Wire 5 — I2C SDA: bit-bang master ↔ HW V2 slave"},
+      {"from": "GPIO13", "to": "GPIO23", "label": "Wire 6 — I2C SCL: bit-bang master ↔ HW V2 slave"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_i2c",
+    "artifact_stem": "test_i2c",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_i2c"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_I2C.*PASS"]
+  }
+}

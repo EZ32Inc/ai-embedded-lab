@@ -1,11 +1,11 @@
 # ESP32-S3 DevKit — Dual USB board
 #
 # Two USB connectors (identified via udevadm):
-#   /dev/ttyACM0 (Vendor=1a86 CH341) — UART0 bridge (GPIO43 TX, GPIO44 RX)
-#   /dev/ttyACM1 (Vendor=Espressif, PID=0x1001) — Native USB Serial/JTAG
+#   /dev/ttyACM2 (Vendor=1a86 CH341, ID=5A7B163835) — UART0 bridge (GPIO43 TX, GPIO44 RX)
+#   /dev/ttyACM1 (Vendor=Espressif, MAC=80:B5:4E:C3:9C:7C) — Native USB Serial/JTAG
 #
-# Flash uses CH341 UART bridge (ACM0) — RTS/DTR auto-reset supported.
-# Console (printf/IDF logs) appears on ACM0 (UART0 at 115200 baud).
+# Flash uses CH341 UART bridge (ACM2) — RTS/DTR auto-reset supported.
+# Console (printf/IDF logs) appears on ACM2 (UART0 at 115200 baud).
 
 board:
   name: ESP32-S3 DevKit Dual USB
@@ -29,7 +29,7 @@ board:
   flash:
     method: idf_esptool
     target: esp32s3
-    port: /dev/ttyACM0        # UART bridge CH341 (GPIO43/44)
+    port: /dev/ttyACM2        # UART bridge CH341 (GPIO43/44, ID=5A7B163835)
     baud: 460800
     serial: null
   pins:

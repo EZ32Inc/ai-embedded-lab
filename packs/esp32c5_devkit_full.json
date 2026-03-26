@@ -1,0 +1,24 @@
+{
+  "name": "esp32c5_devkit_full",
+  "board": "esp32c5_devkit_dual_usb",
+  "notes": "ESP32-C5 DevKit Rule-B suite (14 plans: Stage 0 hello + Stage 1 x6 + Stage 2 x6 + full_suite). 6 jumpers: GPIO2-3, GPIO4-5, GPIO6-1, GPIO7-9, GPIO8-14, GPIO13-23. Flash: CH341 /dev/ttyACM0. I2C: bit-bang master (GPIO8/13) + HW V2 slave (GPIO14/23).",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c5_devkit/hello.json",
+    "tests/plans/esp32c5_devkit/test_nvs.json",
+    "tests/plans/esp32c5_devkit/test_temp.json",
+    "tests/plans/esp32c5_devkit/test_wifi.json",
+    "tests/plans/esp32c5_devkit/test_ble.json",
+    "tests/plans/esp32c5_devkit/test_sleep.json",
+    "tests/plans/esp32c5_devkit/test_pwm.json",
+    "tests/plans/esp32c5_devkit/test_gpio_intr.json",
+    "tests/plans/esp32c5_devkit/test_pcnt.json",
+    "tests/plans/esp32c5_devkit/test_uart.json",
+    "tests/plans/esp32c5_devkit/test_adc.json",
+    "tests/plans/esp32c5_devkit/test_spi.json",
+    "tests/plans/esp32c5_devkit/test_i2c.json",
+    "tests/plans/esp32c5_devkit/test_full_suite.json"
+  ]
+}

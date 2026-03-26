@@ -16,7 +16,7 @@
   "covers": [
     "hello"
   ],
-  "notes": "Stage 0: bare-board smoke. CH341 UART bridge on /dev/ttyACM0.",
+  "notes": "Stage 0: bare-board smoke. CH341 UART bridge on /dev/ttyACM2.",
   "wiring": {
     "required": []
   },
@@ -30,7 +30,7 @@
   },
   "observe_uart": {
     "enabled": true,
-    "port": "/dev/ttyACM0",
+    "port": "/dev/ttyACM2",
     "baud": 115200,
     "profile": "espidf",
     "duration_s": 6,

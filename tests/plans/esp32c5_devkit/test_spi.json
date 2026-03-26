@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "name": "test_spi",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2"],
+  "covers": ["spi", "loopback"],
+  "notes": "Stage 2: SPI2 MOSI=GPIO7 <-> MISO=GPIO9 loopback, 8 bytes. CLK=GPIO0, CS=GPIO10. Jumper: GPIO7 ↔ GPIO9.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO7", "to": "GPIO9", "label": "Wire 4 — SPI2 MOSI ↔ MISO loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_spi",
+    "artifact_stem": "test_spi",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_spi"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_SPI.*PASS"]
+  }
+}

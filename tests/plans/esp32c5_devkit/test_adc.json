@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "name": "test_adc",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2"],
+  "covers": ["adc"],
+  "notes": "Stage 2: GPIO6 drive HIGH/LOW -> GPIO1 (ADC1_CH0). GPIO6 used (not GPIO2) due to C5 LP-IO limitation. Jumper: GPIO6 -> GPIO1.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO6", "to": "GPIO1", "label": "Wire 3 — GPIO output -> ADC1_CH0 (GPIO6=LP-IO safe drive)"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_adc",
+    "artifact_stem": "test_adc",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_adc"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_ADC.*PASS"]
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "schema_version": "1.0",
+  "name": "test_uart",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage2"],
+  "covers": ["uart", "loopback"],
+  "notes": "Stage 2: UART1 loopback GPIO4->GPIO5. Jumper: GPIO4 ↔ GPIO5.",
+  "wiring": {
+    "required": [
+      {"from": "GPIO4", "to": "GPIO5", "label": "Wire 2 — UART1 TX → RX loopback"}
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_uart",
+    "artifact_stem": "test_uart",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_uart"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_UART.*PASS"]
+  }
+}

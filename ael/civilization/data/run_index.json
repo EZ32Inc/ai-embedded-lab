@@ -719,5 +719,128 @@
     "last_seen": 1774526435.3684332,
     "confidence": 0.5,
     "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_hello": {
+    "exp_id": "a0649ee5-e3db-450e-ba48-214ff744cd9d",
+    "success_count": 1,
+    "failure_count": 2,
+    "last_seen": 1774533494.0727532,
+    "confidence": 0.5,
+    "known_failures": {
+      "load": {
+        "exp_id": "903501ad-727e-4543-9928-6c8ee1de979f",
+        "count": 1,
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed — stages: preflight, build, run, check — failure: load — load failed"
+      },
+      "build": {
+        "exp_id": "6fae03f3-769b-4d2a-bd46-1ac057b579ba",
+        "count": 1,
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+      }
+    }
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_nvs": {
+    "exp_id": "bdc88ee4-3328-4117-b4a4-5ac3e1381662",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533661.4516435,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_temp": {
+    "exp_id": "21759859-01cd-4f95-a4fa-a76651a54611",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533706.7106326,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_wifi": {
+    "exp_id": "96baa3dd-f40e-4a70-8e5f-7df28b213e66",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533768.4317062,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_ble": {
+    "exp_id": "4c59d142-b35e-4914-be6d-eb0ef17fa256",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533824.9608262,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_sleep": {
+    "exp_id": "18e4ea3e-7edd-416a-902f-e7bca4750414",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533870.2929633,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_pwm": {
+    "exp_id": "71f312e9-105b-43cd-a393-332a2c844ef0",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533915.575323,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_gpio_intr": {
+    "exp_id": "da02c4fa-3b81-40f2-bd78-9e559fa53847",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774533971.3349972,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_pcnt": {
+    "exp_id": "e6c1efd6-e611-4988-bb43-2568322b243d",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534160.6608238,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_uart": {
+    "exp_id": "1182365b-c8d1-4874-804f-26c0f8b1eb72",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534208.1784692,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_adc": {
+    "exp_id": "81d86fae-4af6-4556-8715-176a05938a9b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534255.32246,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_spi": {
+    "exp_id": "7142a723-8324-481d-8f94-8a0d7aeaabc5",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534302.7074416,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_i2c": {
+    "exp_id": "f73f7762-f55f-46ad-b7b2-6ecbd70b30e2",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534350.4622676,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32s3_devkit_dual_usb|esp32s3_devkit_test_full_suite": {
+    "exp_id": "1a286559-cb61-4d1a-9b42-70cc87172d7c",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774534470.0926619,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }

@@ -25,7 +25,7 @@ board:
   probe_required: false
   build:
     type: idf
-    project_dir: firmware/targets/esp32c5_dual_uart_probe
+    project_dir: firmware/targets/esp32c5_devkit/test_full_suite
   flash:
     method: idf_esptool
     target: esp32c5

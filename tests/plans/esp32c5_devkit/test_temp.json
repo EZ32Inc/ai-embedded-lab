@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "name": "test_temp",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage1"],
+  "covers": ["temperature"],
+  "notes": "Stage 1: Internal temperature sensor (5-90 C). No jumpers required.",
+  "wiring": {"required": []},
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_temp",
+    "artifact_stem": "test_temp",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_temp"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 20,
+    "expect_patterns": ["AEL_TEMP.*PASS"]
+  }
+}

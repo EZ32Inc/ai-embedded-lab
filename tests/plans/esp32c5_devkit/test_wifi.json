@@ -1,0 +1,29 @@
+{
+  "schema_version": "1.0",
+  "name": "test_wifi",
+  "test_kind": "instrument_specific",
+  "board": "esp32c5_devkit_dual_usb",
+  "supported_instruments": ["esp32_meter"],
+  "requires": {"mailbox": false, "datacapture": false},
+  "labels": ["stage1"],
+  "covers": ["wifi"],
+  "notes": "Stage 1: Wi-Fi dual-band passive scan (2.4G + 5G, ap_count>=1). ESP32-C5 supports Wi-Fi 6 dual-band. No jumpers.",
+  "wiring": {"required": []},
+  "build": {
+    "project_dir": "firmware/targets/esp32c5_devkit/test_wifi",
+    "artifact_stem": "test_wifi",
+    "build_dir": "artifacts/build_esp32c5_devkit_test_wifi"
+  },
+  "preflight": {"enabled": false},
+  "observe_uart": {
+    "enabled": true,
+    "instrument_spec": "esp32c5_uart_bridge",
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "boot_signatures": ["rst:0x"],
+    "reset_strategy": "rts",
+    "duration_s": 30,
+    "expect_patterns": ["AEL_WIFI.*PASS"]
+  }
+}
