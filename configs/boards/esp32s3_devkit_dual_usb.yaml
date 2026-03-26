@@ -25,7 +25,7 @@ board:
   probe_required: false
   build:
     type: idf
-    project_dir: firmware/targets/esp32s3_suite
+    project_dir: firmware/targets/esp32s3_devkit/test_full_suite
   flash:
     method: idf_esptool
     target: esp32s3

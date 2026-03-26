@@ -508,10 +508,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_hello": {
     "exp_id": "bf347683-d52d-4c9e-a5cf-82ec6720088b",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 1,
-    "last_seen": 1774522017.311946,
-    "confidence": 0.6,
+    "last_seen": 1774529660.410961,
+    "confidence": 0.7,
     "known_failures": {
       "load": {
         "exp_id": "064937e9-171b-421e-92df-1ef98eaf4517",
@@ -522,10 +522,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_nvs": {
     "exp_id": "d8dd0d9b-3d9e-43d1-9fd5-eca5514a1937",
-    "success_count": 3,
+    "success_count": 4,
     "failure_count": 1,
-    "last_seen": 1774515635.478311,
-    "confidence": 0.7,
+    "last_seen": 1774529706.9224627,
+    "confidence": 0.8,
     "known_failures": {
       "build": {
         "exp_id": "f6afb492-ceaa-44e4-a5ee-df53945ccc80",
@@ -536,34 +536,34 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_temp": {
     "exp_id": "e8c79fb9-f85f-4616-8b9c-04fd6a907b5c",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774515685.6522796,
-    "confidence": 0.6,
+    "last_seen": 1774529751.586434,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_wifi": {
     "exp_id": "d362de35-6e64-4931-9007-6b2c65acf0f6",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774515749.1459713,
-    "confidence": 0.6,
+    "last_seen": 1774529814.8741002,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_ble": {
     "exp_id": "cd109898-7d4f-4977-9c3b-7febde06da83",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774515802.3927689,
-    "confidence": 0.6,
+    "last_seen": 1774529873.696436,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_sleep": {
     "exp_id": "e772366d-00ee-4256-929d-ed4c2d90a67f",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 4,
-    "last_seen": 1774515899.4307673,
-    "confidence": 0.6,
+    "last_seen": 1774529934.3963408,
+    "confidence": 0.7,
     "known_failures": {
       "load": {
         "exp_id": "2f0500ff-2699-4757-9509-11cb6ef35bcd",
@@ -579,10 +579,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_pwm": {
     "exp_id": "8bb470fa-6393-4c78-b381-6cbce7f8c1de",
-    "success_count": 2,
+    "success_count": 3,
     "failure_count": 0,
-    "last_seen": 1774515846.4610436,
-    "confidence": 0.6,
+    "last_seen": 1774529976.692051,
+    "confidence": 0.7,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|unknown": {
@@ -601,26 +601,26 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_gpio_intr": {
     "exp_id": "f3f49cec-4f1d-4f9c-96b6-9f4e4e15d998",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774516008.9919062,
-    "confidence": 0.5,
+    "last_seen": 1774530022.198142,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_uart": {
     "exp_id": "656ea028-d689-4c98-9e49-3eeb8ab3758b",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774516053.4441576,
-    "confidence": 0.5,
+    "last_seen": 1774530067.6116052,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_adc": {
     "exp_id": "f195e0b9-3598-4872-88a2-0a9d72cc42b3",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 12,
-    "last_seen": 1774519261.6566741,
-    "confidence": 0.5,
+    "last_seen": 1774530114.6380177,
+    "confidence": 0.6,
     "known_failures": {
       "check_uart": {
         "exp_id": "4ec0ca5a-cc44-46b5-83d5-f5b528e31f04",
@@ -636,10 +636,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_spi": {
     "exp_id": "253d437c-0ebd-424b-83aa-af4b311e5aff",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774516192.2212548,
-    "confidence": 0.5,
+    "last_seen": 1774530161.714374,
+    "confidence": 0.6,
     "known_failures": {}
   },
   "rp2040_pico_s3jtag|rp2040_gpio_signature_with_s3jtag": {
@@ -663,10 +663,10 @@
   },
   "esp32c3_devkit_native_usb|esp32c3_devkit_test_full_suite": {
     "exp_id": "37e34d1c-f523-44c6-9c87-4e682b9dc988",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 11,
-    "last_seen": 1774526201.2935622,
-    "confidence": 0.5,
+    "last_seen": 1774530344.0344815,
+    "confidence": 0.6,
     "known_failures": {
       "load": {
         "exp_id": "5e937484-221a-4da3-8579-6d7026d02be8",

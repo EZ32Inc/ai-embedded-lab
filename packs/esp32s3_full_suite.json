@@ -1,11 +1,24 @@
 {
   "name": "esp32s3_full_suite",
   "board": "esp32s3_devkit_dual_usb",
-  "notes": "ESP32-S3 full 12-test hardware suite. Requires 6 jumpers — see tests/plans/esp32s3_suite.json for wiring. Covers: TEMP, NVS, WiFi, BLE, Sleep, PWM, INTR, PCNT, UART, ADC, SPI, I2C. No external instrument required.",
+  "notes": "ESP32-S3 full suite (Rule B individual tests + convenience full_suite). Requires 6 jumpers. Covers: HELLO, NVS, TEMP, WiFi, BLE, Sleep, PWM, INTR, PCNT, UART, ADC, SPI, I2C. No external instrument required.",
   "preflight": {
     "enabled": false
   },
   "tests": [
-    "tests/plans/esp32s3_suite.json"
+    "tests/plans/esp32s3_devkit/hello.json",
+    "tests/plans/esp32s3_devkit/test_nvs.json",
+    "tests/plans/esp32s3_devkit/test_temp.json",
+    "tests/plans/esp32s3_devkit/test_wifi.json",
+    "tests/plans/esp32s3_devkit/test_ble.json",
+    "tests/plans/esp32s3_devkit/test_sleep.json",
+    "tests/plans/esp32s3_devkit/test_pwm.json",
+    "tests/plans/esp32s3_devkit/test_gpio_intr.json",
+    "tests/plans/esp32s3_devkit/test_pcnt.json",
+    "tests/plans/esp32s3_devkit/test_uart.json",
+    "tests/plans/esp32s3_devkit/test_adc.json",
+    "tests/plans/esp32s3_devkit/test_spi.json",
+    "tests/plans/esp32s3_devkit/test_i2c.json",
+    "tests/plans/esp32s3_devkit/test_full_suite.json"
   ]
 }

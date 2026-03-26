@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32s3_devkit_hello",
+  "test_kind": "instrument_specific",
+  "board": "esp32s3_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage0",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "hello"
+  ],
+  "notes": "Stage 0: bare-board smoke. CH341 UART bridge on /dev/ttyACM0.",
+  "wiring": {
+    "required": []
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32s3_devkit/hello",
+    "artifact_stem": "ael_esp32s3_devkit_hello",
+    "build_dir": "artifacts/build_esp32s3_devkit_hello"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 6,
+    "reset_strategy": "rts",
+    "boot_signatures": ["rst:0x"],
+    "expect_patterns": [
+      "AEL_HELLO.*PASS"
+    ]
+  }
+}

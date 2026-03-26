@@ -1,0 +1,54 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32s3_devkit_test_i2c",
+  "test_kind": "instrument_specific",
+  "board": "esp32s3_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "i2c"
+  ],
+  "notes": "Stage 2: I2C loopback. HW I2C0 master (GPIO8/GPIO9) <-> HW I2C1 V2 slave (GPIO15/GPIO16). Jumpers: GPIO8<->GPIO15, GPIO9<->GPIO16.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO8",
+        "to": "GPIO15",
+        "label": "I2C0 SDA master <-> I2C1 SDA slave"
+      },
+      {
+        "from": "GPIO9",
+        "to": "GPIO16",
+        "label": "I2C0 SCL master <-> I2C1 SCL slave"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32s3_devkit/test_i2c",
+    "artifact_stem": "ael_esp32s3_devkit_test_i2c",
+    "build_dir": "artifacts/build_esp32s3_devkit_test_i2c"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "boot_signatures": ["rst:0x"],
+    "expect_patterns": [
+      "AEL_I2C.*PASS"
+    ]
+  }
+}

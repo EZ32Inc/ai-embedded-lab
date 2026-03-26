@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32s3_devkit_test_gpio_intr",
+  "test_kind": "instrument_specific",
+  "board": "esp32s3_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "gpio_intr"
+  ],
+  "notes": "Stage 2: GPIO interrupt loopback. Jumper GPIO4 <-> GPIO5.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO4",
+        "to": "GPIO5",
+        "label": "GPIO interrupt drive <-> input (shared with PCNT)"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32s3_devkit/test_gpio_intr",
+    "artifact_stem": "ael_esp32s3_devkit_test_gpio_intr",
+    "build_dir": "artifacts/build_esp32s3_devkit_test_gpio_intr"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "boot_signatures": ["rst:0x"],
+    "expect_patterns": [
+      "AEL_INTR.*PASS"
+    ]
+  }
+}

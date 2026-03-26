@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32s3_devkit_test_nvs",
+  "test_kind": "instrument_specific",
+  "board": "esp32s3_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage1",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "nvs"
+  ],
+  "notes": "Stage 1: NVS write/read. No wiring required.",
+  "wiring": {
+    "required": []
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32s3_devkit/test_nvs",
+    "artifact_stem": "ael_esp32s3_devkit_test_nvs",
+    "build_dir": "artifacts/build_esp32s3_devkit_test_nvs"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM0",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 6,
+    "reset_strategy": "rts",
+    "boot_signatures": ["rst:0x"],
+    "expect_patterns": [
+      "AEL_NVS.*PASS"
+    ]
+  }
+}

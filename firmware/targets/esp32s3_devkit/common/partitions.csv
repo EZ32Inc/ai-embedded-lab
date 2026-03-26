@@ -1,0 +1,5 @@
+# ESP32-S3 DevKit shared partition table
+# nvs 24K | phy_init 4K | factory 1920K
+nvs,      data, nvs,     0x9000,   24K,
+phy_init, data, phy,     0xf000,   4K,
+factory,  app,  factory, 0x10000,  1920K,
