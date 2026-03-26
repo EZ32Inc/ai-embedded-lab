@@ -33,6 +33,7 @@ def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
     instance = raw.get("instance", {}) if isinstance(raw, dict) else {}
     communication = raw.get("communication", {}) if isinstance(raw, dict) else {}
     capability_surfaces = raw.get("capability_surfaces", {}) if isinstance(raw, dict) else {}
+    preflight = raw.get("preflight", {}) if isinstance(raw, dict) else {}
     cfg = dict(probe)
     if "ip" not in cfg and "ip" in connection:
         cfg["ip"] = connection["ip"]
@@ -53,6 +54,8 @@ def normalize_probe_cfg(raw: Dict[str, Any] | Any) -> Dict[str, Any]:
         cfg["communication"] = dict(communication)
     if isinstance(capability_surfaces, dict) and capability_surfaces and "capability_surfaces" not in cfg:
         cfg["capability_surfaces"] = dict(capability_surfaces)
+    if isinstance(preflight, dict) and preflight and "preflight" not in cfg:
+        cfg["preflight"] = dict(preflight)
     return cfg
 
 

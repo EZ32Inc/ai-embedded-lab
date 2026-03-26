@@ -30,3 +30,6 @@ capability_surfaces:
   gpio_in: web_api
   gpio_out: web_api
   reset_out: web_api
+
+preflight:
+  capture_check: targetin

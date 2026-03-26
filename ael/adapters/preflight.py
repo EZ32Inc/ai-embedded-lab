@@ -408,11 +408,17 @@ def run(probe_cfg):
     ip = probe_cfg.get("ip")
     port = probe_cfg.get("gdb_port")
     gdb_cmd = probe_cfg.get("gdb_cmd")
+    preflight_cfg = probe_cfg.get("preflight", {}) if isinstance(probe_cfg.get("preflight"), dict) else {}
+    capture_check = str(preflight_cfg.get("capture_check") or "la").strip().lower()
 
     ok_ping = _ping(ip)
     ok_tcp = _check_tcp(ip, port)
     ok_mon, targets = _monitor_targets(ip, port, gdb_cmd)
-    ok_la = _la_self_test(probe_cfg)
+    if capture_check == "targetin":
+        ok_la = True
+        print("Preflight: capture self-test skipped (TARGETIN-backed path)")
+    else:
+        ok_la = _la_self_test(probe_cfg)
     port_cfg = _fetch_port_config(probe_cfg)
 
     info = {
@@ -421,16 +427,17 @@ def run(probe_cfg):
         "monitor_ok": ok_mon,
         "targets": targets,
         "la_ok": ok_la,
+        "capture_check": capture_check,
         "port_config": port_cfg,
     }
 
     # ICMP/TCP checks can transiently fail while the probe is still stabilizing.
-    # If monitor + LA checks pass, treat ping/tcp as advisory.
+    # If monitor + capture checks pass, treat ping/tcp as advisory.
     if ok_mon and ok_la:
         if not ok_ping:
             print("Preflight: ping check failed, but service checks passed; continuing.")
         if not ok_tcp:
-            print("Preflight: TCP check failed, but monitor/LA checks passed; continuing.")
+            print("Preflight: TCP check failed, but monitor/capture checks passed; continuing.")
         print("Preflight: OK")
         return True, info
     print("Preflight: FAIL")
