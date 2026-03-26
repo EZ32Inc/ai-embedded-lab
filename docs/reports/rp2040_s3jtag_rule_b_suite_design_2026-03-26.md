@@ -376,6 +376,113 @@ tests/plans/rp2040_pico_rule_b/
 
 ---
 
+## 9A. 候选测试实现草案
+
+下面四项是当前最值得推进的 RP2040 + S3JTAG 测试，目标是把它们收敛成真正可落地的 Rule-B truth-layer assets，而不是停留在 capability brainstorming。
+
+### 9A.1 `rp2040_spi_loopback_with_s3jtag`
+
+**建议阶段：** Stage 2  
+**类型：** wired loopback + Web UART report
+
+**建议接线：**
+- `RP2040 GPIO2 / SPI0_SCK`：仅作为输出，不回环
+- `RP2040 GPIO3 / SPI0_TX (MOSI)` → `RP2040 GPIO4 / SPI0_RX (MISO)`
+- `GND` 共地
+
+**固件建议行为：**
+- 初始化 `spi0`
+- 以固定节拍执行 `spi_write_read_blocking()`
+- 发送固定模式，例如 `55 AA 3C C3`
+- 比较回读数据是否与发送完全一致
+- 通过 S3JTAG internal Web UART 打印确定性结果，例如：
+  - `AEL_READY RP2040 SPI PASS rx=55aa3cc3`
+  - 或 `AEL_READY RP2040 SPI FAIL rx=...`
+
+**为什么适合优先落地：**
+- 仓库已有泛用 `rp2040_pico_spi` target，可直接演进
+- wiring contract 简单
+- 验证的是实际 SPI data path，不只是“SPI 初始化成功”
+
+### 9A.2 `rp2040_pwm_capture_with_s3jtag`
+
+**建议阶段：** Stage 2  
+**类型：** wired signal validation via TARGETIN
+
+**建议接线：**
+- `RP2040 PWM_OUT` → `S3JTAG TARGETIN`
+- 推荐选择不与 UART 占用冲突、且便于说明的输出脚，例如 `GPIO16` 或 `GPIO18`
+- `GND` 共地
+
+**固件建议行为：**
+- 使用 RP2040 PWM 外设输出固定参数波形
+- 首选 contract：`1 kHz`, `50% duty`
+- 可后续扩展 second profile，例如 `100 Hz`, `25% duty`
+
+**AEL 验证建议：**
+- 复用现有 TARGETIN signal-check path
+- 明确验：
+  - `min_freq_hz / max_freq_hz`
+  - `duty_min / duty_max`
+- PASS 以外部观测为准，不依赖 DUT 自报
+
+**价值：**
+- 直接复用已 bench-validated 的 TARGETIN 路径
+- 从“generic gpio signature”升级为真正的 PWM feature test
+
+### 9A.3 `rp2040_gpio_interrupt_loopback_with_s3jtag`
+
+**建议阶段：** Stage 2  
+**类型：** wired functional loopback
+
+**建议接线：**
+- `RP2040 GPIO16` (output pulse source) → `RP2040 GPIO17` (IRQ input)
+- `GND` 共地
+
+**固件建议行为：**
+- `GPIO16` 输出固定数量脉冲，例如 `100` 个 rising edges
+- `GPIO17` 配置为 rising-edge IRQ
+- IRQ handler 计数
+- 结束时检查 `irq_count == pulse_count`
+- 通过 mailbox 或 Web UART 输出：
+  - `AEL_READY RP2040 GPIO_IRQ PASS count=100`
+
+**为什么有价值：**
+- 接线简单
+- 结果强约束、稳定、易调试
+- 比纯外部信号观察更接近真实外设/中断功能验证
+
+### 9A.4 `rp2040_internal_temp_with_s3jtag`
+
+**建议阶段：** Stage 1  
+**类型：** no-wire self-test
+
+**建议 contract：**
+- 使用 RP2040 内部温度传感器 ADC 通道
+- 连续读取多次，例如 `8` 到 `16` 次
+- 验证：
+  - 采样非全零
+  - 非满量程饱和
+  - 多次采样落在合理窗口
+- 通过 mailbox 或 Web UART 输出：
+  - `AEL_READY RP2040 TEMP sample=...`
+
+**为什么重要：**
+- 它不依赖任何额外接线
+- 能补上当前 RP2040 Rule-B 最大结构缺口：真正的 Stage 1 no-wire self-test
+
+### 9A.5 推荐优先级
+
+建议实现顺序：
+1. `rp2040_spi_loopback_with_s3jtag`
+2. `rp2040_pwm_capture_with_s3jtag`
+3. `rp2040_gpio_interrupt_loopback_with_s3jtag`
+4. `rp2040_internal_temp_with_s3jtag`
+
+原因：
+- 前三项能最快扩充高价值的 Stage 2 wired feature coverage
+- `internal_temp` 虽然实现简单，但主要解决的是 Rule-B Stage 1 结构缺口
+
 ## 9. 下一步建议（可直接执行）
 
 建议下一轮按以下顺序做：
