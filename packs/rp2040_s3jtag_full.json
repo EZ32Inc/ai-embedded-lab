@@ -1,6 +1,6 @@
 {
   "name": "rp2040_s3jtag_full",
-  "description": "Rule-B full pack for RP2040 via S3JTAG. This convenience layer preserves each test plan's own board profile so the SWD/TARGETIN and SWD/UART paths can coexist without forcing a single pack-level board.",
+  "description": "Rule-B full pack for RP2040 via S3JTAG. This convenience layer currently consists of the Stage 0 mailbox baseline plus the currently validated Stage 2 wired integration tests.",
   "tests": [
     "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json",
     "tests/plans/rp2040_gpio_level_low_with_s3jtag.json",
@@ -9,5 +9,5 @@
     "tests/plans/rp2040_gpio_signature_with_s3jtag.json",
     "tests/plans/rp2040_uart_banner_with_s3jtag.json"
   ],
-  "notes": "Rule-D convenience layer built on already validated independent tests. Pack-level board is intentionally omitted so each test keeps its own board profile."
+  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. Stage 1 no-wire self-tests are still a design gap and will be inserted here once formalized."
 }

@@ -1,11 +1,9 @@
 {
   "name": "rp2040_s3jtag_stage1",
-  "description": "Rule-B Stage 1 for RP2040 via S3JTAG: TARGETIN-based signal validation after Stage 0 control path is already known-good.",
+  "description": "Rule-B Stage 1 for RP2040 via S3JTAG. This stage is reserved for future no-wire self-tests such as internal temperature, timer/mailbox, PWM LED, and flash-read checks. No validated Stage 1 no-wire tests beyond the current Stage 0 baseline have been formalized yet.",
   "board": "rp2040_pico_s3jtag",
   "tests": [
-    "tests/plans/rp2040_gpio_level_low_with_s3jtag.json",
-    "tests/plans/rp2040_gpio_level_high_with_s3jtag.json",
-    "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
-    "tests/plans/rp2040_gpio_signature_with_s3jtag.json"
-  ]
+    "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json"
+  ],
+  "notes": "Temporary transitional pack. The same mailbox runtime-gate asset is currently the closest available no-wire baseline until dedicated Stage 1 self-tests are added."
 }
