@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_gpio_signature_with_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_gpio"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path"
+  ],
+  "covers": [
+    "gpio"
+  ],
+  "notes": "S3JTAG-specific RP2040 signature path. Programs the RP2040 over SWD and validates a single target GPIO routed into S3JTAG Target In (GPIO15). Reset control is intentionally not required on this path.",
+  "build": {
+    "project_dir": "firmware/targets/rp2040_pico",
+    "artifact_stem": "pico_blink",
+    "build_dir": "artifacts/build_rp2040_pico_s3jtag"
+  },
+  "pin": "sig",
+  "min_freq_hz": 200.0,
+  "max_freq_hz": 100000.0,
+  "duty_min": 0.4,
+  "duty_max": 0.6,
+  "duration_s": 1.0,
+  "min_edges": 2,
+  "max_edges": 20000,
+  "instrument": {
+    "instance_id": "s3jtag_rp2040_lab",
+    "label": "S3JTAG"
+  },
+  "bench_setup": {
+    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route one RP2040 GPIO output under test into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "GPIO output under test",
+        "inst_gpio": 15,
+        "expect": "toggle",
+        "freq_hz": 1000
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}

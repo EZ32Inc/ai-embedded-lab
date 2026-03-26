@@ -1,0 +1,32 @@
+instance:
+  id: s3jtag_rp2040_lab
+  type: esp32jtag
+  label: S3JTAG RP2040 Lab
+
+connection:
+  ip: 192.168.4.1
+  gdb_port: 4242
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: wifi
+      endpoint: 192.168.4.1:4242
+      protocol: gdb_remote
+      invocation_style: request_response
+    - name: web_api
+      transport: wifi
+      endpoint: https://192.168.4.1:443
+      protocol: esp32jtag_web_api_v1
+      invocation_style: request_response
+      auth:
+        type: basic
+      options:
+        tls_verify: false
+
+capability_surfaces:
+  swd: gdb_remote
+  gpio_in: web_api
+  gpio_out: web_api
+  reset_out: web_api
