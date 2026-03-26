@@ -4,6 +4,7 @@ import shutil
 import time
 from dataclasses import dataclass
 from typing import List
+from urllib.parse import urlparse
 
 import requests
 from requests.auth import HTTPBasicAuth
@@ -21,8 +22,11 @@ def _tcp_ping(endpoint: str) -> bool:
     if not endpoint or ":" not in endpoint:
         return False
     try:
-        host, port_str = endpoint.rsplit(":", 1)
-        port = int(port_str)
+        parsed = urlparse(endpoint if "//" in endpoint else f"tcp://{endpoint}")
+        host = parsed.hostname
+        port = parsed.port
+        if not host or port is None:
+            return False
         with socket.create_connection((host, port), timeout=1.0):
             return True
     except Exception:

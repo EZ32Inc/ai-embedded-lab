@@ -402,7 +402,7 @@ def _capture_via_esp32jtag_web_uart(endpoint, duration_s, start_delay_s):
     try:
         ws = websocket.create_connection(
             ws_url,
-            timeout=0.5,
+            timeout=5.0,
             sslopt={"cert_reqs": ssl.CERT_NONE},
         )
         ws.settimeout(0.2)

@@ -25,6 +25,14 @@ class TestTcpPing(unittest.TestCase):
         with patch("socket.create_connection", side_effect=ConnectionRefusedError):
             self.assertFalse(_tcp_ping("192.168.1.1:4242"))
 
+    def test_https_endpoint_with_scheme_returns_true(self):
+        mock_conn = MagicMock()
+        mock_conn.__enter__ = MagicMock(return_value=None)
+        mock_conn.__exit__ = MagicMock(return_value=False)
+        with patch("socket.create_connection", return_value=mock_conn) as mocked:
+            self.assertTrue(_tcp_ping("https://192.168.4.1:443"))
+        mocked.assert_called_once_with(("192.168.4.1", 443), timeout=1.0)
+
 
 class TestCheckConnectionReadiness(unittest.TestCase):
     def test_non_dict_bench_setup_returns_empty(self):
