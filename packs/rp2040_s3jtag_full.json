@@ -1,0 +1,13 @@
+{
+  "name": "rp2040_s3jtag_full",
+  "description": "Rule-B full pack for RP2040 via S3JTAG. This convenience layer preserves each test plan's own board profile so the SWD/TARGETIN and SWD/UART paths can coexist without forcing a single pack-level board.",
+  "tests": [
+    "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json",
+    "tests/plans/rp2040_gpio_level_low_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_level_high_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_signature_with_s3jtag.json",
+    "tests/plans/rp2040_uart_banner_with_s3jtag.json"
+  ],
+  "notes": "Rule-D convenience layer built on already validated independent tests. Pack-level board is intentionally omitted so each test keeps its own board profile."
+}

@@ -1,0 +1,8 @@
+{
+  "name": "rp2040_s3jtag_stage2",
+  "description": "Rule-B Stage 2 for RP2040 via S3JTAG: UART integration over the ESP32-S3 internal Web UART bridge.",
+  "board": "rp2040_pico_s3jtag_uart",
+  "tests": [
+    "tests/plans/rp2040_uart_banner_with_s3jtag.json"
+  ]
+}
