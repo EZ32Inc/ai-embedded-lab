@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_wifi",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage1",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "wifi"
+  ],
+  "notes": "Stage 1: Wi-Fi passive scan (2.4 GHz). No wiring required.",
+  "wiring": {
+    "required": []
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_wifi",
+    "artifact_stem": "ael_esp32c6_devkit_test_wifi",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_wifi"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 20,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_WIFI.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

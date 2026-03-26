@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_pcnt",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "pcnt"
+  ],
+  "notes": "Stage 2: PCNT 100 pulses. Jumper GPIO20 <-> GPIO21.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO20",
+        "to": "GPIO21",
+        "label": "PCNT drive -> count"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_pcnt",
+    "artifact_stem": "ael_esp32c6_devkit_test_pcnt",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_pcnt"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_PCNT.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

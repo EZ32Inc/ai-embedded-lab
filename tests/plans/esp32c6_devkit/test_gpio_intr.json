@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_gpio_intr",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "gpio_intr"
+  ],
+  "notes": "Stage 2: GPIO interrupt. Jumper GPIO20 <-> GPIO21.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO20",
+        "to": "GPIO21",
+        "label": "GPIO intr drive <-> input"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_gpio_intr",
+    "artifact_stem": "ael_esp32c6_devkit_test_gpio_intr",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_gpio_intr"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_INTR.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

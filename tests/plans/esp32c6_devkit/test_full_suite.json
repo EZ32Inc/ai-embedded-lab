@@ -1,0 +1,100 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_full_suite",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "full_suite",
+    "convenience_layer"
+  ],
+  "covers": [
+    "hello",
+    "nvs",
+    "temp",
+    "wifi",
+    "ble",
+    "sleep",
+    "pwm",
+    "gpio_intr",
+    "pcnt",
+    "uart",
+    "adc",
+    "spi",
+    "i2c"
+  ],
+  "notes": "Rule D convenience binary: 13 sub-tests in one firmware. 6 jumpers required. GPIO20-21, GPIO18-19, GPIO22-4, GPIO10-2, GPIO8-6, GPIO9-7.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO20",
+        "to": "GPIO21",
+        "label": "GPIO intr drive / PCNT input (shared)"
+      },
+      {
+        "from": "GPIO18",
+        "to": "GPIO19",
+        "label": "UART1 TX -> RX loopback"
+      },
+      {
+        "from": "GPIO22",
+        "to": "GPIO4",
+        "label": "ADC drive -> ADC1_CH4"
+      },
+      {
+        "from": "GPIO10",
+        "to": "GPIO2",
+        "label": "SPI2 MOSI <-> MISO loopback"
+      },
+      {
+        "from": "GPIO8",
+        "to": "GPIO6",
+        "label": "I2C SDA: slave (I2C0) <-> bit-bang master"
+      },
+      {
+        "from": "GPIO9",
+        "to": "GPIO7",
+        "label": "I2C SCL: slave (I2C0) <-> bit-bang master"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_full_suite",
+    "artifact_stem": "ael_esp32c6_devkit_test_full_suite",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_full_suite"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 80,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_HELLO.*PASS",
+      "AEL_NVS.*PASS",
+      "AEL_TEMP.*PASS",
+      "AEL_WIFI.*PASS",
+      "AEL_BLE.*PASS",
+      "AEL_SLEEP.*PASS",
+      "AEL_PWM.*PASS",
+      "AEL_INTR.*PASS",
+      "AEL_PCNT.*PASS",
+      "AEL_UART.*PASS",
+      "AEL_ADC.*PASS",
+      "AEL_SPI.*PASS",
+      "AEL_I2C.*PASS",
+      "AEL_SUITE_FULL DONE passed=13 failed=0"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

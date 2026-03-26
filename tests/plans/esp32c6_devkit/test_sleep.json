@@ -1,0 +1,45 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_sleep",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage1",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "sleep"
+  ],
+  "notes": "Stage 1: Light sleep 1s timer wakeup. No wiring required.",
+  "wiring": {
+    "required": []
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_sleep",
+    "artifact_stem": "ael_esp32c6_devkit_test_sleep",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_sleep"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_SLEEP.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

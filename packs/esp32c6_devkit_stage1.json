@@ -1,0 +1,17 @@
+{
+  "name": "esp32c6_devkit_stage1",
+  "board": "esp32c6_devkit_dual_usb",
+  "notes": "Stage 1: no-wire functional tests (NVS, TEMP, WiFi, BLE, Sleep, PWM).",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c6_devkit/hello.json",
+    "tests/plans/esp32c6_devkit/test_nvs.json",
+    "tests/plans/esp32c6_devkit/test_temp.json",
+    "tests/plans/esp32c6_devkit/test_wifi.json",
+    "tests/plans/esp32c6_devkit/test_ble.json",
+    "tests/plans/esp32c6_devkit/test_sleep.json",
+    "tests/plans/esp32c6_devkit/test_pwm.json"
+  ]
+}

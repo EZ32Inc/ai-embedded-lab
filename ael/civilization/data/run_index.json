@@ -185,13 +185,13 @@
   "unknown|unknown": {
     "exp_id": null,
     "success_count": 0,
-    "failure_count": 1,
-    "last_seen": 1774454495.658978,
+    "failure_count": 2,
+    "last_seen": 1774485284.6837559,
     "confidence": 0.5,
     "known_failures": {
       "preflight": {
         "exp_id": "0a76dab0-ae5c-4300-8235-b53dd426ba65",
-        "count": 1,
+        "count": 2,
         "last_raw": "[unknown] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
       }
     }
@@ -346,10 +346,10 @@
   },
   "esp32_wroom32d_cp210x|esp32_wroom32d_test_full_suite": {
     "exp_id": "e47bc5cd-9a75-45ba-aa84-c86582d45d5c",
-    "success_count": 1,
+    "success_count": 3,
     "failure_count": 3,
-    "last_seen": 1774475647.9697936,
-    "confidence": 0.5,
+    "last_seen": 1774476956.4868786,
+    "confidence": 0.7,
     "known_failures": {
       "build": {
         "exp_id": "556085e7-06d0-4d81-920b-6dff58c8d9fe",
@@ -357,5 +357,153 @@
         "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_full_suite: failed — stages: preflight, load, run, check — failure: build — build failed"
       }
     }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_hello": {
+    "exp_id": "40c0f0c7-0698-4596-bc1b-c9053658e71e",
+    "success_count": 1,
+    "failure_count": 7,
+    "last_seen": 1774485245.8630443,
+    "confidence": 0.5,
+    "known_failures": {
+      "load": {
+        "exp_id": "f355dd6a-5e8a-427a-8c07-5327f660a701",
+        "count": 1,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, build, run, check — failure: load — load failed"
+      },
+      "build": {
+        "exp_id": "e8405fb4-ace1-48ce-a8c6-3bbf251f2d4f",
+        "count": 3,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+      },
+      "check_uart": {
+        "exp_id": "0c530930-fff4-4d41-b25b-38c6e82ae9fd",
+        "count": 3,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, build, load, run — failure: check_uart — uart indicates unstable DUT runtime"
+      }
+    }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_nvs": {
+    "exp_id": "318d756c-def2-4916-93c8-83f45658c3d4",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774485531.9263134,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_temp": {
+    "exp_id": "44abc379-6f07-4ab5-9d74-7341166cb1c6",
+    "success_count": 1,
+    "failure_count": 1,
+    "last_seen": 1774486475.8013003,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "c2f3e1b8-5ee5-4d2b-b87d-7d6c96c1bc9a",
+        "count": 1,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_temp: failed — stages: preflight, build, load, run — failure: check_uart — adapter execute failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)"
+      }
+    }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_wifi": {
+    "exp_id": "3778712c-5bbb-4023-adb9-7edeb7722181",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774485715.4484665,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_ble": {
+    "exp_id": "dd5f874b-1397-4ff9-9267-63e8a0e160f6",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774486610.8155375,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_sleep": {
+    "exp_id": "f8a66b76-d3b8-4154-ac20-3a54e32d338e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774486674.9586189,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_pwm": {
+    "exp_id": "44e410e3-5cec-4de3-a1b3-d461d48e4772",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774486734.8720176,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_gpio_intr": {
+    "exp_id": "f50cb781-df57-412b-a5fe-0fdda8fd8c59",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774486988.7074711,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_pcnt": {
+    "exp_id": "358ed62e-4bf6-446e-9046-8e68ecd510a7",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774487055.5709212,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_uart": {
+    "exp_id": "9cdd06df-0b85-42a8-ab70-97a176d065fc",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774487122.2051587,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_adc": {
+    "exp_id": "61e1c0fd-f1e6-441e-af25-dfc4a34fe322",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774487185.7276244,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_spi": {
+    "exp_id": "d86d6ac6-add1-4ddb-8d3a-4440744268d3",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774487242.723553,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_i2c": {
+    "exp_id": "22040737-9711-4925-bb33-f6a2d2a1ee40",
+    "success_count": 1,
+    "failure_count": 1,
+    "last_seen": 1774487881.7865098,
+    "confidence": 0.5,
+    "known_failures": {
+      "load": {
+        "exp_id": "ac9f854a-e901-4e88-a905-574ed075786d",
+        "count": 1,
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_i2c: failed — stages: preflight, build, run, check — failure: load — load failed"
+      }
+    }
+  },
+  "esp32c6_devkit_dual_usb|esp32c6_devkit_test_full_suite": {
+    "exp_id": "cfd0e189-d9c8-436d-9377-f8ae8e7d8447",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774488034.5534947,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "esp32c6_devkit_dual_usb|test_full_suite": {
+    "exp_id": "77927f41-b8a7-4a42-ad1a-f5b81a81022b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774488729.8618658,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }

@@ -110,6 +110,7 @@ run_index.record_success(board_id, test_name, exp_id)
 | **[HIGH_PRIORITY] ESP32 USB Interface Classification: native-only vs dual** | `7daa8c80` | 所有 ESP32 板（Class A dual / Class B native-only） | 0.9 |
 | **[HIGH_PRIORITY] Playwright Browser Automation for Embedded Web UI Testing** | `747fdb40` | 任何带 Web UI 的嵌入式设备（HTTPS + Basic Auth + WebSocket） | 0.9 |
 | **[HIGH_PRIORITY] HARDWARE_CONNECT_FIRST_RULE — ask before probing** | `04486a33` | 所有需要物理 USB/instrument 连接的任务 | 0.9 |
+| **[HIGH_PRIORITY] RISC-V ESP32 observe_uart boot_signatures fix** | `64b74cc2` | ESP32-C6/C5/C3/S3 (ROM at 115200→boot_count≥4→false crash) | 0.9 |
 
 ## ESP32-C5 board_family 已知陷阱
 

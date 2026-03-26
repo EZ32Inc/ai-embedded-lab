@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_adc",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "adc"
+  ],
+  "notes": "Stage 2: ADC1 loopback. GPIO22 drives -> GPIO4 (ADC1_CH4, input-only).",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO22",
+        "to": "GPIO4",
+        "label": "ADC drive -> ADC1_CH4 input"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_adc",
+    "artifact_stem": "ael_esp32c6_devkit_test_adc",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_adc"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_ADC.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

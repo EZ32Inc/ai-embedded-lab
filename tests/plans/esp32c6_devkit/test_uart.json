@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "name": "esp32c6_devkit_test_uart",
+  "test_kind": "instrument_specific",
+  "board": "esp32c6_devkit_dual_usb",
+  "supported_instruments": [],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "stage2",
+    "selftest",
+    "truth_layer"
+  ],
+  "covers": [
+    "uart"
+  ],
+  "notes": "Stage 2: UART1 TX->RX loopback. Jumper GPIO18 <-> GPIO19.",
+  "wiring": {
+    "required": [
+      {
+        "from": "GPIO18",
+        "to": "GPIO19",
+        "label": "UART1 TX -> RX loopback"
+      }
+    ]
+  },
+  "build": {
+    "project_dir": "firmware/targets/esp32c6_devkit/test_uart",
+    "artifact_stem": "ael_esp32c6_devkit_test_uart",
+    "build_dir": "artifacts/build_esp32c6_devkit_test_uart"
+  },
+  "preflight": {
+    "enabled": false
+  },
+  "observe_uart": {
+    "enabled": true,
+    "port": "/dev/ttyACM1",
+    "baud": 115200,
+    "profile": "espidf",
+    "duration_s": 8,
+    "reset_strategy": "rts",
+    "expect_patterns": [
+      "AEL_UART.*PASS"
+    ],
+    "boot_signatures": [
+      "rst:0x"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "esp32c6_devkit_stage2",
+  "board": "esp32c6_devkit_dual_usb",
+  "notes": "Stage 2: wired tests (GPIO_INTR, PCNT, UART, ADC, SPI, I2C). 6 jumpers required.",
+  "preflight": {
+    "enabled": false
+  },
+  "tests": [
+    "tests/plans/esp32c6_devkit/test_gpio_intr.json",
+    "tests/plans/esp32c6_devkit/test_pcnt.json",
+    "tests/plans/esp32c6_devkit/test_uart.json",
+    "tests/plans/esp32c6_devkit/test_adc.json",
+    "tests/plans/esp32c6_devkit/test_spi.json",
+    "tests/plans/esp32c6_devkit/test_i2c.json"
+  ]
+}
