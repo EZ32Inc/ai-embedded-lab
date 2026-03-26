@@ -1,0 +1,8 @@
+{
+  "name": "smoke_rp2040_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "tests": [
+    "tests/plans/rp2040_gpio_signature_with_s3jtag.json"
+  ],
+  "notes": "RP2040 Pico smoke path via S3JTAG. Programs the target over SWD and verifies one target GPIO through S3JTAG Target In on GPIO15."
+}
