@@ -7,7 +7,8 @@
     "tests/plans/rp2040_gpio_level_high_with_s3jtag.json",
     "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
     "tests/plans/rp2040_gpio_signature_with_s3jtag.json",
-    "tests/plans/rp2040_uart_banner_with_s3jtag.json"
+    "tests/plans/rp2040_uart_banner_with_s3jtag.json",
+    "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
   ],
   "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. Stage 1 no-wire self-tests are still a design gap and will be inserted here once formalized."
 }

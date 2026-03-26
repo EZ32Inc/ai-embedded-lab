@@ -1,0 +1,14 @@
+id: spi_loopback_s3jtag
+name: RP2040 Pico spi_loopback_s3jtag
+board: rp2040_pico_s3jtag_uart
+purpose: S3JTAG-controlled RP2040 SPI MOSI-to-MISO loopback asset using the ESP32-S3 internal Web UART bridge for bounded result reporting
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/spi_loopback_s3jtag/firmware
+  artifact_stem: pico_spi_loopback_s3jtag
+flash:
+  method: gdb_swd
+pins:
+  spi_sck: 2
+  spi_mosi: 3
+  spi_miso: 4
