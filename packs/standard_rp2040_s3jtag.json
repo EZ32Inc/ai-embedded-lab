@@ -1,0 +1,12 @@
+{
+  "name": "standard_rp2040_s3jtag",
+  "description": "No-extra-wire standard suite for RP2040 via S3JTAG: mailbox runtime gate plus TARGETIN low/high/100Hz/1kHz signal checks.",
+  "board": "rp2040_pico_s3jtag",
+  "tests": [
+    "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json",
+    "tests/plans/rp2040_gpio_level_low_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_level_high_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_signature_with_s3jtag.json"
+  ]
+}

@@ -126,7 +126,8 @@ def _triggered_capture(base_url, auth, verify_ssl, timeout_s=5.0) -> bytes:
     return r.content
 
 
-def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None) -> bool:
+def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None, expected_state: str | None = None,
+                         min_edges: int = 1) -> bool:
     start = requests.post(
         f"{base_url}/test/start",
         json={"test_type": "test_targetin_detect"},
@@ -164,11 +165,20 @@ def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=
         capture_out["blob"] = b"TARGETIN"
 
     state = str(result.get("state") or "").strip().lower()
-    ok = str(result.get("result") or "").strip().lower() == "pass" and state == "toggle" and int(result.get("transitions") or 0) > 0
+    transitions = int(result.get("transitions") or 0)
+    expected = str(expected_state or "toggle").strip().lower() or "toggle"
+    if expected in {"high", "low"}:
+        ok = state == expected
+    else:
+        ok = (
+            str(result.get("result") or "").strip().lower() == "pass"
+            and state == "toggle"
+            and transitions >= int(min_edges)
+        )
     if ok:
         print(
             "Verify: TARGETIN detect OK "
-            f"samples={int(result.get('samples') or 0)} transitions={int(result.get('transitions') or 0)} "
+            f"state={state} samples={int(result.get('samples') or 0)} transitions={transitions} "
             f"estimated_hz={int(result.get('estimated_hz') or 0)}"
         )
     else:
@@ -196,7 +206,8 @@ def _bit_from_pin(pin: str) -> int:
     return -1
 
 
-def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out=None, verify_edges=True, pins=None):
+def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_out=None, verify_edges=True, pins=None,
+        expected_state: str | None = None):
     ip = probe_cfg.get("ip")
     scheme = probe_cfg.get("web_scheme", "https")
     port = int(probe_cfg.get("web_port", 443))
@@ -227,7 +238,15 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
 
     if all(str(name).strip().upper() == "TARGETIN" for name in normalized_pins):
         print(f"Verify: TARGETIN host={base_url} duration~{duration_s:.2f}s")
-        return _run_targetin_detect(base_url, auth, verify_ssl, normalized_pins[0], capture_out=capture_out)
+        return _run_targetin_detect(
+            base_url,
+            auth,
+            verify_ssl,
+            normalized_pins[0],
+            capture_out=capture_out,
+            expected_state=expected_state,
+            min_edges=min_edges,
+        )
 
     invalid = [name for name, bit in bit_map.items() if bit < 0 or bit > 15]
     if invalid:

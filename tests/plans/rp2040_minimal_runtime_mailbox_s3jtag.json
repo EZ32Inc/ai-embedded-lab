@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "rp2040_minimal_runtime_mailbox_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "minimal_runtime"],
+  "covers": ["runtime_gate", "mailbox"],
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/minimal_runtime_mailbox_s3jtag/firmware",
+    "artifact_stem": "pico_minimal_runtime_mailbox_s3jtag",
+    "build_dir": "artifacts/build_rp2040_minimal_runtime_mailbox_s3jtag"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 2.0,
+    "addr": "0x20041F00"
+  },
+  "bench_setup": {
+    "notes": "Debug-path-only RP2040 runtime gate for S3JTAG. Requires only SWDIO, SWCLK, and GND. No TARGETIN, UART, or other loopback wiring is required.",
+    "peripheral_signals": [
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "GPIO25",
+        "direction": "output",
+        "notes": "Visual only. Toggles while mailbox detail0 increments after PASS."
+      }
+    ]
+  }
+}

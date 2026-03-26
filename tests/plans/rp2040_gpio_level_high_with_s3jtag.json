@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_gpio"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path"
+  ],
+  "covers": [
+    "gpio"
+  ],
+  "pin": "sig",
+  "instrument": {
+    "instance_id": "s3jtag_rp2040_lab",
+    "label": "S3JTAG"
+  },
+  "name": "rp2040_gpio_level_high_with_s3jtag",
+  "notes": "Programs RP2040 over SWD and validates GPIO16 held high through S3JTAG TARGETIN.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/gpio_level_high_s3jtag/firmware",
+    "artifact_stem": "pico_gpio_level_high_s3jtag",
+    "build_dir": "artifacts/build_rp2040_gpio_level_high_s3jtag"
+  },
+  "duration_s": 0.5,
+  "min_edges": 0,
+  "max_edges": 4,
+  "expected_state": "high",
+  "bench_setup": {
+    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route RP2040 GPIO16 into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "GPIO16",
+        "inst_gpio": 15,
+        "expect": "high",
+        "freq_hz": 0
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}

@@ -1,0 +1,10 @@
+id: gpio_level_low_s3jtag
+name: RP2040 Pico gpio_level_low_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG standard suite signal variant
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/gpio_level_low_s3jtag/firmware
+  artifact_stem: pico_gpio_level_low_s3jtag
+flash:
+  method: gdb_swd

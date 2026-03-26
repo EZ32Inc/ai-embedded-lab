@@ -1,0 +1,10 @@
+id: gpio_signature_100hz_s3jtag
+name: RP2040 Pico gpio_signature_100hz_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG standard suite signal variant
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/gpio_signature_100hz_s3jtag/firmware
+  artifact_stem: pico_gpio_signature_100hz_s3jtag
+flash:
+  method: gdb_swd

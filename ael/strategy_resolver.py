@@ -589,6 +589,7 @@ def build_verify_step(test_raw: Dict[str, Any] | Any, board_cfg: Dict[str, Any] 
                 "max_freq_hz": test_raw.get("max_freq_hz") if isinstance(test_raw, dict) else None,
                 "duty_min": test_raw.get("duty_min") if isinstance(test_raw, dict) else None,
                 "duty_max": test_raw.get("duty_max") if isinstance(test_raw, dict) else None,
+                "expected_state": test_raw.get("expected_state") if isinstance(test_raw, dict) else None,
             },
             "verify_prep": (dict(board_cfg.get("verify_prep", {})) if isinstance(board_cfg, dict) and isinstance(board_cfg.get("verify_prep"), dict) else {}),
             "led_observe_cfg": (dict(test_raw.get("observe_led", {})) if isinstance(test_raw, dict) and isinstance(test_raw.get("observe_led"), dict) else {}),

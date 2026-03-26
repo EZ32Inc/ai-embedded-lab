@@ -1,0 +1,14 @@
+id: rp2040_pico_minimal_runtime_mailbox_s3jtag
+name: RP2040 Pico Minimal Runtime Mailbox via S3JTAG
+parent_dut: rp2040_pico
+description: RP2040 minimal-runtime mailbox golden asset for S3JTAG. Uses only SWD and mailbox verify, no extra bench wiring.
+
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/minimal_runtime_mailbox_s3jtag/firmware
+  artifact_stem: pico_minimal_runtime_mailbox_s3jtag
+
+validation:
+  instrument:
+    id: s3jtag_rp2040_lab
+    family: esp32jtag

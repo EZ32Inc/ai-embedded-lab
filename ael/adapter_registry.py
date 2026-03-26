@@ -971,6 +971,7 @@ class _SignalVerifyAdapter:
                 expected_hz=expected_hz,
                 min_edges=min_edges,
                 max_edges=max_edges,
+                expected_state=(str(test_limits.get('expected_state') or '').strip().lower() or None),
             )
             if not (native_capture.get("ok") if native_capture.get("ok") is not None else native_capture.get("status") == "ok"):
                 return False
@@ -1139,9 +1140,14 @@ class _SignalVerifyAdapter:
                 est_hz = float(targetin.get("estimated_hz") or 0.0)
                 total = high + low
                 duty = (float(high) / float(total)) if total > 0 else 0.0
-                ok = str(targetin.get("result") or "").strip().lower() == "pass" and str(targetin.get("state") or "").strip().lower() == "toggle"
-                if transitions < int(min_edges):
-                    ok = False
+                state = str(targetin.get("state") or "").strip().lower()
+                expected_state = str(test_limits.get("expected_state") or "toggle").strip().lower() or "toggle"
+                if expected_state in {"high", "low"}:
+                    ok = state == expected_state
+                else:
+                    ok = str(targetin.get("result") or "").strip().lower() == "pass" and state == "toggle"
+                    if transitions < int(min_edges):
+                        ok = False
                 metrics = {
                     "freq_hz": est_hz,
                     "duty": duty,
@@ -1149,6 +1155,7 @@ class _SignalVerifyAdapter:
                     "high": high,
                     "low": low,
                     "edges": transitions,
+                    "state": state,
                 }
                 reasons = []
                 min_f = test_limits.get("min_freq_hz")

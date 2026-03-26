@@ -113,6 +113,7 @@ def capture_signature(
     expected_hz: float,
     min_edges: int,
     max_edges: int,
+    expected_state: str | None = None,
     **_: Any,
 ) -> Dict[str, Any]:
     capture: Dict[str, Any] = {}
@@ -127,6 +128,7 @@ def capture_signature(
             max_edges=max_edges,
             capture_out=capture,
             verify_edges=False,
+            expected_state=expected_state,
         )
     except Exception as exc:
         return _native_error("capture_signature_failed", str(exc), retryable=True)
