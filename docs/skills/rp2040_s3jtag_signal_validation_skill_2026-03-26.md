@@ -29,6 +29,8 @@ Validated target on 2026-03-26:
 - `RP2040 Pico`
 - target output: `GPIO16`
 - signal: about `1 kHz` square wave
+- validated formal pack: `packs/smoke_rp2040_s3jtag.json`
+- validated successful run id: `2026-03-26_05-54-03_rp2040_pico_s3jtag_rp2040_gpio_signature_with_s3jtag`
 
 ## Why This Skill Matters
 
@@ -38,6 +40,7 @@ The reusable lesson is:
 - keep SWD programming on the BMP/GDB path
 - move signal verification to a direct GPIO sampling path on the S3 firmware
 - do not wait for logic-analyzer parity before validating a simpler instrument capability
+- make AEL runtime layers explicitly honor the reduced mechanism instead of silently falling back to LA assumptions
 
 ## Preconditions
 
@@ -58,9 +61,11 @@ Required bench assumptions:
 3. Connect to the instrument over BMP/GDB remote and confirm `monitor swd_scan` sees the target.
 4. `load` the new target image and run `compare-sections`.
 5. Ensure the S3 firmware exposes `test_targetin_detect` or an equivalent direct sampling path on `GPIO15`.
-6. Trigger the detect test over the instrument web API.
-7. Confirm the returned JSON shows toggling behavior and a plausible frequency estimate.
-8. Record the result as `flash + detect`, not as full waveform capture.
+6. Ensure AEL preflight for this instrument instance is configured as `TARGETIN`-backed, not LA-backed.
+7. Ensure AEL signal verification preserves `targetin_result` through `capture_signature` into final verdict calculation.
+8. Trigger the detect test over the instrument web API.
+9. Confirm the returned JSON shows toggling behavior and a plausible frequency estimate.
+10. Record the result as `flash + detect`, not as full waveform capture.
 
 ## Canonical Commands
 
@@ -122,6 +127,10 @@ If S3 native USB flashing hits `Write timeout`:
 If the host does not return to the instrument AP automatically:
 - run `nmcli connection up esp32jtag_0F91 ifname wlx90de80a53084`
 
+If a formal pack still fails after bench recovery:
+- check whether `preflight` is still attempting LA self-test instead of skipping to `TARGETIN`
+- check whether `capture_signature` is preserving `targetin_result` into final verify metrics instead of analyzing a fake LA blob
+
 ## Non-Goals
 
 This skill is not for:
@@ -138,6 +147,7 @@ This skill has succeeded when:
 - `compare-sections` succeeds
 - `test_targetin_detect` reports toggling on `GPIO15`
 - the reported frequency is consistent with the target firmware output
+- the formal AEL pack path reaches `PASS: Run verified` without LA-specific pin mapping errors
 
 ## Why This Was Easy To Miss
 
@@ -148,3 +158,11 @@ The better rule is:
 - but shrink the mechanism to the simplest hardware truth that the new board actually supports
 
 For `S3JTAG`, the hardware truth is `SWD + single digital input detect`, not `SWD + FPGA capture`.
+
+## Runtime Notes
+
+AEL-side changes that were required to make the formal pack pass:
+- `b2ebf42` `Support TARGETIN preflight on S3JTAG`
+- `bfdd76a` `Support TARGETIN signal verification on S3JTAG`
+
+These changes matter because the firmware-side proof was not enough on its own. The formal pack only passed once AEL runtime semantics matched the actual hardware boundary.
