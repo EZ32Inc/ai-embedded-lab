@@ -1,0 +1,15 @@
+id: timer_led_blink_ctrl_s3jtag
+name: RP2040 Pico timer_led_blink_ctrl_s3jtag
+board: rp2040_pico_s3jtag
+purpose: Bidirectional LED blink control via AEL mailbox. LED blinks on GPIO25 via 10ms repeating timer ISR. Mailbox at 0x20041F00 reports led_state/toggle_count/period in detail0. PC can write cmd_period_ms to change blink half-period at runtime.
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/timer_led_blink_ctrl_s3jtag/firmware
+  artifact_stem: pico_timer_led_blink_ctrl_s3jtag
+flash:
+  method: gdb_swd
+features:
+  - timer
+  - gpio_out
+  - mailbox
+  - led_blink

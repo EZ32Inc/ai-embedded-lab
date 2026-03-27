@@ -108,6 +108,84 @@ def _gdb_read_mailbox(
     }
 
 
+def _extract_toggle_count(detail0: int) -> int:
+    """Extract bits[15:1] toggle_count from detail0."""
+    return (detail0 >> 1) & 0x7FFF
+
+
+def _execute_detail0_increment(
+    inputs: dict,
+    addr_str: str,
+    addr: int,
+    endpoint: str,
+    target_id: int,
+    out_json: str | None,
+    skip_attach: bool,
+    halt_before_read: bool,
+    attach_monitor_cmd: str,
+) -> Dict[str, Any]:
+    """Verify detail0.toggle_count increments between two reads (live/RUNNING firmware)."""
+    increment_wait_s = float(inputs.get("increment_wait_s", 2.0))
+
+    raw1 = _gdb_read_mailbox(endpoint, target_id, addr,
+                             skip_attach=skip_attach,
+                             halt_before_read=halt_before_read,
+                             attach_monitor_cmd=attach_monitor_cmd)
+    if not raw1.get("ok"):
+        return {"ok": False, "error_summary": f"mailbox read T1 failed: {raw1.get('error')}",
+                "failure_kind": "mailbox_read_error"}
+
+    magic_ok = raw1["magic"] == MAILBOX_MAGIC
+    if not magic_ok:
+        return {"ok": False,
+                "error_summary": f"magic mismatch: {raw1['magic']:#010x}",
+                "failure_kind": "mailbox_verify_mismatch"}
+
+    tc1 = _extract_toggle_count(raw1["detail0"])
+    time.sleep(increment_wait_s)
+
+    raw2 = _gdb_read_mailbox(endpoint, target_id, addr,
+                             skip_attach=skip_attach,
+                             halt_before_read=halt_before_read,
+                             attach_monitor_cmd=attach_monitor_cmd)
+    if not raw2.get("ok"):
+        return {"ok": False, "error_summary": f"mailbox read T2 failed: {raw2.get('error')}",
+                "failure_kind": "mailbox_read_error"}
+
+    tc2 = _extract_toggle_count(raw2["detail0"])
+    period_ms = (raw2["detail0"] >> 16) & 0xFFFF
+    led_state = raw2["detail0"] & 0x1
+    incremented = tc2 != tc1
+
+    result = {
+        "ok":               incremented,
+        "addr":             addr_str,
+        "endpoint":         endpoint,
+        "magic":            f"{raw1['magic']:#010x}",
+        "magic_ok":         magic_ok,
+        "status_t1":        STATUS_NAMES.get(raw1["status"], raw1["status"]),
+        "status_t2":        STATUS_NAMES.get(raw2["status"], raw2["status"]),
+        "detail0_t1":       raw1["detail0"],
+        "detail0_t2":       raw2["detail0"],
+        "toggle_count_t1":  tc1,
+        "toggle_count_t2":  tc2,
+        "led_state":        led_state,
+        "period_ms":        period_ms,
+        "incremented":      incremented,
+    }
+    if out_json:
+        _write_json(out_json, result)
+
+    if not incremented:
+        return {
+            "ok": False,
+            "error_summary": f"toggle_count did not increment (t1={tc1} t2={tc2}); LED not blinking",
+            "failure_kind": "mailbox_verify_mismatch",
+            "result": result,
+        }
+    return {"ok": True, "result": result}
+
+
 def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
     inputs    = step.get("inputs", {}) if isinstance(step, dict) else {}
     probe_ip  = inputs.get("probe_ip", "")
@@ -119,6 +197,7 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
     skip_attach      = bool(inputs.get("skip_attach", False))
     halt_before_read = bool(inputs.get("halt_before_read", False))
     attach_monitor_cmd = str(inputs.get("attach_monitor_cmd", "monitor swdp_scan"))
+    check_mode  = inputs.get("check_mode", "pass")
 
     if not probe_ip:
         return {"ok": False, "error_summary": "check.mailbox_verify: probe_ip not set"}
@@ -128,6 +207,13 @@ def execute(step: dict, plan: dict, ctx: Any) -> Dict[str, Any]:  # noqa: ARG001
 
     addr     = int(addr_str, 16)
     endpoint = f"{probe_ip}:{probe_port}"
+
+    if check_mode == "detail0_increment":
+        return _execute_detail0_increment(
+            inputs, addr_str, addr, endpoint, target_id, out_json,
+            skip_attach, halt_before_read, attach_monitor_cmd,
+        )
+
     raw      = _gdb_read_mailbox(
         endpoint,
         target_id,

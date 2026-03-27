@@ -1,0 +1,38 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "rp2040_timer_led_blink_ctrl_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "timer", "led", "bidirectional", "no_wire"],
+  "covers": ["timer", "gpio_out", "mailbox", "led_blink"],
+  "notes": "Verifies RP2040 LED blinks on GPIO25 via 10ms repeating timer ISR. Reads mailbox detail0 twice (2s apart) and checks toggle_count increments. Mailbox at 0x20041F00: detail0 bit[0]=led_state, bits[15:1]=toggle_count, bits[31:16]=period_ms.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/timer_led_blink_ctrl_s3jtag/firmware",
+    "artifact_stem": "pico_timer_led_blink_ctrl_s3jtag",
+    "build_dir": "artifacts/build_rp2040_timer_led_blink_ctrl_s3jtag"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 1.5,
+    "addr": "0x20041F00",
+    "check_mode": "detail0_increment",
+    "increment_wait_s": 2.0
+  },
+  "bench_setup": {
+    "notes": "No-wire test. Requires only SWDIO, SWCLK, and GND. LED on GPIO25 is driven by firmware timer ISR.",
+    "peripheral_signals": [
+      {
+        "role": "LED",
+        "dut_signal": "GPIO25",
+        "direction": "output",
+        "notes": "Onboard LED. Toggles at 1 Hz (default 500ms half-period) via repeating timer ISR."
+      }
+    ]
+  }
+}
