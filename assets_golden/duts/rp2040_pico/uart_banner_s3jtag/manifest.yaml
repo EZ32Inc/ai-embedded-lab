@@ -14,3 +14,9 @@ golden:
   date: "2026-03-27"
   instrument: s3jtag_rp2040_lab
   instrument_ip: 192.168.2.251
+  instrument_firmware:
+    version: "0.1.0"
+    git_commit: 5a140ca
+    build_target: build_board_esp32s3_devkit
+    board_profile: esp32s3_devkit
+    binary: esp32jtag_v0.1.0_20260327_124827_5a140ca_full.bin
