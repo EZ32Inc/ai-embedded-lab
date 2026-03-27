@@ -38,10 +38,10 @@ from ael.adapters import observe_fpga_counter_freq
 
 # --- Expected channels ---
 CHANNELS = [
-    {"pin": "PA0", "expected_hz": 25_000_000, "label": "cnt[1] 25MHz", "fpga_pin": "F13"},
-    {"pin": "PA1", "expected_hz": 12_500_000, "label": "cnt[2] 12.5MHz", "fpga_pin": "F14"},
-    {"pin": "PA2", "expected_hz":  6_250_000, "label": "cnt[3] 6.25MHz", "fpga_pin": "D14"},
-    {"pin": "PA3", "expected_hz":  3_125_000, "label": "cnt[4] 3.125MHz", "fpga_pin": "D15"},
+    {"pin": "P0.0", "expected_hz": 25_000_000, "label": "cnt[1] 25MHz", "fpga_pin": "F13"},
+    {"pin": "P0.1", "expected_hz": 12_500_000, "label": "cnt[2] 12.5MHz", "fpga_pin": "F14"},
+    {"pin": "P0.2", "expected_hz":  6_250_000, "label": "cnt[3] 6.25MHz", "fpga_pin": "D14"},
+    {"pin": "P0.3", "expected_hz":  3_125_000, "label": "cnt[4] 3.125MHz", "fpga_pin": "D15"},
 ]
 
 TOLERANCES = {

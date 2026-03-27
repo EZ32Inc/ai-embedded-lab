@@ -45,10 +45,10 @@ la_probe:
   instance_id: esp32jtag_rp2040_lab
   instrument_ip: 192.168.2.63
   wiring:
-    - { fpga_pin: F13, fpga_port: "la_ch_in[0]", inst_pin: PA0, expected_hz: 25000000 }
-    - { fpga_pin: F14, fpga_port: "la_ch_in[1]", inst_pin: PA1, expected_hz: 12500000 }
-    - { fpga_pin: D14, fpga_port: "la_ch_in[2]", inst_pin: PA2, expected_hz:  6250000 }
-    - { fpga_pin: D15, fpga_port: "la_ch_in[3]", inst_pin: PA3, expected_hz:  3125000 }
+    - { fpga_pin: F13, fpga_port: "la_ch_in[0]", inst_pin: P0.0, expected_hz: 25000000 }
+    - { fpga_pin: F14, fpga_port: "la_ch_in[1]", inst_pin: P0.1, expected_hz: 12500000 }
+    - { fpga_pin: D14, fpga_port: "la_ch_in[2]", inst_pin: P0.2, expected_hz:  6250000 }
+    - { fpga_pin: D15, fpga_port: "la_ch_in[3]", inst_pin: P0.3, expected_hz:  3125000 }
   experiment: experiments/pa35t_starlite/counter_freq_verify.py
 
 golden:
