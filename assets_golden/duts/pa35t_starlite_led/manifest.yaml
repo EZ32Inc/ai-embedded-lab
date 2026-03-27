@@ -1,0 +1,44 @@
+id: pa35t_starlite_led
+name: PA35T StarLite LED Blink
+board: pa35t_starlite
+mcu: xc7a35t
+family: xilinx_artix7
+purpose: >
+  Minimal LED blink design for the PA35T StarLite board (Xilinx Artix-7 xc7a35tfgg484-2).
+  Drives led[0] and led[1] (W22, Y22) in a rotating pattern via a parameterized counter.
+  Default BLINK_PERIOD=50_000_000 at 100 MHz clock = 0.5s per step (1 Hz visible blink).
+  To change speed: override parameter BLINK_PERIOD in LED.v and rebuild.
+
+build:
+  type: vivado
+  project_dir: /nvme1t/work/PA35T_StarLite/1_FPGA/3_3_PZ_LED
+  project_file: Test_LED.xpr
+  build_script: build.tcl
+  artifact: Test_LED.runs/impl_1/LED.bit
+  vivado: /tools/Xilinx/Vivado/2021.1/bin/vivado
+  top_module: LED
+  part: xc7a35tfgg484-2
+
+flash:
+  method: vivado_jtag
+  program_script: program.tcl
+  jtag_cable: digilent
+
+features:
+  - gpio_out
+  - led_blink
+  - fpga
+
+pins:
+  sys_clk_p: R4    # DIFF_SSTL15 differential clock input
+  sys_rstn:  R14   # LVCMOS33 active-low reset
+  led[0]:    W22   # LVCMOS33 LED output
+  led[1]:    Y22   # LVCMOS33 LED output
+
+golden:
+  status: verified
+  date: "2026-03-27"
+  notes: >
+    Command-line build and program flow verified. LED blink confirmed visually.
+    BLINK_PERIOD parameterized — default 50_000_000 (original speed, 1 Hz).
+    Half-speed test (100_000_000) also confirmed visually on 2026-03-27.
