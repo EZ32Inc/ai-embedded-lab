@@ -12,5 +12,5 @@
     "tests/plans/rp2040_uart_banner_with_s3jtag.json",
     "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
   ],
-  "notes": "Pack-level board is intentionally omitted because the TARGETIN tests use rp2040_pico_s3jtag while the UART test uses rp2040_pico_s3jtag_uart."
+  "notes": "Pack-level board is intentionally omitted because the TARGETIN tests use rp2040_pico_s3jtag while the UART tests use rp2040_pico_s3jtag_uart. The validated fixed Stage 2 wiring is: GPIO18 -> GPIO15/TARGETIN, GPIO0 -> GPIO7, GPIO1 -> GPIO6, GPIO3 -> GPIO4, GPIO16 -> GPIO17, plus SWDIO/SWCLK/GND."
 }
