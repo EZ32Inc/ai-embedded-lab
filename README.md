@@ -113,6 +113,40 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### AMD(Xilinx) Artix XC7A35T — Closed-Loop FPGA Verification via ESP32JTAG LA (2026-03-27)
+
+<!-- IMAGE PLACEHOLDER — replace with actual board/setup photo -->
+<!-- ![PA35T StarLite FPGA + ESP32JTAG LA setup](docs/images/pa35t_starlite_fpga_la_setup.jpg) -->
+
+AEL completed a full closed-loop verification workflow on a **Xilinx Artix-7 (xc7a35tfgg484-2)** FPGA project using the PA35T StarLite board. This extends AEL's reach beyond MCU firmware into repeatable, measurement-backed FPGA validation on real hardware.
+
+**What was done:**
+
+- Brought a Vivado brownfield FPGA project under AEL command-line build and program control (`build.tcl` / `program.tcl`)
+- Integrated the design as an AEL DUT asset (`assets_golden/duts/pa35t_starlite_led/`)
+- Extended the RTL to expose internal counter bits as LA probe outputs on the JM1 connector (4 × LVCMOS33 output pins)
+- Captured all 4 channels simultaneously via **ESP32JTAG** logic analyzer at 264 MHz sample rate
+- Wrote a new AEL adapter (`observe_fpga_counter_freq.py`) for multi-channel frequency, duty cycle, and divide-ratio verification
+- Ran end-to-end automated verification — all three stages PASS
+
+**Verification results (`counter_freq_verify.py`):**
+
+| Stage | Check | Result |
+|-------|-------|--------|
+| Stage 1 | Frequency accuracy (4 channels) | **PASS** ±1% (observed ~0.56% offset) |
+| Stage 2 | Duty cycle (50% target) | **PASS** ±6% (50 MHz is quantization-limited at 264 MHz LA) |
+| Stage 3 | Adjacent-channel divide ratio (2:1) | **PASS** ±0.1% (max error 0.016%) |
+
+**Additional finding — clock offset measurement:**
+
+All channels showed a consistent ~0.56% frequency offset (~5600 ppm), confirming a systematic clock difference between the FPGA oscillator and the ESP32JTAG measurement reference. AEL detected and reasoned about this real hardware characteristic automatically.
+
+**Why this matters:**
+
+This milestone demonstrates a practical FPGA workflow under AEL: modify RTL → build → program → capture signals → verify behavior quantitatively. The same instrument infrastructure (ESP32JTAG as a networked LA) that validates MCU firmware works equally well as a measurement backend for FPGA designs — showing AEL's approach scales across device families.
+
+---
+
 ### Brownfield Embedded Project — AEL Drives a Real Firmware Project to Open-Source Release (2026-03-27)
 
 AEL was applied to [`esp32jtag_firmware`](https://github.com/EZ32Inc/esp32jtag_firmware), an existing embedded firmware project for the ESP32JTAG instrument, as a concrete real-world test of AEL's engineering capabilities beyond greenfield prototyping.
