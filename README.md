@@ -168,6 +168,52 @@ Most AI-assisted embedded development work targets fresh greenfield projects. Th
 
 ---
 
+### RP2040 Pico + S3JTAG — Full Rule-B Golden Suite Validated (2026-03-26 / 2026-03-27)
+
+AEL completed a full Rule-B golden test suite for the **RP2040 Pico** using the **S3JTAG** wireless instrument over WiFi. This is the first validated ARM Cortex-M + wireless instrument combination in AEL: SWD access, flash, and signal verification all happen over the network — no USB cable from the host to the debug probe.
+
+**Instrument setup:**
+
+- S3JTAG (ESP32-S3 based) acts as a networked BMDA (Black Magic Debug App) SWD probe
+- Connected to RP2040 Pico via SWDIO, SWCLK, and signal wires
+- All AEL pipeline operations (flash, GDB mailbox read, UART observe, signal capture) go through WiFi
+
+**Test suite — 13 tests across three stages:**
+
+| Stage | Test | Coverage |
+|-------|------|----------|
+| Stage 0 | `minimal_runtime_mailbox` | Basic bring-up gate — firmware boots and mailbox responds |
+| Stage 1 | `internal_temp_mailbox` | Internal temperature sensor via ADC |
+| Stage 1 | `timer_mailbox` | Hardware repeating timer ISR |
+| Stage 2 | `gpio_level_low / high` | GPIO output levels via S3JTAG TARGETIN capture |
+| Stage 2 | `gpio_signature_100hz / 1kHz` | GPIO frequency output measured by S3JTAG |
+| Stage 2 | `pwm_capture` | PWM duty cycle and frequency capture |
+| Stage 2 | `gpio_interrupt_loopback` | GPIO interrupt driven by loopback wire |
+| Stage 2 | `uart_rxd_detect` | UART RX line detection via S3JTAG |
+| Stage 2 | `uart_banner` | Full UART text output via S3JTAG Web UART bridge |
+| Stage 2 | `spi_loopback` | SPI MOSI→MISO loopback |
+| Stage 2 | `adc_loopback` | ADC input driven by GPIO output |
+
+**Additional validated asset (2026-03-27):**
+
+`timer_led_blink_ctrl` — a bidirectional mailbox test: firmware drives GPIO25 LED via a 10 ms timer ISR; AEL reads `led_state`, `toggle_count`, and `period_ms` from the mailbox via GDB, and can write `cmd_period_ms` to change the blink rate at runtime. Demonstrates live firmware observability over SWD.
+
+**Rule-D combined firmware:**
+
+A `full_suite` firmware asset runs all 13 sub-tests sequentially and reports results via UART through the S3JTAG Web UART bridge — a single flash covers the full board validation pass.
+
+**Closeout reports:**
+
+- [`docs/rp2040_s3jtag_full_suite_closeout_2026-03-26.md`](docs/rp2040_s3jtag_full_suite_closeout_2026-03-26.md) — pack-level full suite result
+- [`docs/rp2040_s3jtag_standard_suite_closeout_2026-03-26.md`](docs/rp2040_s3jtag_standard_suite_closeout_2026-03-26.md)
+- [`docs/rp2040_s3jtag_gpio_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_gpio_validation_closeout_2026-03-26.md)
+- [`docs/rp2040_s3jtag_pwm_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_pwm_validation_closeout_2026-03-26.md)
+- [`docs/rp2040_s3jtag_spi_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_spi_validation_closeout_2026-03-26.md)
+- [`docs/rp2040_s3jtag_uart_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_uart_validation_closeout_2026-03-26.md)
+- [`docs/rp2040_s3jtag_timer_led_blink_ctrl_closeout_2026-03-27.md`](docs/rp2040_s3jtag_timer_led_blink_ctrl_closeout_2026-03-27.md)
+
+---
+
 ### AEL Experience System v0.1 — Record, Reuse, and Grow from Engineering Experience (2026-03-22)
 
 AEL now records, reuses, and grows from engineering experience.
