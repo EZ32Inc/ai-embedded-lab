@@ -781,8 +781,17 @@ MCUs that have completed real-hardware validation at AEL's current golden-standa
 - `STM32H750VBT6`
   - validated with full `7/7 PASS` smoke suite
 - `RP2040`
-  - validated in current AEL verified-board baseline
+  - full `13/13 PASS` Rule-B golden suite via S3JTAG wireless instrument
+  - covers: mailbox, internal temp, timer, GPIO levels, GPIO frequency, PWM, GPIO interrupt, UART, SPI, ADC
 - `ESP32-C6`
+  - validated in current AEL verified-board baseline
+- `ESP32-C5`
+  - full `12/12 PASS` Rule-B golden suite
+- `ESP32-C3`
+  - validated in current AEL verified-board baseline
+- `ESP32-S3`
+  - validated in current AEL verified-board baseline
+- `ESP32-WROOM-32D`
   - validated in current AEL verified-board baseline
 
 ---
@@ -800,7 +809,12 @@ Boards that have completed full bring-up and sequential verification on real har
 | STM32F401RCT6 | STM32F401 | STM32F4 | 8 | verified | [docs/boards/stm32f401rct6.md](docs/boards/stm32f401rct6.md) |
 | STM32G431CBU6 | STM32G431CBU6 | STM32G4 | 9 | verified | [docs/methodology/stm32g431_milestone_postmortem_v0_1.md](docs/methodology/stm32g431_milestone_postmortem_v0_1.md) |
 | STM32H750VBT6 YD | STM32H750VBT6 | STM32H7 | 7 | verified | [docs/methodology/stm32h750_milestone_postmortem_v0_1.md](docs/methodology/stm32h750_milestone_postmortem_v0_1.md) |
-| RP2040 Pico | RP2040 | RP2 | — | verified | — |
+| RP2040 Pico (S3JTAG) | RP2040 | RP2 | 13 | verified (Rule-B, S3JTAG wireless) | [docs/rp2040_s3jtag_full_suite_closeout_2026-03-26.md](docs/rp2040_s3jtag_full_suite_closeout_2026-03-26.md) |
+| ESP32-WROOM-32D | ESP32 | ESP32 | Rule-B | verified | [docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md](docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md) |
+| ESP32-C3 DevKit | ESP32-C3 | ESP32 | Rule-B | verified | [docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md](docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md) |
+| ESP32-C5 DevKit | ESP32-C5 | ESP32 | 12 | verified (Rule-B) | [docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md](docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md) |
+| ESP32-C6 DevKit | ESP32-C6 | ESP32 | Rule-B | verified | [docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md](docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md) |
+| ESP32-S3 DevKit | ESP32-S3 | ESP32 | Rule-B | verified | [docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md](docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md) |
 | ESP32-C6 DevKit | ESP32-C6 | ESP32 | — | verified | — |
 
 ---
