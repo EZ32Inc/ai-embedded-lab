@@ -1168,5 +1168,13 @@
         "last_raw": "[rp2040_pico_s3jtag_uart] unknown: failed — stages: preflight, build, run, check — failure: load — flash attempt failed"
       }
     }
+  },
+  "rp2040_pico_s3jtag|unknown": {
+    "exp_id": "b2ef1853-2072-431c-8bc9-a7033f8ddbb7",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774618193.657584,
+    "confidence": 0.5,
+    "known_failures": {}
   }
 }
