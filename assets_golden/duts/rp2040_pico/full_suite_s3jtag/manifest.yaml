@@ -1,0 +1,23 @@
+id: full_suite_s3jtag
+name: RP2040 Pico full_suite_s3jtag
+board: rp2040_pico_s3jtag_uart
+purpose: Rule D combined firmware. Runs all 13 sub-tests in sequence and reports results via UART through the S3JTAG Web UART bridge. This is the convenience layer; the truth layer is the 13 individual tests in packs/rp2040_s3jtag_full.json.
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/full_suite_s3jtag/firmware
+  artifact_stem: pico_full_suite_s3jtag
+flash:
+  method: gdb_swd
+features:
+  - adc
+  - gpio
+  - pwm
+  - spi
+  - uart
+  - irq
+golden:
+  status: verified
+  run_id: 2026-03-27_09-12-09_rp2040_pico_s3jtag_uart_rp2040_full_suite_s3jtag
+  date: "2026-03-27"
+  instrument: s3jtag_rp2040_lab
+  instrument_ip: 192.168.2.251

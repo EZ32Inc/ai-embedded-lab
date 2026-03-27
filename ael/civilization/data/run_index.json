@@ -644,10 +644,10 @@
   },
   "rp2040_pico_s3jtag|rp2040_gpio_signature_with_s3jtag": {
     "exp_id": "dbac5264-af9d-4ae2-bf2e-f594b98230be",
-    "success_count": 2,
-    "failure_count": 6,
-    "last_seen": 1774525612.4413366,
-    "confidence": 0.6,
+    "success_count": 6,
+    "failure_count": 7,
+    "last_seen": 1774578394.1996713,
+    "confidence": 1.0,
     "known_failures": {
       "preflight": {
         "exp_id": "6105da1a-750c-4be4-aae9-40821f9b8eff",
@@ -656,8 +656,8 @@
       },
       "check_signal": {
         "exp_id": "bb8a1216-b951-4e15-845c-3c81dfda99b1",
-        "count": 2,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — verify failed"
+        "count": 3,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
       }
     }
   },
@@ -682,35 +682,53 @@
   },
   "rp2040_pico_s3jtag|rp2040_minimal_runtime_mailbox_s3jtag": {
     "exp_id": "caa8bcee-0c09-45b1-a88a-209d58a443d0",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774525499.2888758,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 6,
+    "failure_count": 1,
+    "last_seen": 1774578265.287855,
+    "confidence": 1.0,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "b01e8d5d-2d01-405f-b909-abc44c3d55f0",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_minimal_runtime_mailbox_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      }
+    }
   },
   "rp2040_pico_s3jtag|rp2040_gpio_level_low_with_s3jtag": {
     "exp_id": "6f09abb4-be0d-4d81-a45c-7163c9237d97",
-    "success_count": 1,
+    "success_count": 6,
     "failure_count": 0,
-    "last_seen": 1774525518.1076605,
-    "confidence": 0.5,
+    "last_seen": 1774578300.8084407,
+    "confidence": 1.0,
     "known_failures": {}
   },
   "rp2040_pico_s3jtag|rp2040_gpio_level_high_with_s3jtag": {
     "exp_id": "158ed2ee-a5ff-4d43-b6a3-4212d805d0e8",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774525549.6495621,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 5,
+    "failure_count": 1,
+    "last_seen": 1774578332.2551475,
+    "confidence": 0.9,
+    "known_failures": {
+      "check_signal": {
+        "exp_id": "9d6a30da-81a4-4d8a-9c08-844e9c8d6304",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_level_high_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
+      }
+    }
   },
   "rp2040_pico_s3jtag|rp2040_gpio_signature_100hz_with_s3jtag": {
     "exp_id": "28edb604-b429-4523-8625-3f59c500929a",
-    "success_count": 1,
-    "failure_count": 0,
-    "last_seen": 1774525580.9021947,
-    "confidence": 0.5,
-    "known_failures": {}
+    "success_count": 5,
+    "failure_count": 1,
+    "last_seen": 1774578362.6637757,
+    "confidence": 0.9,
+    "known_failures": {
+      "check_signal": {
+        "exp_id": "cf784ba3-d9b1-4bea-a3b2-a8689a9c6bf6",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_100hz_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
+      }
+    }
   },
   "esp32c3_devkit_native_usb|test_full_suite": {
     "exp_id": "01086f19-5d21-4c11-8401-c963589583c5",
@@ -965,5 +983,190 @@
     "last_seen": 1774555751.37558,
     "confidence": 0.6,
     "known_failures": {}
+  },
+  "rp2040_pico_s3jtag_uart|rp2040_uart_banner_with_s3jtag": {
+    "exp_id": "528e6e7f-2d19-4727-bd8c-77e79b5bc2ad",
+    "success_count": 7,
+    "failure_count": 21,
+    "last_seen": 1774617445.1453764,
+    "confidence": 1.0,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "0a8e162e-f324-45f3-8076-51d34ab6f34f",
+        "count": 7,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      },
+      "check_uart": {
+        "exp_id": "27d47e3e-e15f-4e39-8ed6-221485fd8a77",
+        "count": 14,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag_uart|rp2040_spi_loopback_with_s3jtag": {
+    "exp_id": "effee282-2183-40ab-98ae-86092544f68a",
+    "success_count": 1,
+    "failure_count": 10,
+    "last_seen": 1774574021.6483288,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "6eb48300-d754-411c-a2d9-1bfdedf9ee79",
+        "count": 4,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      },
+      "build": {
+        "exp_id": "7921589d-b1c5-43dc-bb81-f09279b89fef",
+        "count": 2,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: preflight, load, run, check — failure: build — build failed"
+      },
+      "check_uart": {
+        "exp_id": "db12cae0-dadb-4e4d-bfe3-a4672efeab40",
+        "count": 4,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag|rp2040_pwm_capture_with_s3jtag": {
+    "exp_id": "13bcf2f9-7cd9-41b9-93ca-c2014c52b795",
+    "success_count": 5,
+    "failure_count": 1,
+    "last_seen": 1774578424.2071495,
+    "confidence": 0.9,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "b35d12e5-d121-4cb3-a97c-1e68d1e8fa09",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_pwm_capture_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag_uart|rp2040_gpio_interrupt_loopback_with_s3jtag": {
+    "exp_id": "00d72f15-c344-40d1-bb82-5128201af552",
+    "success_count": 1,
+    "failure_count": 2,
+    "last_seen": 1774576285.4859903,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_uart": {
+        "exp_id": "f7eb4fb5-7cf0-4015-a22b-6cb1a27b8d68",
+        "count": 2,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_gpio_interrupt_loopback_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag_uart|rp2040_uart_rxd_detect_with_s3jtag": {
+    "exp_id": "82852505-ed52-48ef-80fe-aec77cd94374",
+    "success_count": 1,
+    "failure_count": 2,
+    "last_seen": 1774576070.6713583,
+    "confidence": 0.5,
+    "known_failures": {
+      "check_signal": {
+        "exp_id": "1274a95e-efa7-45ea-915e-450493ae0cc9",
+        "count": 2,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_rxd_detect_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — verify failed"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag|rp2040_internal_temp_mailbox_s3jtag": {
+    "exp_id": "cce3b36c-2b06-4061-a8e0-0ba7371b113e",
+    "success_count": 3,
+    "failure_count": 0,
+    "last_seen": 1774578273.2258878,
+    "confidence": 0.7,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_timer_mailbox_s3jtag": {
+    "exp_id": "667bfebc-5349-4547-a08b-36037e4bc5d7",
+    "success_count": 3,
+    "failure_count": 0,
+    "last_seen": 1774578283.436689,
+    "confidence": 0.7,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_gpio_interrupt_loopback_with_s3jtag": {
+    "exp_id": "5a871b19-7672-4cae-989a-2b5e92188940",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774578439.664576,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_uart_rxd_detect_with_s3jtag": {
+    "exp_id": "2edb8e8c-c68d-4cba-937c-b5f2bee9d475",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774578458.402588,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_uart_banner_with_s3jtag": {
+    "exp_id": "3aac4187-dfaf-4a32-b776-d754f0f8fb71",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774578471.5044885,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_spi_loopback_with_s3jtag": {
+    "exp_id": "64a92a87-4741-4d6e-ae75-913554a465b6",
+    "success_count": 2,
+    "failure_count": 0,
+    "last_seen": 1774578487.3738058,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "rp2040_pico_s3jtag|rp2040_adc_loopback_s3jtag": {
+    "exp_id": "d0161f08-72c6-45ab-bb4c-2ed941e0a1a2",
+    "success_count": 1,
+    "failure_count": 2,
+    "last_seen": 1774605336.1025321,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "71f98376-317e-4efd-800f-294518d6a43f",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      },
+      "check_mailbox": {
+        "exp_id": "3f0b419a-2f6f-4598-868e-53959d2bc5ed",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox read failed: parse_failed"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag_uart|rp2040_full_suite_s3jtag": {
+    "exp_id": "2026-03-27_09-12-09_rp2040_pico_s3jtag_uart_rp2040_full_suite_s3jtag",
+    "success_count": 1,
+    "failure_count": 4,
+    "last_seen": 1774617445.1472645,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "6c77565d-3d32-4200-aad5-ab14b67c4fde",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      },
+      "check_uart": {
+        "exp_id": "61783b90-76c2-4f2c-9494-41c0c068b1c4",
+        "count": 3,
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+      }
+    }
+  },
+  "rp2040_pico_s3jtag_uart|unknown": {
+    "exp_id": "9d222a46-ce38-4fd2-977b-f091b8e23416",
+    "success_count": 2,
+    "failure_count": 1,
+    "last_seen": 1774617134.5918584,
+    "confidence": 0.6,
+    "known_failures": {
+      "load": {
+        "exp_id": "bc6a973f-8f52-4c1c-825d-99153d4f7e80",
+        "count": 1,
+        "last_raw": "[rp2040_pico_s3jtag_uart] unknown: failed — stages: preflight, build, run, check — failure: load — flash attempt failed"
+      }
+    }
   }
 }

@@ -8,3 +8,9 @@ build:
   artifact_stem: pico_uart_banner_s3jtag
 flash:
   method: gdb_swd
+golden:
+  status: verified
+  run_id: 2026-03-27_09-11-30_rp2040_pico_s3jtag_uart_rp2040_uart_banner_with_s3jtag
+  date: "2026-03-27"
+  instrument: s3jtag_rp2040_lab
+  instrument_ip: 192.168.2.251

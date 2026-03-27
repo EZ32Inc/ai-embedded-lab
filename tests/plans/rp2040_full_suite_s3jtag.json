@@ -1,0 +1,56 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_full_suite_s3jtag",
+  "board": "rp2040_pico_s3jtag_uart",
+  "dut": "rp2040_pico",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": ["rule_d", "full_suite", "uart"],
+  "covers": [
+    "minimal_runtime", "internal_temp", "timer",
+    "gpio_level", "gpio_signature", "pwm",
+    "gpio_irq", "uart", "spi", "adc"
+  ],
+  "notes": "Rule D convenience layer. Single firmware runs all 13 sub-tests in sequence and reports via UART through the S3JTAG Web UART bridge. No new wiring required beyond the existing full-suite bench contract. GPIO16->GPIO17 is reused for level, signature, PWM and IRQ sub-tests.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/full_suite_s3jtag/firmware",
+    "artifact_stem": "pico_full_suite_s3jtag",
+    "build_dir": "artifacts/build_rp2040_full_suite_s3jtag"
+  },
+  "observe_uart": {
+    "enabled": true,
+    "backend": "esp32jtag_web_uart",
+    "baud": 115200,
+    "profile": "rp2040",
+    "duration_s": 25,
+    "expect_patterns": [
+      "AEL_SUITE_FULL DONE passed=13 failed=0"
+    ]
+  },
+  "bench_setup": {
+    "notes": "Same wiring as rp2040_s3jtag_full pack. No additional jumpers required. GPIO16->GPIO17 is reused for gpio_level, gpio_sig, pwm, and irq sub-tests.",
+    "loopback_connections": [
+      {"from": "RP2040 GPIO3 (SPI0_TX)", "to": "RP2040 GPIO4 (SPI0_RX)", "kind": "local_jumper"},
+      {"from": "RP2040 GPIO16",          "to": "RP2040 GPIO17",           "kind": "local_jumper"},
+      {"from": "RP2040 GPIO22",          "to": "RP2040 GPIO26/ADC0",      "kind": "local_jumper"}
+    ],
+    "instrument_roles": [
+      {
+        "role": "control_instrument",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "192.168.4.1:4242",
+        "required": true
+      },
+      {
+        "role": "uart_instrument",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "https://192.168.4.1:443",
+        "required": true
+      }
+    ]
+  }
+}
