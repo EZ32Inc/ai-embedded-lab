@@ -113,6 +113,33 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### Brownfield Embedded Project — AEL Drives a Real Firmware Project to Open-Source Release (2026-03-27)
+
+AEL was applied to [`esp32jtag_firmware`](https://github.com/EZ32Inc/esp32jtag_firmware), an existing embedded firmware project for the ESP32JTAG instrument, as a concrete real-world test of AEL's engineering capabilities beyond greenfield prototyping.
+
+This was not a demo or a toy project. The firmware had real hardware dependencies, an existing architecture, and outstanding work: bugs to fix, features to complete, issues to resolve, and a release to prepare. AEL was used to take over and drive that remaining work.
+
+**What AEL did:**
+
+- Reviewed the existing codebase and understood its architecture without starting from scratch
+- Identified and fixed bugs across the firmware stack
+- Resolved hardware bring-up issues encountered during integration testing
+- Completed remaining features required for the release milestone
+- Ran the project through validation against real hardware (RP2040 Pico DUT via SWD)
+- Prepared the project for open-source publication
+
+**The result:**
+
+The firmware project was brought to release state and published as an open-source project. AEL contributed materially to the speed and quality of that outcome.
+
+**Why this matters for AEL:**
+
+Most AI-assisted embedded development work targets fresh greenfield projects. This milestone demonstrates that AEL can be applied to existing brownfield work — reviewing unfamiliar code, working within established constraints, and producing verifiable engineering outcomes on real hardware. That is a meaningfully harder problem, and a more representative test of practical utility.
+
+📄 [ESP32JTAG Firmware Brownfield Onboarding Pattern](ael/civilization/) — experience captured in the Civilization Engine (`92fd939d`)
+
+---
+
 ### AEL Experience System v0.1 — Record, Reuse, and Grow from Engineering Experience (2026-03-22)
 
 AEL now records, reuses, and grows from engineering experience.
