@@ -15,5 +15,5 @@
     "tests/plans/rp2040_uart_banner_with_s3jtag.json",
     "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
   ],
-  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. This pack now includes the validated Stage 1 internal temperature and timer no-wire self-tests alongside the existing Stage 0 and Stage 2 coverage."
+  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. This pack now includes the validated Stage 1 internal temperature and timer no-wire self-tests alongside the existing Stage 0 and Stage 2 coverage. Every formal full-suite closeout must also record the validated esp32jtag_firmware commit used by the bench."
 }
