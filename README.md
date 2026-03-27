@@ -113,34 +113,6 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
-### ESP32 Family Golden Suite Coverage — Major ESP32 Series Validated (2026-03-26)
-
-AEL now has systematic golden test suite coverage across the major ESP32 families:
-
-| Board | Family | Suite |
-|-------|--------|-------|
-| ESP32-WROOM-32D | ESP32 (original) | Rule-B |
-| ESP32-C3 DevKit | ESP32-C3 | Rule-B |
-| ESP32-C5 DevKit | ESP32-C5 | Rule-B |
-| ESP32-C6 DevKit | ESP32-C6 | Rule-B |
-| ESP32-S3 DevKit | ESP32-S3 | Rule-B |
-
-Each board was validated against a consistently structured golden test suite covering the core peripheral set: GPIO, UART, SPI, ADC, PWM, interrupt handling, and board-specific features (WiFi, BLE, sleep modes, temperature sensor, NVS). The suite structure is uniform across families, making coverage directly comparable and results reproducible.
-
-**What this represents for AEL:**
-
-This is not ad-hoc board support added incrementally. Each entry was validated through the same systematic Rule-B methodology, with a firmware asset, a test pack, a golden record, and a detailed closeout report. The result is a coherent cross-family baseline that can serve as a regression anchor as the platform evolves.
-
-**Closeout reports:**
-
-- [`docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md`](docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md)
-- [`docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md)
-- [`docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md)
-- [`docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md`](docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md)
-- [`docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md)
-
----
-
 ### Brownfield Embedded Project — AEL Drives a Real Firmware Project to Open-Source Release (2026-03-27)
 
 AEL was applied to [`esp32jtag_firmware`](https://github.com/EZ32Inc/esp32jtag_firmware), an existing embedded firmware project for the ESP32JTAG instrument, as a concrete real-world test of AEL's engineering capabilities beyond greenfield prototyping.
@@ -170,11 +142,11 @@ Most AI-assisted embedded development work targets fresh greenfield projects. Th
 
 ### RP2040 Pico + S3JTAG — Full Rule-B Golden Suite Validated (2026-03-26 / 2026-03-27)
 
-AEL completed a full Rule-B golden test suite for the **RP2040 Pico** using the **S3JTAG** wireless instrument over WiFi. This is the first validated ARM Cortex-M + wireless instrument combination in AEL: SWD access, flash, and signal verification all happen over the network — no USB cable from the host to the debug probe.
+AEL completed a full Rule-B golden test suite for the **RP2040 Pico** using the **S3JTAG** wireless instrument over WiFi. This is the 2nd validated ARM Cortex-M + wireless instrument combination in AEL after ESP32JTAG: SWD access, flash, and signal verification all happen over the network — no USB cable from the host to the debug probe.
 
 **Instrument setup:**
 
-- S3JTAG (ESP32-S3 based) acts as a networked BMDA (Black Magic Debug App) SWD probe
+- S3JTAG (ESP32-S3 based) acts as a networked BMDA (Black Magic Debug App) SWD probe. It is based on open source project [esp32jtag_firmware](https://github.com/EZ32Inc/esp32jtag_firmware).
 - Connected to RP2040 Pico via SWDIO, SWCLK, and signal wires
 - All AEL pipeline operations (flash, GDB mailbox read, UART observe, signal capture) go through WiFi
 
@@ -211,6 +183,34 @@ A `full_suite` firmware asset runs all 13 sub-tests sequentially and reports res
 - [`docs/rp2040_s3jtag_spi_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_spi_validation_closeout_2026-03-26.md)
 - [`docs/rp2040_s3jtag_uart_validation_closeout_2026-03-26.md`](docs/rp2040_s3jtag_uart_validation_closeout_2026-03-26.md)
 - [`docs/rp2040_s3jtag_timer_led_blink_ctrl_closeout_2026-03-27.md`](docs/rp2040_s3jtag_timer_led_blink_ctrl_closeout_2026-03-27.md)
+
+---
+
+### ESP32 Family Golden Suite Coverage — Major ESP32 Series Validated (2026-03-26)
+
+AEL now has systematic golden test suite coverage across the major ESP32 families:
+
+| Board | Family | Suite |
+|-------|--------|-------|
+| ESP32-WROOM-32D | ESP32 (original) | Rule-B |
+| ESP32-C3 DevKit | ESP32-C3 | Rule-B |
+| ESP32-C5 DevKit | ESP32-C5 | Rule-B |
+| ESP32-C6 DevKit | ESP32-C6 | Rule-B |
+| ESP32-S3 DevKit | ESP32-S3 | Rule-B |
+
+Each board was validated against a consistently structured golden test suite covering the core peripheral set: GPIO, UART, SPI, ADC, PWM, interrupt handling, and board-specific features (WiFi, BLE, sleep modes, temperature sensor, NVS). The suite structure is uniform across families, making coverage directly comparable and results reproducible.
+
+**What this represents for AEL:**
+
+This is not ad-hoc board support added incrementally. Each entry was validated through the same systematic Rule-B methodology, with a firmware asset, a test pack, a golden record, and a detailed closeout report. The result is a coherent cross-family baseline that can serve as a regression anchor as the platform evolves.
+
+**Closeout reports:**
+
+- [`docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md`](docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md)
+- [`docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md)
+- [`docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md)
+- [`docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md`](docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md)
+- [`docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md)
 
 ---
 
