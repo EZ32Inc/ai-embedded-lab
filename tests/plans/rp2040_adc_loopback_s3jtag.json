@@ -1,0 +1,55 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "rp2040_adc_loopback_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "stage2", "adc", "loopback"],
+  "covers": ["adc", "gpio", "mailbox"],
+  "notes": "RP2040 ADC loopback test. GPIO22 is jumpered to GPIO26/ADC0. Firmware drives GPIO22 HIGH then LOW, reads ADC0 each time, and reports PASS via mailbox if high_avg > 3800 and low_avg < 300. detail0 = (high_avg << 16) | low_avg.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/adc_loopback_s3jtag/firmware",
+    "artifact_stem": "pico_adc_loopback_s3jtag",
+    "build_dir": "artifacts/build_rp2040_adc_loopback_s3jtag"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 2.0,
+    "addr": "0x20041F00"
+  },
+  "bench_setup": {
+    "notes": "Requires SWDIO, SWCLK, GND, plus one jumper wire: RP2040 GPIO22 -> RP2040 GPIO26.",
+    "peripheral_signals": [
+      {
+        "role": "ADC0_INPUT",
+        "dut_signal": "GPIO26/ADC0",
+        "direction": "input",
+        "notes": "ADC input. Receives voltage driven by GPIO22 via jumper."
+      },
+      {
+        "role": "ADC_DRIVE",
+        "dut_signal": "GPIO22",
+        "direction": "output",
+        "notes": "Digital output driver. Jumpered to GPIO26/ADC0."
+      },
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "GPIO25",
+        "direction": "output",
+        "notes": "Visual only. Toggles after mailbox result is written."
+      }
+    ],
+    "loopback_connections": [
+      {
+        "from": "RP2040 GPIO22",
+        "to": "RP2040 GPIO26/ADC0",
+        "kind": "local_jumper"
+      }
+    ]
+  }
+}

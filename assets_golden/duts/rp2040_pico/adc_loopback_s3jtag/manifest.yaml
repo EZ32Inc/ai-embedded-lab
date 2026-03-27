@@ -1,0 +1,14 @@
+id: adc_loopback_s3jtag
+name: RP2040 Pico adc_loopback_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG-controlled RP2040 ADC loopback self-test using the AEL mailbox. GPIO22 drives GPIO26/ADC0 high then low; ADC readings are range-checked and reported via mailbox.
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/adc_loopback_s3jtag/firmware
+  artifact_stem: pico_adc_loopback_s3jtag
+flash:
+  method: gdb_swd
+features:
+  - adc
+  - gpio
+  - mailbox
