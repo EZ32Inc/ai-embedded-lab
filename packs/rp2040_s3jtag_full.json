@@ -13,7 +13,8 @@
     "tests/plans/rp2040_gpio_interrupt_loopback_with_s3jtag.json",
     "tests/plans/rp2040_uart_rxd_detect_with_s3jtag.json",
     "tests/plans/rp2040_uart_banner_with_s3jtag.json",
-    "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
+    "tests/plans/rp2040_spi_loopback_with_s3jtag.json",
+    "tests/plans/rp2040_adc_loopback_s3jtag.json"
   ],
-  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. This pack now includes the validated Stage 1 internal temperature and timer no-wire self-tests alongside the existing Stage 0 and Stage 2 coverage. The validated fixed full-suite wiring is: GPIO18 -> GPIO15/TARGETIN, GPIO0 -> GPIO7, GPIO1 -> GPIO6, GPIO3 -> GPIO4, GPIO16 -> GPIO17, plus SWDIO/SWCLK/GND. Every formal full-suite closeout must also record the validated esp32jtag_firmware commit used by the bench."
+  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. This pack now includes the validated Stage 1 internal temperature and timer no-wire self-tests alongside the existing Stage 0 and Stage 2 coverage. The validated fixed full-suite wiring is: GPIO18 -> GPIO15/TARGETIN, GPIO0 -> GPIO7, GPIO1 -> GPIO6, GPIO3 -> GPIO4, GPIO16 -> GPIO17, GPIO22 -> GPIO26/ADC0, plus SWDIO/SWCLK/GND. Every formal full-suite closeout must also record the validated esp32jtag_firmware commit used by the bench."
 }
