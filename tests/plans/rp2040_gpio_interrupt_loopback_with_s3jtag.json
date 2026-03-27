@@ -1,0 +1,120 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_gpio_interrupt_loopback_with_s3jtag",
+  "board": "rp2040_pico_s3jtag_uart",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_uart_console",
+    "has_gpio"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path",
+    "loopback",
+    "gpio_interrupt"
+  ],
+  "covers": [
+    "gpio",
+    "interrupt"
+  ],
+  "notes": "Programs RP2040 over S3JTAG SWD and validates a local GPIO16-to-GPIO17 interrupt loopback through bounded PASS messages on the ESP32-S3 internal Web UART bridge.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/gpio_interrupt_loopback_s3jtag/firmware",
+    "artifact_stem": "pico_gpio_interrupt_loopback_s3jtag",
+    "build_dir": "artifacts/build_rp2040_gpio_interrupt_loopback_s3jtag"
+  },
+  "observe_uart": {
+    "enabled": true,
+    "backend": "esp32jtag_web_uart",
+    "baud": 115200,
+    "profile": "rp2040",
+    "duration_s": 7,
+    "expect_patterns": [
+      "AEL_READY RP2040 GPIO_IRQ PASS"
+    ],
+    "reject_patterns": [
+      "AEL_READY RP2040 GPIO_IRQ FAIL"
+    ]
+  },
+  "bench_setup": {
+    "instrument_roles": [
+      {
+        "role": "control_instrument",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "192.168.4.1:4242",
+        "required": true,
+        "notes": "Used for RP2040 SWD flash/load via S3JTAG."
+      },
+      {
+        "role": "uart_instrument",
+        "instrument_id": "s3jtag_rp2040_lab",
+        "endpoint": "https://192.168.4.1:443",
+        "required": true,
+        "notes": "Uses the ESP32-S3 devkit internal Web UART bridge exposed by the same S3JTAG instrument."
+      }
+    ],
+    "serial_console": {
+      "port": "s3jtag_internal_web_uart",
+      "baud": 115200,
+      "required": true
+    },
+    "peripheral_signals": [
+      {
+        "role": "pulse_out",
+        "dut_signal": "GPIO16",
+        "direction": "output",
+        "notes": "Outputs the fixed interrupt pulse burst."
+      },
+      {
+        "role": "irq_in",
+        "dut_signal": "GPIO17",
+        "direction": "input",
+        "notes": "Counts rising-edge interrupts from GPIO16."
+      },
+      {
+        "role": "uart_tx",
+        "dut_signal": "GPIO0/UART0_TX",
+        "direction": "output",
+        "notes": "Connect RP2040 UART0 TX to the S3JTAG internal UART RX on GPIO7."
+      },
+      {
+        "role": "uart_rx",
+        "dut_signal": "GPIO1/UART0_RX",
+        "direction": "input",
+        "notes": "Connect RP2040 UART0 RX to the S3JTAG internal UART TX on GPIO6."
+      }
+    ],
+    "bench_connections": [
+      {
+        "from": "RP2040 GPIO16",
+        "to": "RP2040 GPIO17"
+      },
+      {
+        "from": "RP2040 UART0 TX",
+        "to": "S3JTAG UART1 RX (GPIO7)"
+      },
+      {
+        "from": "RP2040 UART0 RX",
+        "to": "S3JTAG UART1 TX (GPIO6)"
+      },
+      {
+        "from": "GND",
+        "to": "S3JTAG GND"
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}

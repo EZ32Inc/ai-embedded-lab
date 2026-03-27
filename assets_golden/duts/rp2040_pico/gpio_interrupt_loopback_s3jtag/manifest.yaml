@@ -1,0 +1,13 @@
+id: gpio_interrupt_loopback_s3jtag
+name: RP2040 Pico gpio_interrupt_loopback_s3jtag
+board: rp2040_pico_s3jtag_uart
+purpose: S3JTAG-controlled RP2040 GPIO output-to-input interrupt loopback asset using the ESP32-S3 internal Web UART bridge for bounded result reporting
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/gpio_interrupt_loopback_s3jtag/firmware
+  artifact_stem: pico_gpio_interrupt_loopback_s3jtag
+flash:
+  method: gdb_swd
+pins:
+  pulse_out: 16
+  irq_in: 17
