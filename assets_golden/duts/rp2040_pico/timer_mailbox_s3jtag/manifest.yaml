@@ -1,0 +1,14 @@
+id: timer_mailbox_s3jtag
+name: RP2040 Pico timer_mailbox_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG-controlled RP2040 timer no-wire self-test using the AEL mailbox
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/timer_mailbox_s3jtag/firmware
+  artifact_stem: pico_timer_mailbox_s3jtag
+flash:
+  method: gdb_swd
+features:
+  - timer
+  - alarm
+  - mailbox
