@@ -181,13 +181,27 @@ Convenience Layer（便捷层）：
 
 #### 当前已验证 Stage 2
 
+当前 bench 已验证并固定下来的 Stage 2 接线契约是：
+- `RP2040 GPIO18 -> S3JTAG GPIO15 / TARGETIN`
+- `RP2040 GPIO0 -> S3JTAG GPIO7`
+- `RP2040 GPIO1 -> S3JTAG GPIO6`
+- `RP2040 GPIO3 -> RP2040 GPIO4`
+- `RP2040 GPIO16 -> RP2040 GPIO17`
+- 以及 `SWDIO / SWCLK / GND`
+
+这组固定 wiring 已用于 formal full-suite live validation，后续 Stage 2 资产不应再漂移回旧的 `GPIO16 -> TARGETIN` 契约。
+
 | 测试名 | 作用 | 接线要求 | 状态 |
 |--------|------|----------|------|
-| `test_gpio_level_low` | TARGETIN steady-low | 需要目标 GPIO -> TARGETIN | 已验证 |
-| `test_gpio_level_high` | TARGETIN steady-high | 需要目标 GPIO -> TARGETIN | 已验证 |
-| `test_gpio_signature_100hz` | TARGETIN low-frequency toggle | 需要目标 GPIO -> TARGETIN | 已验证 |
-| `test_gpio_signature_1khz` | TARGETIN 1 kHz toggle | 需要目标 GPIO -> TARGETIN | 已验证 |
-| `test_uart_banner` | Web UART bridge 验证 | 需要 UART TX/RX/GND 接线 | 已验证 |
+| `test_gpio_level_low` | TARGETIN steady-low | `GPIO18 -> TARGETIN` | 已验证 |
+| `test_gpio_level_high` | TARGETIN steady-high | `GPIO18 -> TARGETIN` | 已验证 |
+| `test_gpio_signature_100hz` | TARGETIN low-frequency toggle | `GPIO18 -> TARGETIN` | 已验证 |
+| `test_gpio_signature_1khz` | TARGETIN 1 kHz toggle | `GPIO18 -> TARGETIN` | 已验证 |
+| `test_pwm_capture_with_s3jtag` | PWM 输出经 TARGETIN 验证 | `GPIO18 -> TARGETIN` | 已验证 |
+| `test_gpio_interrupt_loopback_with_s3jtag` | 本地 GPIO 中断回环 | `GPIO16 -> GPIO17` | 已验证 |
+| `test_uart_rxd_detect_with_s3jtag` | UART RXD 原始跳变检测 | `GPIO0 -> GPIO7` | 已验证 |
+| `test_uart_banner` | Web UART bridge 验证 | `GPIO0 -> GPIO7`, `GPIO1 -> GPIO6` | 已验证 |
+| `test_spi_loopback_with_s3jtag` | SPI MOSI/MISO 本地回环并经 UART 报告 | `GPIO3 -> GPIO4`，并保留 UART 线 | 已验证 |
 
 #### 建议新增的 Stage 2 feature tests
 
@@ -285,12 +299,26 @@ tests/plans/rp2040_pico_rule_b/
 - Stage 0:
   - `minimal_runtime_mailbox_s3jtag`（当前 hello-equivalent）
 - Stage 1:
-  - 预留给未来 no-wire self-tests
+  - `minimal_runtime_mailbox_s3jtag`
+  - `internal_temp_mailbox_s3jtag`
+  - `timer_mailbox_s3jtag`
 - Stage 2:
-  - TARGETIN low/high/100Hz/1kHz
-  - UART banner
+  - TARGETIN low/high/100Hz/1kHz（统一使用 `GPIO18 -> TARGETIN`）
+  - `pwm_capture_with_s3jtag`
+  - `gpio_interrupt_loopback_with_s3jtag`
+  - `uart_rxd_detect_with_s3jtag`
+  - `uart_banner_with_s3jtag`
+  - `spi_loopback_with_s3jtag`
 - Full:
-  - 当前已验证的 Stage 0 + Stage 2 truth-layer tests
+  - 当前已验证的 Stage 0 + Stage 1 + Stage 2 truth-layer tests
+
+固定 full-suite wiring 说明：
+- `RP2040 GPIO18 -> S3JTAG GPIO15 / TARGETIN`
+- `RP2040 GPIO0 -> S3JTAG GPIO7`
+- `RP2040 GPIO1 -> S3JTAG GPIO6`
+- `RP2040 GPIO3 -> RP2040 GPIO4`
+- `RP2040 GPIO16 -> RP2040 GPIO17`
+- 以及 `SWDIO / SWCLK / GND`
 
 ---
 
