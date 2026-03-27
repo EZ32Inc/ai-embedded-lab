@@ -1,0 +1,12 @@
+id: pwm_capture_s3jtag
+name: RP2040 Pico pwm_capture_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG-controlled RP2040 PWM output asset using TARGETIN frequency and duty validation
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/pwm_capture_s3jtag/firmware
+  artifact_stem: pico_pwm_capture_s3jtag
+flash:
+  method: gdb_swd
+pins:
+  pwm_out: 18

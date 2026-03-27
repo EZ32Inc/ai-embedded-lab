@@ -1,0 +1,60 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_pwm_capture_with_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_gpio"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path",
+    "pwm"
+  ],
+  "covers": [
+    "pwm"
+  ],
+  "notes": "Programs RP2040 over SWD and validates a 1 kHz 50% PWM output on GPIO18 through S3JTAG TARGETIN.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/pwm_capture_s3jtag/firmware",
+    "artifact_stem": "pico_pwm_capture_s3jtag",
+    "build_dir": "artifacts/build_rp2040_pwm_capture_s3jtag"
+  },
+  "pin": "sig",
+  "duration_s": 1.0,
+  "min_edges": 100,
+  "max_edges": 5000,
+  "min_freq_hz": 800.0,
+  "max_freq_hz": 1200.0,
+  "duty_min": 0.45,
+  "duty_max": 0.55,
+  "instrument": {
+    "instance_id": "s3jtag_rp2040_lab",
+    "label": "S3JTAG"
+  },
+  "bench_setup": {
+    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route RP2040 GPIO18 PWM output into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
+    "dut_to_instrument": [
+      {
+        "dut_gpio": "GPIO18/PWM_OUT",
+        "inst_gpio": 15,
+        "expect": "toggle",
+        "freq_hz": 1000
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}
