@@ -13,14 +13,14 @@ Bench setup validated:
 - `S3JTAG SWCLK GPIO4` -> `RP2040 SWCLK`
 - `S3JTAG SWDIO GPIO5` -> `RP2040 SWDIO`
 - `S3JTAG GND` -> `RP2040 GND`
-- `RP2040 GPIO16` -> `S3JTAG TARGETIN GPIO15`
+- `RP2040 GPIO18` -> `S3JTAG TARGETIN GPIO15`
 - Host Wi-Fi joined the `esp32jtag_0F91` AP and reached the instrument at `192.168.4.1`
 
 Result summary:
 - RP2040 golden firmware build: PASS
 - RP2040 flash via `S3JTAG` BMP/GDB remote: PASS
 - RP2040 post-flash image verify via `compare-sections`: PASS
-- firmware-side `TARGETIN(GPIO15)` detect of RP2040 `GPIO16` 1 kHz output: PASS
+- firmware-side `TARGETIN(GPIO15)` detect of RP2040 `GPIO18` 1 kHz output: PASS
 - formal AEL smoke pack `packs/smoke_rp2040_s3jtag.json`: PASS
 - successful formal run id: `2026-03-26_05-54-03_rp2040_pico_s3jtag_rp2040_gpio_signature_with_s3jtag`
 

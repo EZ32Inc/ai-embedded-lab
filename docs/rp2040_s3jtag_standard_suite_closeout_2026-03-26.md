@@ -16,7 +16,7 @@ Scope:
 Bench shape validated:
 - `S3JTAG GPIO4` -> `RP2040 SWCLK`
 - `S3JTAG GPIO5` -> `RP2040 SWDIO`
-- `S3JTAG GPIO15 TARGETIN` <- `RP2040 GPIO16`
+- `S3JTAG GPIO15 TARGETIN` <- `RP2040 GPIO18`
 - common `GND`
 - no additional UART, SPI, ADC, or reset wiring
 

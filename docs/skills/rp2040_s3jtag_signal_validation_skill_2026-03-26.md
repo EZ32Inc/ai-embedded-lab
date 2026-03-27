@@ -27,7 +27,7 @@ Validated bench shape:
 
 Validated target on 2026-03-26:
 - `RP2040 Pico`
-- target output: `GPIO16`
+- target output: `GPIO18`
 - signal: about `1 kHz` square wave
 - validated formal pack: `packs/smoke_rp2040_s3jtag.json`
 - validated successful run id: `2026-03-26_05-54-03_rp2040_pico_s3jtag_rp2040_gpio_signature_with_s3jtag`

@@ -30,7 +30,7 @@
     "label": "S3JTAG"
   },
   "name": "rp2040_gpio_level_low_with_s3jtag",
-  "notes": "Programs RP2040 over SWD and validates GPIO16 held low through S3JTAG TARGETIN.",
+  "notes": "Programs RP2040 over SWD and validates GPIO18 held low through S3JTAG TARGETIN.",
   "build": {
     "project_dir": "assets_golden/duts/rp2040_pico/gpio_level_low_s3jtag/firmware",
     "artifact_stem": "pico_gpio_level_low_s3jtag",
@@ -41,10 +41,10 @@
   "max_edges": 4,
   "expected_state": "low",
   "bench_setup": {
-    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route RP2040 GPIO16 into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
+    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route RP2040 GPIO18 into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
     "dut_to_instrument": [
       {
-        "dut_gpio": "GPIO16",
+        "dut_gpio": "GPIO18",
         "inst_gpio": 15,
         "expect": "low",
         "freq_hz": 0

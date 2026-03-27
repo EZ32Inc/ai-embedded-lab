@@ -44,10 +44,10 @@
     "label": "S3JTAG"
   },
   "bench_setup": {
-    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route one RP2040 GPIO output under test into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
+    "notes": "Connect RP2040 SWDIO/SWCLK to S3JTAG GPIO5/GPIO4 via P3, and route one RP2040 GPIO18 into S3JTAG Target In on GPIO15. RP2040 reset is not connected in this setup.",
     "dut_to_instrument": [
       {
-        "dut_gpio": "GPIO output under test",
+        "dut_gpio": "GPIO18",
         "inst_gpio": 15,
         "expect": "toggle",
         "freq_hz": 1000
