@@ -33,7 +33,7 @@ int main(void) {
     unsigned pass_count = 0;
     bool led = false;
     uint64_t next_led_us = time_us_64() + 300000;
-    uint64_t next_check_us = time_us_64() + 1000000;
+    uint64_t next_check_us = time_us_64() + 3000000;
 
     printf("AEL_READY RP2040 SPI BOOT\n");
     fflush(stdout);
@@ -45,7 +45,17 @@ int main(void) {
             gpio_put(LED_PIN, led);
             next_led_us = now + 300000;
         }
+        if (now + 500000 < next_check_us) {
+            static uint64_t next_wait_log_us = 0;
+            if (now >= next_wait_log_us) {
+                printf("AEL_READY RP2040 SPI WAIT\n");
+                fflush(stdout);
+                next_wait_log_us = now + 1000000;
+            }
+        }
         if (now >= next_check_us) {
+            printf("AEL_READY RP2040 SPI XFER\n");
+            fflush(stdout);
             memset(rx, 0, sizeof(rx));
             spi_write_read_blocking(spi0, pattern, rx, sizeof(pattern));
             if (memcmp(pattern, rx, sizeof(pattern)) == 0) {
