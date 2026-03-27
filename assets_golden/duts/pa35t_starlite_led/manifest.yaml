@@ -41,7 +41,9 @@ pins:
   la_ch_in[3]:   D15   # LVCMOS33 → cnt[4] =  3.125 MHz  (JM1-PIN12)
 
 la_probe:
-  instrument: s3jtag
+  instrument: esp32jtag
+  instance_id: esp32jtag_rp2040_lab
+  instrument_ip: 192.168.2.63
   wiring:
     - { fpga_pin: F13, fpga_port: "la_ch_in[0]", inst_pin: PA0, expected_hz: 25000000 }
     - { fpga_pin: F14, fpga_port: "la_ch_in[1]", inst_pin: PA1, expected_hz: 12500000 }

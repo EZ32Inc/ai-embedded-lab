@@ -10,12 +10,12 @@ Design: LED blink with la_ch_in[3:0] = cnt[4:1]
   la_ch_in[2] = cnt[3] →  6.250 MHz   (JM1-PIN10, D14)
   la_ch_in[3] = cnt[4] →  3.125 MHz   (JM1-PIN12, D15)
 
-Wiring to S3JTAG:
-  FPGA JM1-PIN6  (F13, la_ch_in[0]) → S3JTAG PA0
-  FPGA JM1-PIN8  (F14, la_ch_in[1]) → S3JTAG PA1
-  FPGA JM1-PIN10 (D14, la_ch_in[2]) → S3JTAG PA2
-  FPGA JM1-PIN12 (D15, la_ch_in[3]) → S3JTAG PA3
-  FPGA GND → S3JTAG GND
+Wiring to ESP32JTAG:
+  FPGA JM1-PIN6  (F13, la_ch_in[0]) → ESP32JTAG PA0
+  FPGA JM1-PIN8  (F14, la_ch_in[1]) → ESP32JTAG PA1
+  FPGA JM1-PIN10 (D14, la_ch_in[2]) → ESP32JTAG PA2
+  FPGA JM1-PIN12 (D15, la_ch_in[3]) → ESP32JTAG PA3
+  FPGA GND → ESP32JTAG GND
 
 Test stages:
   Stage 1 — Frequency accuracy (each channel vs expected)
@@ -23,7 +23,7 @@ Test stages:
   Stage 3 — Ratio validation (adjacent channels 2:1)
 
 Usage:
-  python3 experiments/pa35t_starlite/counter_freq_verify.py [--ip 192.168.2.251]
+  python3 experiments/pa35t_starlite/counter_freq_verify.py [--ip 192.168.2.63]
 """
 
 import argparse
@@ -65,7 +65,7 @@ def make_probe_cfg(ip: str) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="PA35T counter frequency verification")
-    parser.add_argument("--ip", default="192.168.2.251", help="S3JTAG IP address")
+    parser.add_argument("--ip", default="192.168.2.63", help="ESP32JTAG IP address")
     parser.add_argument("--json-out", default=None, help="Write result JSON to file")
     args = parser.parse_args()
 
@@ -73,7 +73,7 @@ def main() -> int:
 
     print("=" * 60)
     print("PA35T StarLite — Counter Frequency Verification")
-    print(f"  S3JTAG: https://{args.ip}")
+    print(f"  ESP32JTAG: https://{args.ip}")
     print(f"  Sample rate: {observe_fpga_counter_freq._SAMPLE_RATE_HZ/1e6:.0f} MHz")
     print("  Channels:")
     for ch in CHANNELS:
