@@ -113,6 +113,34 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
+### ESP32 Family Golden Suite Coverage — Major ESP32 Series Validated (2026-03-26)
+
+AEL now has systematic golden test suite coverage across the major ESP32 families:
+
+| Board | Family | Suite |
+|-------|--------|-------|
+| ESP32-WROOM-32D | ESP32 (original) | Rule-B |
+| ESP32-C3 DevKit | ESP32-C3 | Rule-B |
+| ESP32-C5 DevKit | ESP32-C5 | Rule-B |
+| ESP32-C6 DevKit | ESP32-C6 | Rule-B |
+| ESP32-S3 DevKit | ESP32-S3 | Rule-B |
+
+Each board was validated against a consistently structured golden test suite covering the core peripheral set: GPIO, UART, SPI, ADC, PWM, interrupt handling, and board-specific features (WiFi, BLE, sleep modes, temperature sensor, NVS). The suite structure is uniform across families, making coverage directly comparable and results reproducible.
+
+**What this represents for AEL:**
+
+This is not ad-hoc board support added incrementally. Each entry was validated through the same systematic Rule-B methodology, with a firmware asset, a test pack, a golden record, and a detailed closeout report. The result is a coherent cross-family baseline that can serve as a regression anchor as the platform evolves.
+
+**Closeout reports:**
+
+- [`docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md`](docs/reports/esp32_wroom32d_rule_b_closeout_2026-03-25.md)
+- [`docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c3_devkit_rule_b_closeout_2026-03-26.md)
+- [`docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32c5_devkit_rule_b_closeout_2026-03-26.md)
+- [`docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md`](docs/reports/esp32c6_devkit_rule_b_closeout_2026-03-25.md)
+- [`docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md`](docs/reports/esp32s3_devkit_rule_b_closeout_2026-03-26.md)
+
+---
+
 ### Brownfield Embedded Project — AEL Drives a Real Firmware Project to Open-Source Release (2026-03-27)
 
 AEL was applied to [`esp32jtag_firmware`](https://github.com/EZ32Inc/esp32jtag_firmware), an existing embedded firmware project for the ESP32JTAG instrument, as a concrete real-world test of AEL's engineering capabilities beyond greenfield prototyping.
