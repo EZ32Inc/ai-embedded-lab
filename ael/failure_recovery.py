@@ -13,6 +13,13 @@ FAILURE_TRANSPORT_ERROR = "transport_error"
 FAILURE_TIMEOUT = "timeout"
 FAILURE_NON_RECOVERABLE = "non_recoverable"
 FAILURE_UNKNOWN = "unknown"
+# Flash completed on the programmer side but the firmware did not reach
+# expected operational state as confirmed via the UART serial log.
+# This is distinct from transport_error (serial port unavailable) and from
+# verification_miss (DUT signal not seen).  It pinpoints a post-flash
+# runtime bring-up failure so it is never misreported as a network or test
+# failure.
+FAILURE_RUNTIME_BRINGUP_FAILED = "runtime_bringup_failed"
 
 KNOWN_FAILURE_KINDS = {
     FAILURE_VERIFICATION_MISS,
@@ -22,6 +29,7 @@ KNOWN_FAILURE_KINDS = {
     FAILURE_TIMEOUT,
     FAILURE_NON_RECOVERABLE,
     FAILURE_UNKNOWN,
+    FAILURE_RUNTIME_BRINGUP_FAILED,
 }
 
 _RECOVERY_ACTION_ALIASES = {
