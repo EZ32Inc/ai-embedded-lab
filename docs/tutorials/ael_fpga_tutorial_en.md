@@ -387,16 +387,20 @@ Based on this example, we can now summarize a clear FPGA workflow template.
 
 ## 10. What this suggests for future FPGA projects
 
-Even though this tutorial is based on a simple LED project, it already shows how more advanced FPGA projects can be brought into AEL.
+Even though this tutorial is based on a simple LED project, it already points toward a much wider roadmap.
 
-Natural future extensions include:
+A key observation from this work is that **AI becomes more valuable as FPGA projects grow more complex** — not less. Simple tasks are still easy for a human to finish manually. But large designs with many source files, long build loops, and interactions across subsystems are exactly where an AI-driven engineering loop creates disproportionate leverage.
 
-- more GPIO / counter / timer verification
-- SPI / UART / I2C / JTAG related logic
-- more complex state-machine validation
-- peripheral interface waveform checks
-- internal signal capture through Xilinx ILA
-- external signal capture through ESP32JTAG / S3JTAG
+The highest-priority directions identified for AEL FPGA development are:
+
+1. **Add simulation to the loop** — integrate Verilator or Icarus Verilog, let AEL generate and refine testbenches, and compare simulation results against real hardware measurements.
+2. **Add internal observability via Xilinx ILA / XVC** — move beyond board-level signal capture into internal FPGA signal visibility, using ESP32JTAG's XVC support as the transport.
+3. **Teach AEL to read and act on timing, utilization, and DRC reports** — move from "timing passes" to active timing optimization, report-driven RTL changes, and floorplanning guidance.
+
+Further directions include parameter sweeps for design-space exploration, CDC / reset topology review, and eventually a goal-driven agent that iterates until a target Fmax, area, or verification objective is met.
+
+For the full roadmap and detailed discussion of each direction, see:
+→ [AEL FPGA Roadmap Memo](ael_fpga_next_steps_memo_en.md)
 
 In other words, LED blink is only the entry point, not the destination.
 
