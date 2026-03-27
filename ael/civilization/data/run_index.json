@@ -1171,10 +1171,10 @@
   },
   "rp2040_pico_s3jtag|unknown": {
     "exp_id": "b2ef1853-2072-431c-8bc9-a7033f8ddbb7",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 0,
-    "last_seen": 1774618193.657584,
-    "confidence": 0.5,
+    "last_seen": 1774626600.8683999,
+    "confidence": 0.6,
     "known_failures": {}
   }
 }
