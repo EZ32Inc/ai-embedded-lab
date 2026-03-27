@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "rp2040_internal_temp_mailbox_s3jtag",
+  "board": "rp2040_pico_s3jtag",
+  "dut": "rp2040_pico",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "stage1", "internal_temp", "no_wire"],
+  "covers": ["adc", "temp_sensor", "mailbox"],
+  "notes": "No-wire RP2040 internal temperature self-test for the S3JTAG bench. The DUT reads the internal temperature ADC channel and reports PASS/FAIL through the AEL mailbox. No TARGETIN or UART wiring is required.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/internal_temp_mailbox_s3jtag/firmware",
+    "artifact_stem": "pico_internal_temp_mailbox_s3jtag",
+    "build_dir": "artifacts/build_rp2040_internal_temp_mailbox_s3jtag"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 2.0,
+    "addr": "0x20041F00"
+  },
+  "bench_setup": {
+    "notes": "No-wire RP2040 Stage 1 self-test. Requires only SWDIO, SWCLK, and GND. No UART, TARGETIN, or local loopback jumper is required.",
+    "peripheral_signals": [
+      {
+        "role": "internal_temp_sensor",
+        "dut_signal": "ADC4/TEMP_SENSOR",
+        "direction": "internal",
+        "notes": "Internal RP2040 temperature sensor path read through the ADC peripheral."
+      },
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "GPIO25",
+        "direction": "output",
+        "notes": "Visual only. Toggles after mailbox PASS/FAIL is written."
+      }
+    ]
+  }
+}

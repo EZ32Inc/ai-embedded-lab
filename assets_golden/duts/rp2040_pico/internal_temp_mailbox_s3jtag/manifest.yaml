@@ -1,0 +1,14 @@
+id: internal_temp_mailbox_s3jtag
+name: RP2040 Pico internal_temp_mailbox_s3jtag
+board: rp2040_pico_s3jtag
+purpose: S3JTAG-controlled RP2040 internal temperature no-wire self-test using the AEL mailbox
+build:
+  type: pico
+  project_dir: assets_golden/duts/rp2040_pico/internal_temp_mailbox_s3jtag/firmware
+  artifact_stem: pico_internal_temp_mailbox_s3jtag
+flash:
+  method: gdb_swd
+features:
+  - adc
+  - temp_sensor
+  - mailbox

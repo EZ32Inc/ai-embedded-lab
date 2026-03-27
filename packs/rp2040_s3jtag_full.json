@@ -3,6 +3,7 @@
   "description": "Rule-B full pack for RP2040 via S3JTAG. This convenience layer currently consists of the Stage 0 mailbox baseline plus the currently validated Stage 2 wired integration tests.",
   "tests": [
     "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json",
+    "tests/plans/rp2040_internal_temp_mailbox_s3jtag.json",
     "tests/plans/rp2040_gpio_level_low_with_s3jtag.json",
     "tests/plans/rp2040_gpio_level_high_with_s3jtag.json",
     "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
@@ -13,5 +14,5 @@
     "tests/plans/rp2040_uart_banner_with_s3jtag.json",
     "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
   ],
-  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. Stage 1 no-wire self-tests are still a design gap and will be inserted here once formalized."
+  "notes": "Pack-level board is intentionally omitted so each test keeps its own board profile. This pack now includes the validated Stage 1 internal temperature no-wire self-test alongside the existing Stage 0 and Stage 2 coverage."
 }

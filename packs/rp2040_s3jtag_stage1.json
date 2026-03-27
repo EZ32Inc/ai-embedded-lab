@@ -1,9 +1,10 @@
 {
   "name": "rp2040_s3jtag_stage1",
-  "description": "Rule-B Stage 1 for RP2040 via S3JTAG. This stage is reserved for future no-wire self-tests such as internal temperature, timer/mailbox, PWM LED, and flash-read checks. No validated Stage 1 no-wire tests beyond the current Stage 0 baseline have been formalized yet.",
+  "description": "Rule-B Stage 1 for RP2040 via S3JTAG: no-wire self-tests beyond the Stage 0 runtime gate, currently including the internal temperature mailbox self-check.",
   "board": "rp2040_pico_s3jtag",
   "tests": [
-    "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json"
+    "tests/plans/rp2040_minimal_runtime_mailbox_s3jtag.json",
+    "tests/plans/rp2040_internal_temp_mailbox_s3jtag.json"
   ],
-  "notes": "Temporary transitional pack. The same mailbox runtime-gate asset is currently the closest available no-wire baseline until dedicated Stage 1 self-tests are added."
+  "notes": "Stage 1 remains no-wire only. Tests in this pack must not require TARGETIN, UART, or manual loopback jumpers beyond the base SWD + GND bring-up wiring."
 }
