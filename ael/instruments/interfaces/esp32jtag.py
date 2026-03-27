@@ -448,6 +448,7 @@ def _capture_signature(probe_cfg, **kwargs):
             "bit": data.get("bit"),
             "pin_bits": data.get("pin_bits") if isinstance(data.get("pin_bits"), dict) else {},
             "targetin_result": dict(data.get("targetin_result") or {}) if isinstance(data.get("targetin_result"), dict) else None,
+            "uart_rxd_result": dict(data.get("uart_rxd_result") or {}) if isinstance(data.get("uart_rxd_result"), dict) else None,
         },
         failure_boundary="signal_capture",
         fallback=CAPTURE_SIGNATURE_FALLBACK,

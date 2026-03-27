@@ -1131,21 +1131,29 @@ class _SignalVerifyAdapter:
             }
 
         if not led_observe_cfg.get("enabled"):
+            web_detect = None
+            source_name = None
             if isinstance(capture.get("targetin_result"), dict):
-                targetin = dict(capture.get("targetin_result") or {})
-                samples = int(targetin.get("samples") or 0)
-                high = int(targetin.get("high") or 0)
-                low = int(targetin.get("low") or 0)
-                transitions = int(targetin.get("transitions") or 0)
-                est_hz = float(targetin.get("estimated_hz") or 0.0)
+                web_detect = dict(capture.get("targetin_result") or {})
+                source_name = "targetin_detect"
+            elif isinstance(capture.get("uart_rxd_result"), dict):
+                web_detect = dict(capture.get("uart_rxd_result") or {})
+                source_name = "uart_rxd_detect"
+
+            if isinstance(web_detect, dict):
+                samples = int(web_detect.get("samples") or 0)
+                high = int(web_detect.get("high") or 0)
+                low = int(web_detect.get("low") or 0)
+                transitions = int(web_detect.get("transitions") or 0)
+                est_hz = float(web_detect.get("estimated_hz") or 0.0)
                 total = high + low
                 duty = (float(high) / float(total)) if total > 0 else 0.0
-                state = str(targetin.get("state") or "").strip().lower()
+                state = str(web_detect.get("state") or "").strip().lower()
                 expected_state = str(test_limits.get("expected_state") or "toggle").strip().lower() or "toggle"
                 if expected_state in {"high", "low"}:
                     ok = state == expected_state
                 else:
-                    ok = str(targetin.get("result") or "").strip().lower() == "pass" and state == "toggle"
+                    ok = str(web_detect.get("result") or "").strip().lower() == "pass" and state == "toggle"
                     if transitions < int(min_edges):
                         ok = False
                 metrics = {
@@ -1174,7 +1182,7 @@ class _SignalVerifyAdapter:
                 if duty_max is not None and duty > float(duty_max):
                     reasons.append("duty_above_max")
                     ok = False
-                measure = {"ok": bool(ok), "metrics": metrics, "reasons": reasons, "source": "targetin_detect"}
+                measure = {"ok": bool(ok), "metrics": metrics, "reasons": reasons, "source": str(source_name or "web_detect")}
             elif signal_checks:
                 check_measures = [_analyze_signal_measure(capture, item) for item in signal_checks]
                 relations_ok, relation_results = _evaluate_signal_relations(check_measures)

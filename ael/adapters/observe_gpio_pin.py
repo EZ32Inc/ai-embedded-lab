@@ -126,11 +126,13 @@ def _triggered_capture(base_url, auth, verify_ssl, timeout_s=5.0) -> bytes:
     return r.content
 
 
-def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None, expected_state: str | None = None,
+def _run_web_test_detect(base_url, auth, verify_ssl, *, test_type: str, pin_name: str,
+                         capture_key: str, blob_label: bytes, log_label: str,
+                         capture_out=None, expected_state: str | None = None,
                          min_edges: int = 1) -> bool:
     start = requests.post(
         f"{base_url}/test/start",
-        json={"test_type": "test_targetin_detect"},
+        json={"test_type": test_type},
         headers={"Content-Type": "application/json"},
         auth=auth,
         timeout=10,
@@ -152,7 +154,7 @@ def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=
     result = result_resp.json() if result_resp.content else {}
 
     if capture_out is not None:
-        capture_out["targetin_result"] = dict(result)
+        capture_out[capture_key] = dict(result)
         capture_out["pin"] = pin_name
         capture_out["pins"] = [pin_name]
         capture_out["pin_bits"] = {pin_name: 0}
@@ -162,7 +164,7 @@ def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=
         capture_out["edges"] = int(result.get("transitions") or 0)
         capture_out["high"] = int(result.get("high") or 0)
         capture_out["low"] = int(result.get("low") or 0)
-        capture_out["blob"] = b"TARGETIN"
+        capture_out["blob"] = blob_label
 
     state = str(result.get("state") or "").strip().lower()
     transitions = int(result.get("transitions") or 0)
@@ -177,13 +179,47 @@ def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=
         )
     if ok:
         print(
-            "Verify: TARGETIN detect OK "
+            f"Verify: {log_label} detect OK "
             f"state={state} samples={int(result.get('samples') or 0)} transitions={transitions} "
             f"estimated_hz={int(result.get('estimated_hz') or 0)}"
         )
     else:
-        print(f"Verify: TARGETIN detect failed ({result})")
+        print(f"Verify: {log_label} detect failed ({result})")
     return ok
+
+
+def _run_targetin_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None, expected_state: str | None = None,
+                         min_edges: int = 1) -> bool:
+    return _run_web_test_detect(
+        base_url,
+        auth,
+        verify_ssl,
+        test_type="test_targetin_detect",
+        pin_name=pin_name,
+        capture_key="targetin_result",
+        blob_label=b"TARGETIN",
+        log_label="TARGETIN",
+        capture_out=capture_out,
+        expected_state=expected_state,
+        min_edges=min_edges,
+    )
+
+
+def _run_uart_rxd_detect(base_url, auth, verify_ssl, pin_name: str, capture_out=None, expected_state: str | None = None,
+                         min_edges: int = 1) -> bool:
+    return _run_web_test_detect(
+        base_url,
+        auth,
+        verify_ssl,
+        test_type="test_uart_rxd_detect",
+        pin_name=pin_name,
+        capture_key="uart_rxd_result",
+        blob_label=b"UART_RXD",
+        log_label="UART_RXD",
+        capture_out=capture_out,
+        expected_state=expected_state,
+        min_edges=min_edges,
+    )
 
 
 def _bit_from_pin(pin: str) -> int:
@@ -236,9 +272,22 @@ def run(probe_cfg, pin, duration_s, expected_hz, min_edges, max_edges, capture_o
 
     _maybe_disable_ssl_warnings(verify_ssl, suppress_ssl_warnings)
 
-    if all(str(name).strip().upper() == "TARGETIN" for name in normalized_pins):
+    upper_pins = [str(name).strip().upper() for name in normalized_pins]
+    if all(name == "TARGETIN" for name in upper_pins):
         print(f"Verify: TARGETIN host={base_url} duration~{duration_s:.2f}s")
         return _run_targetin_detect(
+            base_url,
+            auth,
+            verify_ssl,
+            normalized_pins[0],
+            capture_out=capture_out,
+            expected_state=expected_state,
+            min_edges=min_edges,
+        )
+
+    if all(name in {"UART_RXD", "UART1_RX", "GPIO7"} for name in upper_pins):
+        print(f"Verify: UART_RXD host={base_url} duration~{duration_s:.2f}s")
+        return _run_uart_rxd_detect(
             base_url,
             auth,
             verify_ssl,

@@ -8,6 +8,8 @@
     "tests/plans/rp2040_gpio_signature_100hz_with_s3jtag.json",
     "tests/plans/rp2040_gpio_signature_with_s3jtag.json",
     "tests/plans/rp2040_pwm_capture_with_s3jtag.json",
+    "tests/plans/rp2040_gpio_interrupt_loopback_with_s3jtag.json",
+    "tests/plans/rp2040_uart_rxd_detect_with_s3jtag.json",
     "tests/plans/rp2040_uart_banner_with_s3jtag.json",
     "tests/plans/rp2040_spi_loopback_with_s3jtag.json"
   ],

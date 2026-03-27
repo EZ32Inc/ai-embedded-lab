@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "instrument_specific",
+  "name": "rp2040_uart_rxd_detect_with_s3jtag",
+  "board": "rp2040_pico_s3jtag_uart",
+  "dut": "rp2040_pico",
+  "supported_instruments": [
+    "esp32jtag"
+  ],
+  "applies_to": [
+    "board",
+    "bare_mcu"
+  ],
+  "requires_dut_features": [
+    "programmable_via_swd",
+    "has_uart_console",
+    "has_gpio"
+  ],
+  "requires": {
+    "mailbox": false,
+    "datacapture": false
+  },
+  "labels": [
+    "instrument_path",
+    "uart",
+    "raw_detect"
+  ],
+  "covers": [
+    "uart",
+    "signal_path"
+  ],
+  "notes": "Programs the RP2040 UART banner firmware over S3JTAG SWD, then validates that the S3JTAG UART RX pin sees toggling on GPIO7 using the formal web test API. This isolates the physical TX-to-RX signal path before websocket/UART-text checks.",
+  "build": {
+    "project_dir": "assets_golden/duts/rp2040_pico/uart_banner_s3jtag/firmware",
+    "artifact_stem": "pico_uart_banner_s3jtag",
+    "build_dir": "artifacts/build_rp2040_uart_banner_s3jtag"
+  },
+  "pin": "UART_RXD",
+  "expected_state": "toggle",
+  "min_freq_hz": 1.0,
+  "max_freq_hz": 1000000.0,
+  "duration_s": 0.25,
+  "min_edges": 1,
+  "max_edges": 100000,
+  "instrument": {
+    "instance_id": "s3jtag_rp2040_lab",
+    "label": "S3JTAG"
+  },
+  "bench_setup": {
+    "notes": "Uses the same SWD and UART wiring as the RP2040 UART banner path, but verifies only the raw toggling seen by the ESP32-S3 UART RX GPIO before any Web UART text decoding.",
+    "bench_connections": [
+      {
+        "from": "RP2040 SWDIO",
+        "to": "S3JTAG P3.SWDIO"
+      },
+      {
+        "from": "RP2040 SWCLK",
+        "to": "S3JTAG P3.SWCLK"
+      },
+      {
+        "from": "RP2040 UART0 TX",
+        "to": "S3JTAG UART1 RX (GPIO7)"
+      },
+      {
+        "from": "RP2040 UART0 RX",
+        "to": "S3JTAG UART1 TX (GPIO6)"
+      },
+      {
+        "from": "GND",
+        "to": "S3JTAG GND"
+      }
+    ],
+    "ground_required": true,
+    "ground_confirmed": false
+  }
+}
