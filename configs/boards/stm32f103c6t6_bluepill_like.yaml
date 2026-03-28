@@ -1,0 +1,54 @@
+board:
+  name: STM32F103C6T6 Bluepill-like
+  target: stm32f103c6t6
+  instrument_instance: esp32jtag_blackpill_192_168_2_106
+  clock_hz: 8000000
+  kind: bare_mcu
+  features:
+    - programmable_via_swd
+    - has_gpio
+  build:
+    type: arm_debug
+    project_dir: firmware/targets/stm32f103c6_gpio_no_external_capture
+    artifact_stem: stm32f103c6_gpio_no_external_capture_app
+  firmware:
+    description: STM32F103C6T6 self-check plus PC13 LED heartbeat for Bluepill-like boards
+  flash:
+    speed_khz: 1000
+    reset_strategy: connect_under_reset
+    post_load_settle_s: 2.0
+    target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "monitor swdp_scan"
+      - "attach {target_id}"
+      - "load"
+      - "attach {target_id}"
+      - "detach"
+  mailbox_verify_defaults:
+    attach_monitor_cmd: "monitor swdp_scan"
+    skip_attach: false
+  observe_map:
+    led: LED
+  verification_views:
+    led:
+      pin: led
+      resolved_to: LED
+      description: Visual PC13 LED heartbeat on Bluepill-like board
+  bench_connections:
+    - from: PC13
+      to: LED
+    - from: GND
+      to: probe GND
+  safe_pins:
+    - PC13
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "NC"
+  power_and_boot:
+    reset_strategy: connect_under_reset
+    boot_mode_default: normal
+    power_rails:
+      - name: VDD
+        nominal_v: 3.3

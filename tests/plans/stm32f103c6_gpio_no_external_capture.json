@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f103c6_gpio_no_external_capture",
+  "board": "stm32f103c6t6_bluepill_like",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "selftest_only"],
+  "covers": ["gpio"],
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f103c6_gpio_no_external_capture",
+    "artifact_stem": "stm32f103c6_gpio_no_external_capture_app",
+    "build_dir": "artifacts/build_stm32f103c6_gpio_no_external_capture"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "addr": "0x20004C00",
+    "settle_s": 1.0
+  },
+  "bench_setup": {
+    "notes": "No external GPIO capture required. Firmware performs a bounded GPIO self-check on PA4-PA7 and PC13, then reports PASS/FAIL through the AEL mailbox.",
+    "peripheral_signals": [
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "PC13",
+        "direction": "output",
+        "notes": "Firmware includes PC13 in the bounded self-check and heartbeat loop."
+      }
+    ]
+  }
+}
