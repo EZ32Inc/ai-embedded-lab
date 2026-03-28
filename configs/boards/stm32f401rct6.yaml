@@ -19,6 +19,7 @@ board:
       - "monitor a"
       - "attach {target_id}"
       - "load"
+      - "monitor reset run"
       - "attach {target_id}"
       - "detach"
   observe_map:

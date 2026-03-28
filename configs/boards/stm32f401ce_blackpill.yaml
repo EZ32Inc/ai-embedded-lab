@@ -14,6 +14,14 @@ board:
     reset_strategy: connect_under_reset
     post_load_settle_s: 5.0
     target_id: 1
+    gdb_launch_cmds:
+      - "file {firmware}"
+      - "monitor a"
+      - "attach {target_id}"
+      - "load"
+      - "monitor reset run"
+      - "attach {target_id}"
+      - "detach"
   observe_map:
     sig: P0.0
     pa2: P0.0
