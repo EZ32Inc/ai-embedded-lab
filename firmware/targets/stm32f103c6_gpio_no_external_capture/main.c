@@ -84,7 +84,7 @@ int main(void)
 
     ael_mailbox_pass();
 
-    GPIOC_ODR |= GPIOC_LED_MASK;
+    GPIOC_ODR &= ~GPIOC_LED_MASK;
 
     while (1) {
         AEL_MAILBOX->detail0++;
