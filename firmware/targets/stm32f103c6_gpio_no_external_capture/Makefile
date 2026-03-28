@@ -8,7 +8,7 @@ OUT_BIN ?= $(BUILD_DIR)/stm32f103c6_gpio_no_external_capture_app.bin
 CFLAGS = -mcpu=cortex-m3 -mthumb -O2 -ffreestanding -fdata-sections -ffunction-sections -Wall -Wextra -nostdlib
 LDFLAGS = -T stm32f103c6.ld -Wl,--gc-sections -nostdlib
 
-MAIN_SRC = ../stm32f103_gpio_no_external_capture/main.c
+MAIN_SRC = main.c
 STARTUP_SRC = startup.c
 MAIN_OBJ = $(BUILD_DIR)/main.o
 STARTUP_OBJ = $(BUILD_DIR)/startup.o
