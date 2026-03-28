@@ -184,34 +184,95 @@ Requirements:
 - Do not assume the board model or MCU type.
 - Do not begin bring-up, code generation, flashing, pin mapping, or debugging
   until the board and MCU are identified with sufficient confidence.
-- If the user knows the exact board model and MCU part number, use that
-  information.
-- If the user does not know the exact board model, require identification of
-  the MCU by silk marking or exact part number.
-- This identification must come from user-provided evidence. Do not guess.
-
-If identification is incomplete, ask the user for one or more of the
-following:
-
-- MCU silk marking
-- exact MCU part number
-- board model name
-- product link
-- vendor webpage
-- board photo
-- schematic, manual, or other documentation
-
-Preferred follow-up wording:
-
-- “Please confirm the exact board model and MCU part number before we continue.”
-- “If you are not completely sure, please check the silk marking on the MCU.”
-- “If you do not know the board model, please send a product link, webpage,
-  photo, or document so we can identify it correctly.”
+- If the user already provided the exact board model and MCU part number, use
+  that information.
+- If the board model is unclear, use all information already available from the
+  user, including prior messages, uploaded material, links, photos,
+  schematics, manuals, or product pages.
+- If identification is still incomplete, ask only for the missing information.
+- If needed, ask the user to check the MCU silk marking or provide the exact
+  MCU part number.
+- Do not guess.
 
 Enforcement:
 
-Incomplete board/MCU identification is a hard stop for new bring-up. Pause the
-workflow and request clarification before proceeding.
+- Incomplete board/MCU identification is a hard stop for new bring-up.
+- Pause the workflow and request only the missing information before
+  proceeding.
+
+## CE Rule: Setup Summary and User Confirmation Gate
+
+After the board and MCU have been identified, and before any code generation,
+flashing, or test execution begins, AEL must summarize all known setup
+information and ask the user to confirm or correct it.
+
+Requirements:
+
+- Do not start generating code as soon as partial information becomes
+  available.
+- First gather as much setup information as possible from what the user has
+  already provided.
+- Do not force the user to restate or re-derive information that AEL already
+  has or should already know.
+- If some setup details are missing, ask only for those missing details.
+- Once enough information is collected, print a structured setup summary and
+  ask the user to confirm it before proceeding.
+
+The setup summary should include, whenever available:
+
+- board model
+- MCU type / exact MCU part number
+- debug/programming interface in use
+- instrument(s) in use
+- connection method
+- important connection details
+- power status
+- network details if relevant
+- serial port details if relevant
+- any other setup assumptions that will affect code generation, flashing, or
+  verification
+
+Examples of items AEL should summarize when known:
+
+- target board name
+- MCU family and exact part number
+- SWD or JTAG as the target interface
+- ESP32JTAG in use or not
+- ESP32JTAG IP address, if applicable
+- serial adapter in use and port, if applicable
+- logic analyzer / oscilloscope / power supply / other instruments, if
+  applicable
+- whether the target board is powered
+- whether the wiring is believed to be connected and ready
+
+Required behavior:
+
+- AEL must print what it currently believes the setup is.
+- AEL must make uncertainties explicit.
+- AEL must ask the user to confirm or correct the summary.
+- AEL must not shift the burden to the user to remember everything from
+  scratch.
+- AEL should do as much synthesis and consolidation as possible before asking
+  for confirmation.
+
+Preferred confirmation style:
+
+- “Here is my current understanding of the setup. Please confirm or correct
+  anything that is wrong before I proceed.”
+- “Current setup summary: [structured summary]. Please confirm.”
+- “I have the following setup information. Please confirm the details below, or
+  correct any item that is inaccurate.”
+- “The following items are still missing before I proceed: [only missing
+  items].”
+
+Enforcement:
+
+- Setup confirmation is a required gate before code generation, flashing, or
+  verification.
+- If the summary has not been confirmed, stop and ask for confirmation or
+  correction.
+- If information is missing, ask only for the missing items.
+- Do not proceed on unstated assumptions.
 
 ## First-Time MCU Support
 
