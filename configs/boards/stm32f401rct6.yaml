@@ -1,7 +1,7 @@
 board:
   name: STM32F401RCT6
   target: stm32f401rct6
-  instrument_instance: esp32jtag_stm32_golden
+  instrument_instance: esp32jtag_blackpill_192_168_2_106
   clock_hz: 16000000
   build:
     type: arm_debug
