@@ -14,13 +14,13 @@ CMSIS_DEV_INC = vendor/include/st
 CFLAGS = -mcpu=cortex-m4 -mthumb -mfpu=fpv4-sp-d16 -mfloat-abi=hard \
          -O2 -ffreestanding \
          -fdata-sections -ffunction-sections -Wall -Wextra \
-         -DSTM32F401xC \
+         -DSTM32F401xE \
          -I$(CMSIS_CORE_INC) -I$(CMSIS_DEV_INC)
 
 LDFLAGS = -T stm32f401ce.ld -Wl,--gc-sections -nostartfiles -nostdlib
 
 SRCS = main.c vendor/st/system_stm32f4xx.c
-ASMSRCS = vendor/st/startup_stm32f401xc.s
+ASMSRCS = vendor/st/startup_stm32f401xe.s
 OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o) $(ASMSRCS:%.s=$(BUILD_DIR)/%.o)
 
 all: $(OUT_ELF) $(OUT_BIN)

@@ -1,18 +1,10 @@
-/* stm32f401ce — AEL draft firmware template (Group: stm32 / subgroup: stm32f4)
- *
- * Cortex-M4 with FPU — pre-filled for STM32F4xx family.
- *
- * PLACEHOLDER: set the exact MCU variant define in Makefile (e.g. STM32F407xx, STM32F401xE)
- * PLACEHOLDER: update GPIO port/pin assignments below for your board
- */
 #include "stm32f4xx.h"
 
-/* PLACEHOLDER: update with your board's GPIO configuration */
-#define AEL_SIG_PORT   GPIOA                  /* PLACEHOLDER: signature output port */
-#define AEL_SIG_PIN    2u                     /* PLACEHOLDER: signature output pin */
-#define AEL_LED_PORT   GPIOC                  /* PLACEHOLDER: LED port */
-#define AEL_LED_PIN    13u                    /* PLACEHOLDER: LED pin */
-#define AEL_RCC_GPIOEN (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN)  /* PLACEHOLDER: enable clocks for your ports */
+#define AEL_SIG_PORT   GPIOA
+#define AEL_SIG_PIN    2u
+#define AEL_LED_PORT   GPIOC
+#define AEL_LED_PIN    13u
+#define AEL_RCC_GPIOEN (RCC_AHB1ENR_GPIOAEN | RCC_AHB1ENR_GPIOCEN)
 
 void __libc_init_array(void) {}
 
@@ -25,23 +17,34 @@ static void gpio_set_output(GPIO_TypeDef *gpio, uint32_t pin) {
     gpio->PUPDR &= ~(0x3u << shift);
 }
 
+static void systick_init_1khz(void) {
+    SysTick->LOAD = 16000u - 1u;
+    SysTick->VAL = 0u;
+    SysTick->CTRL = SysTick_CTRL_CLKSOURCE_Msk | SysTick_CTRL_ENABLE_Msk;
+}
+
 int main(void) {
     RCC->AHB1ENR |= AEL_RCC_GPIOEN;
     (void)RCC->AHB1ENR;
 
     gpio_set_output(AEL_SIG_PORT, AEL_SIG_PIN);
     gpio_set_output(AEL_LED_PORT, AEL_LED_PIN);
+    systick_init_1khz();
 
-    uint32_t div_sig = 0;
-    uint32_t div_led = 0;
+    uint32_t sig_ms = 0;
+    uint32_t led_ms = 0;
 
     while (1) {
-        if (++div_sig >= 200u) {
-            div_sig = 0;
+        if ((SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) == 0u) {
+            continue;
+        }
+
+        if (++sig_ms >= 5u) {
+            sig_ms = 0u;
             AEL_SIG_PORT->ODR ^= (1u << AEL_SIG_PIN);
         }
-        if (++div_led >= 1500000u) {
-            div_led = 0;
+        if (++led_ms >= 250u) {
+            led_ms = 0u;
             AEL_LED_PORT->ODR ^= (1u << AEL_LED_PIN);
         }
     }

@@ -1,0 +1,42 @@
+id: stm32f401ce_blackpill
+name: STM32F401CE Black Pill
+mcu: stm32f401ce
+family: stm32f4
+description: STM32F401CE Black Pill LED blink bring-up via ESP32JTAG
+
+board:
+  vendor: Generic Black Pill
+  form_factor: blackpill
+
+mcus:
+  - id: main
+    mcu: stm32f401ce
+    family: stm32f4
+    role: dut
+    clock_hz: 16000000
+    build:
+      type: arm_debug
+      project_dir: firmware/targets/stm32f401ce
+    flash:
+      method: gdb_swd
+
+board_configs:
+  - id: esp32jtag
+    path: configs/boards/stm32f401ce_blackpill.yaml
+    instrument_family: esp32jtag
+    primary: true
+
+lifecycle_stage: draft
+
+build:
+  type: arm_debug
+  project_dir: firmware/targets/stm32f401ce
+flash:
+  method: gdb_swd
+tags:
+  - stm32
+  - stm32f4
+  - stm32f401
+  - blackpill
+verified:
+  status: false
