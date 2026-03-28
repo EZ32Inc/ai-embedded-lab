@@ -174,6 +174,45 @@ Rules:
 - Same DUT instance should remain serialized through the existing `dut:<id>` resource lock.
 - Independent DUT instances should get distinct board ids and board configs.
 
+## CE Rule: Board/MCU Identification Gate
+
+For every new board bring-up, the first step is to identify the target board
+and MCU platform exactly.
+
+Requirements:
+
+- Do not assume the board model or MCU type.
+- Do not begin bring-up, code generation, flashing, pin mapping, or debugging
+  until the board and MCU are identified with sufficient confidence.
+- If the user knows the exact board model and MCU part number, use that
+  information.
+- If the user does not know the exact board model, require identification of
+  the MCU by silk marking or exact part number.
+- This identification must come from user-provided evidence. Do not guess.
+
+If identification is incomplete, ask the user for one or more of the
+following:
+
+- MCU silk marking
+- exact MCU part number
+- board model name
+- product link
+- vendor webpage
+- board photo
+- schematic, manual, or other documentation
+
+Preferred follow-up wording:
+
+- “Please confirm the exact board model and MCU part number before we continue.”
+- “If you are not completely sure, please check the silk marking on the MCU.”
+- “If you do not know the board model, please send a product link, webpage,
+  photo, or document so we can identify it correctly.”
+
+Enforcement:
+
+Incomplete board/MCU identification is a hard stop for new bring-up. Pause the
+workflow and request clarification before proceeding.
+
 ## First-Time MCU Support
 
 When extending AEL to a brand-new MCU or board that AEL has not previously
