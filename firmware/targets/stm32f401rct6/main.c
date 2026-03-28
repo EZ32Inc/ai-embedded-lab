@@ -62,8 +62,8 @@ int main(void) {
             div_pa3 = 0u;
             GPIOA_ODR ^= (1u << 3);
         }
-        /* PC13: LED blink 250 ms */
-        if (++led_ms >= 250u) {
+        /* PC13: LED blink 1000 ms */
+        if (++led_ms >= 1000u) {
             led_ms = 0u;
             GPIOC_ODR ^= (1u << 13);
         }
