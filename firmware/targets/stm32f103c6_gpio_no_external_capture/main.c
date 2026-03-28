@@ -84,8 +84,9 @@ int main(void)
 
     ael_mailbox_pass();
 
+    GPIOC_ODR |= GPIOC_LED_MASK;
+
     while (1) {
-        GPIOC_ODR ^= GPIOC_LED_MASK;
         AEL_MAILBOX->detail0++;
         delay_cycles(800000u);
     }
