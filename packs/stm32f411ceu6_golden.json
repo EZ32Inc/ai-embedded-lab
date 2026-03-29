@@ -1,6 +1,6 @@
 {
   "name": "stm32f411ceu6_golden",
-  "description": "STM32F411CEU6 Golden Test Suite — 19 tests across all stages. Stage0: blinky + mailbox health. Stage1: timer + internal temp (no wiring). Stage2: 7 peripheral loopback mailbox tests (i2c_loopback excluded, see docs/reports). Stage3: 8 LA-verified banner tests. Wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, LA: PA2→P0.0, PA3→P0.1, PB13→P0.2.",
+  "description": "STM32F411CEU6 Golden Test Suite — 20 tests across all stages. Stage0: blinky + mailbox health. Stage1: timer + internal temp (no wiring). Stage2: 8 peripheral loopback mailbox tests (incl. i2c_loopback, no external pull-ups required). Stage3: 8 LA-verified banner tests. Wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA: PA2→P0.0, PA3→P0.1, PB13→P0.2.",
   "board": "stm32f411ceu6",
   "bench_profile": "stm32f411ceu6__stage3",
   "status": "golden",
@@ -21,7 +21,8 @@
       "tests/plans/stm32f411ceu6_uart_multibyte.json",
       "tests/plans/stm32f411ceu6_spi_loopback.json",
       "tests/plans/stm32f411ceu6_uart_dma.json",
-      "tests/plans/stm32f411ceu6_iwdg.json"
+      "tests/plans/stm32f411ceu6_iwdg.json",
+      "tests/plans/stm32f411ceu6_i2c_loopback.json"
     ],
     "3": [
       "tests/plans/stm32f411_gpio_signature.json",
@@ -46,6 +47,7 @@
     "tests/plans/stm32f411ceu6_spi_loopback.json",
     "tests/plans/stm32f411ceu6_uart_dma.json",
     "tests/plans/stm32f411ceu6_iwdg.json",
+    "tests/plans/stm32f411ceu6_i2c_loopback.json",
     "tests/plans/stm32f411_gpio_signature.json",
     "tests/plans/stm32f411_gpio_loopback_banner.json",
     "tests/plans/stm32f411_exti_banner.json",
