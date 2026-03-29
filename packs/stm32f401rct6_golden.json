@@ -1,0 +1,18 @@
+{
+  "name": "stm32f401rct6_golden",
+  "description": "STM32F401RCT6 Golden Test Suite — 8 mailbox tests covering GPIO loopback, EXTI, PWM, UART, SPI, UART-DMA, IWDG, and I2C loopback. All tests use baremetal_mailbox (no LA required). Wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3. First full 8/8 PASS: 2026-03-29.",
+  "board": "stm32f401rct6",
+  "bench_profile": "stm32f401rct6__stage3",
+  "status": "golden",
+  "verified_date": "2026-03-29",
+  "tests": [
+    "tests/plans/stm32f401rct6_wiring_verify.json",
+    "tests/plans/stm32f401rct6_exti_trigger.json",
+    "tests/plans/stm32f401rct6_pwm_capture.json",
+    "tests/plans/stm32f401rct6_uart_multibyte.json",
+    "tests/plans/stm32f401rct6_spi_loopback.json",
+    "tests/plans/stm32f401rct6_uart_dma.json",
+    "tests/plans/stm32f401rct6_iwdg.json",
+    "tests/plans/stm32f401rct6_i2c_loopback.json"
+  ]
+}

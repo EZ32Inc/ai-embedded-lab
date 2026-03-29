@@ -34,20 +34,29 @@ build:
 flash:
   method: gdb_swd
 default_packs:
-  - packs/smoke_stm32f401.json
+  - packs/stm32f401rct6_golden.json
 tags:
   - stm32
   - stm32f4
   - stm32f401
 verified:
   status: true
-  verification_suite: stm32f401_basic
+  verification_suite: stm32f401rct6_golden
   tests: 8
   sequential_pass: true
-  latest_run_id: 2026-03-15_19-07-28_stm32f401rct6_stm32f401_pwm_banner
+  latest_run_id: 2026-03-29_08-40-59_stm32f401rct6_stm32f401rct6_i2c_loopback
   verified_on:
-    bench_id: esp32jtag_stm32_golden
-    instrument_endpoint: 192.168.2.98:4242
-  date: 2026-03-15
+    bench_id: esp32jtag_blackpill_192_168_2_106
+    instrument_endpoint: 192.168.2.106:4242
+  date: 2026-03-29
   experiments_passed: 8
-  smoke_pack: packs/smoke_stm32f401.json
+  golden_pack: packs/stm32f401rct6_golden.json
+  golden_covers:
+    - wiring_verify
+    - exti_trigger
+    - pwm_capture
+    - uart_multibyte
+    - spi_loopback
+    - uart_dma
+    - iwdg
+    - i2c_loopback
