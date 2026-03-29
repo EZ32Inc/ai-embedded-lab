@@ -1,0 +1,9 @@
+{
+  "name": "smoke_stm32f103c6_minimal",
+  "board": "stm32f103c6t6_bluepill_like",
+  "preflight": { "enabled": false },
+  "notes": "Minimal STM32F103C6T6 visual smoke pack via ESP32JTAG (BMDA). Current first golden baseline is a reference-style PC13 blinky on a known-good board.",
+  "tests": [
+    "tests/plans/stm32f103c6_pc13_blinky_visual.json"
+  ]
+}
