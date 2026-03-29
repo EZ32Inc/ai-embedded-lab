@@ -1122,6 +1122,7 @@ def run_pipeline(
     until_stage="report",
     return_paths=False,
     run_request=None,
+    pack_meta=None,
 ):
     if run_request is not None:
         if isinstance(run_request, RunRequest):
@@ -1226,6 +1227,7 @@ def run_pipeline(
         wiring=wiring or "",
         request_timeout_s=(getattr(run_request, "timeout_s", None) if run_request is not None else None),
         repo_root=_REPO_ROOT,
+        pack_meta=pack_meta,
     )
     timeout_s = resolved.timeout_s
     meta["timeout_s"] = timeout_s

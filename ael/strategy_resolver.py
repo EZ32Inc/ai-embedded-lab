@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from ael.adapters import build_artifacts
+from ael.bench_profile_loader import resolve_bench_wiring_fields
 from ael.compatibility.model import CompatibilityResult
 from ael.compatibility.resolver import resolve_test_instrument
 from ael.connection_model import NormalizedConnectionContext, normalize_connection_context, resolve_bench_setup, _as_board_dict
@@ -226,6 +227,7 @@ def resolve_run_strategy(
     wiring: Optional[str],
     request_timeout_s: Optional[float],
     repo_root: Path,
+    pack_meta: Optional[Dict[str, Any]] = None,
 ) -> ResolvedRunStrategy:
     probe_cfg = normalize_probe_cfg(probe_raw)
     if hasattr(board_raw, "to_legacy_dict"):
@@ -235,6 +237,8 @@ def resolve_run_strategy(
         board_cfg = dict(raw_board) if isinstance(raw_board, dict) else {}
     else:
         board_cfg = {}
+    bench_fields = resolve_bench_wiring_fields(str(repo_root), board_raw if isinstance(board_raw, dict) else {}, pack_meta=pack_meta)
+    board_cfg.update(bench_fields)
 
     test_build = test_raw.get("build", {}) if isinstance(test_raw, dict) and isinstance(test_raw.get("build"), dict) else {}
     firmware_override = test_raw.get("firmware") if isinstance(test_raw, dict) else None

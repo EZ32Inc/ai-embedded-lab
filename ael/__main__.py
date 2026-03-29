@@ -3956,6 +3956,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
 
     pack_name = pack.get("name", "pack")
     pack_board = board_override or pack.get("board")
+    pack_bench_profile = pack.get("bench_profile")
     tests = pack.get("programs") or pack.get("tests") or []
     if not pack_board or not tests:
         print("Pack: missing board or tests")
@@ -4032,6 +4033,7 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
             no_build=no_build or verify_only,
             verify_only=verify_only,
             return_paths=True,
+            pack_meta={"bench_profile": pack_bench_profile, "mode": "pack", "board": pack_board},
         )
         run_result = _load_json(run_paths.result)
         entry = {
