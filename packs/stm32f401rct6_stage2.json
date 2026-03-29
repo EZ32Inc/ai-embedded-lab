@@ -1,0 +1,9 @@
+{
+  "name": "stm32f401rct6_stage2",
+  "description": "Stage 2 wiring verify for STM32F401RCT6: GPIO loopback (PA8↔PA6), UART loopback (PA9↔PA10), ADC loopback (PB0↔PB1). Mailbox-only, no LA required.",
+  "board": "stm32f401rct6",
+  "bench_profile": "stm32f401rct6__stage3",
+  "tests": [
+    "tests/plans/stm32f401rct6_wiring_verify.json"
+  ]
+}

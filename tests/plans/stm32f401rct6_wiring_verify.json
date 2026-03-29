@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f401rct6_wiring_verify",
+  "board": "stm32f401rct6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "portable", "selfcheck"],
+  "covers": ["gpio", "uart", "adc", "wiring"],
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6_wiring_verify",
+    "artifact_stem": "stm32f401_wiring_verify_app",
+    "build_dir": "artifacts/build_stm32f401rct6_wiring_verify"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x2000FC00"
+  },
+  "bench_setup": {
+    "notes": "Stage 2 wiring verify. Firmware runs GPIO, UART, and ADC loopback tests internally. Pass/fail and per-wire error bitmask read from mailbox at 0x2000FC00 via SWD. On FAIL: error_code bitmask: bit0=GPIO_HIGH (PA8=H→PA6 read L), bit1=GPIO_LOW (PA8=L→PA6 read H), bit2=UART (PA9→PA10 mismatch/timeout), bit3=ADC_HIGH (PB0=H→PB1 ADC<3000), bit4=ADC_LOW (PB0=L→PB1 ADC>1000).",
+    "peripheral_signals": [
+      {
+        "role": "GPIO_OUT",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "GPIO loopback driver, output push-pull. Wire: PA8 → PA6."
+      },
+      {
+        "role": "GPIO_IN",
+        "dut_signal": "PA6",
+        "direction": "input",
+        "notes": "GPIO loopback receiver, input floating. Wire: PA8 → PA6."
+      },
+      {
+        "role": "USART1_TX",
+        "dut_signal": "PA9",
+        "direction": "output",
+        "notes": "USART1 TX, AF7, 115200 8N1. Wire: PA9 → PA10."
+      },
+      {
+        "role": "USART1_RX",
+        "dut_signal": "PA10",
+        "direction": "input",
+        "notes": "USART1 RX, AF7. Wire: PA9 → PA10."
+      },
+      {
+        "role": "ADC_DRIVE",
+        "dut_signal": "PB0",
+        "direction": "output",
+        "notes": "GPIO output drives ADC input via wire. Wire: PB0 → PB1."
+      },
+      {
+        "role": "ADC1_IN9",
+        "dut_signal": "PB1",
+        "direction": "input",
+        "notes": "ADC1 channel 9 analog input. Wire: PB0 → PB1."
+      }
+    ]
+  }
+}
