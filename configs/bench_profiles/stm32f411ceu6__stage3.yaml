@@ -1,7 +1,7 @@
 bench_profile:
   id: stm32f411ceu6__stage3
   board_id: stm32f411ceu6
-  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA on P0.0/P0.1/P0.2(SCL)/P0.3(SDA). PB13 unprobed (P0.2 moved to I2C SCL for debug)"
+  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA on P0.0/P0.1/P0.2"
 
   bench_connections:
     - from: PA8
@@ -20,10 +20,8 @@ bench_profile:
       to: P0.0
     - from: PA3
       to: P0.1
-    - from: PB6
+    - from: PB13
       to: P0.2
-    - from: PB7
-      to: P0.3
     - from: GND
       to: probe GND
 
@@ -31,8 +29,7 @@ bench_profile:
     sig: P0.0
     pa2: P0.0
     pa3: P0.1
-    i2c_scl: P0.2
-    i2c_sda: P0.3
+    pb13: P0.2
 
   verification_views:
     signal:
@@ -40,9 +37,9 @@ bench_profile:
       resolved_to: P0.0
       description: Primary proof capture on PA2
     aux:
-      pin: i2c_scl
+      pin: pb13
       resolved_to: P0.2
-      description: I2C SCL bus (PB6/PB10)
+      description: Auxiliary observed pin on PB13
 
   default_wiring:
     swd: "P3"
