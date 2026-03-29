@@ -1,7 +1,16 @@
 {
   "name": "stm32f401rct6_stage3",
-  "description": "Stage 3 banner tests for STM32F401RCT6: GPIO/EXTI/PWM loopback, UART loopback, ADC loopback.",
+  "description": "Stage 3 LA-verified banner tests for STM32F401RCT6. Instrument independently captures PA2 signal to verify each peripheral. Requires stage2 wiring plus LA: PA2→P0.0, PA3→P0.1, PB13→P0.2.",
   "board": "stm32f401rct6",
   "bench_profile": "stm32f401rct6__stage3",
-  "tests": []
+  "tests": [
+    "tests/plans/stm32f401_gpio_signature.json",
+    "tests/plans/stm32f401_gpio_loopback_banner.json",
+    "tests/plans/stm32f401_exti_banner.json",
+    "tests/plans/stm32f401_capture_banner.json",
+    "tests/plans/stm32f401_pwm_banner.json",
+    "tests/plans/stm32f401_uart_loopback_banner.json",
+    "tests/plans/stm32f401_spi_banner.json",
+    "tests/plans/stm32f401_adc_banner.json"
+  ]
 }
