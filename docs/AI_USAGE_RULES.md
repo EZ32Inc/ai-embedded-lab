@@ -323,6 +323,43 @@ Rules:
    validated baseline for that board, usually the board-specific
    `gpio_signature`-style test, not the whole new suite.
 
+## CE Rule: Preserve Proven Legacy Or Workaround Behavior First
+
+When a board path already contains unusual, weakly documented, or legacy-looking
+behavior, do not normalize or "clean it up" before you have reproduced the
+current live baseline successfully.
+
+This is especially important for paths that predate current CE/closeout
+discipline, where the original reason may be real but poorly documented.
+
+Requirements:
+
+- First classify the existing behavior as one of:
+  - confirmed working baseline
+  - unexplained workaround with live evidence
+  - dead or unverified legacy behavior
+- If the path is live-proven on similar hardware, preserve it first.
+- Reproduce the current baseline first before changing suspicious commands,
+  timing, attach/detach steps, reset behavior, or other bench-sensitive details.
+- Do not replace a weird-looking step just because a cleaner generic pattern
+  looks more correct.
+- If an existing step looks like a workaround, treat it as a bench constraint
+  until a new alternative is proven better on hardware.
+
+Recommended workflow:
+
+1. reproduce the existing path exactly
+2. confirm it works on the real bench
+3. mark unusual behavior as "working but not yet explained"
+4. test alternatives as a separate experiment
+5. only replace the baseline if the alternative is re-proven on hardware
+
+Enforcement:
+
+- "Weird but proven" beats "clean but assumed".
+- Do not normalize an existing proven path during bring-up extension unless the
+  replacement has been validated live.
+
 ## User Project Creation For Supported Boards
 
 When the user asks to create a first project for a board that is already
