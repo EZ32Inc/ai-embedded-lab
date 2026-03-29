@@ -1,7 +1,7 @@
 bench_profile:
   id: stm32f411ceu6__stage3
   board_id: stm32f411ceu6
-  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA on P0.0/P0.1/P0.2"
+  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA P0.0=PA2 P0.1=PA3 P0.2=PB13"
 
   bench_connections:
     - from: PA8
@@ -39,7 +39,7 @@ bench_profile:
     aux:
       pin: pb13
       resolved_to: P0.2
-      description: Auxiliary observed pin on PB13
+      description: SPI2 SCK capture (PB13)
 
   default_wiring:
     swd: "P3"

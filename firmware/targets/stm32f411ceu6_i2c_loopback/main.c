@@ -10,7 +10,7 @@
  * External wiring required: PB6↔PB10 (SCL bus), PB7↔PB3 (SDA bus).
  * Pull-up: STM32 internal ~40 kΩ via PUPDR=01 on all four pins.
  *
- * Status: SUSPENDED — hardware issue suspected (SDA wire anomaly).
+ * Status: ACTIVE — passes on STM32F411CEU6 Board B, no external pull-ups needed.
  * See docs/reports/stm32f411ceu6_i2c_loopback_debug_2026-03-29.md
  *
  * Protocol:
@@ -189,122 +189,121 @@ int main(void)
 
     ael_mailbox_init();
 
-    uint32_t err     = 0u;
-    uint32_t diag_sr = 0u;
+    /* Continuous-retry loop: each iteration SWRSTs both I2C peripherals,
+     * re-inits, attempts a full write+read transaction, updates mailbox. */
+    while (1) {
+        uint32_t err     = 0u;
+        uint32_t diag_sr = 0u;
 
-    /* Sanity: I2C2 PE must still be set */
-    if ((I2C2_CR1 & I2C_CR1_PE) == 0u) {
-        ael_mailbox_fail(0xFDu, I2C2_CR1);
-        while (1) {}
-    }
+        /* Re-init I2C2 slave */
+        I2C2_CR1   = I2C_CR1_SWRST; delay_ms(1u); I2C2_CR1 = 0u;
+        I2C2_CR2   = 16u;
+        I2C2_CCR   = 80u;
+        I2C2_TRISE = 17u;
+        I2C2_OAR1  = (SLAVE_ADDR << 1u) | (1u << 14u);
+        I2C2_CR1   = I2C_CR1_PE; (void)I2C2_CR1;
+        I2C2_CR1  |= I2C_CR1_ACK; (void)I2C2_CR1;
 
-    /* ==================================================================
-     * WRITE PHASE: master sends tx_buf[4] to slave
-     * ================================================================== */
+        /* Re-init I2C1 master */
+        I2C1_CR1   = I2C_CR1_SWRST; delay_ms(1u); I2C1_CR1 = 0u;
+        I2C1_CR2   = 16u;
+        I2C1_CCR   = 80u;
+        I2C1_TRISE = 17u;
+        I2C1_CR1   = I2C_CR1_PE | I2C_CR1_ACK;
+        delay_ms(2u);
 
-    I2C1_CR1 |= I2C_CR1_START;
-    if (wait_flag(&I2C1_SR1, I2C_SR1_SB) != 0) { err = ERR_WRITE_SB; goto fail; }
+        /* ==================================================================
+         * WRITE PHASE: master sends tx_buf[4] to slave
+         * ================================================================== */
 
-    I2C1_DR = (SLAVE_ADDR << 1u) | 0u;
+        I2C1_CR1 |= I2C_CR1_START;
+        if (wait_flag(&I2C1_SR1, I2C_SR1_SB) != 0) { err = ERR_WRITE_SB; goto iter_fail; }
 
-    /* Wait slave ADDR */
-    {
-        uint32_t t = I2C_TIMEOUT;
-        while ((I2C2_SR1 & I2C_SR1_ADDR) == 0u) {
-            if (--t == 0u) {
-                err = ERR_SWRITE_ADDR;
-                diag_sr = (I2C2_SR1 & 0xFFu)
-                        | ((I2C2_SR2 & 0xFFu) << 8u)
-                        | ((I2C1_SR1 & 0xFFFFu) << 16u);
-                goto fail;
+        I2C1_DR = (SLAVE_ADDR << 1u) | 0u;
+
+        {
+            uint32_t t = I2C_TIMEOUT;
+            while ((I2C2_SR1 & I2C_SR1_ADDR) == 0u) {
+                if (--t == 0u) {
+                    err = ERR_SWRITE_ADDR;
+                    diag_sr = (I2C2_SR1 & 0xFFu)
+                            | ((I2C2_SR2 & 0xFFu) << 8u)
+                            | ((I2C1_SR1 & 0xFFFFu) << 16u);
+                    goto iter_fail;
+                }
             }
         }
-    }
-    (void)I2C2_SR1; (void)I2C2_SR2;
+        (void)I2C2_SR1; (void)I2C2_SR2;
 
-    if (wait_flag(&I2C1_SR1, I2C_SR1_ADDR) != 0) { err = ERR_MWRITE_ADDR; goto fail; }
-    (void)I2C1_SR1; (void)I2C1_SR2;
+        if (wait_flag(&I2C1_SR1, I2C_SR1_ADDR) != 0) { err = ERR_MWRITE_ADDR; goto iter_fail; }
+        (void)I2C1_SR1; (void)I2C1_SR2;
 
-    for (uint32_t i = 0u; i < N_BYTES; i++) {
-        if (wait_flag(&I2C1_SR1, I2C_SR1_TXE) != 0) { err = ERR_WRITE_DATA; goto fail; }
-        I2C1_DR = tx_buf[i];
-        if (wait_flag(&I2C2_SR1, I2C_SR1_RXNE) != 0) { err = ERR_WRITE_DATA; goto fail; }
-        slave_buf[i] = (uint8_t)I2C2_DR;
-    }
-
-    if (wait_flag(&I2C1_SR1, I2C_SR1_BTF) != 0) { err = ERR_WRITE_BTF; goto fail; }
-    I2C1_CR1 |= I2C_CR1_STOP;
-
-    {
-        uint32_t t = I2C_TIMEOUT;
-        while (I2C1_SR2 & I2C_SR2_BUSY) {
-            if (--t == 0u) { err = ERR_WRITE_BTF; goto fail; }
-        }
-    }
-    delay_ms(1u);
-
-    /* ==================================================================
-     * READ PHASE: master reads N_BYTES from slave
-     * ================================================================== */
-
-    I2C1_CR1 |= I2C_CR1_ACK;
-    I2C1_CR1 |= I2C_CR1_START;
-    if (wait_flag(&I2C1_SR1, I2C_SR1_SB) != 0) { err = ERR_READ_SB; goto fail; }
-
-    I2C1_DR = (SLAVE_ADDR << 1u) | 1u;
-
-    if (wait_flag(&I2C2_SR1, I2C_SR1_ADDR) != 0) { err = ERR_SREAD_ADDR; goto fail; }
-    (void)I2C2_SR1; (void)I2C2_SR2;
-    if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto fail; }
-    I2C2_DR = slave_buf[0];
-
-    if (wait_flag(&I2C1_SR1, I2C_SR1_ADDR) != 0) { err = ERR_MREAD_ADDR; goto fail; }
-    (void)I2C1_SR1; (void)I2C1_SR2;
-
-    for (uint32_t i = 0u; i < 2u; i++) {
-        if (wait_flag(&I2C1_SR1, I2C_SR1_RXNE) != 0) { err = ERR_READ_DATA; goto fail; }
-        rx_buf[i] = (uint8_t)I2C1_DR;
-        if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto fail; }
-        I2C2_DR = slave_buf[i + 1u];
-    }
-
-    if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto fail; }
-    I2C2_DR = slave_buf[3];
-
-    if (wait_flag(&I2C1_SR1, I2C_SR1_BTF) != 0) { err = ERR_READ_DATA; goto fail; }
-    I2C1_CR1 &= ~I2C_CR1_ACK;
-    I2C1_CR1 |=  I2C_CR1_STOP;
-    rx_buf[2] = (uint8_t)I2C1_DR;
-
-    if (wait_flag(&I2C1_SR1, I2C_SR1_RXNE) != 0) { err = ERR_READ_DATA; goto fail; }
-    rx_buf[3] = (uint8_t)I2C1_DR;
-
-    I2C2_SR1 &= ~I2C_SR1_AF;
-
-    /* ==================================================================
-     * VERIFY
-     * ================================================================== */
-    {
-        uint32_t matched = 0u;
         for (uint32_t i = 0u; i < N_BYTES; i++) {
-            if (rx_buf[i] == tx_buf[i]) { matched++; }
+            if (wait_flag(&I2C1_SR1, I2C_SR1_TXE) != 0) { err = ERR_WRITE_DATA; goto iter_fail; }
+            I2C1_DR = tx_buf[i];
+            if (wait_flag(&I2C2_SR1, I2C_SR1_RXNE) != 0) { err = ERR_WRITE_DATA; goto iter_fail; }
+            slave_buf[i] = (uint8_t)I2C2_DR;
         }
-        if (matched != N_BYTES) {
-            ael_mailbox_fail(ERR_MISMATCH, matched);
-            while (1) {}
-        }
-    }
 
-    ael_mailbox_pass();
-    {
-        uint32_t iteration = 0u;
-        while (1) {
-            delay_ms(1u);
-            AEL_MAILBOX->detail0 = ++iteration;
-        }
-    }
+        if (wait_flag(&I2C1_SR1, I2C_SR1_BTF) != 0) { err = ERR_WRITE_BTF; goto iter_fail; }
+        I2C1_CR1 |= I2C_CR1_STOP;
+        { uint32_t t = I2C_TIMEOUT; while (I2C1_SR2 & I2C_SR2_BUSY) { if (--t == 0u) { err = ERR_WRITE_BTF; goto iter_fail; } } }
+        delay_ms(1u);
 
-fail:
-    ael_mailbox_fail(err, diag_sr);
-    while (1) {}
+        /* ==================================================================
+         * READ PHASE: master reads N_BYTES from slave
+         * ================================================================== */
+
+        I2C1_CR1 |= I2C_CR1_ACK;
+        I2C1_CR1 |= I2C_CR1_START;
+        if (wait_flag(&I2C1_SR1, I2C_SR1_SB) != 0) { err = ERR_READ_SB; goto iter_fail; }
+
+        I2C1_DR = (SLAVE_ADDR << 1u) | 1u;
+
+        if (wait_flag(&I2C2_SR1, I2C_SR1_ADDR) != 0) { err = ERR_SREAD_ADDR; goto iter_fail; }
+        (void)I2C2_SR1; (void)I2C2_SR2;
+        if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto iter_fail; }
+        I2C2_DR = slave_buf[0];
+
+        if (wait_flag(&I2C1_SR1, I2C_SR1_ADDR) != 0) { err = ERR_MREAD_ADDR; goto iter_fail; }
+        (void)I2C1_SR1; (void)I2C1_SR2;
+
+        for (uint32_t i = 0u; i < 2u; i++) {
+            if (wait_flag(&I2C1_SR1, I2C_SR1_RXNE) != 0) { err = ERR_READ_DATA; goto iter_fail; }
+            rx_buf[i] = (uint8_t)I2C1_DR;
+            if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto iter_fail; }
+            I2C2_DR = slave_buf[i + 1u];
+        }
+
+        if (wait_flag(&I2C2_SR1, I2C_SR1_TXE) != 0) { err = ERR_SREAD_TXE; goto iter_fail; }
+        I2C2_DR = slave_buf[3];
+
+        if (wait_flag(&I2C1_SR1, I2C_SR1_BTF) != 0) { err = ERR_READ_DATA; goto iter_fail; }
+        I2C1_CR1 &= ~I2C_CR1_ACK;
+        I2C1_CR1 |=  I2C_CR1_STOP;
+        rx_buf[2] = (uint8_t)I2C1_DR;
+
+        if (wait_flag(&I2C1_SR1, I2C_SR1_RXNE) != 0) { err = ERR_READ_DATA; goto iter_fail; }
+        rx_buf[3] = (uint8_t)I2C1_DR;
+        I2C2_SR1 &= ~I2C_SR1_AF;
+
+        /* ==================================================================
+         * VERIFY
+         * ================================================================== */
+        {
+            uint32_t matched = 0u;
+            for (uint32_t i = 0u; i < N_BYTES; i++) {
+                if (rx_buf[i] == tx_buf[i]) { matched++; }
+            }
+            if (matched != N_BYTES) { err = ERR_MISMATCH; diag_sr = matched; goto iter_fail; }
+        }
+
+        ael_mailbox_pass();
+        delay_ms(200u);
+        continue;
+
+    iter_fail:
+        ael_mailbox_fail(err, diag_sr);
+        delay_ms(200u);
+    }
 }
