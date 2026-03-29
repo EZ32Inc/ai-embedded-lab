@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(*)",  
+      "Fetch(*)",  
       "Bash(git status)",
       "Bash(git diff*)",
       "Bash(git log*)",
