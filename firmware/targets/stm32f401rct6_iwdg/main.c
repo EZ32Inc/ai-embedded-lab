@@ -90,16 +90,15 @@ int main(void)
      * Sequence: unlock → set PR → wait PVU clear → set RLR → wait RVU clear
      *           → reload → start.
      */
+    /*
+     * PVU/RVU waits are only required when modifying a running IWDG.
+     * For initial configuration before start, write directly.
+     */
     IWDG_KR  = IWDG_KEY_UNLOCK;
     IWDG_PR  = 0x06u;                        /* /256 */
-    while (IWDG_SR & IWDG_SR_PVU) {}         /* wait for prescaler update */
-
-    IWDG_KR  = IWDG_KEY_UNLOCK;
     IWDG_RLR = 4095u;                        /* max reload → ~32s timeout */
-    while (IWDG_SR & IWDG_SR_RVU) {}         /* wait for reload update */
-
-    IWDG_KR  = IWDG_KEY_RELOAD;              /* load new reload value */
-    IWDG_KR  = IWDG_KEY_START;               /* start IWDG (locks PR/RLR) */
+    IWDG_KR  = IWDG_KEY_RELOAD;              /* load reload value into counter */
+    IWDG_KR  = IWDG_KEY_START;               /* start IWDG */
 
     ael_mailbox_pass();
 
