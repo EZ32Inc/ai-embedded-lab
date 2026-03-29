@@ -1,0 +1,55 @@
+bench_profile:
+  id: stm32f401rct6__stage3
+  board_id: stm32f401rct6
+  description: "Stage3 banner wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, LA on P0.0/P0.1/P0.2"
+
+  bench_connections:
+    - from: PA8
+      to: PA6
+    - from: PA9
+      to: PA10
+    - from: PB0
+      to: PB1
+    - from: PA2
+      to: P0.0
+    - from: PA3
+      to: P0.1
+    - from: PB13
+      to: P0.2
+    - from: GND
+      to: probe GND
+
+  observe_map:
+    sig: P0.0
+    pa2: P0.0
+    pa3: P0.1
+    pb13: P0.2
+
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Primary proof capture on PA2
+    aux:
+      pin: pb13
+      resolved_to: P0.2
+      description: Auxiliary observed pin on PB13
+
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "P0.0"
+
+  safe_pins:
+    - PA2
+    - PA3
+    - PA6
+    - PA8
+    - PA9
+    - PA10
+    - PB0
+    - PB1
+    - PB13
+    - PB14
+    - PB15
+    - PC13

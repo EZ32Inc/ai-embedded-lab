@@ -1,0 +1,7 @@
+{
+  "name": "stm32f401rct6_stage3",
+  "description": "Stage 3 banner tests for STM32F401RCT6: GPIO/EXTI/PWM loopback, UART loopback, ADC loopback.",
+  "board": "stm32f401rct6",
+  "bench_profile": "stm32f401rct6__stage3",
+  "tests": []
+}
