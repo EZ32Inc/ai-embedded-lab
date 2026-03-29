@@ -1,20 +1,20 @@
 {
+  "schema_version": "1.0",
+  "test_kind": "program_only",
   "name": "stm32f401rct6_pc13_blinky_visual",
   "board": "stm32f401rct6",
-  "pin": "led",
-  "duration_s": 0.25,
-  "expected_hz": 1.0,
-  "min_edges": 1,
-  "max_edges": 20,
-  "observe_led": {
-    "enabled": true,
-    "pin": "led",
-    "duration_s": 0.25,
-    "expected_hz": 1.0,
-    "min_edges": 1,
-    "max_edges": 20,
-    "max_attempts": 20,
-    "sleep_s": 0.0
+  "supported_instruments": ["esp32jtag"],
+  "labels": ["minimal", "visual", "blinky"],
+  "covers": ["gpio", "board_health"],
+  "preflight": {
+    "enabled": false
   },
-  "notes": "Rule-B Stage 0 visual truth-layer heartbeat for STM32F401RCT6. Uses the current known-good PC13 LED blink baseline."
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6",
+    "artifact_stem": "stm32f401_app",
+    "build_dir": "artifacts/build_stm32f401rct6"
+  },
+  "bench_setup": {
+    "notes": "Rule-B Stage 0 visual-only baseline. Flashes the current known-good STM32F401RCT6 PC13 LED blink image. Success requires operator-visible blinking on the onboard LED."
+  }
 }
