@@ -1,7 +1,7 @@
 bench_profile:
   id: stm32f401rct6__stage3
   board_id: stm32f401rct6
-  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, LA on P0.0/P0.1/P0.2"
+  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB11, LA on P0.0/P0.1/P0.2"
 
   bench_connections:
     - from: PA8
@@ -12,6 +12,10 @@ bench_profile:
       to: PB1
     - from: PB15
       to: PB14
+    - from: PB6
+      to: PB10
+    - from: PB7
+      to: PB11
     - from: PA2
       to: P0.0
     - from: PA3
@@ -51,6 +55,10 @@ bench_profile:
     - PA10
     - PB0
     - PB1
+    - PB6
+    - PB7
+    - PB10
+    - PB11
     - PB13
     - PB14
     - PB15

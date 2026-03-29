@@ -10,6 +10,7 @@
     "tests/plans/stm32f401rct6_uart_multibyte.json",
     "tests/plans/stm32f401rct6_spi_loopback.json",
     "tests/plans/stm32f401rct6_uart_dma.json",
-    "tests/plans/stm32f401rct6_iwdg.json"
+    "tests/plans/stm32f401rct6_iwdg.json",
+    "tests/plans/stm32f401rct6_i2c_loopback.json"
   ]
 }
