@@ -1,0 +1,9 @@
+bench_profile:
+  id: stm32f407_discovery__default
+  board_id: stm32f407_discovery
+  description: "ST-Link onboard SWD only; no external LA wiring"
+
+  default_wiring:
+    swd: "onboard"
+    reset: "NC"
+    verify: "NC"

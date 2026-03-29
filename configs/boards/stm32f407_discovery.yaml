@@ -3,6 +3,7 @@ board:
   target: stm32f407_discovery
   instrument_instance: stlink_f407_discovery
   clock_hz: 16000000
+  default_bench_profile: stm32f407_discovery__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f407_discovery
@@ -19,10 +20,6 @@ board:
       - "disconnect"
   mailbox_verify_defaults:
     skip_attach: true
-  default_wiring:
-    swd: "onboard"
-    reset: "NC"
-    verify: "NC"
   power_and_boot:
     reset_strategy: none
     boot_mode_default: normal
