@@ -113,10 +113,11 @@ This project explores a future where AI becomes an active engineering partner in
 
 ## 🚀 Latest Milestone
 
-### AMD(Xilinx) Artix XC7A35T — Closed-Loop FPGA Verification via ESP32JTAG LA (2026-03-27)
+### AMD(Xilinx) Artix XC7A35T — Closed-Loop FPGA Verification via ESP32JTAG LA (2026-03-27) 
+### The first FPGA milestone is complete: AEL can now take over, modify, build, program, instrument, and verify a Xilinx FPGA project on real hardware!
 
 <!-- IMAGE PLACEHOLDER — replace with actual board/setup photo -->
-<!-- ![PA35T StarLite FPGA + ESP32JTAG LA setup](docs/images/pa35t_starlite_fpga_la_setup.jpg) -->
+<!-- ![PA35T StarLite FPGA + ESP32JTAG LA setup](docs/images/Artix_XC7A35T_fpga_la_setup.jpg) -->
 
 AEL completed a full closed-loop verification workflow on a **Xilinx Artix-7 (xc7a35tfgg484-2)** FPGA project using the PA35T StarLite board. This extends AEL's reach beyond MCU firmware into repeatable, measurement-backed FPGA validation on real hardware.
 
@@ -957,6 +958,44 @@ Notes:
 - `tools/cleanup_workspce` is the compatibility alias (kept for existing usage).
 - `tools/cleanup_workspace` is the canonical wrapper.
 - `.gitkeep` placeholder files are preserved.
+
+---
+
+## STM32 MCU Golden Test Suite Summary
+
+> Last updated: 2026-03-28 — full audit report: [`docs/reports/stm32_golden_suite_inventory_2026-03-28.md`](docs/reports/stm32_golden_suite_inventory_2026-03-28.md)
+
+```
+┌───────────────────────────────┬────────┬───────────┬───────┬────────────┬────────────────────────────────────────────────────────────────┐
+│             Board             │ Family │ Lifecycle │ Tests │  Verified  │                            Pack(s)                             │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f103_gpio                │ F1     │ golden    │ 6     │ 2026-03-13 │ smoke_stm32, smoke_stm32f103_gpio_loopbacks_esp32jtag          │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f103_gpio_stlink         │ F1     │ —         │ 6     │ —          │ smoke_stm32f103_gpio_loopbacks_stlink                          │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f103c6t6_bluepill_like   │ F1     │ —         │ 2     │ —          │ smoke_stm32f103c6_minimal                                      │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f103rct6                 │ F1     │ draft     │ 7     │ —          │ smoke_stm32f103rct6, smoke_stm32f103rct6_mailbox_esp32jtag     │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f103rct6_stlink          │ F1     │ —         │ 7     │ —          │ smoke_stm32f103rct6_stlink, smoke_stm32f103rct6_mailbox_stlink │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f401ce_blackpill         │ F4     │ —         │ 1     │ —          │ none (draft)                                                   │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f401rct6                 │ F4     │ golden    │ 13    │ 2026-03-15 │ smoke_stm32f401, stage0, stage0_mailbox, stage1                │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f407_discovery           │ F4     │ golden    │ 7     │ 2026-03-18 │ smoke_stm32f407, smoke_stm32f407_mailbox_stlink                │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f407_discovery_esp32jtag │ F4     │ —         │ 1     │ —          │ smoke_stm32f407_mailbox_esp32jtag                              │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32f411ceu6                 │ F4     │ golden    │ 8     │ 2026-03-14 │ smoke_stm32f411, stm32f411_full_suite                          │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32g431cbu6                 │ G4     │ golden    │ 10    │ 2026-03-16 │ smoke_stm32g431                                                │
+├───────────────────────────────┼────────┼───────────┼───────┼────────────┼────────────────────────────────────────────────────────────────┤
+│ stm32h750vbt6                 │ H7     │ golden    │ 7     │ 2026-03-16 │ smoke_stm32h750                                                │
+└───────────────────────────────┴────────┴───────────┴───────┴────────────┴────────────────────────────────────────────────────────────────┘
+```
+
+**12 boards · 75 test entries** — refactoring ongoing, priority: `stm32f401rct6` (pack consolidation) and `stm32f103c6t6_bluepill_like` (golden promotion).
 
 ---
 
