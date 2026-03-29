@@ -234,6 +234,9 @@ def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patt
     forbid_re = _compile(forbid_patterns)
     boot_re = _compile(boot_patterns)
 
+    MAX_ERRORS = 500
+    MAX_WARNINGS = 200
+
     errors = []
     warnings = []
     matched_expect = {}
@@ -241,18 +244,29 @@ def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patt
     crash_detected = False
     reboot_loop_suspected = False
     boot_count = 0
+    errors_truncated = 0
+    warnings_truncated = 0
 
     for idx, line in enumerate(lines, 1):
         for pat in fatal_re:
             if pat.search(line):
                 crash_detected = True
-                errors.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                if len(errors) < MAX_ERRORS:
+                    errors.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                else:
+                    errors_truncated += 1
         for pat in error_re:
             if pat.search(line):
-                errors.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                if len(errors) < MAX_ERRORS:
+                    errors.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                else:
+                    errors_truncated += 1
         for pat in warning_re:
             if pat.search(line):
-                warnings.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                if len(warnings) < MAX_WARNINGS:
+                    warnings.append({"pattern": pat.pattern, "line": line, "lineno": idx})
+                else:
+                    warnings_truncated += 1
         for pat in expect_re:
             if pat.search(line):
                 matched_expect[pat.pattern] = matched_expect.get(pat.pattern, 0) + 1
@@ -295,7 +309,9 @@ def _evaluate_capture(text, data, port, baud, raw_log_path, profile, expect_patt
         "crash_detected": crash_detected,
         "reboot_loop_suspected": reboot_loop_suspected,
         "errors": errors,
+        "errors_truncated": errors_truncated,
         "warnings": warnings,
+        "warnings_truncated": warnings_truncated,
         "matched": {
             "expect": matched_expect,
             "forbid": matched_forbid,
