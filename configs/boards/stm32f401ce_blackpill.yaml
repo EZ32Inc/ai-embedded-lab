@@ -3,6 +3,7 @@ board:
   target: stm32f401ce_blackpill
   instrument_instance: esp32jtag_blackpill_192_168_2_106
   clock_hz: 16000000
+  default_bench_profile: stm32f401ce_blackpill__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f401ce
@@ -21,47 +22,6 @@ board:
       - "load"
       - "attach {target_id}"
       - "detach"
-  observe_map:
-    sig: P0.0
-    pa2: P0.0
-    led: LED
-  verification_views:
-    signal:
-      pin: sig
-      resolved_to: P0.0
-      description: PA2 signature output for optional logic capture
-    led:
-      pin: led
-      resolved_to: LED
-      description: Onboard PC13 LED blink
-  bench_connections:
-    - from: PA2
-      to: P0.0
-    - from: PC13
-      to: LED
-    - from: GND
-      to: probe GND
-  safe_pins:
-    - PA2
-    - PA3
-    - PA4
-    - PA5
-    - PA6
-    - PA7
-    - PA8
-    - PA9
-    - PA10
-    - PB0
-    - PB1
-    - PB6
-    - PB7
-    - PB8
-    - PB9
-    - PC13
-  default_wiring:
-    swd: "P3"
-    reset: "NC"
-    verify: "P0.0"
   power_and_boot:
     reset_strategy: connect_under_reset
     boot_mode_default: normal
