@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f401rct6_iwdg",
+  "board": "stm32f401rct6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": { "mailbox": true, "datacapture": false },
+  "labels": ["mailbox", "portable", "selfcheck"],
+  "covers": ["iwdg", "lsi"],
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6_iwdg",
+    "artifact_stem": "stm32f401_iwdg_app",
+    "build_dir": "artifacts/build_stm32f401rct6_iwdg"
+  },
+  "signal_checks": [],
+  "mailbox_verify": { "settle_s": 5.0, "addr": "0x2000FC00" },
+  "bench_setup": {
+    "notes": "IWDG (Independent Watchdog) test. No external wiring required. Configures IWDG with LSI clock, prescaler /128, reload=999 → ~4s timeout. Firmware feeds watchdog every 1ms and reports PASS with heartbeat. A sustained heartbeat proves: (a) IWDG started without premature reset (LSI functional, PR/RLR correct); (b) reload path works. If IWDG fires the chip resets and mailbox stays at RUNNING — pipeline reports timeout FAIL.",
+    "peripheral_signals": []
+  }
+}

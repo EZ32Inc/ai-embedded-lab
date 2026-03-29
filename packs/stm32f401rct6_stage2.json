@@ -8,6 +8,8 @@
     "tests/plans/stm32f401rct6_exti_trigger.json",
     "tests/plans/stm32f401rct6_pwm_capture.json",
     "tests/plans/stm32f401rct6_uart_multibyte.json",
-    "tests/plans/stm32f401rct6_spi_loopback.json"
+    "tests/plans/stm32f401rct6_spi_loopback.json",
+    "tests/plans/stm32f401rct6_uart_dma.json",
+    "tests/plans/stm32f401rct6_iwdg.json"
   ]
 }
