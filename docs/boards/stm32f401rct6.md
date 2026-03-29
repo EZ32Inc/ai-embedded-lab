@@ -24,6 +24,24 @@ Result: **8 / 8 PASS** (sequential run)
 | 7 | GPIO loopback banner | stm32f401_gpio_loopback_banner | PA8 → PA6 |
 | 8 | PWM banner | stm32f401_pwm_banner | PA8 → PA6 |
 
+### Legacy Suite Status
+
+The pack above is the preserved pre-Rule-B golden pack for STM32F401RCT6.
+It remains a valid runnable baseline and is still expected to pass `8 / 8`.
+
+### Rule-B Suite Status
+
+Rule-B migration for STM32F401RCT6 starts from a separate Stage 0 LED blink
+truth-layer test so the preserved legacy pack is not disturbed.
+
+Stage 0 pack: `packs/stm32f401rct6_stage0.json`
+Stage 0 test: `tests/plans/stm32f401rct6_pc13_blinky_visual.json`
+
+Current policy:
+- keep `packs/smoke_stm32f401.json` as the preserved legacy golden pack
+- add the new Rule-B suite in parallel, stage by stage
+- do not replace the preserved legacy pack until the newer suite is mature and re-validated
+
 ---
 
 ## Bench Wiring
