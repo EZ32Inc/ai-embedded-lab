@@ -81,6 +81,12 @@ def main():
     pack_p.add_argument("--no-flash", action="store_true")
     pack_p.add_argument("--no-build", action="store_true")
     pack_p.add_argument("--verify-only", action="store_true")
+    pack_p.add_argument(
+        "--stage",
+        default=None,
+        help="Comma-separated stage names/numbers to run (e.g. '0', '0,1', '2,3'). "
+             "Requires the pack to define a 'stages' field.",
+    )
 
     instr_p = sub.add_parser("instruments")
     instr_sub = instr_p.add_subparsers(dest="instr_cmd", required=True)
@@ -623,6 +629,7 @@ def main():
             if not args.pack:
                 print("DUT has no packs. Provide --pack.")
                 sys.exit(2)
+        stage_filter = [s.strip() for s in args.stage.split(",")] if getattr(args, "stage", None) else None
         code = run_pack(
             pack_path=args.pack,
             board_override=board_override,
@@ -630,6 +637,7 @@ def main():
             no_flash=args.no_flash,
             no_build=args.no_build,
             verify_only=args.verify_only,
+            stage_filter=stage_filter,
         )
         sys.exit(code)
     if args.cmd == "inventory":
@@ -3945,7 +3953,7 @@ def _load_json(path):
         return {}
 
 
-def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False, no_build=False, verify_only=False):
+def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False, no_build=False, verify_only=False, stage_filter=None):
     repo_root = os.path.dirname(os.path.dirname(__file__))
     pack_full = pack_path if os.path.isabs(pack_path) else os.path.join(repo_root, pack_path)
     try:
@@ -3958,6 +3966,24 @@ def run_pack(pack_path, board_override=None, stop_on_fail=False, no_flash=False,
     pack_board = board_override or pack.get("board")
     pack_bench_profile = pack.get("bench_profile")
     tests = pack.get("programs") or pack.get("tests") or []
+
+    if stage_filter is not None:
+        stages = pack.get("stages")
+        if not stages:
+            print(f"Pack: --stage specified but pack '{pack_name}' has no 'stages' field")
+            return 2
+        selected = []
+        for s in stage_filter:
+            if s not in stages:
+                available = ", ".join(sorted(stages.keys()))
+                print(f"Pack: stage '{s}' not found in pack. Available: {available}")
+                return 2
+            selected.extend(stages[s])
+        # Preserve original order and deduplicate
+        seen = set()
+        tests = [t for t in tests if t in selected and not (t in seen or seen.add(t))]
+        print(f"Pack: stage filter {stage_filter} → {len(tests)} test(s)")
+
     if not pack_board or not tests:
         print("Pack: missing board or tests")
         return 2

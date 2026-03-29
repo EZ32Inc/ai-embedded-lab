@@ -5,6 +5,36 @@
   "bench_profile": "stm32f401rct6__stage3",
   "status": "golden",
   "verified_date": "2026-03-29",
+  "stages": {
+    "0": [
+      "tests/plans/stm32f401rct6_pc13_blinky_visual.json",
+      "tests/plans/stm32f401rct6_minimal_runtime_mailbox.json"
+    ],
+    "1": [
+      "tests/plans/stm32f401rct6_timer_mailbox.json",
+      "tests/plans/stm32f401rct6_internal_temp_mailbox.json"
+    ],
+    "2": [
+      "tests/plans/stm32f401rct6_wiring_verify.json",
+      "tests/plans/stm32f401rct6_exti_trigger.json",
+      "tests/plans/stm32f401rct6_pwm_capture.json",
+      "tests/plans/stm32f401rct6_uart_multibyte.json",
+      "tests/plans/stm32f401rct6_spi_loopback.json",
+      "tests/plans/stm32f401rct6_uart_dma.json",
+      "tests/plans/stm32f401rct6_iwdg.json",
+      "tests/plans/stm32f401rct6_i2c_loopback.json"
+    ],
+    "3": [
+      "tests/plans/stm32f401_gpio_signature.json",
+      "tests/plans/stm32f401_gpio_loopback_banner.json",
+      "tests/plans/stm32f401_exti_banner.json",
+      "tests/plans/stm32f401_capture_banner.json",
+      "tests/plans/stm32f401_pwm_banner.json",
+      "tests/plans/stm32f401_uart_loopback_banner.json",
+      "tests/plans/stm32f401_spi_banner.json",
+      "tests/plans/stm32f401_adc_banner.json"
+    ]
+  },
   "tests": [
     "tests/plans/stm32f401rct6_pc13_blinky_visual.json",
     "tests/plans/stm32f401rct6_minimal_runtime_mailbox.json",
