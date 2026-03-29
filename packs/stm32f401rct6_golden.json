@@ -1,11 +1,15 @@
 {
   "name": "stm32f401rct6_golden",
-  "description": "STM32F401RCT6 Golden Test Suite — 8 mailbox tests covering GPIO loopback, EXTI, PWM, UART, SPI, UART-DMA, IWDG, and I2C loopback. All tests use baremetal_mailbox (no LA required). Wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3. First full 8/8 PASS: 2026-03-29.",
+  "description": "STM32F401RCT6 Golden Test Suite — 20 tests across all stages. Stage0: blinky + mailbox health. Stage1: timer + internal temp (no wiring). Stage2: 8 peripheral loopback mailbox tests. Stage3: 8 LA-verified banner tests. Wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, PB6↔PB10, PB7↔PB3, LA: PA2→P0.0, PA3→P0.1, PB13→P0.2. All stages PASS 2026-03-29.",
   "board": "stm32f401rct6",
   "bench_profile": "stm32f401rct6__stage3",
   "status": "golden",
   "verified_date": "2026-03-29",
   "tests": [
+    "tests/plans/stm32f401rct6_pc13_blinky_visual.json",
+    "tests/plans/stm32f401rct6_minimal_runtime_mailbox.json",
+    "tests/plans/stm32f401rct6_timer_mailbox.json",
+    "tests/plans/stm32f401rct6_internal_temp_mailbox.json",
     "tests/plans/stm32f401rct6_wiring_verify.json",
     "tests/plans/stm32f401rct6_exti_trigger.json",
     "tests/plans/stm32f401rct6_pwm_capture.json",
@@ -13,6 +17,14 @@
     "tests/plans/stm32f401rct6_spi_loopback.json",
     "tests/plans/stm32f401rct6_uart_dma.json",
     "tests/plans/stm32f401rct6_iwdg.json",
-    "tests/plans/stm32f401rct6_i2c_loopback.json"
+    "tests/plans/stm32f401rct6_i2c_loopback.json",
+    "tests/plans/stm32f401_gpio_signature.json",
+    "tests/plans/stm32f401_gpio_loopback_banner.json",
+    "tests/plans/stm32f401_exti_banner.json",
+    "tests/plans/stm32f401_capture_banner.json",
+    "tests/plans/stm32f401_pwm_banner.json",
+    "tests/plans/stm32f401_uart_loopback_banner.json",
+    "tests/plans/stm32f401_spi_banner.json",
+    "tests/plans/stm32f401_adc_banner.json"
   ]
 }

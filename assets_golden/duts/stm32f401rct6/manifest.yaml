@@ -42,16 +42,20 @@ tags:
 verified:
   status: true
   verification_suite: stm32f401rct6_golden
-  tests: 8
+  tests: 20
   sequential_pass: true
   latest_run_id: 2026-03-29_08-40-59_stm32f401rct6_stm32f401rct6_i2c_loopback
   verified_on:
     bench_id: esp32jtag_blackpill_192_168_2_106
     instrument_endpoint: 192.168.2.106:4242
   date: 2026-03-29
-  experiments_passed: 8
+  experiments_passed: 20
   golden_pack: packs/stm32f401rct6_golden.json
   golden_covers:
+    - pc13_blinky_visual
+    - minimal_runtime_mailbox
+    - timer_mailbox
+    - internal_temp_mailbox
     - wiring_verify
     - exti_trigger
     - pwm_capture
@@ -60,3 +64,11 @@ verified:
     - uart_dma
     - iwdg
     - i2c_loopback
+    - gpio_signature
+    - gpio_loopback_banner
+    - exti_banner
+    - capture_banner
+    - pwm_banner
+    - uart_loopback_banner
+    - spi_banner
+    - adc_banner
