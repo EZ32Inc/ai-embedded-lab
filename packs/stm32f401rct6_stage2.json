@@ -4,6 +4,9 @@
   "board": "stm32f401rct6",
   "bench_profile": "stm32f401rct6__stage3",
   "tests": [
-    "tests/plans/stm32f401rct6_wiring_verify.json"
+    "tests/plans/stm32f401rct6_wiring_verify.json",
+    "tests/plans/stm32f401rct6_exti_trigger.json",
+    "tests/plans/stm32f401rct6_pwm_capture.json",
+    "tests/plans/stm32f401rct6_uart_multibyte.json"
   ]
 }
