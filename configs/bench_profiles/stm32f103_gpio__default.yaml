@@ -1,0 +1,48 @@
+bench_profile:
+  id: stm32f103_gpio__default
+  board_id: stm32f103_gpio
+  description: "GPIO waveform wiring: PA4→P0.0, PA5→P0.1, PA6→P0.2, PA7→P0.3, PC13→LED"
+
+  bench_connections:
+    - from: PA4
+      to: P0.0
+    - from: PA5
+      to: P0.1
+    - from: PA6
+      to: P0.2
+    - from: PA7
+      to: P0.3
+    - from: PC13
+      to: LED
+    - from: GND
+      to: probe GND
+
+  observe_map:
+    sig: P0.0
+    pa4: P0.0
+    pa5: P0.1
+    pa6: P0.2
+    pa7: P0.3
+    led: LED
+
+  verification_views:
+    signal:
+      pin: sig
+      resolved_to: P0.0
+      description: Generic GPIO signature capture on PA4
+    led:
+      pin: led
+      resolved_to: LED
+      description: Visual Bluepill LED blink on PC13
+
+  default_wiring:
+    swd: "P3"
+    reset: "NC"
+    verify: "P0.0"
+
+  safe_pins:
+    - PA4
+    - PA5
+    - PA6
+    - PA7
+    - PC13

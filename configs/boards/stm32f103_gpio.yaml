@@ -3,6 +3,7 @@ board:
   target: stm32f103c8t6
   instrument_instance: esp32jtag_stm32_golden
   clock_hz: 8000000
+  default_bench_profile: stm32f103_gpio__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f103
@@ -27,45 +28,6 @@ board:
   mailbox_verify_defaults:
     attach_monitor_cmd: "monitor a"
     skip_attach: false
-  observe_map:
-    sig: P0.0
-    pa4: P0.0
-    pa5: P0.1
-    pa6: P0.2
-    pa7: P0.3
-    led: LED
-  verification_views:
-    signal:
-      pin: sig
-      resolved_to: P0.0
-      description: Generic GPIO signature capture on PA4
-    led:
-      pin: led
-      resolved_to: LED
-      description: Visual Bluepill LED blink on PC13
-  bench_connections:
-    - from: PA4
-      to: P0.0
-    - from: PA5
-      to: P0.1
-    - from: PA6
-      to: P0.2
-    - from: PA7
-      to: P0.3
-    - from: PC13
-      to: LED
-    - from: GND
-      to: probe GND
-  safe_pins:
-    - PA4
-    - PA5
-    - PA6
-    - PA7
-    - PC13
-  default_wiring:
-    swd: "P3"
-    reset: "NC"
-    verify: "P0.0"
   power_and_boot:
     reset_strategy: connect_under_reset
     boot_mode_default: normal
