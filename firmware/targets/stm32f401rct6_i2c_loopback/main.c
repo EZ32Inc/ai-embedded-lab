@@ -83,6 +83,7 @@
 #define I2C_CR1_START (1u << 8)
 #define I2C_CR1_STOP  (1u << 9)
 #define I2C_CR1_ACK   (1u << 10)
+#define I2C_CR1_SWRST (1u << 15)
 
 /* I2C SR1 */
 #define I2C_SR1_SB   (1u << 0)   /* start bit (master) */
@@ -183,19 +184,27 @@ int main(void)
 
     /* ---- I2C2 slave init (must be ready before master generates START) -- */
     /*
+     * Software-reset before configuring: clears any stale state left by a
+     * previous run (the STM32 I2C peripheral can latch BUSY across GDB resets).
      * OAR1 bit 14 must remain 1 (reserved, RM0368 §27.6.3).
      * ACK=1: slave hardware auto-acks matching addresses and data bytes.
      * NOSTRETCH=0 (default): slave stretches SCL when not ready, required
      * for single-CPU polling interleaving.
      */
-    I2C2_CR1   = 0u;
-    I2C2_CR2   = 16u;                              /* FREQ = 16 MHz */
-    I2C2_CCR   = 80u;                              /* SM 100 kHz */
+    I2C2_CR1   = I2C_CR1_SWRST;               /* assert software reset */
+    delay_ms(1u);
+    I2C2_CR1   = 0u;                           /* release reset, PE=0 */
+    I2C2_CR2   = 16u;                          /* FREQ = 16 MHz */
+    I2C2_CCR   = 80u;                          /* SM 100 kHz */
     I2C2_TRISE = 17u;
-    I2C2_OAR1  = (SLAVE_ADDR << 1u) | (1u << 14u);/* 7-bit addr 0x42 */
+    I2C2_OAR1  = (SLAVE_ADDR << 1u) | (1u << 14u); /* 7-bit addr 0x42 */
     I2C2_CR1   = I2C_CR1_PE | I2C_CR1_ACK;
 
+    delay_ms(2u);                              /* let slave stabilise on bus */
+
     /* ---- I2C1 master init ----------------------------------------------- */
+    I2C1_CR1   = I2C_CR1_SWRST;
+    delay_ms(1u);
     I2C1_CR1   = 0u;
     I2C1_CR2   = 16u;
     I2C1_CCR   = 80u;
@@ -204,7 +213,13 @@ int main(void)
 
     ael_mailbox_init();
 
-    uint32_t err = 0u;
+    /*
+     * Capture BUSY state at startup for diagnostics.
+     * detail0=1 on FAIL means BUSY was stuck when START was attempted;
+     * detail0=0 means the bus appeared idle but SB still did not set.
+     */
+    uint32_t err      = 0u;
+    uint32_t i2c_diag = (I2C1_SR2 & I2C_SR2_BUSY) ? 1u : 0u;
 
     /* ==================================================================
      * WRITE PHASE: master sends tx_buf[4] to slave (slave stores in slave_buf)
@@ -351,6 +366,6 @@ int main(void)
     }
 
 fail:
-    ael_mailbox_fail(err, 0u);
+    ael_mailbox_fail(err, i2c_diag);
     while (1) {}
 }
