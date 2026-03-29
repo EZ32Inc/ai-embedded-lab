@@ -34,7 +34,7 @@
         "dut_signal": "PB0/ADC1_IN8",
         "kind": "analog_in",
         "required": true,
-        "status": "provisioned_unverified",
+        "status": "provisioned",
         "notes": "Physically connect PB1 to PB0. Firmware exports ADC-valid status on PA2."
       }
     ]

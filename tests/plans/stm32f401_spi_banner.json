@@ -39,7 +39,7 @@
         "dut_signal": "PB14/SPI2_MISO",
         "kind": "digital_loopback",
         "required": true,
-        "status": "provisioned_unverified",
+        "status": "provisioned",
         "notes": "Physically connect PB15/SPI2_MOSI to PB14/SPI2_MISO. Firmware exports SPI-valid status on PA2."
       }
     ]

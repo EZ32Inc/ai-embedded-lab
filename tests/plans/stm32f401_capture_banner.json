@@ -35,7 +35,7 @@
         "dut_signal": "PA6",
         "kind": "digital_loopback",
         "required": true,
-        "status": "provisioned_unverified",
+        "status": "provisioned",
         "notes": "Physically connect PA8 to PA6. Firmware exports capture-valid status on PA2."
       }
     ]

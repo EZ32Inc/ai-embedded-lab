@@ -33,7 +33,7 @@
         "dut_signal": "PA10/USART1_RX",
         "kind": "digital_loopback",
         "required": true,
-        "status": "provisioned_unverified",
+        "status": "provisioned",
         "notes": "Physically connect PA9/USART1_TX to PA10/USART1_RX. Firmware exports UART-valid status on PA2."
       }
     ]
