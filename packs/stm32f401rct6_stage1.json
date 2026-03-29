@@ -3,6 +3,7 @@
   "description": "Rule-B Stage 1 no-wire self-tests for STM32F401RCT6 via ESP32JTAG.",
   "board": "stm32f401rct6",
   "tests": [
-    "tests/plans/stm32f401rct6_timer_mailbox.json"
+    "tests/plans/stm32f401rct6_timer_mailbox.json",
+    "tests/plans/stm32f401rct6_internal_temp_mailbox.json"
   ]
 }
