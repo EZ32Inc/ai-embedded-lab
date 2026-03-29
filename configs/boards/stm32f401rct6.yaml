@@ -3,6 +3,7 @@ board:
   target: stm32f401rct6
   instrument_instance: esp32jtag_blackpill_192_168_2_106
   clock_hz: 16000000
+  default_bench_profile: stm32f401rct6__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32f401rct6
@@ -21,51 +22,6 @@ board:
       - "load"
       - "attach {target_id}"
       - "detach"
-  observe_map:
-    sig: P0.0
-    pa2: P0.0
-    pa3: P0.1
-    pb13: P0.2
-    led: LED
-  verification_views:
-    signal:
-      pin: sig
-      resolved_to: P0.0
-      description: Primary proof capture on PA2
-    aux:
-      pin: pb13
-      resolved_to: P0.2
-      description: Auxiliary observed SPI clock pin on PB13
-  bench_connections:
-    - from: PA2
-      to: P0.0
-    - from: PA3
-      to: P0.1
-    - from: PB13
-      to: P0.2
-    - from: PC13
-      to: LED
-    - from: PC13
-      to: P0.3
-    - from: GND
-      to: probe GND
-  safe_pins:
-    - PA2
-    - PA3
-    - PA6
-    - PA8
-    - PA9
-    - PA10
-    - PB0
-    - PB1
-    - PB13
-    - PB14
-    - PB15
-    - PC13
-  default_wiring:
-    swd: "P3"
-    reset: "NC"
-    verify: "P0.0"
   power_and_boot:
     reset_strategy: connect_under_reset
     boot_mode_default: normal
