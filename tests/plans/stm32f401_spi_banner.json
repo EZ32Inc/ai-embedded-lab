@@ -16,9 +16,22 @@
   },
   "bench_setup": {
     "peripheral_signals": [
-      { "role": "SPI2_SCK",  "dut_signal": "PB13", "direction": "output", "notes": "Instrument observes PB13 on P0.2." },
-      { "role": "SPI2_MISO", "dut_signal": "PB14", "direction": "input"  },
-      { "role": "SPI2_MOSI", "dut_signal": "PB15", "direction": "output" }
+      {
+        "role": "SPI2_SCK",
+        "dut_signal": "PB13",
+        "direction": "output",
+        "notes": "Instrument observes PB13 on P0.2."
+      },
+      {
+        "role": "SPI2_MISO",
+        "dut_signal": "PB14",
+        "direction": "input"
+      },
+      {
+        "role": "SPI2_MOSI",
+        "dut_signal": "PB15",
+        "direction": "output"
+      }
     ],
     "external_inputs": [
       {
@@ -26,7 +39,7 @@
         "dut_signal": "PB14/SPI2_MISO",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned_unverified",
         "notes": "Physically connect PB15/SPI2_MOSI to PB14/SPI2_MISO. Firmware exports SPI-valid status on PA2."
       }
     ]

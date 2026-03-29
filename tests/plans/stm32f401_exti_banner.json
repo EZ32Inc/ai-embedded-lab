@@ -16,8 +16,18 @@
   },
   "bench_setup": {
     "peripheral_signals": [
-      { "role": "EXTI_SOURCE",          "dut_signal": "PA8", "direction": "output", "notes": "Firmware generates edges on PA8." },
-      { "role": "EXTI_SELF_CHECK_INPUT", "dut_signal": "PA6", "direction": "input",  "notes": "EXTI counts edges via PA8→PA6 loopback." }
+      {
+        "role": "EXTI_SOURCE",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "Firmware generates edges on PA8."
+      },
+      {
+        "role": "EXTI_SELF_CHECK_INPUT",
+        "dut_signal": "PA6",
+        "direction": "input",
+        "notes": "EXTI counts edges via PA8\u2192PA6 loopback."
+      }
     ],
     "external_inputs": [
       {
@@ -25,7 +35,7 @@
         "dut_signal": "PA6",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned_unverified",
         "notes": "Physically connect PA8 to PA6. Firmware exports EXTI-valid status on PA2."
       }
     ]

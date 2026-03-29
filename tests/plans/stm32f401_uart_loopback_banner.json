@@ -16,8 +16,16 @@
   },
   "bench_setup": {
     "peripheral_signals": [
-      { "role": "USART1_TX", "dut_signal": "PA9",  "direction": "output" },
-      { "role": "USART1_RX", "dut_signal": "PA10", "direction": "input"  }
+      {
+        "role": "USART1_TX",
+        "dut_signal": "PA9",
+        "direction": "output"
+      },
+      {
+        "role": "USART1_RX",
+        "dut_signal": "PA10",
+        "direction": "input"
+      }
     ],
     "external_inputs": [
       {
@@ -25,7 +33,7 @@
         "dut_signal": "PA10/USART1_RX",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned_unverified",
         "notes": "Physically connect PA9/USART1_TX to PA10/USART1_RX. Firmware exports UART-valid status on PA2."
       }
     ]

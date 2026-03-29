@@ -16,8 +16,17 @@
   },
   "bench_setup": {
     "peripheral_signals": [
-      { "role": "ADC1_IN8",         "dut_signal": "PB0/ADC1_IN8", "direction": "input"  },
-      { "role": "ADC_LOOPBACK_SOURCE", "dut_signal": "PB1",        "direction": "output", "notes": "Firmware drives PB1 and samples PB0 through loopback." }
+      {
+        "role": "ADC1_IN8",
+        "dut_signal": "PB0/ADC1_IN8",
+        "direction": "input"
+      },
+      {
+        "role": "ADC_LOOPBACK_SOURCE",
+        "dut_signal": "PB1",
+        "direction": "output",
+        "notes": "Firmware drives PB1 and samples PB0 through loopback."
+      }
     ],
     "external_inputs": [
       {
@@ -25,7 +34,7 @@
         "dut_signal": "PB0/ADC1_IN8",
         "kind": "analog_in",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned_unverified",
         "notes": "Physically connect PB1 to PB0. Firmware exports ADC-valid status on PA2."
       }
     ]

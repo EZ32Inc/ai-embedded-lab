@@ -16,8 +16,18 @@
   },
   "bench_setup": {
     "peripheral_signals": [
-      { "role": "TIM1_CH1_PWM_OUT",    "dut_signal": "PA8", "direction": "output", "notes": "TIM1_CH1 PWM on PA8 (AF1)." },
-      { "role": "PWM_SELF_CHECK_INPUT", "dut_signal": "PA6", "direction": "input",  "notes": "Firmware samples PA6 via PA8→PA6 loopback." }
+      {
+        "role": "TIM1_CH1_PWM_OUT",
+        "dut_signal": "PA8",
+        "direction": "output",
+        "notes": "TIM1_CH1 PWM on PA8 (AF1)."
+      },
+      {
+        "role": "PWM_SELF_CHECK_INPUT",
+        "dut_signal": "PA6",
+        "direction": "input",
+        "notes": "Firmware samples PA6 via PA8\u2192PA6 loopback."
+      }
     ],
     "external_inputs": [
       {
@@ -25,7 +35,7 @@
         "dut_signal": "PA6",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned_unverified",
         "notes": "Physically connect PA8/TIM1_CH1 to PA6. Firmware exports PWM-valid status on PA2."
       }
     ]
