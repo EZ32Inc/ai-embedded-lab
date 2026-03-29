@@ -1,7 +1,7 @@
 bench_profile:
   id: stm32f401rct6__stage3
   board_id: stm32f401rct6
-  description: "Stage3 banner wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, LA on P0.0/P0.1/P0.2"
+  description: "Stage2/3 wiring: PA8↔PA6, PA9↔PA10, PB0↔PB1, PB15↔PB14, LA on P0.0/P0.1/P0.2"
 
   bench_connections:
     - from: PA8
@@ -10,6 +10,8 @@ bench_profile:
       to: PA10
     - from: PB0
       to: PB1
+    - from: PB15
+      to: PB14
     - from: PA2
       to: P0.0
     - from: PA3

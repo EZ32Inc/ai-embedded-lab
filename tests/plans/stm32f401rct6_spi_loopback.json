@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f401rct6_spi_loopback",
+  "board": "stm32f401rct6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": { "mailbox": true, "datacapture": false },
+  "labels": ["mailbox", "portable", "selfcheck"],
+  "covers": ["spi2", "loopback"],
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6_spi_loopback",
+    "artifact_stem": "stm32f401_spi_loopback_app",
+    "build_dir": "artifacts/build_stm32f401rct6_spi_loopback"
+  },
+  "signal_checks": [],
+  "mailbox_verify": { "settle_s": 5.0, "addr": "0x2000FC00" },
+  "bench_setup": {
+    "notes": "SPI2 loopback test. PB15 (SPI2_MOSI AF5) → PB14 (SPI2_MISO AF5), 1 wire. Master mode, 250 kHz, 8-bit CPOL=0 CPHA=0, SSM software NSS on PB12. Sends 8 bytes {0x01..0x80} and verifies each echo. On FAIL: error_code bits 0-7 = per-byte failure mask. detail0 = matched byte count (0-7). On PASS: detail0 = heartbeat counter.",
+    "peripheral_signals": [
+      {
+        "role": "SPI_MOSI",
+        "dut_signal": "PB15",
+        "direction": "output",
+        "notes": "SPI2_MOSI AF5. Wire: PB15 → PB14."
+      },
+      {
+        "role": "SPI_MISO",
+        "dut_signal": "PB14",
+        "direction": "input",
+        "notes": "SPI2_MISO AF5. Wire: PB15 → PB14."
+      }
+    ]
+  }
+}
