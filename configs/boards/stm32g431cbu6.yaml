@@ -8,6 +8,7 @@ board:
     - programmable_via_swd
     - has_reset_pin
     - has_gpio
+  default_bench_profile: stm32g431cbu6__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32g431cbu6
@@ -27,47 +28,6 @@ board:
       - "load"
       - "set *(unsigned int*)0xE000EDF0 = 0xA05F0001"
       - "detach"
-  observe_map:
-    sig: P0.3
-    pa2: P0.3
-    pa3: P0.0
-    pa4: P0.2
-    pb3: P0.1
-    spi_sck: P0.1
-    led: LED
-    pa8: LED
-  verification_views:
-    signal:
-      pin: sig
-      resolved_to: P0.3
-      description: GPIO signature capture on PA2 (~250Hz primary signal)
-    led:
-      pin: led
-      resolved_to: LED
-      description: Operator-visible PA8 LED blink (1Hz, active-high)
-  bench_connections:
-    - from: PA2
-      to: P0.3
-    - from: PA3
-      to: P0.0
-    - from: PA4
-      to: P0.2
-    - from: PB3
-      to: P0.1
-    - from: PA8
-      to: LED
-    - from: GND
-      to: probe GND
-  safe_pins:
-    - PA2
-    - PA3
-    - PA4
-    - PA8
-    - PB3
-  default_wiring:
-    swd: "P3"
-    reset: "NC"
-    verify: "P0.3"
   power_and_boot:
     reset_strategy: connect_under_reset
     boot_mode_default: normal
