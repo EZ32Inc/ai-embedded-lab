@@ -32,7 +32,7 @@ devices:
     role: instrument
     driver: esp32_jtag
     connection:
-      host: "192.168.2.106"
+      host: "192.168.2.103"
       gdb_port: 4242
       web_port: 443
     config:

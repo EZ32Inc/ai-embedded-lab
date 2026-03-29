@@ -4,7 +4,7 @@ instance:
   label: ESP32JTAG STM32F411
 
 connection:
-  ip: 192.168.2.106
+  ip: 192.168.2.103
   gdb_port: 4242
 
 communication:
@@ -12,12 +12,12 @@ communication:
   surfaces:
     - name: gdb_remote
       transport: wifi
-      endpoint: 192.168.2.106:4242
+      endpoint: 192.168.2.103:4242
       protocol: gdb_remote
       invocation_style: request_response
     - name: web_api
       transport: wifi
-      endpoint: https://192.168.2.106:443
+      endpoint: https://192.168.2.103:443
       protocol: esp32jtag_web_api_v1
       invocation_style: request_response
       auth:
