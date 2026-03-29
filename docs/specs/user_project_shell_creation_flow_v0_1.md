@@ -150,6 +150,36 @@ Recommended fields:
 
 This is enough for v0.1.
 
+## Project ID Naming Rule
+
+Project ids should be lightweight, stable, and filesystem-safe.
+
+Recommended shape:
+
+- `<target-or-board>_<goal>`
+
+Examples:
+
+- `stm32f411_first_example`
+- `stm32f411_led_blink`
+- `stm32f103c6t6_bringup`
+
+Rules:
+
+- use lowercase
+- use short descriptive goal words
+- prefer MCU or board identity plus user goal
+- do not include temporary bench details such as IP address, serial port, or
+  instrument choice
+- treat the project id as a stable lookup key, not a full setup summary
+
+At project creation time, AEL should explicitly tell the user:
+
+- the chosen `project_id`
+- where the shell was created
+- that as long as the MCU or board information is known, AEL can list and find
+  the project later
+
 ## Initial Files
 
 Generate only these initially:

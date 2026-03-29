@@ -96,6 +96,16 @@ Location:
 - `projects/<project_id>/README.md`
 - `projects/<project_id>/session_notes.md`
 
+Typical project id shape:
+
+- `<target-or-board>_<goal>`
+
+Examples:
+
+- `stm32f411_first_example`
+- `stm32f411_led_blink`
+- `stm32f103c6t6_bringup`
+
 The user project domain is distinct from the system domain (`default verification`, board capabilities).
 Cross-domain links record which system path a project is anchored to.
 

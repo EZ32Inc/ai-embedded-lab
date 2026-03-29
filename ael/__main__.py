@@ -1613,11 +1613,14 @@ Fill in all PLACEHOLDER fields before attempting to run.
 
     print(f"created: {project_dir}")
     print(f"  project_id: {project_id}")
+    print("  project_id_rule: target_or_board + goal, lower-case slug for stable lookup")
     print(f"  target_mcu: {target_mcu}")
     print(f"  mature_path: {mature_path or 'none'}")
     print(f"  path_maturity: {path_maturity} (confidence: {maturity_confidence})")
     print(f"  status: {status}")
     print(f"  next: {next_action}")
+    print("  note: as long as the MCU or board information is known, AEL can list")
+    print("        and find this project later from the user-project domain.")
     print("")
     if is_mature:
         # H1: A/B/C/D structured output for known-board clarify-first policy
