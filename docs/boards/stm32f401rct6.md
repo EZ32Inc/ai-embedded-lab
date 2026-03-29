@@ -36,6 +36,8 @@ truth-layer test so the preserved legacy pack is not disturbed.
 
 Stage 0 pack: `packs/stm32f401rct6_stage0.json`
 Stage 0 test: `tests/plans/stm32f401rct6_pc13_blinky_visual.json`
+Stage 0 mailbox pack: `packs/stm32f401rct6_stage0_mailbox.json`
+Stage 0 mailbox test: `tests/plans/stm32f401rct6_minimal_runtime_mailbox.json`
 
 Current policy:
 - keep `packs/smoke_stm32f401.json` as the preserved legacy golden pack

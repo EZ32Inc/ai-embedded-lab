@@ -1,0 +1,8 @@
+{
+  "name": "stm32f401rct6_stage0_mailbox",
+  "description": "Rule-B Stage 0 mailbox runtime gate for STM32F401RCT6 via ESP32JTAG. SWD-only, no extra wiring required.",
+  "board": "stm32f401rct6",
+  "tests": [
+    "tests/plans/stm32f401rct6_minimal_runtime_mailbox.json"
+  ]
+}

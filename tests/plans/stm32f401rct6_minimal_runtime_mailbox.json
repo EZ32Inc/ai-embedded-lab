@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32f401rct6_minimal_runtime_mailbox",
+  "board": "stm32f401rct6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "minimal_runtime", "stage0"],
+  "covers": ["runtime_gate", "mailbox", "board_health"],
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f401rct6_minimal_runtime_mailbox",
+    "artifact_stem": "stm32f401_minimal_runtime_mailbox_app",
+    "build_dir": "artifacts/build_stm32f401rct6_minimal_runtime_mailbox"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 4.0,
+    "addr": "0x2000FC00"
+  },
+  "bench_setup": {
+    "notes": "Rule-B Stage 0 mailbox runtime gate for STM32F401RCT6. Requires only SWDIO, SWCLK, and GND. PC13 LED is optional visual support only.",
+    "peripheral_signals": [
+      {
+        "role": "STATUS_LED",
+        "dut_signal": "PC13",
+        "direction": "output",
+        "notes": "Visual only. Toggles after PASS while mailbox detail0 increments."
+      }
+    ]
+  }
+}
