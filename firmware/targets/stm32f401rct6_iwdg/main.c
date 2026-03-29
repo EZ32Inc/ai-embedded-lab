@@ -79,18 +79,23 @@ int main(void)
 
     /*
      * Configure IWDG:
-     *   Prescaler /128 → fIWDG ≈ 32000/128 = 250 Hz
-     *   Reload = 999    → timeout ≈ 999/250 = 4.0 s
+     *   Prescaler /256 → fIWDG ≈ 32000/256 = 125 Hz
+     *   Reload = 4095   → timeout ≈ 4095/125 = 32.8 s
+     *
+     * Use a long timeout (>> settle_s=5s) so IWDG never fires during the
+     * mailbox observation window. Firmware kicks every 1ms so it won't
+     * fire in normal operation. This tests: LSI starts, IWDG configures
+     * and starts without premature reset, firmware survives with IWDG active.
      *
      * Sequence: unlock → set PR → wait PVU clear → set RLR → wait RVU clear
      *           → reload → start.
      */
     IWDG_KR  = IWDG_KEY_UNLOCK;
-    IWDG_PR  = 0x05u;                        /* /128 */
+    IWDG_PR  = 0x06u;                        /* /256 */
     while (IWDG_SR & IWDG_SR_PVU) {}         /* wait for prescaler update */
 
     IWDG_KR  = IWDG_KEY_UNLOCK;
-    IWDG_RLR = 999u;
+    IWDG_RLR = 4095u;                        /* max reload → ~32s timeout */
     while (IWDG_SR & IWDG_SR_RVU) {}         /* wait for reload update */
 
     IWDG_KR  = IWDG_KEY_RELOAD;              /* load new reload value */
