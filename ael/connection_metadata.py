@@ -196,6 +196,18 @@ def validate_power_and_boot(power_and_boot: Dict[str, Any] | Any) -> List[str]:
     return errors
 
 
+def validate_bench_profile(profile: Dict[str, Any]) -> List[str]:
+    """Validate the content of a bench profile dict (under the 'bench_profile' key)."""
+    if not isinstance(profile, dict):
+        return ["bench_profile must be a mapping"]
+    errors: List[str] = []
+    errors.extend(validate_bench_connections(profile.get("bench_connections")))
+    errors.extend(validate_observe_map(profile.get("observe_map")))
+    errors.extend(validate_verification_views(profile.get("verification_views")))
+    errors.extend(validate_default_wiring(profile.get("default_wiring")))
+    return errors
+
+
 def validate_connection_metadata(
     board_cfg: Dict[str, Any] | Any,
     test_raw: Dict[str, Any] | Any,
