@@ -35,7 +35,7 @@
         "dut_signal": "PA6",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned",
         "notes": "Execution contract: physically connect PA8 to PA6 so the DUT can confirm EXTI edge detection internally. AEL should observe PA2, not PA8/PA6, for the bounded proof."
       }
     ]

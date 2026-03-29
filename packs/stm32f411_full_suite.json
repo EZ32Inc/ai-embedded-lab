@@ -1,6 +1,7 @@
 {
   "name": "stm32f411_full_suite",
   "board": "stm32f411ceu6",
+  "bench_profile": "stm32f411ceu6__stage3",
   "tests": [
     "tests/plans/stm32f411_gpio_signature.json",
     "tests/plans/stm32f411_uart_loopback_banner.json",

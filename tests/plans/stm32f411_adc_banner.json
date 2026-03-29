@@ -34,7 +34,7 @@
         "dut_signal": "PB0/ADC1_IN8",
         "kind": "analog_in",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned",
         "notes": "Execution contract: physically connect PB1 to PB0 so the DUT can self-drive a square wave into ADC1_IN8 during runtime validation."
       }
     ]

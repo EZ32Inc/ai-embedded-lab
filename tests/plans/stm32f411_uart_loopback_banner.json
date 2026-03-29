@@ -33,7 +33,7 @@
         "dut_signal": "PA10/USART1_RX",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned",
         "notes": "Execution contract: physically connect PA9/USART1_TX to PA10/USART1_RX. Firmware performs a bounded UART loopback self-check internally and exports UART-valid status on PA2."
       }
     ]

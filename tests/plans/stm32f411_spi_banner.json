@@ -39,7 +39,7 @@
         "dut_signal": "PB14/SPI2_MISO",
         "kind": "digital_loopback",
         "required": true,
-        "status": "manual_loopback_required",
+        "status": "provisioned",
         "notes": "Execution contract: physically connect PB15/SPI2_MOSI to PB14/SPI2_MISO. Firmware performs a bounded SPI loopback self-check internally and exports SPI-valid status on PA2."
       }
     ]
