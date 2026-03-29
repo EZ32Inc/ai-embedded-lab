@@ -9,6 +9,7 @@ board:
     - has_reset_pin
     - has_gpio
     - has_uart_console
+  default_bench_profile: stm32h750vbt6__default
   build:
     type: arm_debug
     project_dir: firmware/targets/stm32h750_minimal_runtime_mailbox
