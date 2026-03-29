@@ -9,12 +9,12 @@
       "check_uart": {
         "exp_id": "9080020e-01c4-4579-82c4-f651ad085ad4",
         "count": 3,
-        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed — stages: preflight, build, load, run — failure: check_uart — uart transport unavailable"
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 uart transport unavailable"
       },
       "load": {
         "exp_id": "fd1f2710-5c8c-4cca-b54d-e4563fe7c8f6",
         "count": 3,
-        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c5_devkit_dual_usb] esp32c5_suite_ext3: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       }
     }
   },
@@ -28,7 +28,7 @@
       "build": {
         "exp_id": "72607a48-1703-4722-9451-97994746f3f2",
         "count": 1,
-        "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32c6_devkit] esp32c6_gpio_signature_with_meter: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       }
     }
   },
@@ -146,12 +146,12 @@
       "build": {
         "exp_id": "302a602d-93a4-4563-be35-fc9cac2be158",
         "count": 4,
-        "last_raw": "[esp32jtag_instrument_s3] esp32jtag_firmware_smoke: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32jtag_instrument_s3] esp32jtag_firmware_smoke: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       },
       "check_uart": {
         "exp_id": "890e3f6c-7b47-498a-912e-6b0ca0a246a2",
         "count": 1,
-        "last_raw": "[esp32jtag_instrument_s3] esp32jtag_firmware_smoke: failed — stages: preflight, build, load, run — failure: check_uart — adapter execute failed: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
+        "last_raw": "[esp32jtag_instrument_s3] esp32jtag_firmware_smoke: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 adapter execute failed: int() argument must be a string, a bytes-like object or a real number, not 'NoneType'"
       }
     }
   },
@@ -173,12 +173,12 @@
       "check_uart": {
         "exp_id": "9e7bd106-7dd2-40a2-9f57-e658303d32ab",
         "count": 4,
-        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed — stages: preflight, build, load, run — failure: check_uart — instrument spec 'esp32s3_uart_bridge' not found in /nvme1t/work/codex/ai-embedded-lab/configs/instrument_specs"
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 instrument spec 'esp32s3_uart_bridge' not found in /nvme1t/work/codex/ai-embedded-lab/configs/instrument_specs"
       },
       "load": {
         "exp_id": "b407af7f-8899-411e-9ee8-555c29decdf9",
         "count": 1,
-        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed — stages: preflight, build, run, check — failure: load — adapter execute failed: [Errno 2] No such file or directory: 'idf.py'"
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_suite: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 adapter execute failed: [Errno 2] No such file or directory: 'idf.py'"
       }
     }
   },
@@ -192,7 +192,7 @@
       "preflight": {
         "exp_id": "0a76dab0-ae5c-4300-8235-b53dd426ba65",
         "count": 2,
-        "last_raw": "[unknown] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[unknown] unknown: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       }
     }
   },
@@ -214,17 +214,17 @@
       "build": {
         "exp_id": "3c4c9b90-5ad1-4580-a427-17e92be7b096",
         "count": 2,
-        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       },
       "load": {
         "exp_id": "7c871986-db15-4028-9eb5-265d834d77cc",
         "count": 2,
-        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       },
       "check_uart": {
         "exp_id": "48832acc-b3c8-460a-a8a2-f04d7009dfe1",
         "count": 7,
-        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed — stages: preflight, build, load, run — failure: check_uart — uart indicates unstable DUT runtime"
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_suite: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 uart indicates unstable DUT runtime"
       }
     }
   },
@@ -238,7 +238,7 @@
       "preflight": {
         "exp_id": "160eb8ed-9b89-458f-bf4b-0b763b6005b8",
         "count": 1,
-        "last_raw": "[esp32_wroom32d_cp210x] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[esp32_wroom32d_cp210x] unknown: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       }
     }
   },
@@ -284,7 +284,7 @@
       "load": {
         "exp_id": "8866b55f-9a41-4568-bce3-f653321d559f",
         "count": 1,
-        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_pwm: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_pwm: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       }
     }
   },
@@ -354,7 +354,7 @@
       "build": {
         "exp_id": "556085e7-06d0-4d81-920b-6dff58c8d9fe",
         "count": 3,
-        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_full_suite: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32_wroom32d_cp210x] esp32_wroom32d_test_full_suite: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       }
     }
   },
@@ -368,17 +368,17 @@
       "load": {
         "exp_id": "f355dd6a-5e8a-427a-8c07-5327f660a701",
         "count": 1,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       },
       "build": {
         "exp_id": "e8405fb4-ace1-48ce-a8c6-3bbf251f2d4f",
         "count": 3,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 adapter execute failed: [Errno 32] Broken pipe"
       },
       "check_uart": {
         "exp_id": "0c530930-fff4-4d41-b25b-38c6e82ae9fd",
         "count": 3,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed — stages: preflight, build, load, run — failure: check_uart — uart indicates unstable DUT runtime"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_hello: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 uart indicates unstable DUT runtime"
       }
     }
   },
@@ -400,7 +400,7 @@
       "check_uart": {
         "exp_id": "c2f3e1b8-5ee5-4d2b-b87d-7d6c96c1bc9a",
         "count": 1,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_temp: failed — stages: preflight, build, load, run — failure: check_uart — adapter execute failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_temp: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 adapter execute failed: device reports readiness to read but returned no data (device disconnected or multiple access on port?)"
       }
     }
   },
@@ -486,7 +486,7 @@
       "load": {
         "exp_id": "ac9f854a-e901-4e88-a905-574ed075786d",
         "count": 1,
-        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_i2c: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c6_devkit_dual_usb] esp32c6_devkit_test_i2c: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       }
     }
   },
@@ -516,7 +516,7 @@
       "load": {
         "exp_id": "064937e9-171b-421e-92df-1ef98eaf4517",
         "count": 1,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_hello: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_hello: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       }
     }
   },
@@ -530,7 +530,7 @@
       "build": {
         "exp_id": "f6afb492-ceaa-44e4-a5ee-df53945ccc80",
         "count": 1,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_nvs: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_nvs: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 adapter execute failed: [Errno 32] Broken pipe"
       }
     }
   },
@@ -568,12 +568,12 @@
       "load": {
         "exp_id": "2f0500ff-2699-4757-9509-11cb6ef35bcd",
         "count": 3,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_sleep: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_sleep: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       },
       "check_uart": {
         "exp_id": "2d0c7272-8cac-417f-b361-fb18059c3401",
         "count": 1,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_sleep: failed — stages: preflight, build, load, run — failure: check_uart — uart transport unavailable"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_sleep: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 uart transport unavailable"
       }
     }
   },
@@ -595,7 +595,7 @@
       "preflight": {
         "exp_id": "1a2faede-fc0f-4887-b395-47c8e1ba2b5d",
         "count": 7,
-        "last_raw": "[esp32c3_devkit_native_usb] unknown: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[esp32c3_devkit_native_usb] unknown: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       }
     }
   },
@@ -625,12 +625,12 @@
       "check_uart": {
         "exp_id": "4ec0ca5a-cc44-46b5-83d5-f5b528e31f04",
         "count": 11,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_adc: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_adc: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       },
       "build": {
         "exp_id": "632e9b7f-cd7d-4126-b149-58c8a48dd232",
         "count": 1,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_adc: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_adc: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       }
     }
   },
@@ -652,12 +652,12 @@
       "preflight": {
         "exp_id": "6105da1a-750c-4be4-aae9-40821f9b8eff",
         "count": 4,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       },
       "check_signal": {
         "exp_id": "bb8a1216-b951-4e15-845c-3c81dfda99b1",
         "count": 3,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_signal \u2014 observe failed"
       }
     }
   },
@@ -671,12 +671,12 @@
       "load": {
         "exp_id": "5e937484-221a-4da3-8579-6d7026d02be8",
         "count": 5,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_full_suite: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_full_suite: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       },
       "check_uart": {
         "exp_id": "465d9246-041d-4688-960d-40956beaed12",
         "count": 6,
-        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_full_suite: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[esp32c3_devkit_native_usb] esp32c3_devkit_test_full_suite: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -690,7 +690,7 @@
       "preflight": {
         "exp_id": "b01e8d5d-2d01-405f-b909-abc44c3d55f0",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_minimal_runtime_mailbox_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_minimal_runtime_mailbox_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       }
     }
   },
@@ -712,7 +712,7 @@
       "check_signal": {
         "exp_id": "9d6a30da-81a4-4d8a-9c08-844e9c8d6304",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_level_high_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_level_high_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_signal \u2014 observe failed"
       }
     }
   },
@@ -726,7 +726,7 @@
       "check_signal": {
         "exp_id": "cf784ba3-d9b1-4bea-a3b2-a8689a9c6bf6",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_100hz_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — observe failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_gpio_signature_100hz_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_signal \u2014 observe failed"
       }
     }
   },
@@ -748,12 +748,12 @@
       "load": {
         "exp_id": "903501ad-727e-4543-9928-6c8ee1de979f",
         "count": 1,
-        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       },
       "build": {
         "exp_id": "6fae03f3-769b-4d2a-bd46-1ac057b579ba",
         "count": 1,
-        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed — stages: preflight, load, run, check — failure: build — adapter execute failed: [Errno 32] Broken pipe"
+        "last_raw": "[esp32s3_devkit_dual_usb] esp32s3_devkit_hello: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 adapter execute failed: [Errno 32] Broken pipe"
       }
     }
   },
@@ -967,12 +967,12 @@
       "check_uart": {
         "exp_id": "65721617-360d-40cc-a93f-08a4654e6784",
         "count": 21,
-        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       },
       "load": {
         "exp_id": "e571de24-64da-4494-9280-8b7e7466d599",
         "count": 2,
-        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed — stages: preflight, build, run, check — failure: load — load failed"
+        "last_raw": "[esp32c5_devkit_dual_usb] test_i2c: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 load failed"
       }
     }
   },
@@ -994,12 +994,12 @@
       "preflight": {
         "exp_id": "0a8e162e-f324-45f3-8076-51d34ab6f34f",
         "count": 7,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       },
       "check_uart": {
         "exp_id": "27d47e3e-e15f-4e39-8ed6-221485fd8a77",
         "count": 14,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_banner_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -1013,17 +1013,17 @@
       "preflight": {
         "exp_id": "6eb48300-d754-411c-a2d9-1bfdedf9ee79",
         "count": 4,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       },
       "build": {
         "exp_id": "7921589d-b1c5-43dc-bb81-f09279b89fef",
         "count": 2,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: preflight, load, run, check — failure: build — build failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed \u2014 stages: preflight, load, run, check \u2014 failure: build \u2014 build failed"
       },
       "check_uart": {
         "exp_id": "db12cae0-dadb-4e4d-bfe3-a4672efeab40",
         "count": 4,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_spi_loopback_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -1037,7 +1037,7 @@
       "preflight": {
         "exp_id": "b35d12e5-d121-4cb3-a97c-1e68d1e8fa09",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_pwm_capture_with_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_pwm_capture_with_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       }
     }
   },
@@ -1051,7 +1051,7 @@
       "check_uart": {
         "exp_id": "f7eb4fb5-7cf0-4015-a22b-6cb1a27b8d68",
         "count": 2,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_gpio_interrupt_loopback_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_gpio_interrupt_loopback_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -1065,7 +1065,7 @@
       "check_signal": {
         "exp_id": "1274a95e-efa7-45ea-915e-450493ae0cc9",
         "count": 2,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_rxd_detect_with_s3jtag: failed — stages: preflight, build, load, run — failure: check_signal — verify failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_uart_rxd_detect_with_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_signal \u2014 verify failed"
       }
     }
   },
@@ -1127,12 +1127,12 @@
       "preflight": {
         "exp_id": "71f98376-317e-4efd-800f-294518d6a43f",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       },
       "check_mailbox": {
         "exp_id": "3f0b419a-2f6f-4598-868e-53959d2bc5ed",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox read failed: parse_failed"
+        "last_raw": "[rp2040_pico_s3jtag] rp2040_adc_loopback_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_mailbox \u2014 mailbox read failed: parse_failed"
       }
     }
   },
@@ -1146,12 +1146,12 @@
       "preflight": {
         "exp_id": "6c77565d-3d32-4200-aad5-ab14b67c4fde",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed \u2014 stages: build, load, run, check \u2014 failure: preflight \u2014 preflight failed"
       },
       "check_uart": {
         "exp_id": "61783b90-76c2-4f2c-9494-41c0c068b1c4",
         "count": 3,
-        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed — stages: preflight, build, load, run — failure: check_uart — expected UART readiness patterns missing"
+        "last_raw": "[rp2040_pico_s3jtag_uart] rp2040_full_suite_s3jtag: failed \u2014 stages: preflight, build, load, run \u2014 failure: check_uart \u2014 expected UART readiness patterns missing"
       }
     }
   },
@@ -1165,7 +1165,7 @@
       "load": {
         "exp_id": "bc6a973f-8f52-4c1c-825d-99153d4f7e80",
         "count": 1,
-        "last_raw": "[rp2040_pico_s3jtag_uart] unknown: failed — stages: preflight, build, run, check — failure: load — flash attempt failed"
+        "last_raw": "[rp2040_pico_s3jtag_uart] unknown: failed \u2014 stages: preflight, build, run, check \u2014 failure: load \u2014 flash attempt failed"
       }
     }
   },
@@ -1175,6 +1175,502 @@
     "failure_count": 0,
     "last_seen": 1774626600.8683999,
     "confidence": 0.6,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_minimal_runtime_mailbox": {
+    "exp_id": "5c4c4d53-4dcb-4e21-9a67-b291098e1d35",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_adc_dac_loopback": {
+    "exp_id": "0f80a1d7-9e7e-4cea-a2a6-6cd1dcd48af2",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_gpio_loopback": {
+    "exp_id": "7036fce7-4f56-4598-b600-8c3f9b01b69e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_uart_loopback": {
+    "exp_id": "93e0352c-a17f-4308-93a5-1f22e8233973",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_exti_trigger": {
+    "exp_id": "8f73ff66-acd1-4201-80ba-fedb016cdbb3",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32h750vbt6|stm32h750_pwm_capture": {
+    "exp_id": "47cd42b2-fce7-4c87-9096-ac16d673fafb",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_uart_loopback_banner": {
+    "exp_id": "0b7f2435-798c-410b-b0d4-544031abcca6",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_adc_banner": {
+    "exp_id": "5ad4b5cf-ba2d-47c1-8026-5ff8ddf1591f",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_spi_banner": {
+    "exp_id": "a33cb002-8438-42ad-8a69-766dd92f9fdf",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_gpio_loopback_banner": {
+    "exp_id": "a455999b-3778-4baf-97a8-c4f547ca466b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_pwm_banner": {
+    "exp_id": "0fec8715-2d88-4674-81bf-a46ab216c49a",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_exti_banner": {
+    "exp_id": "7743b91d-8890-431b-9b80-bc6ef23fcc00",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f411ceu6|stm32f411_capture_banner": {
+    "exp_id": "ec96ddf3-7a75-466c-8b33-ae057ddcfbdf",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191800.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio_stlink|stm32f103_uart_loopback_mailbox": {
+    "exp_id": "2d9fc48b-8f3e-4685-a5f6-545b1058be76",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio_stlink|stm32f103_spi_mailbox": {
+    "exp_id": "d1547a85-c48a-4567-98ab-5c7552778e53",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio_stlink|stm32f103_exti_mailbox": {
+    "exp_id": "e9cfc41e-3ad6-41fa-9960-80031d0c5879",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio_stlink|stm32f103_adc_mailbox": {
+    "exp_id": "39899d83-6ded-494a-a9d7-979bf5473480",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_mailbox": {
+    "exp_id": "2322e88c-22b7-4a59-aa8e-070bd4d0ed76",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_timer_mailbox": {
+    "exp_id": "e33a9e9e-a2ef-4539-bfdb-d6a1e5db339b",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_gpio_loopback": {
+    "exp_id": "4c9b219a-c4c8-40aa-8637-9062022dd7b8",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_uart_loopback": {
+    "exp_id": "5ffc2609-73b1-4d79-8d36-e62673b89ef3",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_exti_trigger": {
+    "exp_id": "5c20ae04-9f18-4d09-b072-6098bf1349aa",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_adc_loopback": {
+    "exp_id": "15b6410e-9e00-4b9b-a694-468f47b64f43",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery|stm32f407_spi_loopback": {
+    "exp_id": "3f839896-17a8-4edd-a4a1-9619ce7ee20f",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363800.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_led_blink": {
+    "exp_id": "c4877478-90d7-4e1e-a688-2734f8291d84",
+    "success_count": 5,
+    "failure_count": 2,
+    "last_seen": 1774362000.0,
+    "confidence": 0.9,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401rct6_minimal_runtime_mailbox": {
+    "exp_id": "126b8177-9006-47f3-bb38-f93280667030",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774362300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401rct6_pc13_blinky_visual": {
+    "exp_id": "01d9e64c-b8ba-4d0d-9e51-12aab1ea0fa8",
+    "success_count": 1,
+    "failure_count": 1,
+    "last_seen": 1774362600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401rct6_timer_mailbox": {
+    "exp_id": "7c94f073-c2af-4860-a41f-c636a5758fb7",
+    "success_count": 1,
+    "failure_count": 1,
+    "last_seen": 1774362900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103c6t6_bluepill_like|stm32f103c6_gpio_no_external_capture": {
+    "exp_id": "693ebdd4-821b-4a70-b34a-84172e9f06c5",
+    "success_count": 12,
+    "failure_count": 0,
+    "last_seen": 1774363200.0,
+    "confidence": 1.0,
+    "known_failures": {}
+  },
+  "stm32f103c6t6_bluepill_like|stm32f103c6_pc13_blinky_visual": {
+    "exp_id": "5bdec51f-4867-4555-91d3-7b96d4303bd3",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774363500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401ce_blackpill|stm32f401ce_led_blink": {
+    "exp_id": "dfac4843-407c-4386-98d2-bec6a53ff7d1",
+    "success_count": 2,
+    "failure_count": 3,
+    "last_seen": 1774363800.0,
+    "confidence": 0.6,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_gpio_no_external_capture": {
+    "exp_id": "f795549d-252c-476c-9e2d-0b9f060047cc",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_gpio_signature": {
+    "exp_id": "791dc870-f023-45ad-9487-6a949123c27e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_uart_loopback_mailbox": {
+    "exp_id": "054372d5-1a69-435e-af85-b3bd13a449b3",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_spi_mailbox": {
+    "exp_id": "11375359-86b2-4e75-a5e4-b175598d14c9",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774190900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_exti_mailbox": {
+    "exp_id": "f208d42d-9ddc-4b50-aadb-9248fe760aec",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio|stm32f103_adc_mailbox": {
+    "exp_id": "81d671d2-d68c-4b13-9cec-4795b52ace6a",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103_gpio_stlink|stm32f103_gpio_no_external_capture": {
+    "exp_id": "2bea59f2-1d8e-488d-ad61-70a977061dff",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774191800.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_mailbox": {
+    "exp_id": "30c8f885-b651-4f04-9a11-b154c441e3be",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774192100.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_timer_mailbox": {
+    "exp_id": "e5d682c7-80b6-4302-af6a-cab2d4e93a04",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774192400.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_gpio_loopback": {
+    "exp_id": "e28af7b4-74f6-48ad-86b1-88123ae9db31",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774192700.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_uart_loopback": {
+    "exp_id": "b636de98-3088-4145-9400-1c5f4df02704",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774193000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_exti_trigger": {
+    "exp_id": "9d3af55c-8971-4283-af6c-0fbcfc705912",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774193300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_adc_loopback": {
+    "exp_id": "0be2076c-cfd5-4127-8e2a-42e7197f6147",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774193600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6|stm32f103rct6_spi_loopback": {
+    "exp_id": "5618fc92-a83f-4601-ba02-28be01255bee",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774193900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_mailbox": {
+    "exp_id": "b22ad626-223f-494c-8691-0389c8822b5e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774194200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_timer_mailbox": {
+    "exp_id": "69790c5c-9615-4cee-bfed-a9527e5146f1",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774194500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_gpio_loopback": {
+    "exp_id": "fc844490-f678-4e46-861c-2047b25b50b0",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774194800.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_uart_loopback": {
+    "exp_id": "1a883db7-3621-40d8-8dad-3456fdcd020e",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774195100.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_exti_trigger": {
+    "exp_id": "db003e01-cd24-4fd9-acbd-595ddc350966",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774195400.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_adc_loopback": {
+    "exp_id": "dcb30e34-db3e-4d20-b1c9-8069a9879e01",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774195700.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f103rct6_stlink|stm32f103rct6_spi_loopback": {
+    "exp_id": "57d30ceb-210f-4fd2-9ca7-9bc9425982a6",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774196000.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_gpio_signature": {
+    "exp_id": "b94e9ae2-047d-4f7b-8ea1-339ea1b2c06a",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774196300.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_uart_loopback_banner": {
+    "exp_id": "e4f200f6-b667-4dc5-93d2-6f7c726157c1",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774196600.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_spi_banner": {
+    "exp_id": "ef5ef32f-0a86-4d86-b5f7-6b46dab1b964",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774196900.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_adc_banner": {
+    "exp_id": "881634df-3900-43e8-af1e-bcf9380bf86a",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774197200.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_capture_banner": {
+    "exp_id": "006819a2-0a57-42a3-b3f1-3f965a53c2d9",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774197500.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_exti_banner": {
+    "exp_id": "1ec6a940-199a-4f66-a286-7d864bbb261d",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774197800.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_gpio_loopback_banner": {
+    "exp_id": "757bbe17-1bcd-449c-88fd-74164f58dc8f",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774198100.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401_pwm_banner": {
+    "exp_id": "df995070-5dbf-487d-9273-bb31ff6862e6",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774198400.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f401rct6|stm32f401rct6_internal_temp_mailbox": {
+    "exp_id": "fced0395-fbf0-4088-a348-6267dccd0f7f",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774198700.0,
+    "confidence": 0.5,
+    "known_failures": {}
+  },
+  "stm32f407_discovery_esp32jtag|stm32f407_mailbox": {
+    "exp_id": "775873a3-7010-4afa-8982-cca5be6993a6",
+    "success_count": 1,
+    "failure_count": 0,
+    "last_seen": 1774199000.0,
+    "confidence": 0.5,
     "known_failures": {}
   }
 }
