@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-29
 **Pack:** `packs/stm32f411ceu6_golden.json`
-**Result:** PASS — 19/19 tests
+**Result:** PASS — 20/20 tests (i2c_loopback restored 2026-03-29 after board swap)
 
 ---
 
@@ -12,11 +12,11 @@
 |-------|-------|-------|--------|
 | Stage 0 | pc13_blinky_visual, minimal_runtime_mailbox | 2 | ✓ PASS |
 | Stage 1 | timer_mailbox, internal_temp_mailbox | 2 | ✓ PASS |
-| Stage 2 | wiring_verify, exti_trigger, pwm_capture, uart_multibyte, spi_loopback, uart_dma, iwdg | 7 | ✓ PASS |
+| Stage 2 | wiring_verify, exti_trigger, pwm_capture, uart_multibyte, spi_loopback, uart_dma, iwdg, i2c_loopback | 8 | ✓ PASS |
 | Stage 3 | gpio_signature, gpio_loopback_banner, exti_banner, capture_banner, pwm_banner, uart_loopback_banner, spi_banner, adc_banner | 8 | ✓ PASS |
-| **Total** | | **19** | **19/19 PASS** |
+| **Total** | | **20** | **20/20 PASS** |
 
-**Excluded:** `stm32f411ceu6_i2c_loopback` — hardware issue (SDA wire anomaly). See `docs/reports/stm32f411ceu6_i2c_loopback_debug_2026-03-29.md`.
+**Note:** `stm32f411ceu6_i2c_loopback` was initially excluded due to SDA anomaly on Board A (hardware damage). After board swap to Board B, i2c_loopback passed without external pull-ups. See `docs/reports/stm32f411ceu6_i2c_loopback_debug_2026-03-29.md`.
 
 ---
 
@@ -81,8 +81,8 @@
 
 | Item | Priority | Notes |
 |------|----------|-------|
-| I2C loopback hardware fix | Medium | Replace SDA jumper wire; add external 4.7kΩ pull-ups on SDA+SCL; consider PB9 instead of PB3 |
-| I2C LA capture | Medium | Add P0.3=SDA, P0.4=SCL probes once hardware fixed; update bench profile and test plan |
+| Board A retirement | Low | Board A has GPIO damage on PB/PC; retire from active use |
+| I2C LA capture | Low | Optional: add P0.2/P0.3 LA probes for I2C bus visibility in future debug sessions |
 
 ---
 
@@ -95,3 +95,9 @@
 - F411 I2C OAR1 bit14 encoding requirement
 - SRAM diagnostic dump technique for bare-metal register verification
 - GPIO wire continuity test method
+
+**Additional records from I2C debug resolution (2026-03-29):**
+- `6bef776a` — STM32F4 internal pull-ups sufficient for I2C SM 100kHz loopback (board_family)
+- `94ac00dd` — [HIGH_PRIORITY] Board swap = fastest HW vs SW failure diagnosis (pattern)
+- `df19dd7c` — [HIGH_PRIORITY] wire_scan IDR technique: XOR full IDR to find connected pins (pattern)
+- `77469dc5` — [HIGH_PRIORITY] BMDA: use load+attach+detach, never continue& (pattern)
