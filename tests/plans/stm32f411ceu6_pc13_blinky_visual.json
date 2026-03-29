@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "program_only",
+  "name": "stm32f411ceu6_pc13_blinky_visual",
+  "board": "stm32f411ceu6",
+  "supported_instruments": ["esp32jtag"],
+  "labels": ["minimal", "visual", "blinky"],
+  "covers": ["gpio", "board_health"],
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32f411ceu6_pc13_blinky_visual",
+    "artifact_stem": "stm32f411_blinky_app",
+    "build_dir": "artifacts/build_stm32f411ceu6_pc13_blinky_visual"
+  },
+  "bench_setup": {
+    "notes": "Rule-B Stage 0 visual-only baseline. Flashes the STM32F411CEU6 PC13 LED blink image. Success requires operator-visible blinking on the onboard LED."
+  }
+}
