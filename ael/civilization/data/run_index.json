@@ -1821,14 +1821,14 @@
   },
   "stm32f401rct6|stm32f401rct6_i2c_loopback": {
     "exp_id": "f2fc0faf-2e16-434c-b3d2-1182a7d0144d",
-    "success_count": 6,
-    "failure_count": 1,
-    "last_seen": 1774790900.0722473,
+    "success_count": 8,
+    "failure_count": 3,
+    "last_seen": 1774811629.9707956,
     "confidence": 1.0,
     "known_failures": {
       "check_mailbox": {
         "exp_id": "58918e2a-0d21-48f6-afa2-ea9014764ac1",
-        "count": 1,
+        "count": 3,
         "last_raw": "[stm32f401rct6] stm32f401rct6_i2c_loopback: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox verify failed: status=FAIL (expected PASS)"
       }
     }
@@ -1932,14 +1932,19 @@
   "stm32f411ceu6|stm32f411ceu6_i2c_loopback": {
     "exp_id": null,
     "success_count": 0,
-    "failure_count": 16,
-    "last_seen": 1774801462.6100862,
+    "failure_count": 18,
+    "last_seen": 1774809981.598639,
     "confidence": 0.5,
     "known_failures": {
       "check_mailbox": {
         "exp_id": "ef69e2e9-9160-44ae-a205-16f4f6d07434",
-        "count": 16,
+        "count": 17,
         "last_raw": "[stm32f411ceu6] stm32f411ceu6_i2c_loopback: failed — stages: preflight, build, load, run — failure: check_mailbox — mailbox verify failed: status=FAIL (expected PASS)"
+      },
+      "preflight": {
+        "exp_id": "a6513fd8-bd3d-4b7a-b0df-bd79fa0b49e7",
+        "count": 1,
+        "last_raw": "[stm32f411ceu6] stm32f411ceu6_i2c_loopback: failed — stages: build, load, run, check — failure: preflight — preflight failed"
       }
     }
   }
