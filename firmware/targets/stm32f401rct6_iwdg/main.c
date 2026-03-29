@@ -25,6 +25,12 @@
 #include <stdint.h>
 #include "ael_mailbox.h"
 
+/* ---- RCC (for LSI enable) ----------------------------------------------- */
+#define RCC_BASE   0x40023800u
+#define RCC_CSR    (*(volatile uint32_t *)(RCC_BASE + 0x74u))
+#define RCC_CSR_LSION  (1u << 0)
+#define RCC_CSR_LSIRDY (1u << 1)
+
 /* ---- IWDG --------------------------------------------------------------- */
 #define IWDG_BASE  0x40003000u
 #define IWDG_KR    (*(volatile uint32_t *)(IWDG_BASE + 0x00u))
@@ -62,6 +68,14 @@ int main(void)
     SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_ENABLE;
 
     ael_mailbox_init();
+
+    /*
+     * Enable LSI oscillator and wait for it to stabilise.
+     * RM0368 §14.3.4: LSIRDY must be set before writing IWDG registers;
+     * otherwise PVU/RVU bits never clear (update occurs in VDD/LSI domain).
+     */
+    RCC_CSR |= RCC_CSR_LSION;
+    while ((RCC_CSR & RCC_CSR_LSIRDY) == 0u) {}
 
     /*
      * Configure IWDG:
