@@ -15,7 +15,7 @@
   "signal_checks": [],
   "mailbox_verify": { "settle_s": 5.0, "addr": "0x2000FC00" },
   "bench_setup": {
-    "notes": "I2C1 master (PB6=SCL, PB7=SDA) ↔ I2C2 slave (PB10=SCL, PB11=SDA). Wiring: PB6↔PB10, PB7↔PB11 (2 jumper wires). Pull-up: STM32 internal ~40 kΩ (PUPDR=01), no external resistors. SM 100 kHz. Master writes 4 bytes {0xA1,0xB2,0xC3,0xD4} to slave (addr 0x42), then reads them back. FAIL error_code=1..10 indicates which I2C step timed out; error_code=11 means data mismatch (detail0=matched count).",
+    "notes": "I2C1 master (PB6=SCL, PB7=SDA) ↔ I2C2 slave (PB10=SCL, PB3=SDA AF9). PB3 used as I2C2_SDA because PB11 is not on the BlackPill connector. Wiring: PB6↔PB10, PB7↔PB3 (2 jumper wires). Pull-up: STM32 internal ~40 kΩ (PUPDR=01), no external resistors. SM 100 kHz. Master writes 4 bytes {0xA1,0xB2,0xC3,0xD4} to slave (addr 0x42), then reads them back. FAIL error_code=1..10 indicates which I2C step timed out; error_code=11 means data mismatch (detail0=matched count).",
     "peripheral_signals": [
       {
         "role": "I2C_SCL",
@@ -25,9 +25,9 @@
       },
       {
         "role": "I2C_SDA",
-        "dut_signal": "PB7/PB11",
+        "dut_signal": "PB7/PB3",
         "direction": "bidir",
-        "notes": "I2C1_SDA (PB7, AF4) ↔ I2C2_SDA (PB11, AF4). Wire: PB7↔PB11."
+        "notes": "I2C1_SDA (PB7, AF4) ↔ I2C2_SDA (PB3, AF9). Wire: PB7↔PB3. PB3 is the alternate I2C2_SDA pin (AF9) since PB11 is not on the connector."
       }
     ]
   }

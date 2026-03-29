@@ -1,10 +1,13 @@
 /*
  * STM32F401RCT6 — I2C1 Master / I2C2 Slave Loopback (Step 1: Internal Pull-up)
  *
- * I2C1 master: PB6 (SCL, AF4), PB7  (SDA, AF4)
- * I2C2 slave:  PB10(SCL, AF4), PB11 (SDA, AF4)
+ * I2C1 master: PB6 (SCL, AF4), PB7 (SDA, AF4)
+ * I2C2 slave:  PB10(SCL, AF4), PB3 (SDA, AF9)
  *
- * External wiring required: PB6↔PB10 (SCL bus), PB7↔PB11 (SDA bus).
+ * PB3 is the alternate I2C2_SDA pin (AF9) used because PB11 (AF4) is not
+ * exposed on the BlackPill connector.
+ *
+ * External wiring required: PB6↔PB10 (SCL bus), PB7↔PB3 (SDA bus).
  * Pull-up: STM32 internal ~40 kΩ via PUPDR=01 on all four pins.
  * (40 kΩ exceeds the I2C spec max of 10 kΩ but may work on short traces.)
  *
@@ -151,32 +154,32 @@ int main(void)
     RCC_APB1ENR |= RCC_APB1ENR_I2C1EN | RCC_APB1ENR_I2C2EN;
     (void)RCC_APB1ENR;
 
-    /* ---- GPIO: AF4, open-drain, internal pull-up (~40 kΩ) --------------- */
+    /* ---- GPIO: open-drain, internal pull-up (~40 kΩ) -------------------- */
     /*
-     * PB6  I2C1_SCL: MODER[13:12]=10, OTYPER[6]=1, PUPDR[13:12]=01, AFRL[27:24]=4
-     * PB7  I2C1_SDA: MODER[15:14]=10, OTYPER[7]=1, PUPDR[15:14]=01, AFRL[31:28]=4
-     * PB10 I2C2_SCL: MODER[21:20]=10, OTYPER[10]=1, PUPDR[21:20]=01, AFRH[11:8]=4
-     * PB11 I2C2_SDA: MODER[23:22]=10, OTYPER[11]=1, PUPDR[23:22]=01, AFRH[15:12]=4
+     * PB3  I2C2_SDA: MODER[7:6]=10,   OTYPER[3]=1,  PUPDR[7:6]=01,   AFRL[15:12]=9 (AF9)
+     * PB6  I2C1_SCL: MODER[13:12]=10, OTYPER[6]=1,  PUPDR[13:12]=01, AFRL[27:24]=4 (AF4)
+     * PB7  I2C1_SDA: MODER[15:14]=10, OTYPER[7]=1,  PUPDR[15:14]=01, AFRL[31:28]=4 (AF4)
+     * PB10 I2C2_SCL: MODER[21:20]=10, OTYPER[10]=1, PUPDR[21:20]=01, AFRH[11:8]=4  (AF4)
      */
-    GPIOB_MODER &= ~((0x3u << 12u) | (0x3u << 14u) |
-                     (0x3u << 20u) | (0x3u << 22u));
-    GPIOB_MODER |=  ((0x2u << 12u) | (0x2u << 14u) |
-                     (0x2u << 20u) | (0x2u << 22u));
+    GPIOB_MODER &= ~((0x3u <<  6u) | (0x3u << 12u) |
+                     (0x3u << 14u) | (0x3u << 20u));
+    GPIOB_MODER |=  ((0x2u <<  6u) | (0x2u << 12u) |
+                     (0x2u << 14u) | (0x2u << 20u));
 
-    GPIOB_OTYPER |= (1u << 6u) | (1u << 7u) | (1u << 10u) | (1u << 11u);
+    GPIOB_OTYPER |= (1u << 3u) | (1u << 6u) | (1u << 7u) | (1u << 10u);
 
-    GPIOB_PUPDR &= ~((0x3u << 12u) | (0x3u << 14u) |
-                     (0x3u << 20u) | (0x3u << 22u));
-    GPIOB_PUPDR |=  ((0x1u << 12u) | (0x1u << 14u) |
-                     (0x1u << 20u) | (0x1u << 22u));
+    GPIOB_PUPDR &= ~((0x3u <<  6u) | (0x3u << 12u) |
+                     (0x3u << 14u) | (0x3u << 20u));
+    GPIOB_PUPDR |=  ((0x1u <<  6u) | (0x1u << 12u) |
+                     (0x1u << 14u) | (0x1u << 20u));
 
-    /* AFRL: AF4 for PB6 [27:24] and PB7 [31:28] */
-    GPIOB_AFRL &= ~((0xFu << 24u) | (0xFu << 28u));
-    GPIOB_AFRL |=  ((0x4u << 24u) | (0x4u << 28u));
+    /* AFRL: AF9 for PB3 [15:12]; AF4 for PB6 [27:24] and PB7 [31:28] */
+    GPIOB_AFRL &= ~((0xFu << 12u) | (0xFu << 24u) | (0xFu << 28u));
+    GPIOB_AFRL |=  ((0x9u << 12u) | (0x4u << 24u) | (0x4u << 28u));
 
-    /* AFRH: AF4 for PB10 [11:8] and PB11 [15:12] */
-    GPIOB_AFRH &= ~((0xFu << 8u) | (0xFu << 12u));
-    GPIOB_AFRH |=  ((0x4u << 8u) | (0x4u << 12u));
+    /* AFRH: AF4 for PB10 [11:8] */
+    GPIOB_AFRH &= ~(0xFu << 8u);
+    GPIOB_AFRH |=  (0x4u << 8u);
 
     /* ---- I2C2 slave init (must be ready before master generates START) -- */
     /*
