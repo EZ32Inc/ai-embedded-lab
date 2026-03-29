@@ -112,6 +112,8 @@ run_index.record_success(board_id, test_name, exp_id)
 | **[HIGH_PRIORITY] HARDWARE_CONNECT_FIRST_RULE — ask before probing** | `04486a33` | 所有需要物理 USB/instrument 连接的任务 | 0.9 |
 | **[HIGH_PRIORITY] RISC-V ESP32 observe_uart boot_signatures fix** | `64b74cc2` | ESP32-C6/C5/C3/S3 (ROM at 115200→boot_count≥4→false crash) | 0.9 |
 | **[HIGH_PRIORITY] LA GND must be first wire — floating GND = phantom signals** | `f5a92b73` | 所有 LA/示波器接线（ESP32JTAG、S3JTAG、任何探头） | 0.95 |
+| **[HIGH_PRIORITY] STM32 I2C BUSY stuck across GDB resets — assert SWRST before config** | `db885cac` | 所有 STM32 裸机 I2C（F1/F4/F7/H7）| 0.9 |
+| **[HIGH_PRIORITY] AEL pack subcommand: use `ael pack`, NOT `ael run --pack`** | `bb3a87f5` | 所有使用 pack 运行多测试的场景 | 0.9 |
 
 ## ESP32-C5 board_family 已知陷阱
 
