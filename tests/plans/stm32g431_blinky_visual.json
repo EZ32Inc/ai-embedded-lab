@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "program_only",
+  "name": "stm32g431_blinky_visual",
+  "board": "stm32g431cbu6",
+  "supported_instruments": ["esp32jtag"],
+  "labels": ["minimal", "visual", "blinky"],
+  "covers": ["gpio", "board_health"],
+  "preflight": {
+    "enabled": false
+  },
+  "build": {
+    "project_dir": "firmware/targets/stm32g431cbu6",
+    "artifact_stem": "stm32g431_app",
+    "build_dir": "artifacts/build_stm32g431_blinky_visual"
+  },
+  "bench_setup": {
+    "notes": "Stage 0 visual-only baseline. Flashes the STM32G431CBU6 blinky image. PA8 LED blinks at ~1 Hz. PA2 toggles at ~250 Hz, PA3 at ~125 Hz. Success requires operator-visible blinking on the onboard LED."
+  }
+}

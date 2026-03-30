@@ -1,0 +1,48 @@
+{
+  "name": "stm32g431cbu6_golden",
+  "description": "STM32G431CBU6 Golden Test Suite — 14 tests across 4 stages. Stage0: blinky + mailbox health. Stage1: timer + internal temp (no wiring). Stage2: 6 peripheral loopback tests. Stage3: 4 LA-verified banner tests. Wiring: PA8↔PA6, PA9↔PA10, PB4↔PB5, PB1↔PB0, LA: PA2→P0.3, PA3→P0.0, PA4→P0.2, PB3→P0.1.",
+  "board": "stm32g431cbu6",
+  "bench_profile": "stm32g431cbu6__default",
+  "status": "golden",
+  "verified_date": "2026-03-29",
+  "stages": {
+    "0": [
+      "tests/plans/stm32g431_blinky_visual.json",
+      "tests/plans/stm32g431_minimal_runtime_mailbox.json"
+    ],
+    "1": [
+      "tests/plans/stm32g431_timer_mailbox.json",
+      "tests/plans/stm32g431_internal_temp_mailbox.json"
+    ],
+    "2": [
+      "tests/plans/stm32g431_wiring_verify.json",
+      "tests/plans/stm32g431_iwdg.json",
+      "tests/plans/stm32g431_exti.json",
+      "tests/plans/stm32g431_capture.json",
+      "tests/plans/stm32g431_uart_loopback.json",
+      "tests/plans/stm32g431_spi.json"
+    ],
+    "3": [
+      "tests/plans/stm32g431_gpio_signature.json",
+      "tests/plans/stm32g431_gpio_loopback.json",
+      "tests/plans/stm32g431_pwm.json",
+      "tests/plans/stm32g431_adc.json"
+    ]
+  },
+  "tests": [
+    "tests/plans/stm32g431_blinky_visual.json",
+    "tests/plans/stm32g431_minimal_runtime_mailbox.json",
+    "tests/plans/stm32g431_timer_mailbox.json",
+    "tests/plans/stm32g431_internal_temp_mailbox.json",
+    "tests/plans/stm32g431_wiring_verify.json",
+    "tests/plans/stm32g431_iwdg.json",
+    "tests/plans/stm32g431_exti.json",
+    "tests/plans/stm32g431_capture.json",
+    "tests/plans/stm32g431_uart_loopback.json",
+    "tests/plans/stm32g431_spi.json",
+    "tests/plans/stm32g431_gpio_signature.json",
+    "tests/plans/stm32g431_gpio_loopback.json",
+    "tests/plans/stm32g431_pwm.json",
+    "tests/plans/stm32g431_adc.json"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0",
+  "test_kind": "baremetal_mailbox",
+  "name": "stm32g431_iwdg",
+  "board": "stm32g431cbu6",
+  "supported_instruments": ["esp32jtag"],
+  "requires": {
+    "mailbox": true,
+    "datacapture": false
+  },
+  "labels": ["mailbox", "portable", "selfcheck"],
+  "covers": ["iwdg", "lsi", "watchdog"],
+  "build": {
+    "project_dir": "firmware/targets/stm32g431_iwdg",
+    "artifact_stem": "stm32g431_iwdg_app",
+    "build_dir": "artifacts/build_stm32g431_iwdg"
+  },
+  "signal_checks": [],
+  "mailbox_verify": {
+    "settle_s": 5.0,
+    "addr": "0x20007F00"
+  },
+  "bench_setup": {
+    "notes": "IWDG test. LSI oscillator enabled, IWDG configured with /256 prescaler and reload=4095 (~32.8s timeout). Firmware kicks watchdog every 1ms. PASS once IWDG starts without premature reset and firmware remains alive. detail0=heartbeat counter. No FAIL path — misconfigured IWDG causes reset and mailbox stays at RUNNING, reported as timeout by pipeline.",
+    "peripheral_signals": []
+  }
+}
