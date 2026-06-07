@@ -18,8 +18,7 @@ Current state after cleanup:
 - Public entry points are English-first and linked from
   [DOCS_INDEX.md](./DOCS_INDEX.md).
 - `docs/obsolete/` has been removed.
-- Large raw development logs have been isolated under
-  [reports/raw/](./reports/raw/).
+- Large raw development logs have been removed from the public docs tree.
 - High-priority root-level mixed-language docs have been translated or replaced
   with English versions.
 
@@ -29,7 +28,7 @@ Current state after cleanup:
 |---|---|
 | `60486ef` | Refreshed public documentation entry points |
 | `10168fd` | Added section indexes and documentation maintenance policy |
-| `a05a001` | Removed obsolete docs and isolated raw logs |
+| `a05a001` | Removed obsolete docs and initially isolated raw logs |
 | `2255649` | Cleaned up high-priority public docs language |
 
 ## Deleted Documents
@@ -54,15 +53,16 @@ current public documentation:
 | `docs/obsolete/serial_role_backend_cleanup.md` | Completed cleanup note |
 | `docs/obsolete/uart_role_backend_cleanup.md` | Completed cleanup note |
 
-## Moved Documents
+## Removed Raw Logs
 
-The following raw logs were moved out of the main reports list because they are
-large, historical, and may contain bench-local details:
+The following raw logs were first moved out of the main reports list, then
+removed from the public docs tree because they are large, historical, and may
+contain bench-local details:
 
-| Old path | New path |
+| Removed file | Reason |
 |---|---|
-| `docs/reports/ael_daplink_stm32f103rct6_dev_whole_log-2026-04-01.txt` | `docs/reports/raw/ael_daplink_stm32f103rct6_dev_whole_log-2026-04-01.txt` |
-| `docs/reports/ael_esp32jtag_stm32f103c6t6_dev_whole_log-2026-04-01.txt` | `docs/reports/raw/ael_esp32jtag_stm32f103c6t6_dev_whole_log-2026-04-01.txt` |
+| `docs/reports/raw/ael_daplink_stm32f103rct6_dev_whole_log-2026-04-01.txt` | Raw interactive transcript with local bench details |
+| `docs/reports/raw/ael_esp32jtag_stm32f103c6t6_dev_whole_log-2026-04-01.txt` | Raw interactive transcript with local bench details |
 
 ## Retained Documents
 
@@ -129,7 +129,6 @@ Residual groups:
   `ael_execution_parallel_scheduling_architecture_2026-03-20.md`
 - methodology and plan notes under `docs/methodology/` and `docs/plans/`
 - dated validation reports under `docs/reports/`
-- raw historical transcript under `docs/reports/raw/`
 - selected skills under `docs/skills/`
 - selected specs and memos under `docs/specs/`
 - non-operational book material under `docs/books/`
@@ -138,7 +137,7 @@ Recommended handling:
 
 1. Translate or replace active agent/contributor guidance first.
 2. Summarize historical reports in English rather than translating full logs.
-3. Keep raw logs isolated unless they are removed entirely.
+3. Keep raw logs outside the public repo unless explicitly sanitized.
 4. Archive or delete non-operational Chinese essays if they are not useful for
    the public repo.
 
@@ -162,8 +161,7 @@ Priority order:
 2. Treat `docs/reports/` as evidence, not current instructions.
 3. Promote only current specs into `DOCS_INDEX.md`; leave older specs as
    historical until reviewed.
-4. Move raw logs and full transcripts under `reports/raw/` or remove them from
-   public branches.
+4. Keep raw logs and full transcripts outside public branches unless sanitized.
 5. Keep public documentation English-first.
 6. Avoid new filenames with spaces, punctuation-heavy names, or non-ASCII
    characters.
@@ -182,6 +180,6 @@ Priority order:
 ## Residual Risk
 
 This cleanup improved the public documentation surface, but it did not fully
-sanitize every historical report or raw transcript. Before pushing a public
-release, review remaining historical files for private IP addresses, absolute
-local paths, serial numbers, credentials, and bench-specific details.
+sanitize every historical report. Before pushing a public release, review
+remaining historical files for private IP addresses, absolute local paths,
+serial numbers, credentials, and bench-specific details.

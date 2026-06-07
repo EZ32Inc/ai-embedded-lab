@@ -38,9 +38,9 @@ Do not use reports as the only source for:
 
 ## Raw Logs
 
-Large raw logs live under [raw/](./raw/) after review. Keep them out of the main
-report listing unless they contain evidence that cannot be summarized in a
-short report.
+Large raw logs are not kept on the public `master` branch by default. If a raw
+log contains reusable evidence, summarize it as a dated report and keep the full
+transcript outside the public repo unless it has been explicitly sanitized.
 
 Before publishing raw logs, check for local paths, private IP addresses,
 serial numbers, tokens, and bench-specific environment details.

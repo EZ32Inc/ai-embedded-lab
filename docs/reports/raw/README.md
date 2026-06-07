@@ -1,11 +1,12 @@
 # Raw Historical Logs
 
-This directory contains large raw logs from previous interactive development
-sessions. They are retained as historical evidence only.
+This directory is reserved for reviewed raw logs from previous interactive
+development sessions.
 
-These files may include local bench details such as private IP addresses,
-serial-port names, absolute paths, and transcript fragments. Do not use them as
-public-facing documentation, current status, or agent instructions.
+Raw transcripts are not kept on the public `master` branch by default. They may
+include local bench details such as private IP addresses, serial-port names,
+absolute paths, and transcript fragments.
 
 When a raw log contains reusable evidence, summarize it in a dated report under
-`docs/reports/` and link back here only when the full transcript is required.
+`docs/reports/`. Keep the full transcript outside the public repo unless it has
+been explicitly sanitized.

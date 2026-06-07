@@ -370,7 +370,10 @@ This staged structure was important. It let the AI begin with the simplest proof
 
 ## What the AI Is Doing in This Workflow
 
-We ahve a detailed [a doc](docs/reports/ael_esp32jtag_stm32f103c6t6_dev_whole_log-2026-04-01.txt) that record all the process of this ,from teh start of detecting the connected target baord and stm32f103c6t6 MCU, to the completion of golden suite generation. [This doc](docs/reports/stm32f103c6t6_golden_suite_closeout_2026-04-01.md) has a summarry of this golden suite generation.
+The detailed raw transcript for this bring-up is not kept in the public repo.
+The public summary is
+[stm32f103c6t6_golden_suite_closeout_2026-04-01.md](../reports/stm32f103c6t6_golden_suite_closeout_2026-04-01.md),
+which records the golden-suite result and the key evidence.
 
 So what is the AI actually doing during this process?
 
@@ -386,7 +389,9 @@ Sometimes I also give it an execution rule:
 
 I call this the **15-minute tick, 10-minute block** rule.
 
-In many cases, the AI can complete a test in a single pass. But some failures require several rounds of iteration. There are real cases where [a test took three full rounds](docs/reports/ael_esp32jtag_stm32f103c6t6_dev_whole_log-2026-04-01.txt) of **code -> flash -> check -> repair** before the issue was finally resolved and the test passed.
+In many cases, the AI can complete a test in a single pass. Some failures
+require several rounds of **code -> flash -> check -> repair** before the issue
+is resolved and the test passes.
 
 That is what makes this workflow different from ordinary code generation. The AI is not just writing code once. It is participating in a real engineering loop: generating firmware, running it on hardware, observing the result, diagnosing the failure, correcting the implementation, and trying again.
 
@@ -537,4 +542,3 @@ ESP32JTAG provides exactly the kind of hardware-side capability needed to make t
 For me, that is the core message of this tutorial:
 
 **AI-driven embedded development is no longer just an idea. It is becoming a practical engineering workflow on real hardware.**
-
