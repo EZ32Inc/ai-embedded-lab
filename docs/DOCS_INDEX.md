@@ -12,6 +12,7 @@ over older prose.
 |---|---|
 | [README.md](./README.md) | Short documentation entry point |
 | [what_is_ael.md](./what_is_ael.md) | Compact explanation of AEL concepts |
+| [DOCS_MAINTENANCE.md](./DOCS_MAINTENANCE.md) | Documentation upkeep, language, naming, and public-safety rules |
 | [ael_cli_reference_v0_1.md](./ael_cli_reference_v0_1.md) | CLI command reference |
 | [current_validated_capabilities.md](./current_validated_capabilities.md) | Public validated-capability summary |
 | [architecture_map.md](./architecture_map.md) | Current code/module architecture map |
@@ -37,11 +38,11 @@ over older prose.
 
 | Directory | Status | Use |
 |---|---|---|
-| [boards/](./boards/) | Current + historical | Board notes and board-specific closeouts |
+| [boards/](./boards/) | Current + historical | Board notes and board-specific closeouts; start with [boards/README.md](./boards/README.md) |
 | [guides/](./guides/) | Current | Practical user workflows |
-| [reports/](./reports/) | Historical evidence | Validation closeouts and investigations |
+| [reports/](./reports/) | Historical evidence | Validation closeouts and investigations; start with [reports/README.md](./reports/README.md) |
 | [roadmap/](./roadmap/) | Mixed | Planning documents; prefer newest files |
-| [specs/](./specs/) | Mixed | Versioned specs, drafts, and policy documents |
+| [specs/](./specs/) | Mixed | Versioned specs, drafts, and policy documents; start with [specs/README.md](./specs/README.md) |
 | [skills/](./skills/) | Current + historical | Reusable AI-agent workflow knowledge |
 | [tutorials/](./tutorials/) | Current + historical | Long-form walkthroughs |
 | [archive/](./archive/) | Historical | Archived reference material |
