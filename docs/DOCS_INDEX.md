@@ -47,6 +47,7 @@ over older prose.
 | [tutorials/](./tutorials/) | Current + historical | Long-form walkthroughs |
 | [archive/](./archive/) | Historical | Archived reference material |
 | [books/](./books/) | Non-operational | Essay/book material, not project instructions |
+| [reports/raw/](./reports/raw/) | Historical/raw | Large raw logs; not public-facing guidance |
 
 ---
 

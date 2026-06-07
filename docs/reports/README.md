@@ -38,8 +38,8 @@ Do not use reports as the only source for:
 
 ## Raw Logs
 
-Large raw logs should live under `raw/` once reviewed. Keep them out of the
-main report listing unless they contain evidence that cannot be summarized in a
+Large raw logs live under [raw/](./raw/) after review. Keep them out of the main
+report listing unless they contain evidence that cannot be summarized in a
 short report.
 
 Before publishing raw logs, check for local paths, private IP addresses,
