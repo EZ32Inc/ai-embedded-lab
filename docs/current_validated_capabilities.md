@@ -1,245 +1,96 @@
 # Current Validated Capabilities
 
-## Purpose
+This document summarizes the public `master` branch. It intentionally avoids
+bench-local IP addresses and private setup details. For live truth, use:
 
-This document captures the current validated state of AEL after the recent real-hardware validation work.
+```bash
+python3 -m ael inventory list --format text
+python3 -m ael verify-default state
+```
 
-It is an internal engineering baseline.
+---
 
-Its purpose is to record:
+## Validation Model
 
-- what is currently known to work well
-- what is now reasonably standardized
-- what is only partially formed
-- what boundaries and next steps matter most right now
+AEL tracks several confidence levels:
 
-## Current Validated Board/Test Paths
+- **canonical golden**: validated path promoted to the main system baseline
+- **golden / legacy golden**: validated path retained for compatibility or a
+  specific fixture
+- **candidate / draft**: useful path that is not yet a public baseline
+- **report-only evidence**: historical closeout or investigation evidence
 
-### 1. ESP32-C6 Golden GPIO / Meter Path
+The CLI inventory is the preferred source for exact current labels.
 
-- board family: `esp32c6`
-- validation style: DUT firmware build + flash + UART readiness + external meter-based digital/analog verification
-- main instrument path: `esp32s3_dev_c_meter` over `192.168.4.1:9000`
-- current status: validated on real hardware and used in current default verification, but bench-side meter/Wi-Fi instability is still intermittent
+---
 
-What is currently solid in this path:
+## Public Golden Coverage
 
-- golden firmware builds as `esp32c6`
-- flash to the attached board is working
-- UART readiness token validation is working
-- meter-based digital GPIO signature verification is working
-- analog rail verification is working
-- standardized validation summary and last-known-good setup output are present
-- `current_setup` now captures current bench-side setup facts for this path
+The public branch contains validated paths across these families:
 
-Known nuance:
+| Family / board class | Representative status |
+|---|---|
+| WCH CH32V203 | Golden suite validated, `23/23 PASS` |
+| WCH CH32V305 | Golden suite validated, `25/25 PASS` |
+| WCH CH32V003 | Golden subset validated, currently `13/13` after removing an unsafe sleep test |
+| nRF52840 nice!nano | Zephyr/UF2-oriented golden suite validated, `15/15 PASS` |
+| STM32F103 / STM32F401 / STM32F411 / STM32F407 | Multiple golden or canonical-golden suites validated |
+| STM32F030 / STM32G431 / STM32H563 / STM32U585 / STM32H750 | Validated reports and/or golden-suite records present |
+| RP2040 Pico | GPIO, UART, SPI, PWM, timer, temperature, and signal-validation paths present |
+| ESP32 C3/C5/C6/S3/WROOM32D | Several native and dual-USB paths are represented in inventory; exact pack availability should be checked with the CLI |
 
-- current failures in this path are best interpreted as degraded instrument / degraded bench behavior unless new evidence points elsewhere
-- recent failures have included:
-  - meter unreachable
-  - meter API/transport timeout
-  - late `instrument.signature` timeout after DUT UART readiness was already confirmed
+Representative reports:
 
-### 2. RP2040 / Raspberry Pi Pico Verification Path
+- [CH32V203 closeout](./reports/ch32v203_nanoch32v203_golden_suite_closeout_2026-04-12.md)
+- [CH32V305 report](../reports/ch32v305xxx_golden_suite_report.md)
+- [nRF52840 nice!nano closeout](./reports/nrf52840_nicenano_golden_suite_closeout_2026-04-12.md)
+- [STM32F030 closeout](./reports/stm32f030c8t6_golden_suite_closeout_2026-04-03.md)
+- [STM32F407 report](../reports/stm32f407vet6_golden_suite_report.md)
 
-- board family: `rp2040`
-- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main control-instrument path: `esp32jtag_rp2040_lab` at `192.168.2.63:4242` with LA verify via `https://192.168.2.63:443`
-- current status: validated on real hardware and stable in current default verification
+---
 
-What is currently solid in this path:
+## Current Practical Strengths
 
-- pre-flight control-instrument/network/LA checks are working
-- build and flash are working
-- logic-analyzer verification is working
-- standardized validation summary and last-known-good setup output are present
+- Staged execution: plan, pre-flight, run, check, report.
+- Pack execution for board-level golden suites.
+- Board/test/instrument inventory through the CLI.
+- Mailbox-based bare-metal verification for many Cortex-M and RISC-V targets.
+- UART observation and USB/UF2-oriented flows for selected boards.
+- Evidence-oriented closeout reports for real hardware validation.
+- Project domain separation: user projects live under `projects/`, while system
+  capabilities live under configs, assets, packs, and test plans.
 
-Known nuance:
+---
 
-- RP2040 flash may emit BMDA/GDB remote failure warnings after load, but the path is currently treated as healthy when downstream verify passes
+## Current Known Gaps
 
-### 3. STM32F103 / Bluepill Verification Path
+- Some docs and reports predate the current inventory and should be treated as
+  historical unless confirmed by CLI output.
+- Some ESP32 inventory entries reference pack names that are not present on the
+  public branch; use `inventory list` before promising a runnable suite.
+- The default verification manifest may be unavailable or stale on a machine
+  that has not recently run default verification.
+- Bench readiness is not implied by repository support. Users must confirm their
+  board, instrument, wiring, power, and serial/debug access.
+- Instrument abstraction is still evolving; older docs may use probe-first
+  language where current docs prefer instrument/control-instrument wording.
 
-- board family: `stm32f103`
-- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main control-instrument path: `esp32jtag_stm32_golden` at `192.168.2.99:4242` with LA verify via `https://192.168.2.99:443`
-- current status: validated on real hardware and stable in current default verification
+---
 
-What is currently solid in this path:
+## Recommended Current Workflow
 
-- pre-flight control-instrument/network/LA checks are working
-- build and flash are working
-- logic-analyzer verification is working
-- the STM32 BMDA post-load reattach sequence is stable in repeated golden runs
-- standardized validation summary and last-known-good setup output are present
+1. Start from `python3 -m ael inventory list --format text`.
+2. Confirm the target board and exact fixture.
+3. Inspect the test or pack with `inventory describe-test` and
+   `inventory describe-connection`.
+4. Run one low-risk smoke test before running a full pack.
+5. Record meaningful live validation with a closeout report and reusable skill
+   capture when a new pack or capability is formalized.
 
-### 4. STM32F411 / WeAct Black Pill Verification Path
+---
 
-- board family: `stm32f411`
-- validation style: control-instrument-backed pre-flight + build + BMDA/GDB flash + logic-analyzer verify
-- main control-instrument path: `esp32jtag_stm32f411` at `192.168.2.103:4242` with LA verify via `https://192.168.2.103:443`
-- current status: validated on real hardware for the GPIO signature baseline and the first self-check suite
+## Maintenance Note
 
-What is currently solid in this path:
-
-- pre-flight control-instrument/network/LA checks are working
-- build and flash are working
-- logic-analyzer verification is working
-- GPIO signature, UART loopback, ADC, SPI, GPIO loopback, PWM, EXTI, and capture are all validated on real hardware
-- standardized validation summary and last-known-good setup output are present
-
-## Current Default Verification Set
-
-Current default verification sequence:
-
-1. `esp32c6_gpio_signature_with_meter`
-2. `rp2040_gpio_signature`
-3. `stm32f103_gpio_signature`
-4. `stm32f103_uart_banner`
-5. `stm32f411_gpio_signature`
-
-Source:
-
-- [default_verification_setting.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/default_verification_setting.yaml)
-
-Current status:
-
-- default verification is functioning correctly as a five-step DUT-backed orchestration path and now includes `stm32f411_gpio_signature`
-- baseline interpretation rule:
-  - distinguish configuration correctness from current bench health
-  - the five-step baseline definition is correct even when one current bench path is degraded
-- latest live run with the five-step configuration passed on:
-  - `rp2040_gpio_signature`
-  - `stm32f103_gpio_signature`
-  - `stm32f103_uart_banner`
-  - `stm32f411_gpio_signature`
-- the same run still hit an existing ESP32-C6 flash/serial availability problem on `esp32c6_gpio_signature_with_meter`
-- note:
-  - `stm32f103_uart_banner` remains in the default verification baseline as a legacy UART-bridge capability check
-  - the canonical STM32F103C8T6 golden path is now `packs/stm32f103c8t6_golden.json` on `stm32f103_gpio`, not `stm32f103_uart`
-
-## Current STM32F411 Bring-Up Status
-
-- GPIO signature baseline: validated
-- first self-check suite: validated
-  - `stm32f411_uart_loopback_banner`
-  - `stm32f411_adc_banner`
-  - `stm32f411_spi_banner`
-  - `stm32f411_gpio_loopback_banner`
-  - `stm32f411_pwm_banner`
-  - `stm32f411_exti_banner`
-  - `stm32f411_capture_banner`
-- latest full suite rerun:
-  - all `8/8` STM32F411 tests passed on live hardware on `2026-03-14`
-- repeatability evidence:
-  - the full suite passed again in the follow-on repeat batch, upgrading the first-wave STM32F411 paths to `repeat-pass`
-
-## Current Workflow Maturity
-
-The workflow is now in reasonably good shape in several important areas.
-
-Current stronger areas:
-
-- new-board bring-up flow has been clarified in a dedicated document
-- `plan`-stage readiness summary expectations are explicit
-- validation summary output is standardized
-- last-known-good setup output is standardized
-- stage semantics now distinguish executed, skipped, and deferred
-- meter-based bench mapping has moved toward explicit `bench_setup`
-- current setup facts have started to be grouped explicitly in `current_setup`
-
-This does not mean the workflow is fully mature.
-
-It does mean AEL now has a usable, repeatable validation flow rather than a collection of only ad hoc successful runs.
-
-## Current Instrument Architecture Status
-
-Instrument architecture is now clearer than before, though still incomplete.
-
-What has been clarified:
-
-- instrument is treated as a bench-side capability layer
-- board / test / instrument / bench setup boundaries are more explicit
-- the ESP32-S3 meter path is now understood as a concrete instrument-capability example
-- meter DUT-to-instrument mapping is now represented as `bench_setup` in active meter-based test plans
-- current selected setup facts are beginning to be grouped as run-time setup facts
-- communication metadata is now carried through configs, summaries, archive output, and inventory views
-- capability-to-surface metadata is now available as metadata for instrument and probe paths
-
-What is still only partially formed:
-
-- instrument backend dispatch is still partly concrete-backend-oriented
-- broader instrument abstraction is clarified architecturally, but only partially aligned in code
-- capability-to-surface metadata is informational only and is not yet used for runtime routing
-- degraded-instrument recovery remains intentionally bounded; classification/reporting is ahead of recovery automation
-
-## Current Stable Strengths
-
-The most important strengths that are now clearly real:
-
-- multiple MCU families are validated in practice
-- multiple bench interaction styles are already working:
-  - Wi-Fi instrument path
-  - control-instrument/JTAG/logic-analyzer path
-- default verification covers more than one family and more than one validation style
-- evidence-driven validation is real, not hypothetical
-- successful runs now produce usable summaries instead of only raw logs
-- current known-good hardware paths are being preserved while structure is improved incrementally
-
-## Current Known Gaps Or Incomplete Areas
-
-Important incomplete areas remain.
-
-Most relevant current gaps:
-
-- not all paths expose the same level of setup clarity
-- instrument abstraction is improved, but not yet fully unified in implementation
-- some intermittent meter-side timeout behavior has been observed in reruns
-- the workflow/skills layer is growing, but still not broad enough to cover all recurring review patterns
-- some older docs/examples still use legacy probe-first wording and remain candidates for gradual cleanup
-
-## Current Product / Engineering Decisions
-
-These decisions appear to be true right now:
-
-- do not rush into many more new boards immediately
-- preserve the currently working ESP32-C6 and RP2040 paths while improving structure
-- prefer small, architecture-aligned cleanups over broad refactors
-- instrument work is now foundational and should continue carefully
-- skills remain important, but they should build on clearer boundaries
-- validated hardware paths should remain the anchor for future design decisions
-
-## Suggested Near-Term Next-Step Options
-
-These are realistic near-term options, not a large roadmap.
-
-### 1. Continue Small Compatibility / Contract Cleanup
-
-Examples:
-
-- keep shrinking visible legacy compatibility wording
-- tighten active bench/resource and DUT/runtime output contracts where operator value is clear
-
-### 2. Stabilize Occasional Meter Timeout Behavior
-
-Examples:
-
-- continue observing transient `check_meter` timeout cases
-- improve evidence only if remaining ambiguity still costs time in practice
-
-### 3. Keep Validating Current Known-Good Paths
-
-Examples:
-
-- continue running default verification regularly
-- treat RP2040 and STM32F103 as stable baseline confidence paths, with ESP32-C6 as both a validated path and a useful degraded-instrument stress case
-
-## Summary
-
-At this stage, AEL is a working real-hardware validation system with:
-
-- multiple validated board families
-- multiple validated bench interaction styles
-- a default verification system whose orchestration is working correctly even when one instrument path is degraded
-- clearer board/test/instrument/bench boundaries than before
-- a workflow that is now structured enough to support careful next-step cleanup without losing the current known-good paths
+This file should be refreshed after each public golden-suite promotion or major
+inventory change. Do not copy private bench IP addresses or local filesystem
+paths into this document.

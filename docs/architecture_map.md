@@ -1,7 +1,7 @@
 # AEL Architecture Map
 
-**Date:** 2026-03-22
-**Status:** Current (based on live codebase)
+**Date:** 2026-06-07
+**Status:** Current public-master map
 
 ---
 
@@ -11,11 +11,17 @@
 |---|---|---|---|
 | CLI main | `ael/__main__.py` | `main()` | Argparse router for all subcommands |
 | Single test run | `ael/pipeline.py` | `run_pipeline()` | Full pipeline: config → build → flash → observe → report |
-| Verification suite | `ael/default_verification.py` | `run_default_setting()` | Parallel multi-board test suite with health governance |
+| Pack run | `ael/pack_runner.py` / CLI routing | pack command path | Sequential suite execution for one board |
+| Verification suite | `ael/default_verification.py` | `run_default_setting()` | Default verification suite with health governance |
 | Stage explain | `ael/stage_explain.py` | `explain_stage()` | Structured metadata/plan view for a given stage |
 | Doctor | `ael/instrument_doctor.py` | `run_doctor()` | Instrument + connection health diagnostics |
 
-**CLI subcommands:** `run`, `doctor`, `pack`, `instruments`, `dut`, `verify-default`, `inventory`, `connection`, `explain-stage`, `workflow-archive`, `hw-check`, `la-check`, `status`, `board`, `project`
+**CLI subcommands:** `run`, `doctor`, `pack`, `instruments`, `dut`,
+`verify-default`, `inventory`, `connection`, `explain-stage`,
+`workflow-archive`, `hw-check`, `la-check`, `status`, `board`, `project`,
+`invoke`.
+
+For command details, see [ael_cli_reference_v0_1.md](./ael_cli_reference_v0_1.md).
 
 ---
 
@@ -52,7 +58,10 @@ CLI  →  pipeline.run_pipeline()
                                    result JSON + console output; evidence.json artifact
 ```
 
-**Retry / recovery:** `runner.run_plan()` implements a per-step retry budget. On failure, `failure_recovery.py` normalises the failure kind and `recovery_policy.py` resolves recovery hints (e.g. replug, reset, reflash).
+**Retry / recovery:** `runner.run_plan()` implements a per-step retry budget.
+On failure, `failure_recovery.py` normalises the failure kind and
+`recovery_policy.py` resolves recovery hints such as replug, reset, reflash,
+or degraded-instrument interpretation.
 
 ---
 
@@ -177,7 +186,10 @@ firmware/targets/*/          tests/plans/*.json
 
 ## 6. Immediate Pain Points Noticed
 
-1. **`pipeline.py` is too large (~2100 lines)** — config merging, plan building, stage routing, summary formatting, and debug rendering all in one file. Candidates to split out: `config_merger`, `plan_builder`, `run_orchestrator`, `summary_formatter`.
+1. **`pipeline.py` is large** — config merging, plan building, stage routing,
+summary formatting, and debug rendering all live close together. Candidates to
+split out: `config_merger`, `plan_builder`, `run_orchestrator`,
+`summary_formatter`.
 
 2. **`runner.run_plan()` is long (~400+ lines)** — retry loop, recovery dispatch, timeout handling, and failure classification all mixed together. Hard to trace control flow.
 
@@ -185,8 +197,18 @@ firmware/targets/*/          tests/plans/*.json
 
 4. **Connection model is split across four modules** — `connection_model.py`, `connection_metadata.py`, `connection_doctor.py`, `adapters/preflight.py`. No single source of truth for connection readiness.
 
-5. **Instrument layer has dual abstraction** — old manifest-based `registry.py` / `manifest.py` path alongside newer action dispatcher (`dispatcher.py`, `action_registry.py`). Both active; some backends reachable from both paths.
+5. **Instrument layer has multiple abstraction paths** — manifest loading,
+native dispatch, action dispatch, and concrete backend paths coexist. This is
+useful during migration but should remain explicit in docs and code.
 
 6. **Step types are plain strings** — `adapter_registry.get("build.cmake")` style. No compile-time discovery or validation of which step types exist.
 
 7. **Evidence vs result are separate schemas** — `artifacts/evidence.json` and `runs/{id}/result.json` use different structures with no explicit link between them.
+
+---
+
+## 7. Current Documentation Boundary
+
+This map describes the public `master` branch. Private work branches may contain
+additional orchestration or bench-local configuration that is intentionally not
+represented here.

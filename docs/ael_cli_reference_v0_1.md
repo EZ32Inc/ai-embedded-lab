@@ -1,373 +1,178 @@
 # AEL CLI Reference v0.1
 
-This document lists all available `ael` commands, their purpose, typical usage,
-and key output fields.
-
-All commands run from the repo root: `python -m ael <command>` or `ael <command>`
-(if installed).
-
----
-
-## Overview Commands
-
-### `ael status`
-
-Unified system domain + user project domain overview. The primary entry point
-for understanding the current state of everything.
+This reference is for the public `master` branch. Commands are run from the
+repository root:
 
 ```bash
-ael status
-ael status --projects-root projects --runs-root runs
+python3 -m ael <command> ...
 ```
 
-**Output sections:**
-- `=== System Domain ===` — lists system main DUTs (`assets_golden/`) with
-  `verified` status, branch DUTs (`assets_branch/`) with `lifecycle_stage`,
-  promote candidates, and default verification pass rate
-- `=== User Project Domain ===` — lists all user projects with `status`,
-  `capability_source` (main/branch), and branch `capability_ref`
-- `=== Cross-Domain Links ===` — branch capabilities linked to user projects,
-  current lifecycle stage, and promote path
+Use `python3 -m ael --help` and `python3 -m ael <command> --help` for the
+runtime source of truth.
 
 ---
 
-### `ael board state <board_id>`
+## Top-Level Commands
 
-Capability state for a specific board: run history, health, source domain.
+Current top-level commands:
+
+```text
+run, doctor, pack, instruments, dut, verify-default, inventory, connection,
+explain-stage, workflow-archive, hw-check, la-check, status, board, project,
+invoke
+```
+
+---
+
+## State And Discovery
+
+### `status`
+
+Unified system-domain and user-project overview.
 
 ```bash
-ael board state stm32f411ceu6 --format text
-ael board state stm32h743_draft --format text
+python3 -m ael status
 ```
 
-**Key output fields:**
-- `source: golden | branch | user` — which namespace this DUT lives in
-- `lifecycle_stage: merged_to_main | validated | runnable | draft`
-- `health_status: pass | partial_pass | fail | unknown`
-- `validated_tests` / `failing_tests`
+Use this first when resuming work.
 
-**Default format:** JSON. Use `--format text` for human-readable output.
+### `inventory`
 
----
-
-### `ael inventory list`
-
-Full DUT and test inventory across all namespaces.
+Inspect known DUTs, suites, instrument instances, tests, and connections.
 
 ```bash
-ael inventory list --format text
+python3 -m ael inventory list --format text
+python3 -m ael inventory suites
+python3 -m ael inventory instances
+python3 -m ael inventory describe-dut --board <board_id>
+python3 -m ael inventory describe-test --board <board_id> --test <test_id>
+python3 -m ael inventory describe-connection --board <board_id> --test <test_id>
+python3 -m ael inventory diff-connection --board <board_id> --test <test_id>
+python3 -m ael inventory audit-test-schema
 ```
 
-**Output:** Each DUT with `[branch]` or `[golden]` tag, `stage=<lifecycle>`,
-and all associated tests.
+### `board`
 
----
-
-### `ael doctor`
-
-Check instrument connectivity and bench health.
+Inspect board/capability state.
 
 ```bash
-ael doctor
-ael doctor --instrument <ip:port>
+python3 -m ael board state <board_id> --format text
 ```
 
----
+### `verify-default`
 
-## Project Commands
-
-### `ael project create`
-
-Create a new user project. Resolves the closest system capability (mature/inferred/unknown),
-creates a draft capability in `assets_branch/` if needed, and outputs the domain assignment.
+Inspect or run the default verification baseline.
 
 ```bash
-ael project create \
-  --target-mcu stm32h743zit6 \
-  --project-name "H743 full test" \
-  --user-goal "test all peripherals" \
-  --project-user alice
+python3 -m ael verify-default state
+python3 -m ael verify-default run
+python3 -m ael verify-default review
 ```
-
-**Key output for mature path (copy hit):**
-- A/B/C/D structured block: known repo facts / assumptions / still needed / next step
-- `capability_source: main`
-
-**Key output for inferred/unknown path (copy miss):**
-- Bootstrap result: DUT id, manifest path, board config path, `lifecycle: draft`
-- `capability_source: branch`, `capability_ref: <dut_id>`
-- Lifecycle path: `draft → runnable → validated → merge_candidate → merged_to_main`
-
-**Stored in `projects/<id>/project.yaml`:**
-`domain`, `project_user`, `path_maturity`, `capability_source`, `capability_ref`,
-`confirmed_facts`, `assumptions`, `unresolved_items`, `cross_domain_links`
 
 ---
 
-### `ael project list`
+## Running Tests
 
-List all user projects with domain and capability source.
+### `run`
+
+Run one test plan against a board/DUT.
 
 ```bash
-ael project list
-ael project list --projects-root projects
+python3 -m ael run --board <board_id> --test <test_id>
+python3 -m ael run --board <board_id> --test <test_id> --until-stage plan
+python3 -m ael run --board <board_id> --test <test_id> --project <project_id>
 ```
 
-**Output per project:**
-`domain`, `target_mcu`, `path_maturity`, `capability_source`,
-`capability_ref` (if branch), `status`, `next_recommended_action`
+Common options:
 
----
+- `--board <board_id>`: board config ID from `configs/boards/`
+- `--dut <dut_id>`: DUT ID from assets
+- `--controller <instrument>`: control instrument config
+- `--probe <instrument>`: legacy alias for `--controller`
+- `--until-stage plan|pre-flight|run|run-exit|report`
+- `--quiet` / `--verbose`
 
-### `ael project status <project_id>`
+### `pack`
 
-Detailed status for one project.
+Run a pack file, optionally filtered by stage.
 
 ```bash
-ael project status stm32h743_bringup
+python3 -m ael pack --board <board_id> --pack packs/<pack>.json
+python3 -m ael pack --board <board_id> --pack packs/<pack>.json --stage 0,1
+python3 -m ael pack --board <board_id> --pack packs/<pack>.json --stop-on-fail
 ```
 
-**Key output fields:**
-`domain`, `path_maturity`, `capability_source`, `capability_ref [branch capability | system main]`,
-`confirmed_facts`, `assumptions`, `unresolved_items`, `run_evidence`
+Common options:
+
+- `--no-build`
+- `--no-flash`
+- `--verify-only`
+- `--stage <stage-list>` for packs with `stages` metadata
 
 ---
 
-### `ael project questions <project_id>`
+## Project Workflow
 
-Guided next questions for a project. Branches on `path_maturity`.
+User projects are lightweight working contexts in `projects/<project_id>/`.
 
 ```bash
-ael project questions stm32h743_bringup
+python3 -m ael project list
+python3 -m ael project create --target-mcu <mcu>
+python3 -m ael project status <project_id>
+python3 -m ael project answering-context <project_id>
+python3 -m ael project questions <project_id>
+python3 -m ael project intake <project_id>
+python3 -m ael project run-gate <project_id>
+python3 -m ael project update <project_id> --set-status <status>
+python3 -m ael project append-note <project_id> --note "..."
+python3 -m ael project link-run <project_id> --run-id <run_id> --ok
+python3 -m ael project show-cross-domain-links <project_id>
 ```
 
-For **mature** paths: confirmation checklist (board variant, instrument, wiring, test intent).
-For **inferred/unknown** paths: open questions about MCU details, board, instrument.
+Typical flow:
+
+1. Create or select a project.
+2. Confirm real board, instrument, wiring, and test intent.
+3. Run `project run-gate`.
+4. Run one test or pack.
+5. Link evidence back to the project.
 
 ---
 
-### `ael project run-gate <project_id>`
-
-Gate check before running. Must pass before `ael run` is used with a project flag.
+## Instrument And Connection Tools
 
 ```bash
-ael project run-gate stm32h743_bringup
+python3 -m ael doctor
+python3 -m ael instruments list
+python3 -m ael instruments describe --id <instrument_id>
+python3 -m ael instruments doctor --id <instrument_id>
+python3 -m ael connection doctor --board <board_id> --test <test_id>
+python3 -m ael explain-stage --board <board_id> --test <test_id> --stage <stage>
 ```
 
-**Readiness states:**
-- `confirmed_enough_to_prepare` — gate open
-- `partially_confirmed` — gate open with warnings
-- `candidate_path_identified` — gate blocked, need confirmations
-- `branch_capability_runnable` — branch DUT at runnable stage, gate open
-- `branch_capability_draft` — gate blocked, fill PLACEHOLDERs first
-- `branch_capability_missing` — gate blocked, branch DUT not found
+`doctor` and `connection doctor` are diagnostic aids. They do not prove that a
+user's hardware wiring is correct unless the required physical setup has been
+confirmed.
 
 ---
 
-### `ael project update <project_id>`
+## Other Commands
 
-Update project fields.
-
-```bash
-ael project update stm32h743_bringup --set-status runnable
-ael project update stm32h743_bringup --append-confirmed-fact "Board confirmed: H743ZIT6"
-ael project update stm32h743_bringup --set-blocker "instrument offline"
-```
-
----
-
-### `ael project link-run <project_id>`
-
-Link a completed run result to a project and update run evidence.
-
-```bash
-ael project link-run stm32h743_bringup \
-  --run-id 2026-03-17_10-30-00_stm32h743_gpio_loopback \
-  --ok
-```
+| Command | Purpose |
+|---|---|
+| `dut` | DUT lifecycle and promotion commands |
+| `workflow-archive` | Inspect workflow event records |
+| `hw-check` | Hardware setup checks |
+| `la-check` | Logic-analyzer-oriented checks |
+| `invoke` | Invoke a named board capability by natural name or alias |
 
 ---
 
-### `ael project show-cross-domain-links <project_id>`
+## Source Of Truth
 
-Show how this user project links to the system domain.
+When this document conflicts with runtime behavior, prefer:
 
-```bash
-ael project show-cross-domain-links stm32h743_bringup
-```
-
-**Output:**
-- `capability_source` and `capability_ref`
-- Current `lifecycle_stage` of the branch DUT
-- Full lifecycle path with current stage highlighted: `[draft] → runnable → ...`
-- Next steps to advance lifecycle and promote
-- Cross-domain impact: "when promoted, enters assets_golden/ as system main capability"
-
-For **main** projects: `cross_domain_links: (none) — uses system main capability`
-
----
-
-### `ael project append-note <project_id>`
-
-Append a note to the project's session notes.
-
-```bash
-ael project append-note stm32h743_bringup --note "SWD confirmed working"
-```
-
----
-
-### `ael project intake <project_id>`
-
-Interactive or non-interactive fact collection — write confirmed facts from a
-structured checklist directly into project.yaml.
-
-```bash
-ael project intake stm32h743_bringup
-ael project intake stm32h743_bringup --non-interactive
-```
-
----
-
-## DUT / Capability Commands
-
-### `ael dut set-lifecycle`
-
-Advance the `lifecycle_stage` of a branch or user DUT.
-
-```bash
-ael dut set-lifecycle --id stm32h743_draft --stage runnable
-ael dut set-lifecycle --id stm32h743_draft --stage validated
-ael dut set-lifecycle --id stm32h743_draft --stage merge_candidate
-```
-
-**Valid stages:** `draft → runnable → validated → merge_candidate → merged_to_main`
-
-Stage must advance in order. `merged_to_main` is set automatically by `dut promote`.
-
----
-
-### `ael dut promote`
-
-Promote a branch capability to system main (`assets_golden/`).
-
-```bash
-ael dut promote --id stm32h743_draft
-ael dut promote --id stm32h743_draft --as-id stm32h743zit6
-```
-
-**Gate 1:** `lifecycle_stage` must be `merge_candidate`.
-**Gate 2:** `compile_validation` must be `passed`.
-**Gate 3:** Required metadata fields must be present (id, mcu, family, build_type, flash_method).
-
-On success: DUT moves to `assets_golden/duts/`, `lifecycle_stage` set to `merged_to_main`.
-
----
-
-### `ael dut show-placeholders`
-
-List unfilled PLACEHOLDER fields in a branch/user DUT before advancing lifecycle.
-
-```bash
-ael dut show-placeholders --id stm32h743_draft
-ael dut show-placeholders --id stm32h743_draft --namespace branch
-```
-
----
-
-### `ael dut show-linked-projects`
-
-Reverse lookup: which user projects reference this branch DUT?
-
-```bash
-ael dut show-linked-projects --id stm32h743_draft
-```
-
-**Output:** linked project list with status and user, plus promote path and cross-domain impact.
-
----
-
-### `ael dut create`
-
-Copy a DUT from `assets_golden/` to `assets_branch/` or `assets_user/`.
-
-```bash
-ael dut create stm32f411ceu6 stm32f411_variant --dest branch
-```
-
-Creates `assets_branch/duts/stm32f411_variant/` with `lifecycle_stage: draft`.
-
----
-
-### `ael dut set-compile-validated`
-
-Record compile validation result on a branch DUT (required for promote Gate 2).
-
-```bash
-ael dut set-compile-validated --id stm32h743_draft --result passed
-ael dut set-compile-validated --id stm32h743_draft --result failed --note "linker error"
-```
-
----
-
-## Execution Commands
-
-### `ael run`
-
-Run a single test against a board.
-
-```bash
-ael run --board stm32f411ceu6 --test stm32f411_gpio_signature
-ael run --project stm32h743_bringup --test stm32h743_gpio_loopback
-```
-
-When `--project` is given and the project has `capability_source: branch`,
-the branch DUT is used automatically.
-
----
-
-### `ael pack`
-
-Run a test pack (multiple tests) against a board.
-
-```bash
-ael pack smoke_stm32f411 --board stm32f411ceu6
-```
-
----
-
-## Verification Commands
-
-### `ael verify-default`
-
-Manage and run the system-level default verification suite.
-
-```bash
-ael verify-default show                    # show current config
-ael verify-default state --format text     # current pass/fail state
-ael verify-default run                     # run all steps
-ael verify-default repeat --limit 5        # repeat until failure, max 5 runs
-```
-
-Default verification is a **system domain** object — it tracks platform health
-across all verified boards, not individual user project state.
-
----
-
-## Lifecycle Summary
-
-```
-User project:    intake → plan → execute → review → closeout
-                 (project.yaml: status field)
-
-Branch DUT:      draft → runnable → validated → merge_candidate → merged_to_main
-                 (manifest.yaml: lifecycle_stage field)
-                 Promoted to system main via: ael dut promote
-
-System main:     assets_golden/duts/<id>/manifest.yaml  lifecycle_stage: merged_to_main
-Branch:          assets_branch/duts/<id>/manifest.yaml  lifecycle_stage: draft|runnable|...
-```
-
----
-
-*CLI Reference version: v0.1 — covers AEL as of 2026-03-17.*
+1. `python3 -m ael <command> --help`
+2. command implementation in `ael/__main__.py`
+3. current configs and manifests
+4. this document
