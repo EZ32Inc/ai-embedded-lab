@@ -1,5 +1,6 @@
 # AEL Paradigm Shift
-### From AI Assistant to AI-Driven Embedded Engineering (从AI辅助到AI驱动)
+
+### From AI Assistant To AI-Driven Embedded Engineering
 
 AEL introduces a new way of doing embedded engineering.
 
@@ -480,9 +481,8 @@ AEL replaces it with:
 
 > a closed-loop, AI-driven engineering system operating on real hardware.
 
-## 16. about
+## 16. Metadata
 
 **Date:** 2026-03-20
-**Status:** Draft Execution Plan
+**Status:** Draft
 **Drafted by:** Andrew Li
-

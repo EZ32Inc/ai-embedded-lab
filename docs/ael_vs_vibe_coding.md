@@ -1,158 +1,139 @@
-# AEL vs Vibe Coding：相同点与本质差异
+# AEL vs Vibe Coding: Similarities And Core Differences
 
-## 1. 问题背景
+## 1. Background
 
-随着 AI 在工程中的应用不断增强，一种新的开发方式逐渐被称为 "vibe coding"。
-与此同时，另一类系统开始出现，它们不仅生成代码，还能够执行工程任务并持续迭代直到目标达成。
+As AI becomes more useful in engineering, one style of development is often
+called "vibe coding": a human describes intent, AI generates or modifies code,
+and the human keeps steering the loop.
 
-这两者在表面上有相似之处：
+AEL belongs to a different class of system. It can generate code, but it is
+designed to execute engineering tasks, observe results, and iterate until an
+engineering outcome is reached.
 
-- 都使用自然语言作为输入
-- 都依赖 AI 生成和修改代码
-- 都表现为一种"循环式推进"的过程
+The two can look similar because:
 
-因此，很容易被认为是同一类系统的不同阶段。
+- both accept natural-language intent
+- both use AI to generate and modify code
+- both proceed through iterative loops
 
-但实际上，它们在本质上是不同的。
+They differ in who owns the loop and what the loop is trying to deliver.
 
-## 2. 相同点：为什么它们看起来很像
+## 2. Similarities
 
-### 2.1 都是 intent-driven
+### 2.1 Intent-Driven Work
 
-在这两类系统中，人不再通过低层指令（代码或操作）直接控制系统，而是通过更高层的"意图"来表达目标。
+Both systems move engineering from low-level instruction toward high-level
+intent. The user states the goal; the system helps translate that goal into
+actions.
 
-这标志着工程活动从：
+### 2.2 AI-Generated Implementation
 
-**指令驱动 → 意图驱动**
+Both systems use AI for implementation work:
 
-### 2.2 都使用 AI 生成与修改代码
+- generating code
+- modifying existing logic
+- fixing errors
+- explaining tradeoffs
 
-两者都依赖 AI 来完成代码层面的工作，包括：
+In both cases, writing code becomes AI-assisted or AI-led.
 
-- 生成实现
-- 修改已有逻辑
-- 修复错误
+### 2.3 Iterative Progress
 
-这使得"写代码"这一行为从手工过程转变为 AI 辅助或 AI 主导的过程。
+Neither system is usually a single-shot output. Both make progress through
+feedback and repeated correction.
 
-### 2.3 都表现为循环（loop），而非一次性输出
+## 3. Core Difference: Loop Ownership
 
-无论是 vibe coding 还是 AEL，都不是一次生成就结束，而是通过多轮迭代逐步逼近目标。
+The central difference is loop ownership.
 
-因此，两者都具备"循环系统"的特征。
+### 3.1 Vibe Coding: Human-Driven Loop
 
-## 3. 本质差异：谁在驱动这个循环
+In vibe coding:
 
-尽管有这些相似之处，两者之间存在一个根本性的差异：
+- the human decides what to do next
+- the human judges whether the result is correct
+- the human decides whether to continue, change direction, or stop
 
-**谁在推进这个循环（loop ownership）**
+The AI role is to generate code, modify code, and suggest next steps.
 
-### 3.1 Vibe Coding：人驱动循环
+The summary is:
 
-在 vibe coding 中：
+> Human drives; AI assists.
 
-- 人决定下一步做什么
-- 人判断当前结果是否正确
-- 人决定是否继续、修改或停止
+### 3.2 AEL: AI-Driven Loop
 
-AI 的角色是：
+In AEL:
 
-- 生成代码
-- 修改代码
-- 提供建议
+- the human defines the goal and boundary
+- AI decides the next engineering action
+- AI executes that action through AEL
+- AI observes the result
+- AI repairs or retries when needed
 
-因此，其本质是：
+The summary is:
 
-> **Human drives, AI assists**
+> AI drives; human defines goal and boundary.
 
-### 3.2 AEL：AI 驱动循环
+### 3.3 Structural Shift, Not Just More Automation
 
-在 AEL 中：
+This is not only a difference in automation level. It is a shift in control.
 
-- 人提供目标与约束
-- AI 决定下一步行动
-- AI 执行操作
-- AI 判断结果是否达标
-- AI 在必要时修复并继续推进
+In vibe coding, the human remains the controller and AI is an accelerator.
+In AEL, AI becomes the controller for the execution loop, while the human sets
+direction, constraints, and acceptance criteria.
 
-因此，其本质是：
+## 4. Goal Difference: Code vs Outcome
 
-> **AI drives, human defines goal and boundary**
+### 4.1 Vibe Coding Goal
 
-### 3.3 这是控制权的转移，而不是程度差异
+Vibe coding primarily delivers code. Code is the main artifact.
 
-这一差异不是"自动化程度更高"那么简单，而是：
+### 4.2 AEL Goal
 
-**控制权从人转移到了 AI**
+AEL aims to deliver an engineering outcome. Code is one possible means to reach
+that outcome, but it is not the final objective.
 
-- 在 vibe coding 中，人是控制器，AI 是执行加速器
-- 在 AEL 中，AI 是控制器，人是目标设定者
+The short version:
 
-这是一个结构性的变化，而非线性增强。
+> Vibe coding delivers code. AEL delivers validated results.
 
-## 4. 目标的不同：代码 vs 结果
-
-另一个关键差异在于系统的目标。
-
-### 4.1 Vibe Coding 的目标
-
-**生成代码（build code）**
-
-代码本身就是主要交付物。
-
-### 4.2 AEL 的目标
-
-**达成工程结果（achieve outcome）**
-
-代码只是实现目标的手段之一，而不是最终目的。
-
-### 4.3 本质区别
-
-可以用一句话概括：
-
-> **Vibe coding 交付代码，AEL 交付结果。**
-
-## 5. 世界的不同：软件空间 vs 真实执行空间
-
-两者运行的"世界"也不同。
+## 5. Execution World: Software Space vs Real Systems
 
 ### 5.1 Vibe Coding
 
-- 主要在软件环境中运行
-- 操作对象是代码与程序
-- 结果通常是程序输出
+Vibe coding usually operates in software space:
+
+- source files
+- programs
+- command output
+- application behavior
 
 ### 5.2 AEL
 
-- 面向真实系统（例如硬件、设备、环境）
-- 操作对象是现实世界中的实体
-- 结果是系统状态的改变或目标的达成
+AEL operates against real systems:
 
-因此，两者的区别也可以理解为：
+- MCUs
+- instruments
+- firmware
+- signals
+- physical board state
 
-**从"描述系统"到"作用系统"的转变**
+The transition is from describing systems to acting on systems.
 
-## 6. 关系总结：包含，但不等同
+## 6. Relationship
 
-基于以上分析，可以得出一个清晰的关系：
+AEL includes vibe-coding capability, but it is not the same thing.
 
-**AEL 包含 vibe coding 的能力，但不等同于 vibe coding。**
+- Vibe coding is a code-generation and code-editing mode.
+- AEL is an execution system that includes generation, flashing, observation,
+  validation, recovery, and iteration.
 
-更具体地说：
+## 7. Conclusion
 
-- vibe coding 是一种能力（主要体现在代码生成与修改）
-- AEL 是一个系统（包含生成、执行、验证、迭代等完整闭环）
+Vibe coding is a human-driven way to produce code with AI assistance.
 
-## 7. 最终结论
+AEL is an AI-driven engineering system that uses code, instruments, and
+validation loops to converge on real outcomes.
 
-可以用以下几句话作为最终总结：
-
-> Vibe coding 是人驱动的代码生成方式，
-> AEL 是 AI 驱动的工程结果收敛系统。
->
-> 区别不在于 AI 是否参与，而在于谁在掌控循环。
->
-> Vibe coding 的目标是生成代码，
-> AEL 的目标是让系统达到目标状态。
->
-> Vibe coding 是手段，AEL 是系统。
+The key difference is not whether AI participates. The key difference is who
+controls the loop and what the loop is expected to deliver.
