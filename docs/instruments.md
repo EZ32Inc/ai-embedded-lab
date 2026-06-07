@@ -1,112 +1,119 @@
-# Instruments in AEL
+# Instruments In AEL
 
-AEL interacts with real hardware through **Instruments**.
+AEL interacts with real hardware through instruments.
 
-An Instrument is any device that can interact with a DUT (Device Under Test), such as:
+An instrument is any device or service that can act on, observe, or help verify
+a DUT. Examples include:
 
-- debug adapters (SWD / JTAG)
+- SWD/JTAG debug adapters
+- UART bridges and monitors
 - logic capture devices
-- UART monitors
 - signal generators
 - power switches
-- scopes / meters (now or later)
+- meters and scopes
+- network-facing instrument daemons
 
-AEL is designed so instruments can be added without changing core orchestration logic.
+The preferred current term is **control instrument**. The older term **probe**
+still appears in code and output for compatibility, especially around debug and
+flash paths.
 
-See also:
-- `docs/instrument_model.md` for the repo-level architecture position, including the planned retirement of `probe` as a parallel top-level concept.
-- `docs/architecture/cloud_instrument_architecture_v0_1.md` for the network-native/cloud-ready instrument direction.
-- `docs/specs/cloud_instrument_profile_v0_1.md` for the bounded cloud-ready instrument profile.
+## Current CLI Entry
 
-Terminology note:
-- preferred current term: `control instrument`
-- legacy compatibility term: `probe`
-- in current AEL output, debug/JTAG-style hardware may still carry legacy `probe_*` fields for compatibility, but the preferred user-facing wording is `control_instrument*`
+Use:
 
----
+```bash
+python3 -m ael instruments --help
+```
 
-## Instrument Manifest (v0.1)
+Current subcommands include:
 
-Each instrument is described by a machine-readable manifest:
+- `list`
+- `describe`
+- `show`
+- `find`
+- `doctor`
+- `usb-probe`
+- `detect-mcu`
+- ESP32 meter Wi-Fi helpers such as `wifi-scan`, `wifi-connect`, and
+  `meter-ready`
 
-- Local (shipped with AEL):  
-  `assets_golden/instruments/<instrument_id>/manifest.json`
+Verify exact options with the subcommand help before running live bench actions.
 
-- Local (user workspace):  
-  `assets_user/instruments/<instrument_id>/manifest.json`
+## Current Model
 
-- Network (instrument-hosted):  
-  `http://<ip>/.well-known/ael/manifest.json`
+The instrument layer is designed around:
 
-The manifest is the contract between AEL (Orchestrator) and the instrument.
+- stable identity
+- declared capabilities
+- explicit transports
+- action/result contracts
+- clear fallback and degraded-instrument reporting
 
-It declares:
+Start with:
 
-- identity (USB VID/PID, serial, MAC, etc.)
-- transports (USB/serial/TCP, endpoints, discovery hints)
-- capabilities (debug, observe, power, etc.)
-- safety limits (voltage, current, hotplug)
-- docs and examples (human + AI usage notes)
+- [instrument_model_v1.md](./instrument_model_v1.md)
+- [control_instrument_compatibility.md](./control_instrument_compatibility.md)
+- [degraded_instrument_policy.md](./degraded_instrument_policy.md)
+- [instruments/usb_uart_bridge_daemon_v0_1.md](./instruments/usb_uart_bridge_daemon_v0_1.md)
 
----
+Older architecture and migration notes may still be useful as history, but
+current behavior should be checked against code, configs, and CLI output.
 
-## Required Manifest Fields
+## Manifest Direction
 
-A v0.1 manifest must include:
+Instrument manifests describe:
 
-- `schema`: must be `"ael.instrument.manifest.v0.1"`
-- `id`: stable instrument id (string)
-- `kind`: must be `"instrument"`
-- `transports`: list (at least one transport)
-- `capabilities`: list (at least one capability)
+- identity
+- transports
+- capabilities
+- safety limits
+- documentation and examples
 
-Minimal example:
+Example shape:
 
 ```json
 {
   "schema": "ael.instrument.manifest.v0.1",
-  "id": "my_instrument_01",
+  "id": "example_instrument",
   "kind": "instrument",
   "transports": [
-    { "type": "serial", "endpoint_hint": "/dev/ttyACM*", "protocol": "line-json-v0.1" }
+    {"type": "serial", "endpoint_hint": "<serial-port>", "protocol": "line-json-v0.1"}
   ],
   "capabilities": [
-    { "name": "observe.logic", "version": "v0.1", "channels": 8 }
+    {"name": "uart.observe", "version": "v0.1"}
   ]
 }
 ```
 
-## ESP32 Meter Wi-Fi Control
+Keep public examples generic. Do not publish real private IPs, Wi-Fi details,
+USB serial numbers, or bench-local paths.
 
-For Wi-Fi instruments like `esp32s3_dev_c_meter`, AEL can normalize AP discovery and connection from the instrument manifest instead of relying on ad hoc shell commands.
+## ESP32 Meter Notes
 
-Examples:
+ESP32 meter helpers can normalize AP discovery, connection, reachability, and
+meter readiness from instrument configuration. Public documentation should show
+generic command shapes:
 
 ```bash
-python3 -m ael instruments meter-setup --id esp32s3_dev_c_meter --port /dev/ttyACM0 --ifname wlxf0090d36d617 --ssid-suffix 67A9
-python3 -m ael instruments meter-ready --id esp32s3_dev_c_meter --ifname wlxf0090d36d617 --ssid-suffix 67A9
-python3 -m ael instruments meter-list --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
-python3 -m ael instruments wifi-scan --id esp32s3_dev_c_meter --ifname wlxf0090d36d617
-python3 -m ael instruments wifi-connect --id esp32s3_dev_c_meter --ifname wlxf0090d36d617 --ssid-suffix 67A9
-python3 -m ael instruments meter-reachability --id esp32s3_dev_c_meter
-python3 -m ael instruments meter-ping --id esp32s3_dev_c_meter
+python3 -m ael instruments wifi-scan --id <instrument-id> --ifname <wifi-interface>
+python3 -m ael instruments wifi-connect --id <instrument-id> --ifname <wifi-interface> --ssid-suffix <suffix>
+python3 -m ael instruments meter-ready --id <instrument-id> --ifname <wifi-interface> --ssid-suffix <suffix>
+python3 -m ael instruments meter-reachability --id <instrument-id>
+python3 -m ael instruments meter-ping --id <instrument-id>
 ```
 
-Behavior:
+Do not commit real SSIDs, passwords, interface MAC-derived names, or private
+meter IPs in public docs.
 
-- `meter-setup` performs `flash -> wait for AP -> connect`
-- `meter-ready` performs `scan -> connect -> ping`
-- `meter-list` reports all visible `ESP32_GPIO_METER_XXXX` candidates in a canonical agent-facing structure
-- `wifi-scan` filters visible SSIDs by the manifest `wifi.ap_ssid_prefix`
-- `wifi-connect` uses the manifest password automatically
-- `meter-reachability` ICMP-pings the meter IP before a run
-- `meter-ping` verifies the instrument responds on the manifest TCP endpoint
-- if exactly one matching SSID is visible, `wifi-connect` may select it directly
-- if multiple matching SSIDs are visible, provide `--ssid` or `--ssid-suffix`
+## Public-Repo Safety
 
-Canonical `meter-list` fields:
+Instrument docs are especially likely to contain local bench details. Before
+committing:
 
-- `available_meters`: list of `{ssid, suffix, signal, in_use}`
-- `meter_count`
-- `selection_required`
-- `recommended_action`
+- replace private IPs with `<probe-ip>` or `<instrument-ip>`
+- replace serial devices with `<serial-port>`
+- replace local interface names with `<wifi-interface>`
+- replace real SSID suffixes with `<suffix>`
+- summarize raw logs instead of linking transcripts
+
+See [SECURITY_AND_PUBLIC_REPO.md](./SECURITY_AND_PUBLIC_REPO.md).

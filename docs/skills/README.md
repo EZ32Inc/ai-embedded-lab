@@ -1,139 +1,114 @@
-# AEL Skills and Workflow Notes
+# AEL Skills
 
-## Purpose
+This directory stores reusable engineering knowledge extracted from real AEL
+development, validation, and bench work.
 
-This directory stores reusable engineering knowledge extracted from real AEL development and bench work.
+Skill docs are not raw logs. They should capture what should be reused next
+time: diagnosis workflows, known failure classes, validation patterns, and
+operator guidance.
 
-These documents are intended to capture:
-- troubleshooting workflows
-- recurring diagnostic patterns
-- design and policy clarifications
-- operational guidance that should be reused in future work
+## How To Use This Directory
 
-The goal is to make important experience explicit, reusable, and easier for future AI/Codex/humans to apply.
+Use this order:
 
-## Why We Are Doing This
+1. Start with current public docs:
+   - [../README.md](../README.md)
+   - [../DOCS_INDEX.md](../DOCS_INDEX.md)
+   - [../ael_cli_reference_v0_1.md](../ael_cli_reference_v0_1.md)
+2. Use active skills for recurring workflows and troubleshooting.
+3. Treat dated board-specific skills as historical captures unless they match
+   the current board, instrument, and code path.
+4. Verify current commands with CLI help before running hardware actions.
 
-AEL development is now producing a growing amount of valuable practical knowledge:
-- how to diagnose intermittent bench failures
-- how to interpret verification behavior
-- how to reason about resource locking and concurrency
-- how to distinguish architecture issues from bench-side issues
-- how to apply repeatable engineering workflows to real hardware problems
+## Active Skill Groups
 
-If this knowledge is not written down, it will be repeatedly rediscovered.
-Writing it down now is the fastest and lightest way to preserve and reuse it.
+| Area | Representative files |
+|---|---|
+| Agent/repo orientation | `ael_orientation_skill.md`, `ael_repo_answering_skill.md`, `user_project_answering_skill.md` |
+| Documentation cleanup | `active_doc_cleanup_workflow.md` |
+| New board and pack work | `new_board_bringup_skill.md`, `new_pack_closeout_and_skill_capture.md`, `capability_expansion_skill_v0_1.md` |
+| Default verification | `default_verification_repeat_mode.md`, `default_verification_repeat_skill.md`, `default_verification_single_run_triage.md` |
+| Degraded instruments and bench drift | `degraded_instrument_handling.md`, `bench_drift_vs_degraded_instrument.md`, `bench_resource_drift_interpretation.md` |
+| Resource locking and concurrency | `worker_resource_locking.md`, `probe_fallback_policy.md` |
+| User projects | `user_project_creation_skill.md`, `connection_contract_retrieval.md` |
+| Validation summaries | `validation_summary_emission_skill.md`, `last_known_good_extraction_skill.md` |
 
-## Current Approach
+## Historical Capture Groups
 
-For now, AEL skills are stored as simple Markdown documents under `docs/skills/`.
-
-This is intentionally lightweight.
-
-At this stage, the priority is:
-1. capture useful knowledge quickly
-2. make it reusable
-3. keep development moving
-
-We are not yet building a formal skills engine or workflow execution system.
-These Markdown files are the first practical step.
-
-## What These Documents Are
-
-A skill document should be a reusable engineering note, workflow, or troubleshooting guide.
-
-It should help answer questions like:
-- if this kind of problem happens again, what should we check?
-- what evidence should we collect?
-- how should we classify the problem?
-- what conclusions are already known?
-- what remains unresolved?
-
-## What These Documents Are Not
-
-These documents are not:
-- raw session logs
-- timeline-style summaries
-- casual notes
-- general brainstorming text
-
-A session summary records what happened.
-A skill document captures what should be reused next time.
-
-## Writing Guidelines
-
-Each skill document should be:
-- practical
-- concise
-- structured
-- reusable
-- grounded in real AEL work
-
-Prefer documenting:
-- real problems already encountered
-- workflows already used or clearly needed
-- policy decisions that affect future work
-- engineering patterns likely to recur
-
-Do not present unverified hypotheses as established facts.
-Separate:
-- confirmed observations
-- current working assumptions
-- unresolved questions
-
-## Suggested Structure
-
-A skill document should usually include:
-
-- Purpose
-- Scope
-- Background
-- Failure / Issue Classes
-- Required Observations
-- Diagnosis Workflow
-- Interpretation Guide
-- Recommended Output Format
-- Current Known Conclusions
-- Unresolved Questions
-- Related Files
-- Notes
-
-Not every document must be identical, but this structure should be the default.
-
-## Naming Convention
-
-Use clear, topic-focused filenames in lowercase with underscores.
+Many files are dated board-specific captures. They remain useful evidence but
+should not be treated as current instructions without checking the code and
+current configs.
 
 Examples:
+
+- `rp2040_s3jtag_*_2026-03-26.md`
+- `stm32f030c8t6_*_2026-04-03.md`
+- `stm32f103*_2026-03-28.md`
+- `stm32f401*_2026-03-28.md`
+- `stm32f401ce_*_2026-04-05.md`
+
+These files are best used to recover known patterns:
+
+- what failed before
+- which evidence was collected
+- which mitigation worked
+- which validation closeout was required
+
+## What A Good Skill Contains
+
+A reusable skill should usually include:
+
+- purpose
+- scope
+- prerequisites
+- required observations
+- diagnosis workflow
+- interpretation guide
+- recommended output format
+- known conclusions
+- unresolved questions
+- related files
+
+Keep skills concise and actionable. Link to reports for detailed evidence
+instead of copying raw logs into the skill.
+
+## What Does Not Belong Here
+
+Do not add:
+
+- raw session logs
+- unsanitized terminal transcripts
+- private bench IP addresses or serial numbers
+- one-off brainstorming notes
+- generic essays that do not change engineering behavior
+
+If a raw session produced reusable knowledge, summarize it as a skill and store
+the raw transcript outside public branches unless it has been sanitized.
+
+## Naming Rules
+
+Use lowercase snake_case filenames for new skills.
+
+Good examples:
+
 - `esp32c6_intermittent_bench_failure.md`
 - `default_verification_repeat_mode.md`
 - `probe_fallback_policy.md`
 - `worker_resource_locking.md`
 
 Avoid vague names such as:
+
 - `notes_1.md`
 - `new_workflow.md`
 - `thoughts.md`
 
-## Evolution Plan
+## Maintenance
 
-These Markdown skill documents are the starting point.
+When a skill becomes stale:
 
-Later, some or all of this knowledge may be turned into:
-- more formal workflow documents
-- structured metadata
-- machine-readable skill formats
-- agent-usable diagnostic or execution guidance
+1. Update it if the workflow is still active.
+2. Mark it historical if it is useful only as evidence.
+3. Remove it if it duplicates a better current skill and has no unique value.
 
-For now, the rule is simple:
-capture the knowledge first, formalize it later.
-
-## Immediate Use
-
-The first intended use is to create concrete reusable skill documents from current AEL work, such as:
-- ESP32-C6 intermittent bench failure investigation
-- default verification repeat mode guidance
-- probe fallback policy
-- worker resource locking
-
-These will serve both as practical references and as examples for future skill documents.
+Before committing, run the public-repo checks in
+[../SECURITY_AND_PUBLIC_REPO.md](../SECURITY_AND_PUBLIC_REPO.md).

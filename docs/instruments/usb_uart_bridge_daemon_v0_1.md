@@ -75,7 +75,7 @@ At runtime, the daemon:
 
 Example config:
 
-- [usb_uart_bridge.example.yaml](/nvme1t/work/codex/ai-embedded-lab/configs/instruments/usb_uart_bridge.example.yaml)
+- [usb_uart_bridge.example.yaml](../../configs/instruments/usb_uart_bridge.example.yaml)
 
 Main fields:
 
@@ -104,7 +104,7 @@ them only when the UART example or DUT requires different settings.
 
 Module:
 
-- [usb_uart_bridge_cli.py](/nvme1t/work/codex/ai-embedded-lab/ael/usb_uart_bridge_cli.py)
+- [usb_uart_bridge_cli.py](../../ael/usb_uart_bridge_cli.py)
 
 Commands:
 
@@ -120,8 +120,8 @@ Example usage:
 
 ```bash
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml list --format text
-python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --serial ABC123456
-python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --device-id /dev/serial/by-path/pci-0000:00:14.0-usb-0:14.4:1.0-port0
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --serial <usb-serial>
+python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml select --device-id <stable-device-id>
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml show --format text
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml doctor --format text
 python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.yaml serve
@@ -131,7 +131,7 @@ python3 -m ael.usb_uart_bridge_cli --config configs/instruments/usb_uart_bridge.
 
 Module:
 
-- [usb_uart_bridge_daemon.py](/nvme1t/work/codex/ai-embedded-lab/ael/instruments/usb_uart_bridge_daemon.py)
+- [usb_uart_bridge_daemon.py](../../ael/instruments/usb_uart_bridge_daemon.py)
 
 Current API is JSON over HTTP using Python stdlib `http.server`.
 
