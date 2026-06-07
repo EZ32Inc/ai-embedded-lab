@@ -13,6 +13,7 @@ over older prose.
 | [README.md](./README.md) | Short documentation entry point |
 | [what_is_ael.md](./what_is_ael.md) | Compact explanation of AEL concepts |
 | [DOCS_MAINTENANCE.md](./DOCS_MAINTENANCE.md) | Documentation upkeep, language, naming, and public-safety rules |
+| [SECURITY_AND_PUBLIC_REPO.md](./SECURITY_AND_PUBLIC_REPO.md) | Public-repo hygiene for logs, bench details, and sensitive values |
 | [DOCS_AUDIT_2026-06-07.md](./DOCS_AUDIT_2026-06-07.md) | Documentation cleanup report and remaining work |
 | [ael_cli_reference_v0_1.md](./ael_cli_reference_v0_1.md) | CLI command reference |
 | [current_validated_capabilities.md](./current_validated_capabilities.md) | Public validated-capability summary |

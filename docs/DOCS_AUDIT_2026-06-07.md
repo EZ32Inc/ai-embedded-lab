@@ -90,6 +90,7 @@ The following document groups should remain, with different levels of trust:
 | `docs/README.md` | Rewritten as a concise current docs entry point |
 | `docs/DOCS_INDEX.md` | Added current entry points, directory status, and raw-log policy |
 | `docs/DOCS_MAINTENANCE.md` | Added documentation maintenance and public-safety policy |
+| `docs/SECURITY_AND_PUBLIC_REPO.md` | Added public-repo hygiene rules for logs and bench details |
 | `docs/ael_cli_reference_v0_1.md` | Refreshed from current CLI shape |
 | `docs/current_validated_capabilities.md` | Replaced stale capability claims with public-safe baseline |
 | `docs/architecture_map.md` | Updated current module and CLI summary |
