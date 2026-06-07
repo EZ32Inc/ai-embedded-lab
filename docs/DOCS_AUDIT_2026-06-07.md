@@ -12,7 +12,7 @@ remaining work needed to keep AEL documentation public-ready.
 The documentation tree has been reorganized around current public entry points,
 section indexes, and an explicit maintenance policy.
 
-Current state after cleanup:
+Current state after cleanup and follow-up public-safety work:
 
 - `docs/` contains 598 files.
 - Public entry points are English-first and linked from
@@ -30,6 +30,10 @@ Current state after cleanup:
 | `10168fd` | Added section indexes and documentation maintenance policy |
 | `a05a001` | Removed obsolete docs and initially isolated raw logs |
 | `2255649` | Cleaned up high-priority public docs language |
+| `4d29554` | Added this documentation audit report |
+| `08bbe61` | Removed raw logs from the public docs tree |
+| `e319b43` | Added public-repo security guide |
+| `18d902d` | Refreshed skills and instruments entry points |
 
 ## Deleted Documents
 
@@ -97,6 +101,9 @@ The following document groups should remain, with different levels of trust:
 | `docs/boards/README.md` | Added board directory index |
 | `docs/reports/README.md` | Added report-use policy and raw-log handling |
 | `docs/specs/README.md` | Added spec directory index and cleanup rules |
+| `docs/skills/README.md` | Added active/historical skill policy and public-safety rules |
+| `docs/instruments.md` | Rewritten as a public-safe current instrument entry point |
+| `docs/instruments/usb_uart_bridge_daemon_v0_1.md` | Replaced absolute links and local examples with relative links/placeholders |
 | `docs/AELToDoList.md` | Translated and normalized as English task list |
 | `docs/ael_vs_vibe_coding.md` | Translated and rewritten in English |
 | `docs/ael_paradigm_shift.md` | Removed mixed-language heading and normalized metadata |
