@@ -2,7 +2,7 @@
  * STM32H750 PC0/PC1/PC2 LED blink.
  *
  * Clock: reset-default 64 MHz HSI. SysTick is configured for 1 ms ticks.
- * GPIOC is on the H7 AHB4 bus; PC0, PC1, and PC2 blink in sequence.
+ * GPIOC is on the H7 AHB4 bus. PC0 blinks; PC1 and PC2 stay high/off.
  */
 
 #include <stdint.h>
@@ -25,7 +25,9 @@
 #define SYST_CSR_CLKSOURCE    (1u << 2)
 #define SYST_CSR_COUNTFLAG    (1u << 16)
 
-#define LED_MASK              ((1u << 0) | (1u << 1) | (1u << 2))
+#define LED0_MASK             (1u << 0)
+#define LED_OFF_MASK          ((1u << 1) | (1u << 2))
+#define LED_MASK              (LED0_MASK | LED_OFF_MASK)
 
 static void delay_ms(uint32_t ms)
 {
@@ -49,18 +51,12 @@ int main(void)
     GPIOC_OSPEEDR &= ~((0x3u << 0u) | (0x3u << 2u) | (0x3u << 4u));
     GPIOC_PUPDR &= ~((0x3u << 0u) | (0x3u << 2u) | (0x3u << 4u));
 
-    const uint32_t leds[] = {
-        1u << 0,
-        1u << 1,
-        1u << 2,
-    };
+    GPIOC_BSRR = LED_MASK;
 
     while (1) {
-        for (uint32_t i = 0u; i < 3u; i++) {
-            GPIOC_BSRR = (LED_MASK << 16u) | leds[i];
-            delay_ms(500u);
-            GPIOC_BSRR = leds[i] << 16u;
-            delay_ms(200u);
-        }
+        GPIOC_BSRR = (LED0_MASK << 16u) | LED_OFF_MASK;
+        delay_ms(500u);
+        GPIOC_BSRR = LED_MASK;
+        delay_ms(500u);
     }
 }
