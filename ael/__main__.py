@@ -37,6 +37,7 @@ from ael import connection_doctor
 from ael import inventory as inventory_view
 from ael.pack_loader import load_pack
 from ael import stage_explain
+from ael import golden_reference
 from ael.instruments import mcu_detect
 from tools.audit_test_plan_schema import build_report as build_test_plan_schema_report, render_text as render_test_plan_schema_report_text
 from tools.audit_test_plan_schema import build_report as build_test_plan_schema_report, render_text as render_test_plan_schema_report_text
@@ -492,8 +493,25 @@ def main():
     invoke_p.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     invoke_p.add_argument("capability", nargs="?", default=None, help="Capability name or alias, e.g. \"port d loopback self-test\"")
 
+    golden_ref_p = sub.add_parser("golden-reference", help="resolve the validated golden example to reuse before flash/debug")
+    golden_ref_p.add_argument("--target", required=True, help="MCU target or family")
+    golden_ref_p.add_argument("--instrument", required=True, help="Instrument family or id")
+    golden_ref_p.add_argument("--no-closest", action="store_true", help="do not return closest-family fallback references")
+    golden_ref_p.add_argument("--format", choices=["text", "json"], default="text")
+
     args = parser.parse_args()
     repo_root = os.path.dirname(os.path.dirname(__file__))
+    if args.cmd == "golden-reference":
+        payload = golden_reference.resolve(
+            args.target,
+            args.instrument,
+            allow_closest=not args.no_closest,
+        )
+        if args.format == "json":
+            print(json.dumps(payload, indent=2, sort_keys=True))
+        else:
+            print(golden_reference.render_text(payload, repo_root=Path(repo_root)), end="")
+        sys.exit(0 if payload.get("ok") else 1)
     if args.cmd == "run":
         if getattr(args, "project", None):
             project_dir = Path(getattr(args, "run_projects_root", "projects")) / args.project

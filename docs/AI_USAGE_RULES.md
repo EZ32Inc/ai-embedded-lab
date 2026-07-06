@@ -153,6 +153,43 @@ Separate:
 - inferred implementation detail
 - missing contract data
 
+## Golden Reference First For Hardware Tasks
+
+When a user asks an AI agent to detect, flash, bring up, or debug an MCU through
+an instrument, the agent must first resolve the existing Golden Reference before
+hand-writing probe or GDB commands.
+
+Use:
+
+```bash
+python3 -m ael golden-reference --target <mcu> --instrument <instrument-family>
+```
+
+Examples:
+
+```bash
+python3 -m ael golden-reference --target rp2040 --instrument coreweaver
+python3 -m ael golden-reference --target stm32f103 --instrument esp32jtag
+```
+
+If a reference is found, reuse the referenced board config, pack, skill, and
+validated run as the starting point. Do not invent or temporarily piece together
+a flash sequence for the same target/instrument family.
+
+If no exact reference exists, the agent may use a closest-family reference only
+after stating that it is an adaptation, not a validated golden path. If no
+reference exists at all, stop and identify or create a successful example before
+hand-building a flash sequence.
+
+The intended workflow is:
+
+Human request -> Golden Reference lookup -> existing board/pack/run/skill ->
+execute or adapt.
+
+It is not:
+
+Human request -> manual GDB command construction.
+
 ## DUT Instance Disambiguation
 
 When adding a new test for a board family that already exists in AEL, do not assume it uses the existing DUT automatically.
