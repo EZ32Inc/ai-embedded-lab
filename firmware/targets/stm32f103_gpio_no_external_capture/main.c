@@ -16,6 +16,15 @@
 #define GPIOC_IDR (*(volatile uint32_t *)(GPIOC_BASE + 0x08u))
 #define GPIOC_ODR (*(volatile uint32_t *)(GPIOC_BASE + 0x0Cu))
 
+#define SYSTICK_BASE 0xE000E010u
+#define SYST_CSR (*(volatile uint32_t *)(SYSTICK_BASE + 0x00u))
+#define SYST_RVR (*(volatile uint32_t *)(SYSTICK_BASE + 0x04u))
+#define SYST_CVR (*(volatile uint32_t *)(SYSTICK_BASE + 0x08u))
+
+#define SYST_CSR_ENABLE (1u << 0)
+#define SYST_CSR_CLKSOURCE (1u << 2)
+#define SYST_CSR_COUNTFLAG (1u << 16)
+
 #define RCC_IOPAEN (1u << 2)
 #define RCC_IOPCEN (1u << 4)
 
@@ -38,6 +47,8 @@ static uint32_t verify_pattern(uint32_t expected_a, uint32_t expected_c)
 
 int main(void)
 {
+    uint32_t led_ms = 0u;
+
     const uint32_t patterns[] = {
         0u,
         (1u << 4) | (1u << 6),
@@ -79,9 +90,20 @@ int main(void)
 
     ael_mailbox_pass();
 
+    SYST_RVR = 7999u;
+    SYST_CVR = 0u;
+    SYST_CSR = SYST_CSR_CLKSOURCE | SYST_CSR_ENABLE;
+
     while (1) {
-        GPIOA_ODR ^= GPIOA_SELFTEST_MASK;
-        GPIOC_ODR ^= GPIOC_LED_MASK;
-        AEL_MAILBOX->detail0++;
+        if ((SYST_CSR & SYST_CSR_COUNTFLAG) == 0u) {
+            continue;
+        }
+
+        if (++led_ms >= 500u) {
+            led_ms = 0u;
+            GPIOA_ODR ^= GPIOA_SELFTEST_MASK;
+            GPIOC_ODR ^= GPIOC_LED_MASK;
+            AEL_MAILBOX->detail0++;
+        }
     }
 }
