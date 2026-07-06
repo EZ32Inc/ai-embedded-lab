@@ -66,7 +66,7 @@ arm-none-eabi-gdb -q --nx --batch \
   -ex "attach 1" \
   -ex "load" \
   -ex "compare-sections" \
-  -ex "monitor reset" \
+  -ex "attach 1" \
   -ex "detach" \
   -ex "quit"
 ```
@@ -81,3 +81,7 @@ Section .binary_info: matched
 Section .data: matched
 ```
 
+The final `attach 1` before `detach` is intentional. It matches the
+STM32F401/F411 BMDA post-load sequence that starts the target without requiring
+a physical power cycle. Do not replace it with `monitor reset` or
+`monitor reset run` for this CoreWeaver ARM/Cortex flow.

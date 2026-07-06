@@ -60,7 +60,7 @@ arm-none-eabi-gdb -q --nx --batch \
   -ex 'file artifacts/build_rp2354_coreweaver_blinky/rp2354_coreweaver_blinky.elf' \
   -ex 'load' \
   -ex 'compare-sections' \
-  -ex 'monitor reset run' \
+  -ex 'attach 1' \
   -ex 'detach' \
   -ex 'quit'
 ```
@@ -71,7 +71,8 @@ Result:
 - `load` completed to flash at `0x10000000`
 - `compare-sections` matched `.text`, `.rodata`, `.ARM.exidx`, `.binary_info`,
   `.data`, and `.flash_end`
-- `monitor reset run` issued
+- second `attach 1` then `detach` issued so the target starts without a power
+  cycle
 
 ## Visual Validation
 

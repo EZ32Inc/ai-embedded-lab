@@ -55,7 +55,7 @@ arm-none-eabi-gdb -q --nx --batch \
   -ex 'file firmware/targets/stm32h503_pc13_blinky/build/stm32h503_pc13_blinky.elf' \
   -ex 'load' \
   -ex 'compare-sections' \
-  -ex 'monitor reset run' \
+  -ex 'attach 1' \
   -ex 'detach' \
   -ex 'quit'
 ```
@@ -66,7 +66,8 @@ Result:
 - `load` completed
 - `compare-sections` matched `.isr_vector`
 - `compare-sections` matched `.text`
-- `monitor reset run` issued
+- second `attach 1` then `detach` issued so the target starts without a power
+  cycle
 
 ## Visual Validation
 

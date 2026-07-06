@@ -25,6 +25,7 @@ board:
       - "file {firmware}"
       - "attach {target_id}"
       - "load"
+      - "attach {target_id}"
       - "detach"
   power_and_boot:
     reset_strategy: connect_under_reset
