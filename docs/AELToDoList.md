@@ -180,6 +180,43 @@ Nine CH32V003 stage-2 tests previously passed, including I2C, SPI DMA, ADC DMA,
 and TIM DMA. After recovery, rerun them before deciding whether they should join
 the golden suite or remain an independent pack.
 
+### TASK-005 - AEL Unified Task Front Door
+
+**Status:** [ ] Needs design and implementation
+
+AEL needs a single front-door workflow for user intents before hardware-facing
+execution. The RP2040/CoreWeaver flash-script issue showed that documentation
+alone is not enough: agents can still bypass a known Golden Suite path and
+reconstruct a sequence by hand.
+
+**Goal:**
+
+Route common user requests through a deterministic classifier and reference
+lookup before execution:
+
+- target detection
+- known firmware flashing
+- Golden Suite execution
+- specific UART/GPIO/SPI/ADC/mailbox/blink test execution
+- board capability questions
+- board and instrument resource questions
+- closest-family adaptation for new MCUs or boards
+- new board bring-up and promotion into reusable references
+
+**Direction:**
+
+1. Define a small task-intent schema.
+2. Add a read-only command such as `ael task-plan`.
+3. Make the planner consult Golden Reference, inventory, board configs, packs,
+   skills, and prior validated runs.
+4. For known target/instrument families, output the exact allowed path and
+   explicitly forbid ad hoc command construction.
+5. Add regression examples for RP2040/CoreWeaver and STM32 ESP32JTAG flows.
+6. Later wire `ael run`, `ael pack`, and AI usage rules through this front door.
+
+**Reference memo:**
+`docs/memo/ael_unified_task_frontdoor_memo_2026-07-06.md`
+
 ---
 
 ## Done
