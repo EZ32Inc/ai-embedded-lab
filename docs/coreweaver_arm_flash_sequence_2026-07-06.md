@@ -131,6 +131,12 @@ the added PD1 pull-up, target discovery was stable, but the first `load` at a
 requested 100 kHz frequency reported a `.text` mismatch during
 `compare-sections`.
 
+Later testing on another CoreWeaver board showed an additional GDB remote issue:
+old WCH GDB 8.3 does not cleanly parse the CH32V006 `rv32emc` target
+description, and may report `Truncated register 8`, `Error writing data to
+flash`, or false `compare-sections` mismatches. See
+`docs/coreweaver_ch32v006_gdb_remote_issue_2026-07-06.md`.
+
 Use a lower requested frequency for CH32V006 flashing:
 
 ```sh
