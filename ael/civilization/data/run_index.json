@@ -919,10 +919,10 @@
   },
   "rp2040_pico_coreweaver_af81_ch2|rp2040_minimal_runtime_mailbox_coreweaver_ch2": {
     "exp_id": "ba04a535-0ae7-4012-9042-e3f841d69cc4",
-    "success_count": 1,
+    "success_count": 2,
     "failure_count": 2,
-    "last_seen": 1783380816.2814705,
-    "confidence": 0.5,
+    "last_seen": 1783381185.8322847,
+    "confidence": 0.6,
     "known_failures": {
       "build": {
         "exp_id": "cc65fdbf-f411-4805-8ffe-0d885e17f2e4",
