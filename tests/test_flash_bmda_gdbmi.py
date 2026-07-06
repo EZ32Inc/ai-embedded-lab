@@ -89,6 +89,40 @@ def test_run_gdb_default_launch_still_adds_resume_and_detach():
     assert "detach" in args
 
 
+def test_run_gdb_remote_timeout_is_set_before_connect():
+    captured = {}
+
+    def fake_run(args, capture_output, text, timeout):
+        captured["args"] = args
+
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        return Result()
+
+    with patch("ael.adapters.flash_bmda_gdbmi.subprocess.run", side_effect=fake_run):
+        flash_bmda_gdbmi._run_gdb(
+            "arm-none-eabi-gdb",
+            "192.168.4.1",
+            4244,
+            "/tmp/fw.elf",
+            1,
+            [],
+            [],
+            30,
+            True,
+            ["monitor swd_scan", "file {firmware}", "attach {target_id}", "load", "detach"],
+            remote_timeout_s=15,
+        )
+
+    args = captured["args"]
+    timeout_idx = args.index("set remotetimeout 15")
+    connect_idx = args.index("target extended-remote 192.168.4.1:4244")
+    assert timeout_idx < connect_idx
+
+
 def test_contains_rejected_output_matches_keywords_case_insensitively():
     keyword = flash_bmda_gdbmi._contains_rejected_output(
         "Warning: Remote failure reply: E01\nCould not read registers\n",

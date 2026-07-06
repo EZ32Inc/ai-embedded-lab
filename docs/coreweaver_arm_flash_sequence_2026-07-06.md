@@ -12,12 +12,18 @@ The visible symptom is:
 - the LED program does not run immediately
 - the program runs only after a target power cycle
 
-This is the same issue previously debugged on STM32F401/F411. The working
-sequence was not `monitor reset run`; it was a second attach followed by detach.
+This is the same issue previously debugged on STM32F401/F411. For STM32 targets,
+the working sequence was not `monitor reset run`; it was a second attach
+followed by detach.
+
+RP2040 is an exception. The RP2040 Pico on CoreWeaver channel 2 was later
+validated with the older RP2040 golden-run shape:
+`load`, `monitor reset run`, `continue`, `detach`. See
+`docs/coreweaver_stm32_rp2040_flash_script_fix_2026-07-06.md`.
 
 ## Working Pattern
 
-Use this post-load pattern for CoreWeaver ARM/Cortex targets:
+Use this post-load pattern for CoreWeaver STM32 ARM/Cortex targets:
 
 ```text
 monitor swd_scan
@@ -58,15 +64,23 @@ python3 tools/coreweaver_flash_arm.py \
   artifacts/build_stm32h503_pc13_blinky/stm32h503_pc13_blinky.elf
 ```
 
-For RP2040 on channel 2, keep connect-under-reset enabled because discovery on
-that setup required it:
+For RP2040 on channel 2, do not use the STM32 post-load sequence. Lower the
+debug speed before scan and use the RP2040-specific reset/continue/detach
+sequence:
 
 ```sh
-python3 tools/coreweaver_flash_arm.py \
-  --channel 2 \
-  --frequency 5000 \
-  --connect-reset \
-  artifacts/build_rp2040_pico/pico_blink.elf
+arm-none-eabi-gdb -q --nx --batch \
+  -ex "set remotetimeout 15" \
+  -ex "target extended-remote 192.168.4.1:4244" \
+  -ex "monitor frequency 1000" \
+  -ex "monitor swd_scan" \
+  -ex "file artifacts/build_rp2040_pico_s3jtag/pico_blink.elf" \
+  -ex "attach 1" \
+  -ex "load" \
+  -ex "monitor reset run" \
+  -ex "continue" \
+  -ex "detach" \
+  -ex "quit"
 ```
 
 For STM32H750 on channel 3:
@@ -87,8 +101,9 @@ python3 tools/coreweaver_flash_arm.py \
 
 ## Scope
 
-This note applies to ARM/Cortex targets on CoreWeaver, including STM32F401,
-STM32F411, STM32H503, STM32H750, RP2040, and RP2354/RP2350.
+This note applies to STM32 ARM/Cortex targets on CoreWeaver, including
+STM32F401, STM32F411, STM32H503, and STM32H750. RP2040 and RP2354/RP2350 need
+their own target-family-specific handling.
 
 It does not apply to CH32V006 or CH32V305. Those WCH RISC-V paths use different
 debug transports and have separate flash/run handling.

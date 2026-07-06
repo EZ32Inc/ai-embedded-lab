@@ -22,15 +22,28 @@ _STINFO_BIN = _STLINK_BIN_DIR / "st-info"
 _OPENOCD_BIN = "openocd"
 
 
-def _run_gdb(gdb_cmd, ip, port, firmware_path, target_id, pre_cmds, post_cmds, timeout_s, do_continue, launch_cmds):
+def _run_gdb(
+    gdb_cmd,
+    ip,
+    port,
+    firmware_path,
+    target_id,
+    pre_cmds,
+    post_cmds,
+    timeout_s,
+    do_continue,
+    launch_cmds,
+    remote_timeout_s=None,
+):
     args = [
         gdb_cmd,
         "-q",
         "--nx",
         "--batch",
-        "-ex",
-        f"target extended-remote {ip}:{port}",
     ]
+    if remote_timeout_s:
+        args.extend(["-ex", f"set remotetimeout {int(remote_timeout_s)}"])
+    args.extend(["-ex", f"target extended-remote {ip}:{port}"])
     for cmd in pre_cmds:
         args.extend(["-ex", cmd])
     if launch_cmds:
@@ -898,6 +911,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
     speed_khz = flash_cfg.get("speed_khz", None)
     reset_strategy = flash_cfg.get("reset_strategy", "")
     timeout_s = int(flash_cfg.get("timeout_s", 120))
+    remote_timeout_s = flash_cfg.get("gdb_remote_timeout_s", None)
     do_continue = True
     reset_available = bool(flash_cfg.get("reset_available", True))
     launch_cmds = flash_cfg.get("gdb_launch_cmds", None)
@@ -991,6 +1005,7 @@ def run(probe_cfg, firmware_path, flash_cfg=None, flash_json_path=None):
                     timeout_s,
                     do_continue,
                     launch_cmds,
+                    remote_timeout_s=remote_timeout_s,
                 )
                 out = (res.stdout or "") + (res.stderr or "")
                 out_l = out.lower()

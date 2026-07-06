@@ -52,36 +52,31 @@ artifacts/build_rp2040_pico/pico_blink.elf
 
 ## Flash
 
-Plain SWD scan did not detect this RP2040 reliably. The working path is to
-enable connect-under-reset before scanning:
+Plain SWD scan at the default speed did not detect this RP2040 reliably. The
+working path is to lower the requested SWD speed before scanning, then use the
+same post-load resume shape as the March 2026 RP2040 S3JTAG golden runs:
 
 ```sh
 arm-none-eabi-gdb -q --nx --batch \
   artifacts/build_rp2040_pico/pico_blink.elf \
-  -ex "set remotetimeout 60" \
+  -ex "set remotetimeout 15" \
   -ex "target extended-remote 192.168.4.1:4244" \
-  -ex "monitor frequency 5000" \
-  -ex "monitor connect_rst enable" \
+  -ex "monitor frequency 1000" \
   -ex "monitor swd_scan" \
   -ex "attach 1" \
   -ex "load" \
-  -ex "compare-sections" \
-  -ex "attach 1" \
+  -ex "monitor reset run" \
+  -ex "continue" \
   -ex "detach" \
   -ex "quit"
 ```
 
-The flash verification matched all loaded sections:
+The validated run reports `Remote failure reply: E01` / `FF` after the
+post-load reset and continue. This matches the older RP2040 S3JTAG golden-run
+shape when reset is not wired, and the target starts running immediately after
+GDB detaches.
 
-```text
-Section .boot2: matched
-Section .text: matched
-Section .rodata: matched
-Section .binary_info: matched
-Section .data: matched
-```
-
-The final `attach 1` before `detach` is intentional. It matches the
-STM32F401/F411 BMDA post-load sequence that starts the target without requiring
-a physical power cycle. Do not replace it with `monitor reset` or
-`monitor reset run` for this CoreWeaver ARM/Cortex flow.
+Do not use the STM32-style final `attach 1` followed by `detach` for this RP2040
+path, and do not insert `compare-sections` between `load` and the post-load
+resume sequence. Those variants can leave the RP2040 halted until the next
+target power cycle even though the flash contents are valid.

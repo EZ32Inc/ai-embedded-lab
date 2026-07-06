@@ -18,20 +18,18 @@ board:
   firmware:
     description: RP2040 GPIO-signature target exercised through S3JTAG SWD + Target In
   flash:
-    speed_khz: 50
-    reset_strategy: none
+    timeout_s: 120
+    gdb_remote_timeout_s: 15
     reset_available: false
-    post_load_settle_s: 2.0
     target_id: 1
     gdb_launch_cmds:
-      - "monitor frequency 5000"
-      - "monitor connect_rst enable"
+      - "monitor frequency 1000"
       - "monitor swd_scan"
       - "file {firmware}"
       - "attach {target_id}"
       - "load"
-      - "compare-sections"
-      - "attach {target_id}"
+      - "monitor reset run"
+      - "continue"
       - "detach"
   observe_map:
     sig: TARGETIN

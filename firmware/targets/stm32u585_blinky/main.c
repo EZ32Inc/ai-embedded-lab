@@ -26,8 +26,8 @@
 #define GPIOC_MODER      (*(volatile uint32_t *)(GPIOC_BASE + 0x00u))
 #define GPIOC_BSRR       (*(volatile uint32_t *)(GPIOC_BASE + 0x18u))
 
-/* ~500 ms at 4 MHz MSI (loop body ≈ 4 cycles) */
-#define DELAY_HALF_S     250000u
+/* ~250 ms at 4 MHz MSI (loop body ≈ 4 cycles) */
+#define DELAY_HALF_S     125000u
 
 static void delay(uint32_t n) {
     for (volatile uint32_t i = 0u; i < n; i++) {}
@@ -44,11 +44,11 @@ int main(void) {
     /* Signal AEL: firmware is running */
     ael_mailbox_init();
 
-    /* Blink PC13 forever: LED ON (low) → 500ms → LED OFF (high) → 500ms */
+    /* Blink PC13 forever: LED ON (low) -> 250ms -> LED OFF (high) -> 250ms */
     while (1) {
-        GPIOC_BSRR = (1u << 29);   /* reset PC13 low  → LED ON  */
+        GPIOC_BSRR = (1u << 29);   /* reset PC13 low -> LED ON */
         delay(DELAY_HALF_S);
-        GPIOC_BSRR = (1u << 13);   /* set PC13 high   → LED OFF */
+        GPIOC_BSRR = (1u << 13);   /* set PC13 high -> LED OFF */
         delay(DELAY_HALF_S);
 
         /* Keep reporting PASS on every cycle */
