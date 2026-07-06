@@ -902,5 +902,38 @@
         "last_raw": "[stm32f401ce_blackpill_daplink] stm32f401ce_blackpill_daplink_led_blink: failed — stages: preflight, build, run, check — failure: load — Flash: local DAPLink/OpenOCD GDB server exited during startup with code 1"
       }
     }
+  },
+  "rp2040_pico_coreweaver_af81_ch2|rp2040_minimal_runtime_mailbox_s3jtag": {
+    "exp_id": null,
+    "success_count": 0,
+    "failure_count": 1,
+    "last_seen": 1783380612.5446208,
+    "confidence": 0.5,
+    "known_failures": {
+      "preflight": {
+        "exp_id": "bfee36ab-72bc-40d7-a9c3-1e6bd921463b",
+        "count": 1,
+        "last_raw": "[rp2040_pico_coreweaver_af81_ch2] rp2040_minimal_runtime_mailbox_s3jtag: failed — stages: build, load, run, check — failure: preflight — preflight failed"
+      }
+    }
+  },
+  "rp2040_pico_coreweaver_af81_ch2|rp2040_minimal_runtime_mailbox_coreweaver_ch2": {
+    "exp_id": "ba04a535-0ae7-4012-9042-e3f841d69cc4",
+    "success_count": 1,
+    "failure_count": 2,
+    "last_seen": 1783380816.2814705,
+    "confidence": 0.5,
+    "known_failures": {
+      "build": {
+        "exp_id": "cc65fdbf-f411-4805-8ffe-0d885e17f2e4",
+        "count": 1,
+        "last_raw": "[rp2040_pico_coreweaver_af81_ch2] rp2040_minimal_runtime_mailbox_coreweaver_ch2: failed — stages: preflight, load, run, check — failure: build — build failed"
+      },
+      "load": {
+        "exp_id": "3bbb7ccf-62fa-43ff-9b88-e90437c1e889",
+        "count": 1,
+        "last_raw": "[rp2040_pico_coreweaver_af81_ch2] rp2040_minimal_runtime_mailbox_coreweaver_ch2: failed — stages: preflight, build, run, check — failure: load — flash attempt failed"
+      }
+    }
   }
 }

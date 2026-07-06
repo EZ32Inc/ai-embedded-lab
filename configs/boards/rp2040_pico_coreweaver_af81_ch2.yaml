@@ -1,0 +1,49 @@
+board:
+  name: RP2040 Pico via CoreWeaver AF81 channel 2
+  target: rp2040
+  kind: board
+  features:
+    - programmable_via_swd
+    - has_gpio
+  processors:
+    - id: rp2040
+      arch: arm
+      role: primary
+      clock_hz: 125000000
+  instrument_instance: coreweaver_af81_ch2
+  build:
+    type: cmake
+    project_dir: firmware/targets/rp2040_pico
+    artifact_stem: pico_blink
+    build_dir: artifacts/build_rp2040_pico_s3jtag
+  firmware:
+    description: RP2040 GPIO-signature target exercised through CoreWeaver SWD
+  flash:
+    timeout_s: 120
+    gdb_remote_timeout_s: 15
+    allowed_strategies:
+      - normal
+    reset_available: false
+    target_id: 1
+    gdb_launch_cmds:
+      - "monitor frequency 1000"
+      - "monitor swd_scan"
+      - "file {firmware}"
+      - "attach {target_id}"
+      - "load"
+      - "monitor reset run"
+      - "continue"
+      - "detach"
+  bench_connections:
+    - from: RP2040 SWDIO
+      to: CoreWeaver CH2.SWDIO
+    - from: RP2040 SWCLK
+      to: CoreWeaver CH2.SWCLK
+    - from: GND
+      to: CoreWeaver GND
+  power_and_boot:
+    reset_strategy: none
+    boot_mode_default: normal
+    power_rails:
+      - name: 3V3
+        nominal_v: 3.3

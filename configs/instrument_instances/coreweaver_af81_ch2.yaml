@@ -1,0 +1,23 @@
+instance:
+  id: coreweaver_af81_ch2
+  type: esp32jtag
+  label: CoreWeaver AF81 channel 2
+
+connection:
+  ip: 192.168.4.1
+  gdb_port: 4244
+
+communication:
+  primary: gdb_remote
+  surfaces:
+    - name: gdb_remote
+      transport: wifi
+      endpoint: 192.168.4.1:4244
+      protocol: gdb_remote
+      invocation_style: request_response
+
+capability_surfaces:
+  swd: gdb_remote
+  gpio_in: web_api
+  gpio_out: web_api
+  reset_out: web_api
